@@ -9,6 +9,9 @@ services:
     stdin_open: true
     ports:
       - "8000:8000"
+    environment:
+      - TZ=Asia/Jakarta
+
     networks:
       - capstone-network
       
