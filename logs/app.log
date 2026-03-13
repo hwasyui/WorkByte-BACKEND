@@ -1,0 +1,4 @@
+2026-03-13 14:16:18,023 | INFO | DATABASE |  | Database engine established
+2026-03-13 14:16:20,358 | DEBUG | DATABASE |  | Executing query: SELECT * FROM testing_table | params={}
+2026-03-13 14:16:20,367 | INFO | DATABASE |  | Fetched 1 rows from testing_table
+2026-03-13 14:16:20,368 | INFO | FUNCTIONS |  | Fetched 1 rows from testing table
