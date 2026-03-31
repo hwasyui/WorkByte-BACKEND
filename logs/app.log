@@ -2,3 +2,1516 @@
 2026-03-13 14:16:20,358 | DEBUG | DATABASE |  | Executing query: SELECT * FROM testing_table | params={}
 2026-03-13 14:16:20,367 | INFO | DATABASE |  | Fetched 1 rows from testing_table
 2026-03-13 14:16:20,368 | INFO | FUNCTIONS |  | Fetched 1 rows from testing table
+2026-03-14 12:37:57,354 | INFO | DATABASE |  | Database engine established
+2026-03-14 12:38:20,673 | DEBUG | DATABASE |  | Executing query: SELECT * FROM testing_table | params={}
+2026-03-14 12:38:20,678 | INFO | DATABASE |  | Fetched 1 rows from testing_table
+2026-03-14 12:38:20,679 | INFO | FUNCTIONS |  | Fetched 1 rows from testing table
+2026-03-14 13:18:48,791 | DEBUG | DATABASE |  | Executing query: SELECT * FROM testing_table | params={}
+2026-03-14 13:18:48,801 | INFO | DATABASE |  | Fetched 1 rows from testing_table
+2026-03-14 13:18:48,802 | INFO | FUNCTIONS |  | Fetched 1 rows from testing table
+2026-03-14 13:25:52,937 | DEBUG | DATABASE |  | Executing query: SELECT * FROM testing_table | params={}
+2026-03-14 13:25:52,944 | INFO | DATABASE |  | Fetched 1 rows from testing_table
+2026-03-14 13:25:52,946 | INFO | FUNCTIONS |  | Fetched 1 rows from testing table
+2026-03-14 13:26:01,427 | DEBUG | DATABASE |  | Executing query: SELECT * FROM testing_table | params={}
+2026-03-14 13:26:01,430 | INFO | DATABASE |  | Fetched 1 rows from testing_table
+2026-03-14 13:26:01,432 | INFO | FUNCTIONS |  | Fetched 1 rows from testing table
+2026-03-14 14:34:21,551 | DEBUG | DATABASE |  | Executing query: SELECT * FROM testing_table | params={}
+2026-03-14 14:34:21,568 | INFO | DATABASE |  | Fetched 1 rows from testing_table
+2026-03-14 14:34:21,570 | INFO | FUNCTIONS |  | Fetched 1 rows from testing table
+2026-03-14 14:37:07,756 | DEBUG | DATABASE |  | Executing query: SELECT * FROM testing_table | params={}
+2026-03-14 14:37:07,757 | INFO | DATABASE |  | Fetched 1 rows from testing_table
+2026-03-14 14:37:07,757 | INFO | FUNCTIONS |  | Fetched 1 rows from testing table
+2026-03-14 14:38:32,384 | DEBUG | DATABASE |  | Executing query: SELECT * FROM testing_table | params={}
+2026-03-14 14:38:32,386 | INFO | DATABASE |  | Fetched 1 rows from testing_table
+2026-03-14 14:38:32,387 | INFO | FUNCTIONS |  | Fetched 1 rows from testing table
+2026-03-14 14:52:53,900 | DEBUG | DATABASE |  | Executing query: SELECT * FROM testing_table | params={}
+2026-03-14 14:52:53,906 | INFO | DATABASE |  | Fetched 1 rows from testing_table
+2026-03-14 14:52:53,908 | INFO | FUNCTIONS |  | Fetched 1 rows from testing table
+2026-03-18 08:08:05,743 | INFO | DATABASE |  | Database engine established
+2026-03-18 08:42:20,962 | INFO | DATABASE |  | Database engine established
+2026-03-18 08:42:30,030 | INFO | DATABASE |  | Database engine established
+2026-03-18 08:42:41,043 | INFO | DATABASE |  | Database engine established
+2026-03-18 08:43:06,564 | DEBUG | DATABASE |  | Executing query: SELECT user_id, email, password, type FROM users WHERE email = %s | params=('user@example.com',)
+2026-03-18 08:43:06,566 | ERROR | DATABASE |  | Query database error: List argument must consist only of dictionaries
+Traceback (most recent call last):
+  File "/app/functions/database.py", line 205, in execute_query
+    result = conn.execute(text(query), params or {})
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1413, in execute
+    distilled_parameters = _distill_params_20(parameters)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "lib/sqlalchemy/cyextension/util.pyx", line 26, in sqlalchemy.cyextension.util._distill_params_20
+sqlalchemy.exc.ArgumentError: List argument must consist only of dictionaries
+2026-03-18 08:43:06,571 | ERROR | AUTH |  | Get user error: List argument must consist only of dictionaries
+Traceback (most recent call last):
+  File "/app/functions/authentication.py", line 78, in get_user
+    result = db.execute_query(query, params=(email,))
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/functions/database.py", line 205, in execute_query
+    result = conn.execute(text(query), params or {})
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1413, in execute
+    distilled_parameters = _distill_params_20(parameters)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "lib/sqlalchemy/cyextension/util.pyx", line 26, in sqlalchemy.cyextension.util._distill_params_20
+sqlalchemy.exc.ArgumentError: List argument must consist only of dictionaries
+2026-03-18 08:43:06,595 | ERROR | AUTH |  | Registration error: password cannot be longer than 72 bytes, truncate manually if necessary (e.g. my_password[:72])
+Traceback (most recent call last):
+  File "/app/functions/authentication.py", line 91, in register_user
+    hashed_password = get_password_hash(password)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/functions/authentication.py", line 35, in get_password_hash
+    return pwd_context.hash(password)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/passlib/context.py", line 2258, in hash
+    return record.hash(secret, **kwds)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/passlib/utils/handlers.py", line 779, in hash
+    self.checksum = self._calc_checksum(secret)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/passlib/handlers/bcrypt.py", line 591, in _calc_checksum
+    self._stub_requires_backend()
+  File "/usr/local/lib/python3.12/site-packages/passlib/utils/handlers.py", line 2254, in _stub_requires_backend
+    cls.set_backend()
+  File "/usr/local/lib/python3.12/site-packages/passlib/utils/handlers.py", line 2156, in set_backend
+    return owner.set_backend(name, dryrun=dryrun)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/passlib/utils/handlers.py", line 2163, in set_backend
+    return cls.set_backend(name, dryrun=dryrun)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/passlib/utils/handlers.py", line 2188, in set_backend
+    cls._set_backend(name, dryrun)
+  File "/usr/local/lib/python3.12/site-packages/passlib/utils/handlers.py", line 2311, in _set_backend
+    super(SubclassBackendMixin, cls)._set_backend(name, dryrun)
+  File "/usr/local/lib/python3.12/site-packages/passlib/utils/handlers.py", line 2224, in _set_backend
+    ok = loader(**kwds)
+         ^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/passlib/handlers/bcrypt.py", line 626, in _load_backend_mixin
+    return mixin_cls._finalize_backend_mixin(name, dryrun)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/passlib/handlers/bcrypt.py", line 421, in _finalize_backend_mixin
+    if detect_wrap_bug(IDENT_2A):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/passlib/handlers/bcrypt.py", line 380, in detect_wrap_bug
+    if verify(secret, bug_hash):
+       ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/passlib/utils/handlers.py", line 792, in verify
+    return consteq(self._calc_checksum(secret), chk)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/passlib/handlers/bcrypt.py", line 655, in _calc_checksum
+    hash = _bcrypt.hashpw(secret, config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: password cannot be longer than 72 bytes, truncate manually if necessary (e.g. my_password[:72])
+2026-03-18 08:45:40,068 | INFO | DATABASE |  | Database engine established
+2026-03-18 08:45:45,936 | DEBUG | DATABASE |  | Executing query: SELECT user_id, email, password, type FROM users WHERE email = %s | params=('user@example.com',)
+2026-03-18 08:45:45,937 | ERROR | DATABASE |  | Query database error: List argument must consist only of dictionaries
+Traceback (most recent call last):
+  File "/app/functions/database.py", line 205, in execute_query
+    result = conn.execute(text(query), params or {})
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1413, in execute
+    distilled_parameters = _distill_params_20(parameters)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "lib/sqlalchemy/cyextension/util.pyx", line 26, in sqlalchemy.cyextension.util._distill_params_20
+sqlalchemy.exc.ArgumentError: List argument must consist only of dictionaries
+2026-03-18 08:45:45,939 | ERROR | AUTH |  | Get user error: List argument must consist only of dictionaries
+Traceback (most recent call last):
+  File "/app/functions/authentication.py", line 81, in get_user
+    result = db.execute_query(query, params=(email,))
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/functions/database.py", line 205, in execute_query
+    result = conn.execute(text(query), params or {})
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1413, in execute
+    distilled_parameters = _distill_params_20(parameters)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "lib/sqlalchemy/cyextension/util.pyx", line 26, in sqlalchemy.cyextension.util._distill_params_20
+sqlalchemy.exc.ArgumentError: List argument must consist only of dictionaries
+2026-03-18 08:45:45,951 | ERROR | AUTH |  | Registration error: password cannot be longer than 72 bytes, truncate manually if necessary (e.g. my_password[:72])
+Traceback (most recent call last):
+  File "/app/functions/authentication.py", line 96, in register_user
+    hashed_password = get_password_hash(password)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/functions/authentication.py", line 35, in get_password_hash
+    return pwd_context.hash(password)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/passlib/context.py", line 2258, in hash
+    return record.hash(secret, **kwds)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/passlib/utils/handlers.py", line 779, in hash
+    self.checksum = self._calc_checksum(secret)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/passlib/handlers/bcrypt.py", line 591, in _calc_checksum
+    self._stub_requires_backend()
+  File "/usr/local/lib/python3.12/site-packages/passlib/utils/handlers.py", line 2254, in _stub_requires_backend
+    cls.set_backend()
+  File "/usr/local/lib/python3.12/site-packages/passlib/utils/handlers.py", line 2156, in set_backend
+    return owner.set_backend(name, dryrun=dryrun)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/passlib/utils/handlers.py", line 2163, in set_backend
+    return cls.set_backend(name, dryrun=dryrun)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/passlib/utils/handlers.py", line 2188, in set_backend
+    cls._set_backend(name, dryrun)
+  File "/usr/local/lib/python3.12/site-packages/passlib/utils/handlers.py", line 2311, in _set_backend
+    super(SubclassBackendMixin, cls)._set_backend(name, dryrun)
+  File "/usr/local/lib/python3.12/site-packages/passlib/utils/handlers.py", line 2224, in _set_backend
+    ok = loader(**kwds)
+         ^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/passlib/handlers/bcrypt.py", line 626, in _load_backend_mixin
+    return mixin_cls._finalize_backend_mixin(name, dryrun)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/passlib/handlers/bcrypt.py", line 421, in _finalize_backend_mixin
+    if detect_wrap_bug(IDENT_2A):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/passlib/handlers/bcrypt.py", line 380, in detect_wrap_bug
+    if verify(secret, bug_hash):
+       ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/passlib/utils/handlers.py", line 792, in verify
+    return consteq(self._calc_checksum(secret), chk)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/passlib/handlers/bcrypt.py", line 655, in _calc_checksum
+    hash = _bcrypt.hashpw(secret, config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: password cannot be longer than 72 bytes, truncate manually if necessary (e.g. my_password[:72])
+2026-03-18 08:47:34,382 | INFO | DATABASE |  | Database engine established
+2026-03-18 08:47:38,697 | DEBUG | DATABASE |  | Executing query: SELECT user_id, email, password, type FROM users WHERE email = :email | params={'email': 'user@example.com'}
+2026-03-18 08:47:38,711 | INFO | DATABASE |  | Query returned 0 rows
+2026-03-18 08:47:38,723 | ERROR | AUTH |  | Registration error: password cannot be longer than 72 bytes, truncate manually if necessary (e.g. my_password[:72])
+Traceback (most recent call last):
+  File "/app/functions/authentication.py", line 100, in register_user
+    hashed_password = get_password_hash(password)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/functions/authentication.py", line 35, in get_password_hash
+    return pwd_context.hash(password)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/passlib/context.py", line 2258, in hash
+    return record.hash(secret, **kwds)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/passlib/utils/handlers.py", line 779, in hash
+    self.checksum = self._calc_checksum(secret)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/passlib/handlers/bcrypt.py", line 591, in _calc_checksum
+    self._stub_requires_backend()
+  File "/usr/local/lib/python3.12/site-packages/passlib/utils/handlers.py", line 2254, in _stub_requires_backend
+    cls.set_backend()
+  File "/usr/local/lib/python3.12/site-packages/passlib/utils/handlers.py", line 2156, in set_backend
+    return owner.set_backend(name, dryrun=dryrun)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/passlib/utils/handlers.py", line 2163, in set_backend
+    return cls.set_backend(name, dryrun=dryrun)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/passlib/utils/handlers.py", line 2188, in set_backend
+    cls._set_backend(name, dryrun)
+  File "/usr/local/lib/python3.12/site-packages/passlib/utils/handlers.py", line 2311, in _set_backend
+    super(SubclassBackendMixin, cls)._set_backend(name, dryrun)
+  File "/usr/local/lib/python3.12/site-packages/passlib/utils/handlers.py", line 2224, in _set_backend
+    ok = loader(**kwds)
+         ^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/passlib/handlers/bcrypt.py", line 626, in _load_backend_mixin
+    return mixin_cls._finalize_backend_mixin(name, dryrun)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/passlib/handlers/bcrypt.py", line 421, in _finalize_backend_mixin
+    if detect_wrap_bug(IDENT_2A):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/passlib/handlers/bcrypt.py", line 380, in detect_wrap_bug
+    if verify(secret, bug_hash):
+       ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/passlib/utils/handlers.py", line 792, in verify
+    return consteq(self._calc_checksum(secret), chk)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/passlib/handlers/bcrypt.py", line 655, in _calc_checksum
+    hash = _bcrypt.hashpw(secret, config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: password cannot be longer than 72 bytes, truncate manually if necessary (e.g. my_password[:72])
+2026-03-28 23:46:39,668 | INFO | DATABASE |  | Database engine established
+2026-03-28 23:47:36,577 | DEBUG | DATABASE |  | Executing query: SELECT user_id, email, password, type FROM users WHERE email = :email | params={'email': 'user@example.com'}
+2026-03-28 23:47:36,598 | INFO | DATABASE |  | Query returned 0 rows
+2026-03-28 23:47:36,742 | DEBUG | DATABASE |  | Executing query: 
+        INSERT INTO users (email, password, type)
+        VALUES (:email, :password, :user_type)
+        RETURNING user_id
+         | params={'email': 'user@example.com', 'password': '$argon2id$v=19$m=65536,t=3,p=4$3lnk83PSgexLDVoc0qBW6A$Mt7/IJpotzyWtEcXEtTNW/+7Zt2YFp/mGuFrYJbG8aE', 'user_type': 'freelancer'}
+2026-03-28 23:47:36,767 | INFO | DATABASE |  | Query returned 1 rows
+2026-03-28 23:47:36,770 | DEBUG | DATABASE |  | Executing query: 
+            INSERT INTO freelancer (user_id)
+            VALUES (:user_id)
+            RETURNING freelancer_id
+             | params={'user_id': 'fae74e23-6765-46f0-aad8-33648bb5e174'}
+2026-03-28 23:47:36,776 | ERROR | DATABASE |  | Query database error: (psycopg2.errors.NotNullViolation) null value in column "full_name" of relation "freelancer" violates not-null constraint
+DETAIL:  Failing row contains (075fc86d-79b7-4fc5-8a45-e58a1e9c5299, fae74e23-6765-46f0-aad8-33648bb5e174, null, null, null, null, null, hourly, USD, 0, 2026-03-28 16:47:36.771066, 2026-03-28 16:47:36.771066).
+
+[SQL: 
+            INSERT INTO freelancer (user_id)
+            VALUES (%(user_id)s)
+            RETURNING freelancer_id
+            ]
+[parameters: {'user_id': 'fae74e23-6765-46f0-aad8-33648bb5e174'}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+psycopg2.errors.NotNullViolation: null value in column "full_name" of relation "freelancer" violates not-null constraint
+DETAIL:  Failing row contains (075fc86d-79b7-4fc5-8a45-e58a1e9c5299, fae74e23-6765-46f0-aad8-33648bb5e174, null, null, null, null, null, hourly, USD, 0, 2026-03-28 16:47:36.771066, 2026-03-28 16:47:36.771066).
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/functions/database.py", line 205, in execute_query
+    result = conn.execute(text(query), params or {})
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+    return meth(
+           ^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 527, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2363, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.IntegrityError: (psycopg2.errors.NotNullViolation) null value in column "full_name" of relation "freelancer" violates not-null constraint
+DETAIL:  Failing row contains (075fc86d-79b7-4fc5-8a45-e58a1e9c5299, fae74e23-6765-46f0-aad8-33648bb5e174, null, null, null, null, null, hourly, USD, 0, 2026-03-28 16:47:36.771066, 2026-03-28 16:47:36.771066).
+
+[SQL: 
+            INSERT INTO freelancer (user_id)
+            VALUES (%(user_id)s)
+            RETURNING freelancer_id
+            ]
+[parameters: {'user_id': 'fae74e23-6765-46f0-aad8-33648bb5e174'}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-03-28 23:47:36,791 | ERROR | AUTH |  | Registration error: (psycopg2.errors.NotNullViolation) null value in column "full_name" of relation "freelancer" violates not-null constraint
+DETAIL:  Failing row contains (075fc86d-79b7-4fc5-8a45-e58a1e9c5299, fae74e23-6765-46f0-aad8-33648bb5e174, null, null, null, null, null, hourly, USD, 0, 2026-03-28 16:47:36.771066, 2026-03-28 16:47:36.771066).
+
+[SQL: 
+            INSERT INTO freelancer (user_id)
+            VALUES (%(user_id)s)
+            RETURNING freelancer_id
+            ]
+[parameters: {'user_id': 'fae74e23-6765-46f0-aad8-33648bb5e174'}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+psycopg2.errors.NotNullViolation: null value in column "full_name" of relation "freelancer" violates not-null constraint
+DETAIL:  Failing row contains (075fc86d-79b7-4fc5-8a45-e58a1e9c5299, fae74e23-6765-46f0-aad8-33648bb5e174, null, null, null, null, null, hourly, USD, 0, 2026-03-28 16:47:36.771066, 2026-03-28 16:47:36.771066).
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/functions/authentication.py", line 133, in register_user
+    profile_result = db.execute_query(profile_query, params={"user_id": user_id})
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/functions/database.py", line 205, in execute_query
+    result = conn.execute(text(query), params or {})
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+    return meth(
+           ^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 527, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2363, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.IntegrityError: (psycopg2.errors.NotNullViolation) null value in column "full_name" of relation "freelancer" violates not-null constraint
+DETAIL:  Failing row contains (075fc86d-79b7-4fc5-8a45-e58a1e9c5299, fae74e23-6765-46f0-aad8-33648bb5e174, null, null, null, null, null, hourly, USD, 0, 2026-03-28 16:47:36.771066, 2026-03-28 16:47:36.771066).
+
+[SQL: 
+            INSERT INTO freelancer (user_id)
+            VALUES (%(user_id)s)
+            RETURNING freelancer_id
+            ]
+[parameters: {'user_id': 'fae74e23-6765-46f0-aad8-33648bb5e174'}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-03-28 23:49:32,754 | INFO | DATABASE |  | Database engine established
+2026-03-28 23:49:50,291 | DEBUG | DATABASE |  | Executing query: SELECT user_id, email, password, type FROM users WHERE email = :email | params={'email': 'user@example.com'}
+2026-03-28 23:49:50,307 | INFO | DATABASE |  | Query returned 0 rows
+2026-03-28 23:49:50,501 | DEBUG | DATABASE |  | Executing query: 
+        INSERT INTO users (email, password, type)
+        VALUES (:email, :password, :user_type)
+        RETURNING user_id
+         | params={'email': 'user@example.com', 'password': '$argon2id$v=19$m=65536,t=3,p=4$+oasRqQ77SupGxcsQAh4bQ$r7+mJqFDc/767C7c8gqAfNtyeoT2Ev2VCbN4oqOsYpE', 'user_type': 'freelancer'}
+2026-03-28 23:49:50,510 | INFO | DATABASE |  | Query returned 1 rows
+2026-03-28 23:49:50,512 | DEBUG | DATABASE |  | Executing query: 
+            INSERT INTO freelancer (user_id, full_name)
+            VALUES (:user_id, :full_name)
+            RETURNING freelancer_id
+             | params={'user_id': 'f2c8a630-2638-4346-82e5-8de728a5566e', 'full_name': 'string'}
+2026-03-28 23:49:50,550 | ERROR | DATABASE |  | Query database error: (psycopg2.errors.ForeignKeyViolation) insert or update on table "freelancer" violates foreign key constraint "freelancer_user_id_fkey"
+DETAIL:  Key (user_id)=(f2c8a630-2638-4346-82e5-8de728a5566e) is not present in table "users".
+
+[SQL: 
+            INSERT INTO freelancer (user_id, full_name)
+            VALUES (%(user_id)s, %(full_name)s)
+            RETURNING freelancer_id
+            ]
+[parameters: {'user_id': 'f2c8a630-2638-4346-82e5-8de728a5566e', 'full_name': 'string'}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+psycopg2.errors.ForeignKeyViolation: insert or update on table "freelancer" violates foreign key constraint "freelancer_user_id_fkey"
+DETAIL:  Key (user_id)=(f2c8a630-2638-4346-82e5-8de728a5566e) is not present in table "users".
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/functions/database.py", line 205, in execute_query
+    result = conn.execute(text(query), params or {})
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+    return meth(
+           ^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 527, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2363, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.IntegrityError: (psycopg2.errors.ForeignKeyViolation) insert or update on table "freelancer" violates foreign key constraint "freelancer_user_id_fkey"
+DETAIL:  Key (user_id)=(f2c8a630-2638-4346-82e5-8de728a5566e) is not present in table "users".
+
+[SQL: 
+            INSERT INTO freelancer (user_id, full_name)
+            VALUES (%(user_id)s, %(full_name)s)
+            RETURNING freelancer_id
+            ]
+[parameters: {'user_id': 'f2c8a630-2638-4346-82e5-8de728a5566e', 'full_name': 'string'}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-03-28 23:49:50,559 | ERROR | AUTH |  | Registration error: (psycopg2.errors.ForeignKeyViolation) insert or update on table "freelancer" violates foreign key constraint "freelancer_user_id_fkey"
+DETAIL:  Key (user_id)=(f2c8a630-2638-4346-82e5-8de728a5566e) is not present in table "users".
+
+[SQL: 
+            INSERT INTO freelancer (user_id, full_name)
+            VALUES (%(user_id)s, %(full_name)s)
+            RETURNING freelancer_id
+            ]
+[parameters: {'user_id': 'f2c8a630-2638-4346-82e5-8de728a5566e', 'full_name': 'string'}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+psycopg2.errors.ForeignKeyViolation: insert or update on table "freelancer" violates foreign key constraint "freelancer_user_id_fkey"
+DETAIL:  Key (user_id)=(f2c8a630-2638-4346-82e5-8de728a5566e) is not present in table "users".
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/functions/authentication.py", line 139, in register_user
+    profile_result = db.execute_query(profile_query, params={"user_id": user_id, "full_name": full_name})
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/functions/database.py", line 205, in execute_query
+    result = conn.execute(text(query), params or {})
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+    return meth(
+           ^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 527, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2363, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.IntegrityError: (psycopg2.errors.ForeignKeyViolation) insert or update on table "freelancer" violates foreign key constraint "freelancer_user_id_fkey"
+DETAIL:  Key (user_id)=(f2c8a630-2638-4346-82e5-8de728a5566e) is not present in table "users".
+
+[SQL: 
+            INSERT INTO freelancer (user_id, full_name)
+            VALUES (%(user_id)s, %(full_name)s)
+            RETURNING freelancer_id
+            ]
+[parameters: {'user_id': 'f2c8a630-2638-4346-82e5-8de728a5566e', 'full_name': 'string'}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-03-28 23:51:15,380 | INFO | DATABASE |  | Database engine established
+2026-03-28 23:51:20,116 | DEBUG | DATABASE |  | Executing query: SELECT user_id, email, password, type FROM users WHERE email = :email | params={'email': 'user@example.com'}
+2026-03-28 23:51:20,125 | INFO | DATABASE |  | Query returned 0 rows
+2026-03-28 23:51:20,243 | DEBUG | DATABASE |  | Executing query: 
+        INSERT INTO users (email, password, type)
+        VALUES (:email, :password, :user_type)
+        RETURNING user_id
+         | params={'email': 'user@example.com', 'password': '$argon2id$v=19$m=65536,t=3,p=4$RRVLiiU8Lb8qm5IpIOgIHw$q50idAifCX4Ahh6ycMHF8BRwGjeFJSbHLJhettqKA3w', 'user_type': 'freelancer'}
+2026-03-28 23:51:20,246 | INFO | DATABASE |  | Query returned 1 rows
+2026-03-28 23:51:20,249 | INFO | DATABASE |  | Write query executed and committed
+2026-03-28 23:51:20,250 | DEBUG | DATABASE |  | Executing query: 
+            INSERT INTO freelancer (user_id, full_name)
+            VALUES (:user_id, :full_name)
+            RETURNING freelancer_id
+             | params={'user_id': 'adf87383-9ffc-4dd2-8aa7-15dfa70d9d52', 'full_name': 'string'}
+2026-03-28 23:51:20,255 | INFO | DATABASE |  | Query returned 1 rows
+2026-03-28 23:51:20,256 | INFO | DATABASE |  | Write query executed and committed
+2026-03-28 23:51:20,257 | INFO | AUTH |  | User registered: user@example.com as freelancer
+2026-03-28 23:51:20,257 | INFO | AUTH |  | User registered: user@example.com
+2026-03-31 08:56:22,396 | INFO | DATABASE |  | Database engine established
+2026-03-31 08:56:22,721 | INFO | DATABASE |  | Database engine established
+2026-03-31 08:56:22,741 | INFO | DATABASE |  | Database engine established
+2026-03-31 08:56:22,761 | INFO | DATABASE |  | Database engine established
+2026-03-31 08:56:22,780 | INFO | DATABASE |  | Database engine established
+2026-03-31 08:56:22,797 | INFO | DATABASE |  | Database engine established
+2026-03-31 08:56:22,814 | INFO | DATABASE |  | Database engine established
+2026-03-31 08:57:28,830 | INFO | DATABASE |  | Database engine established
+2026-03-31 08:57:28,962 | INFO | DATABASE |  | Database engine established
+2026-03-31 08:57:28,977 | INFO | DATABASE |  | Database engine established
+2026-03-31 08:57:28,990 | INFO | DATABASE |  | Database engine established
+2026-03-31 08:57:29,004 | INFO | DATABASE |  | Database engine established
+2026-03-31 08:57:29,017 | INFO | DATABASE |  | Database engine established
+2026-03-31 08:57:29,027 | INFO | DATABASE |  | Database engine established
+2026-03-31 09:05:31,480 | DEBUG | DATABASE |  | Executing query: SELECT * FROM freelancer WHERE user_id = :param0 LIMIT 1 | params={'param0': 'string'}
+2026-03-31 09:05:31,492 | ERROR | DATABASE |  | Fetch database error: (psycopg2.errors.InvalidTextRepresentation) invalid input syntax for type uuid: "string"
+LINE 1: SELECT * FROM freelancer WHERE user_id = 'string' LIMIT 1
+                                                 ^
+
+[SQL: SELECT * FROM freelancer WHERE user_id = %(param0)s LIMIT 1]
+[parameters: {'param0': 'string'}]
+(Background on this error at: https://sqlalche.me/e/20/9h9h)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+psycopg2.errors.InvalidTextRepresentation: invalid input syntax for type uuid: "string"
+LINE 1: SELECT * FROM freelancer WHERE user_id = 'string' LIMIT 1
+                                                 ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/functions/database.py", line 66, in fetch_data
+    result = conn.execute(text(query), params)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+    return meth(
+           ^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 527, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2363, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.DataError: (psycopg2.errors.InvalidTextRepresentation) invalid input syntax for type uuid: "string"
+LINE 1: SELECT * FROM freelancer WHERE user_id = 'string' LIMIT 1
+                                                 ^
+
+[SQL: SELECT * FROM freelancer WHERE user_id = %(param0)s LIMIT 1]
+[parameters: {'param0': 'string'}]
+(Background on this error at: https://sqlalche.me/e/20/9h9h)
+2026-03-31 09:05:31,512 | ERROR | FREELANCER_FUNCTIONS |  | Error fetching freelancer by user_id: (psycopg2.errors.InvalidTextRepresentation) invalid input syntax for type uuid: "string"
+LINE 1: SELECT * FROM freelancer WHERE user_id = 'string' LIMIT 1
+                                                 ^
+
+[SQL: SELECT * FROM freelancer WHERE user_id = %(param0)s LIMIT 1]
+[parameters: {'param0': 'string'}]
+(Background on this error at: https://sqlalche.me/e/20/9h9h)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+psycopg2.errors.InvalidTextRepresentation: invalid input syntax for type uuid: "string"
+LINE 1: SELECT * FROM freelancer WHERE user_id = 'string' LIMIT 1
+                                                 ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/routes/freelancers/freelancer_functions.py", line 198, in get_freelancer_by_user_id
+    rows = db.fetch_data(
+           ^^^^^^^^^^^^^^
+  File "/app/functions/database.py", line 66, in fetch_data
+    result = conn.execute(text(query), params)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+    return meth(
+           ^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 527, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2363, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.DataError: (psycopg2.errors.InvalidTextRepresentation) invalid input syntax for type uuid: "string"
+LINE 1: SELECT * FROM freelancer WHERE user_id = 'string' LIMIT 1
+                                                 ^
+
+[SQL: SELECT * FROM freelancer WHERE user_id = %(param0)s LIMIT 1]
+[parameters: {'param0': 'string'}]
+(Background on this error at: https://sqlalche.me/e/20/9h9h)
+2026-03-31 09:05:31,514 | ERROR | FREELANCER_ROUTER |  | Error creating freelancer: (psycopg2.errors.InvalidTextRepresentation) invalid input syntax for type uuid: "string"
+LINE 1: SELECT * FROM freelancer WHERE user_id = 'string' LIMIT 1
+                                                 ^
+
+[SQL: SELECT * FROM freelancer WHERE user_id = %(param0)s LIMIT 1]
+[parameters: {'param0': 'string'}]
+(Background on this error at: https://sqlalche.me/e/20/9h9h)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+psycopg2.errors.InvalidTextRepresentation: invalid input syntax for type uuid: "string"
+LINE 1: SELECT * FROM freelancer WHERE user_id = 'string' LIMIT 1
+                                                 ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/routes/freelancers/freelancer_routes.py", line 60, in create_freelancer
+    existing = FreelancerFunctions.get_freelancer_by_user_id(freelancer.user_id)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/routes/freelancers/freelancer_functions.py", line 198, in get_freelancer_by_user_id
+    rows = db.fetch_data(
+           ^^^^^^^^^^^^^^
+  File "/app/functions/database.py", line 66, in fetch_data
+    result = conn.execute(text(query), params)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+    return meth(
+           ^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 527, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2363, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.DataError: (psycopg2.errors.InvalidTextRepresentation) invalid input syntax for type uuid: "string"
+LINE 1: SELECT * FROM freelancer WHERE user_id = 'string' LIMIT 1
+                                                 ^
+
+[SQL: SELECT * FROM freelancer WHERE user_id = %(param0)s LIMIT 1]
+[parameters: {'param0': 'string'}]
+(Background on this error at: https://sqlalche.me/e/20/9h9h)
+2026-03-31 09:49:07,809 | INFO | DATABASE |  | Database engine established
+2026-03-31 09:49:48,450 | INFO | DATABASE |  | Database engine established
+2026-03-31 10:00:45,176 | INFO | DATABASE |  | Database engine established
+2026-03-31 10:00:48,123 | INFO | DATABASE |  | Database engine established
+2026-03-31 10:01:18,461 | INFO | DATABASE |  | Database engine established
+2026-03-31 10:01:18,922 | INFO | DATABASE |  | Database engine established
+2026-03-31 10:01:18,922 | INFO | DB_MANAGER |  | Global database engine initialized
+2026-03-31 10:01:18,922 | INFO | LIFESPAN |  | Application startup complete - database initialized
+2026-03-31 10:02:41,257 | DEBUG | DATABASE |  | Executing query: SELECT user_id, email, password, type, created_at, updated_at FROM users WHERE email = :param0 LIMIT 1 | params={'param0': 'test@freelancer.com'}
+2026-03-31 10:02:41,270 | INFO | DATABASE |  | Fetched 0 rows from users
+2026-03-31 10:02:41,273 | DEBUG | DATABASE |  | Executing insert into users
+2026-03-31 10:02:41,287 | INFO | DATABASE |  | Inserted 1 rows into users
+2026-03-31 10:02:41,288 | INFO | USERS_FUNCTIONS |  | User test@freelancer.com created with ID 718da02c-df9a-49f7-b525-6df9c3843f50
+2026-03-31 10:02:41,288 | INFO | USERS_ROUTER |  | User created: test@freelancer.com with ID 718da02c-df9a-49f7-b525-6df9c3843f50
+2026-03-31 10:24:22,650 | INFO | DB_MANAGER |  | Database connections closed
+2026-03-31 10:24:22,650 | INFO | LIFESPAN |  | Application shutdown complete - database connections closed
+2026-03-31 10:24:25,322 | INFO | DATABASE |  | Database engine established
+2026-03-31 10:24:25,731 | INFO | DATABASE |  | Database engine established
+2026-03-31 10:24:25,731 | INFO | DB_MANAGER |  | Global database engine initialized
+2026-03-31 10:24:25,731 | INFO | LIFESPAN |  | Application startup complete - database initialized
+2026-03-31 10:35:17,745 | INFO | DATABASE |  | Database engine established
+2026-03-31 10:35:18,073 | INFO | DATABASE |  | Database engine established
+2026-03-31 10:35:18,073 | INFO | DB_MANAGER |  | Global database engine initialized
+2026-03-31 10:35:18,073 | INFO | LIFESPAN |  | Application startup complete - database initialized
+2026-03-31 12:53:03,671 | INFO | DATABASE |  | Database engine established
+2026-03-31 12:59:13,631 | INFO | DATABASE |  | Database engine established
+2026-03-31 12:59:20,324 | INFO | DATABASE |  | Database engine established
+2026-03-31 12:59:51,453 | INFO | DATABASE |  | Database engine established
+2026-03-31 12:59:51,792 | INFO | DATABASE |  | Database engine established
+2026-03-31 12:59:51,792 | INFO | DB_MANAGER |  | Global database engine initialized
+2026-03-31 12:59:51,793 | INFO | LIFESPAN |  | Application startup complete - database initialized
+2026-03-31 13:01:52,656 | DEBUG | DATABASE |  | Executing query: SELECT * FROM freelancer WHERE full_name ILIKE '%' || :search_term || '%' ORDER BY created_at DESC | params={'search_term': 'testing'}
+2026-03-31 13:01:52,671 | INFO | DATABASE |  | Query returned 0 rows
+2026-03-31 13:01:52,672 | INFO | FREELANCER_FUNCTIONS |  | Found 0 freelancers matching 'testing'
+2026-03-31 13:03:03,166 | DEBUG | DATABASE |  | Executing query: SELECT * FROM freelancer WHERE user_id = :param0 LIMIT 1 | params={'param0': 'adf87383-9ffc-4dd2-8aa7-15dfa70d9d52'}
+2026-03-31 13:03:03,172 | INFO | DATABASE |  | Fetched 1 rows from freelancer
+2026-03-31 13:03:03,174 | INFO | FREELANCER_FUNCTIONS |  | Freelancer for user adf87383-9ffc-4dd2-8aa7-15dfa70d9d52 found
+2026-03-31 13:03:26,552 | DEBUG | DATABASE |  | Executing query: SELECT * FROM freelancer WHERE freelancer_id = :param0 LIMIT 1 | params={'param0': 'adf87383-9ffc-4dd2-8aa7-15dfa70d9d52'}
+2026-03-31 13:03:26,558 | INFO | DATABASE |  | Fetched 0 rows from freelancer
+2026-03-31 13:03:26,562 | DEBUG | DATABASE |  | Executing query: SELECT * FROM freelancer WHERE user_id = :param0 LIMIT 1 | params={'param0': 'adf87383-9ffc-4dd2-8aa7-15dfa70d9d52'}
+2026-03-31 13:03:26,565 | INFO | DATABASE |  | Fetched 1 rows from freelancer
+2026-03-31 13:03:26,566 | INFO | FREELANCER_FUNCTIONS |  | Freelancer for user adf87383-9ffc-4dd2-8aa7-15dfa70d9d52 found
+2026-03-31 13:03:26,567 | DEBUG | DATABASE |  | Executing update: UPDATE freelancer SET full_name = :full_name, bio = :bio, estimated_rate = :estimated_rate, rate_time = :rate_time, rate_currency = :rate_currency WHERE freelancer_id = :cond0 | params={'full_name': 'TEST 1 FREELANCERS', 'bio': 'this is user freelancers dummy 1', 'estimated_rate': 0.0, 'rate_time': 'hourly', 'rate_currency': 'IDR', 'cond0': UUID('2fd32253-90af-43d7-8994-51d013a6bb96')}
+2026-03-31 13:03:26,595 | INFO | DATABASE |  | Updated rows in freelancer
+2026-03-31 13:03:26,596 | DEBUG | DATABASE |  | Executing query: SELECT * FROM freelancer WHERE freelancer_id = :param0 LIMIT 1 | params={'param0': UUID('2fd32253-90af-43d7-8994-51d013a6bb96')}
+2026-03-31 13:03:26,600 | INFO | DATABASE |  | Fetched 1 rows from freelancer
+2026-03-31 13:03:26,601 | INFO | FREELANCER_FUNCTIONS |  | Freelancer 2fd32253-90af-43d7-8994-51d013a6bb96 found
+2026-03-31 13:03:26,602 | DEBUG | DATABASE |  | Executing query: SELECT embedding_id FROM freelancer_embedding WHERE freelancer_id = :freelancer_id | params={'freelancer_id': UUID('2fd32253-90af-43d7-8994-51d013a6bb96')}
+2026-03-31 13:03:26,605 | INFO | DATABASE |  | Query returned 0 rows
+2026-03-31 13:03:26,611 | DEBUG | DATABASE |  | Executing insert into freelancer_embedding
+2026-03-31 13:03:26,628 | INFO | DATABASE |  | Inserted 1 rows into freelancer_embedding
+2026-03-31 13:03:26,629 | INFO | EMBEDDING_FUNCTIONS |  | Created freelancer embedding: 0982e8e2-802d-4fce-a773-9a9668e5ec92
+2026-03-31 13:03:26,629 | INFO | FREELANCER_FUNCTIONS |  | Freelancer 2fd32253-90af-43d7-8994-51d013a6bb96 updated
+2026-03-31 13:03:26,630 | DEBUG | DATABASE |  | Executing query: SELECT * FROM freelancer WHERE freelancer_id = :param0 LIMIT 1 | params={'param0': UUID('2fd32253-90af-43d7-8994-51d013a6bb96')}
+2026-03-31 13:03:26,632 | INFO | DATABASE |  | Fetched 1 rows from freelancer
+2026-03-31 13:03:26,632 | INFO | FREELANCER_FUNCTIONS |  | Freelancer 2fd32253-90af-43d7-8994-51d013a6bb96 found
+2026-03-31 13:03:26,633 | INFO | FREELANCER_ROUTER |  | Freelancer 2fd32253-90af-43d7-8994-51d013a6bb96 updated
+2026-03-31 13:44:22,125 | INFO | DB_MANAGER |  | Database connections closed
+2026-03-31 13:44:22,130 | INFO | LIFESPAN |  | Application shutdown complete - database connections closed
+2026-03-31 13:46:19,439 | INFO | DATABASE |  | Database engine established
+2026-03-31 13:46:19,926 | INFO | DATABASE |  | Database engine established
+2026-03-31 13:46:19,926 | INFO | DB_MANAGER |  | Global database engine initialized
+2026-03-31 13:46:19,926 | INFO | LIFESPAN |  | Application startup complete - database initialized
+2026-03-31 13:46:27,669 | DEBUG | DATABASE |  | Executing query: SELECT * FROM freelancer WHERE freelancer_id = :param0 LIMIT 1 | params={'param0': 'adf87383-9ffc-4dd2-8aa7-15dfa70d9d52'}
+2026-03-31 13:46:27,674 | INFO | DATABASE |  | Fetched 0 rows from freelancer
+2026-03-31 13:46:27,676 | DEBUG | DATABASE |  | Executing query: SELECT * FROM freelancer WHERE user_id = :param0 LIMIT 1 | params={'param0': 'adf87383-9ffc-4dd2-8aa7-15dfa70d9d52'}
+2026-03-31 13:46:27,679 | INFO | DATABASE |  | Fetched 1 rows from freelancer
+2026-03-31 13:46:27,681 | INFO | FREELANCER_FUNCTIONS |  | Freelancer for user adf87383-9ffc-4dd2-8aa7-15dfa70d9d52 found
+2026-03-31 13:46:27,683 | DEBUG | DATABASE |  | Executing update: UPDATE freelancer SET full_name = :full_name, bio = :bio, estimated_rate = :estimated_rate, rate_time = :rate_time, rate_currency = :rate_currency WHERE freelancer_id = :cond0 | params={'full_name': 'TEST 1 FREELANCERS', 'bio': 'this is user freelancers dummy 1', 'estimated_rate': 0.0, 'rate_time': 'hourly', 'rate_currency': 'IDR', 'cond0': '2fd32253-90af-43d7-8994-51d013a6bb96'}
+2026-03-31 13:46:27,695 | INFO | DATABASE |  | Updated rows in freelancer
+2026-03-31 13:46:27,697 | DEBUG | DATABASE |  | Executing query: SELECT * FROM freelancer WHERE freelancer_id = :param0 LIMIT 1 | params={'param0': '2fd32253-90af-43d7-8994-51d013a6bb96'}
+2026-03-31 13:46:27,701 | INFO | DATABASE |  | Fetched 1 rows from freelancer
+2026-03-31 13:46:27,705 | INFO | FREELANCER_FUNCTIONS |  | Freelancer 2fd32253-90af-43d7-8994-51d013a6bb96 found
+2026-03-31 13:46:27,707 | DEBUG | DATABASE |  | Executing query: SELECT embedding_id FROM freelancer_embedding WHERE freelancer_id = :freelancer_id | params={'freelancer_id': '2fd32253-90af-43d7-8994-51d013a6bb96'}
+2026-03-31 13:46:27,715 | INFO | DATABASE |  | Query returned 1 rows
+2026-03-31 13:46:27,719 | DEBUG | DATABASE |  | Executing update: UPDATE freelancer_embedding SET embedding_vector = :embedding_vector, source_text = :source_text, embedding_metadata = :embedding_metadata WHERE embedding_id = :cond0 | params={'embedding_vector': '[0.21042404826858518, 0.32389074389445704, 0.9907781749856804, 0.49726184944671326, 0.14283828037256063, 0.7466534294677772, 0.9344615501610641, 0.02461974853988902, 0.9783334815774801, 0.06642635426270271, 0.06100190605306732, 0.6036177416154409, 0.9475502754849758, 0.4763815723132666, 0.24166447875380326, 0.5499614517372211, 0.480327091036174, 0.6700308477944763, 0.33049536770599575, 0.7387766345405026, 0.9624258583785111, 0.9191813982884997, 0.8008110628369329, 0.9692550772961074, 0.618579164097325, 0.023621415856297623, 0.717426829173091, 0.3165354795998141, 0.10032951818855074, 0.22814328387989335, 0.25556571764262237, 0.7139067713595305, 0.5205575128065855, 0.5549097887517064, 0.40279836981126504, 0.49857962129346733, 0.8184143513060911, 0.8325217300245443, 0.19244565016248827, 0.7138516519601226, 0.66965835991411, 0.5648229914753423, 0.2953644434617305, 0.18460738656952425, 0.9150859998591101, 0.23662751124517845, 0.6905623994610148, 0.8357815665896094, 0.5185812215673027, 0.5417662061455223, 0.22838016830056274, 0.8738897488862578, 0.1901674073570877, 0.07644163026280992, 0.5658834214346808, 0.33167033115250966, 0.46768109763993504, 0.7941533137381328, 0.8319723000405476, 0.5311979810223433, 0.9700892494996882, 0.9450546742300773, 0.4990315020362053, 0.910748503526092, 0.22080339126809811, 0.44980980762981226, 0.38423643567247834, 0.9077516408555476, 0.49323263514190596, 0.5502850961250814, 0.876139098166231, 0.7494047242964778, 0.1373777253557663, 0.9265237165264807, 0.400105094859706, 0.6794822954708104, 0.6497121812836351, 0.4002315860088035, 0.9959502242691286, 0.6589926530255902, 0.046549580874157725, 0.18522663177127108, 0.04151433315835151, 0.6264593083950583, 0.6858132244390729, 0.5983912034787515, 0.7725957482274463, 0.9672313629961584, 0.10217931667871016, 0.7294390602839611, 0.039986109602764386, 0.9104953424866113, 0.15896516190796117, 0.9468227538583854, 0.3527410033406868, 0.24611828952440873, 0.5662219016799861, 0.5868520053284602, 0.5345292312588839, 0.22366406047437948, 0.17837339995724677, 0.8299834242085242, 0.5610289544066203, 0.9142279276531352, 0.6677070754270333, 0.24928388515567723, 0.778395133341414, 0.04060890204244849, 0.04912467310961255, 0.34748724908944273, 0.4991678785617656, 0.8893031688633385, 0.1961462432710973, 0.6375332222653752, 0.4361432857798323, 0.6089014939024467, 0.09553205590607272, 0.4231644692509615, 0.19076471253354532, 0.6726311476816826, 0.4068132973106052, 0.3586853920983901, 0.1418956981907714, 0.546793266648452, 0.8989681093907285, 0.708714384412374, 0.3497963293064855, 0.3606755164208123, 0.953741547138099, 0.5622132076956637, 0.09761730732844531, 0.5459792807349212, 0.35268102944519686, 0.5415418269741971, 0.03848587635812273, 0.9244479166882992, 0.08798714137687369, 0.08644773258256244, 0.3161929705938048, 0.5009241881490962, 0.2925029148271705, 0.08024008668580351, 0.22906153279715824, 0.9609199982535407, 0.43918914512620366, 0.31747931660827056, 0.7551521282537691, 0.05184732073552101, 0.6910208695310707, 0.14316289762328405, 0.0124242590929039, 0.35608711387403147, 0.16223198227268287, 0.25150753255285396, 0.19261506126604722, 0.3949461508770197, 0.6675092312082817, 0.7410545360807351, 0.011314048910353813, 0.37705368840250686, 0.3799601213768282, 0.8638501215896845, 0.7802077040917536, 0.4307228910498997, 0.7194865370613616, 0.5048997991303243, 0.550165335344834, 0.12551743503780344, 0.5486486144536521, 0.6706464797514388, 0.34474019219988783, 0.4379726383950493, 0.03374894112601723, 0.29793574163190695, 0.14108741040441286, 0.22531462533656488, 0.03530534321273626, 0.7665750377011465, 0.028901701644371447, 0.40801810541055095, 0.5803071804073892, 0.8071304701159016, 0.8468563522681936, 0.2547323562261308, 0.14895402544480918, 0.7884011255071254, 0.10524312418430715, 0.6626969608844145, 0.93759973085019, 0.760690252186487, 0.7904218353372706, 0.25536197350091705, 0.6169791784511003, 0.9033812767556602, 0.7583021454495223, 0.24472585854112172, 0.9620083909750533, 0.20098851113410332, 0.610237354588699, 0.025753780473650956, 0.23003397248523727, 0.1715685670481899, 0.4511822425112135, 0.270821911580167, 0.8376424241338053, 0.8404217422050336, 0.5701512059681388, 0.10883905478665235, 0.8644315481806629, 0.9584016236064359, 0.7143769136007141, 0.6531963276528692, 0.39400286986032595, 0.4224920086441486, 0.7731366983218658, 0.7104792133626423, 0.6055167409580191, 0.6720029562664884, 0.05579514177191869, 0.881123901220545, 0.2676672527474421, 0.8689399615218019, 0.5349582333253116, 0.0892736562088321, 0.8440581619425382, 0.43785172529514327, 0.2167910534004278, 0.9514483601436977, 0.757490809879072, 0.019283465859862736, 0.5445441011349993, 0.23204937541117776, 0.4885832462212629, 0.6858562435519409, 0.9714253165670785, 0.47795028971292275, 0.01762455555218201, 0.23135272395169404, 0.05431699028432446, 0.3549655289172692, 0.37766064138075606, 0.14549301361364297, 0.19991689203268936, 0.9285860244152043, 0.10706521341270159, 0.8731003438172692, 0.7175428894946596, 0.07456813601305023, 0.37182375637249576, 0.19388236983776286, 0.04012356207445911, 0.10584817267658464, 0.10267864511462677, 0.7696740975751681, 0.29575496208879626, 0.8294987473664925, 0.15043839920243884, 0.29978786580672523, 0.8684126299297737, 0.25677378758075564, 0.13081531146387093, 0.11694726678491818, 0.7428201721927872, 0.21874945225860398, 0.4462658275264769, 0.054704931439372495, 0.6042728483971432, 0.22140499165589556, 0.19411132292678102, 0.4288661044907679, 0.7549389926471679, 0.9083239159933081, 0.07149964638604689, 0.07152069417276807, 0.34726302108537255, 0.479272894986582, 0.8299032203345522, 0.07042750819103927, 0.6895885677764155, 0.6289090083832343, 0.7291757444662661, 0.9042676698495394, 0.5952735286051002, 0.6141284929882851, 0.8043106685916623, 0.6355052302236899, 0.9722018780619994, 0.6594300294779696, 0.8309549105045929, 0.24928083537770795, 0.06622220662181444, 0.6235657741182328, 0.6322125925569045, 0.5833251491701003, 0.9862307786686643, 0.07232217920077977, 0.41038790331730823, 0.6955375820251333, 0.8019795336008009, 0.6375668356658801, 0.26387094715337556, 0.8136262641584892, 0.9500826223420668, 0.6974615365872223, 0.9159522082816145, 0.28392695377195376, 0.9997626204120313, 0.853449651559346, 0.040677342333113375, 0.21194027975985064, 0.964985637379538, 0.4003156022285582, 0.8400929984300539, 0.867213996106627, 0.5241336723733377, 0.1876766463589601, 0.5510929367569646, 0.32877880763057377, 0.05266208229611413, 0.1081953971557037, 0.24932647201090585, 0.8176870976928899, 0.09045363934560668, 0.6865146283837821, 0.25999945112969436, 0.9105983996560421, 0.04679764811694054, 0.4460033036321496, 0.4863157379618799, 0.4655491653042244, 0.819855031094966, 0.389484366098255, 0.44603581405622317, 0.6040375578072178, 0.3284664196270397, 0.13824773672709012, 0.6509461277385713, 0.2854602633629838, 0.7042704562733421, 0.2850114814289827, 0.29105871319137466, 0.9755368191103045, 0.9469070010696984, 0.5007818868733167, 0.09065827479684518, 0.6016587934796219, 0.5945392042476573, 0.038672680846219776, 0.03458398842989352, 0.019643234277871846, 0.4236365402378708, 0.5364593904785064, 0.9879281595940002, 0.70181654220577, 0.45934240697796536, 0.9853395438084616, 0.37745346525336565, 0.6102947407942738, 0.4621044800570061, 0.8529313941396336, 0.6906021653642583, 0.7117948854914649, 0.13767064751332803, 0.5868238002744478, 0.10502809880344088, 0.7203893050987974, 0.395467963595162, 0.062431380422832694, 0.2794773741928205, 0.04452460173359174, 0.4228562974696668, 0.05960155056990368, 0.9446665970845426, 0.6104959519170127, 0.653004497551919, 0.44486021546813237, 0.5552515187492568, 0.028613857118070518, 0.03792992100173842, 0.14248267306403128, 0.09468341174048556, 0.5455422864134669, 0.38929898051729883, 0.5583589355614325, 0.03161679108837434, 0.21038713033333678, 0.13134784186121462, 0.5216169220799599, 0.8323387646277806, 0.5855170599635838, 0.2740499377029556, 0.782496551043959, 0.4096572810910053, 0.12420364106263315, 0.35515226968624214, 0.38075647846246663, 0.2897195933242832, 0.6120403764804189, 0.7091631393426929, 0.1543234572195391, 0.5282612985246076, 0.0788830943869705, 0.5353207038526014, 0.9288915039555614, 0.16205669984483595, 0.520276652876875, 0.002185232710297025, 0.12085633590256695, 0.3828937567580897, 0.49175899007487767, 0.6479877529258106, 0.8851574953426632, 0.08183491058895198, 0.8163478202891497, 0.922729984123514, 0.8901076559166875, 0.7861785985557571, 0.9505438383958728, 0.5195320764725078, 0.1841396963632086, 0.26597033011364424, 0.27217886171256833, 0.8183135793562284, 0.6207824613645099, 0.8729051878436196, 0.3327131186225257, 0.033146716322420056, 0.5963811590715467, 0.6889472416848087, 0.5894177090051976, 0.43933126766530217, 0.4634450558875337, 0.33699141533851873, 0.9980289837335469, 0.23979280735778963, 0.2204873659559311, 0.40460534838498563, 0.9041308994197251, 0.743122357023679, 0.6422562914896103, 0.28208237645963086, 0.7031617245791347, 0.14426323716084344, 0.2687538819261759, 0.7882684999437821, 0.4819879748026513, 0.7689011204671472, 0.526758925477081, 0.7562795073183891, 0.07362973025462727, 0.2908741098406138, 0.29840473546581214, 0.7153728879569854, 0.9058944187998772, 0.41894447857067607, 0.14654412703243958, 0.4686731641442483, 0.3193396489637653, 0.48558926013224446, 0.5985547910452309, 0.5056257747659232, 0.10199394950822238, 0.7059606463682145, 0.5032516108979065, 0.3027526016623783, 0.5322876630331809, 0.24607279897817547, 0.13069933204140038, 0.7573291498350398, 0.29473496232544694, 0.5883818197690125, 0.4772169981129918, 0.8920794818783812, 0.9433585354012909, 0.3685916359456476, 0.25034343616184396, 0.7452904404196394, 0.1367018409835542, 0.2692103633092864, 0.4748686619427539, 0.14708846214396765, 0.27135004516916006, 0.21738695798420404, 0.6284752642943567, 0.457380419003406, 0.5465310297042095, 0.9391873924929067, 0.02475456394584208, 0.1652734990789143, 0.5957628331509235, 0.6830845701591268, 0.7321319881181061, 0.8647745363592879, 0.2630157160967581, 0.2791663514609831, 0.22410288213789453, 0.7101501968733561, 0.5820681758111377, 0.908754856185791, 0.4583958905798391, 0.2805077203340457, 0.6710425058600792, 0.6375569917990989, 0.46108186210477176, 0.45357077083691255, 0.2442497241590187, 0.17447475192039097, 0.4112421094415708, 0.34638308849106914, 0.9524867155620894, 0.6944507664531999, 0.33112123724627907, 0.0224288217091817, 0.06428203481707206, 0.48547446358145474, 0.9653317370499415, 0.6010470013584207, 0.4184947391823224, 0.22427018422132772, 0.6067797494050565, 0.003897798100686911, 0.7490186937989256, 0.9450166725664721, 0.10881943165486208, 0.08084239543523741, 0.34029664103876756, 0.1573377700178623, 0.2934165885119301, 0.9533992402851538, 0.6266248259626905, 0.583757766844724, 0.5305774101781285, 0.04707266146743727, 0.050118307528206896, 0.8060466632992728, 0.946690456889287, 0.06827270631083537, 0.1040661996249882, 0.5343646812081763, 0.9684415104586803, 0.2832714236682162, 0.3551532102872368, 0.9826463091482041, 0.22555948682366223, 0.7351534946366347, 0.2790352050541768, 0.9617445042535112, 0.6550552064387393, 0.4118050285140742, 0.2021093224231142, 0.8512981914224317, 0.8164978858028128, 0.7371120980679455, 0.6921042801625751, 0.9125968942897715, 0.1271718789443126, 0.3473237806621182, 0.3672748841584096, 0.8345682507081487, 0.7726181014023044, 0.36634448196202296, 0.5947182752668273, 0.06789770256552707, 0.36457884653047345, 0.5865512326575584, 0.913482487734072, 0.7544200122281899, 0.6960339207339853, 0.7595353143918236, 0.7358394539807803, 0.11165995179132193, 0.7722426940176742, 0.16156848361833098, 0.18299653795856685, 0.11584503885578723, 0.9355733206271205, 0.7896416314676877, 0.5678482974433303, 0.030439150487874267, 0.28428609085705636, 0.5945486579150521, 0.5083111175713795, 0.17615562842970844, 0.0027923001203735698, 0.2733320089445681, 0.5567940137700125, 0.5156416916102204, 0.7788445277074587, 0.8433087313586667, 0.24953540768651594, 0.8114859054894878, 0.8822158105903896, 0.8568102207942359, 0.6312651965209249, 0.05945658769807116, 0.8819371838957394, 0.28792905911265865, 0.2556735574635267, 0.44514646825717463, 0.027729115031036256, 0.9938656675872846, 0.147786938638387, 0.22945659487913517, 0.09909904924373603, 0.8332089311220254, 0.0530701689061317, 0.25498832808775374, 0.5158289728482477, 0.7496048701893079, 0.8465204731836681, 0.3046194686881353, 0.8605999960342317, 0.8389486438367102, 0.9416578356197408, 0.30030050953472764, 0.8933550681043929, 0.6873088595306706, 0.06248065539991565, 0.8291658047883962, 0.4058007790728698, 0.8609807090409934, 0.353140082533663, 0.8580330315173244, 0.681936942479697, 0.24569205656721282, 0.18037689857285, 0.5366922131410607, 0.23187791657403523, 0.06937043396891684, 0.17366883464790184, 0.05823516472634749, 0.6841728157464302, 0.0637961655110888, 0.9059094705347422, 0.7299337723704051, 0.9484904871779837, 0.06257225545060108, 0.10255102652051551, 0.5480680310228834, 0.6558332579576654, 0.7788801147478339, 0.14322897913712207, 0.8405541169361515, 0.36405289895652815, 0.8942146361299557, 0.6776538817170626, 0.8007233917176539, 0.813348447715713, 0.1313568730025324, 0.15245510285568775, 0.8172802289374004, 0.9179492514883167, 0.1302888218260424, 0.9448374121802807, 0.496501359361067, 0.6951752828799448, 0.8046598132046738, 0.7003292303117821, 0.7175457848408843, 0.7734736455248287, 0.2861093021430884, 0.5085250454845129, 0.9942642513887597, 0.32924446993960443, 0.7451707058590504, 0.2632620955724234, 0.600191715199855, 0.9869918694815479, 0.102213960058953, 0.9643540527694894, 0.17917247460631514, 0.7329217721673256, 0.5582225115659977, 0.6004675549404592, 0.19178910831934814, 0.5685527602535481, 0.39481030136930273, 0.24502323008227056, 0.8637957398121577, 0.5247239803924068, 0.27542403339447674, 0.7255478128020008, 0.2372983011325357, 0.1067439489818427, 0.540074727610026, 0.6160942229202963, 0.5930711526826525, 0.061889012767442186, 0.5217456309884081, 0.28609354145121924, 0.23720116968444427, 0.15535986256911194, 0.6381650924859865, 0.5765261357824625, 0.7090383161808239, 0.27427559239502697, 0.47720250265357333, 0.7581093293179889, 0.8728445478577982, 0.9262116412803755, 0.4120252125377457, 0.7837413935773845, 0.947769449990702, 0.6540890343005428, 0.09333273783440399, 0.25939245098724273, 0.12179361231625296, 0.6995651086473472, 0.37474266422245606, 0.02999908188376743, 0.13424985969662628, 0.2538448724059196, 0.015234311609541251, 0.5852002821363771, 0.930968507310515, 0.056491092021157985, 0.03495012361351779, 0.23818292928065943, 0.5201750274610094, 0.637091721572435, 0.358089700282352, 0.8120762264498055, 0.11732131946260482, 0.8678607755049486, 0.4999798326610755, 0.21326426208133342, 0.010479589589711069, 0.18461085106877906, 0.8710014231915106, 0.1513287745332863, 0.17022678541782443, 0.005293887604296277, 0.8298715978365483, 0.40501268812033975, 0.5084665964197574, 0.2856210617585322, 0.7804751980901353, 0.485037014235418, 0.1674150472492183, 0.37312818346423116, 0.6358803018190173, 0.9665228672262296, 0.881501761895296, 0.7452240327571761, 0.7466222897240048, 0.40139542140498485, 0.574932595655524, 0.2923512471865165, 0.421121567760539, 0.8781716389127547, 0.7200389186020735, 0.3931788748964886, 0.2053248048611922, 0.7388407265631555, 0.11571641979764691, 0.14140836611632757, 0.39410156675984165, 0.8305111802251818, 0.4236545955969986, 0.6917814147359633, 0.5816905608252745, 0.8603179329001522, 0.06438222874761712, 0.12973512601866244, 0.27339419366801065, 0.4744204556482754, 0.3284836794809597, 0.48962054896636775, 0.7988387440955355, 0.6922800188067569, 0.5409397797455033, 0.34737406450147823, 0.15307742840009153, 0.8585355758269752, 0.28538827992113436, 0.09546322565957588, 0.7658946295843863, 0.13822666640302406, 0.5886613229993061, 0.37278604929325043, 0.5921417530874611, 0.884302187885308, 0.4258025648415139, 0.7603229596405472, 0.985558474168591, 0.19496998815003408, 0.7113743013166958, 0.626144396277804, 0.7774387846636688, 0.7488095283369642, 0.16808292577608797, 0.07877829296617278, 0.9499964703421337, 0.10099300309214132, 0.22857340212770705, 0.830373607963839, 0.2631947126435149, 0.14743697198599692, 0.8795772941831282, 0.8322195917011912, 0.351967996702535, 0.6995581455410766, 0.45226179085898055, 0.9023006023561372, 0.210863904837148, 0.0212090559510677, 0.026817299770340086, 0.3908862668172032, 0.5275432187444363, 0.16534159436026674, 0.3160713111536255, 0.09889872797104327, 0.15602268441716682, 0.19741678714485922, 0.8293419901434408, 0.3405633178002857, 0.1948991042237801, 0.8581967273302958, 0.2958679341448608, 0.4956173675725355, 0.4881494461008261, 0.5859505310436588, 0.30303885321956137, 0.2518400098411889, 0.6170621644009642, 0.8995261374787199, 0.019519350683057435, 0.05234010452652327, 0.8363128366964759, 0.2395473983705224, 0.27801831222011497, 0.4659396331224197, 0.0431770349419861, 0.08101585383820009, 0.12179209537343538, 0.40256427432432984, 0.7063575607962052, 0.9813570796820016, 0.989375522759756, 0.6594663155768004, 0.1097388452326089, 0.016083126220687083, 0.5830137532444126, 0.4944594620503595, 0.5683733187687013, 0.03930700582744595, 0.4807848653699618, 0.8279103599986043, 0.9236766842405031, 0.7899089646614952, 0.7310705689187824, 0.9140881360645159, 0.37531441537057997, 0.04314516165627691, 0.7486960046583198, 0.12176482156861335, 0.04852866481243656, 0.481776635686086, 0.46638718519334743, 0.5241929980814394, 0.5233232261189721, 0.5956468457648579, 0.7785849318027419, 0.6390085111456362, 0.9005924860063947, 0.1899788157454939, 0.9336831515577596, 0.9218574284746496, 0.7661574114078028, 0.2267270292012602, 0.35835946755185166, 0.9183113539214074, 0.08148612239108499, 0.350511880408776, 0.20981304373221155, 0.02297294154320595, 0.4310305731778259, 0.9816090781125013, 0.2395301647266761, 0.7734792893451468, 0.2879231633596401, 0.5171281319474802, 0.5716546461630035, 0.012573309720204207, 0.2224979899629752, 0.24943819195824302, 0.9588802729100748, 0.6322190563240788, 0.02794356875591597, 0.09021019204832514, 0.040198301430310446, 0.5980796931323907, 0.8693329701323802, 0.09721696587075435, 0.4364689002203984, 0.6414676424796372, 0.7137825277638326, 0.29042383597159616, 0.8513927830940466, 0.21468334780188214, 0.6014079824431929, 0.11032373535394113, 0.27535001083517474, 0.3805865712047639, 0.6691463808507898, 0.7920693640247782, 0.028306863108944924, 0.1270859493208445, 0.36139645078281557, 0.5358003719318113, 0.8338492650582349, 0.4697285799979477, 0.12840427441928315, 0.09375566820807513, 0.5240027259739776, 0.054654200529562935, 0.2401393596693282, 0.26882713583264517, 0.5138615332734838, 0.8479235031247752, 0.972566182580846, 0.44923540544508633, 0.654013941556318, 0.921139833904147, 0.841194773919554, 0.4131541495290262, 0.49224663761006404, 0.7482015314409062, 0.1607808574800097, 0.35160442682430937, 0.5514845861716385, 0.6979058979414651, 0.6734171334318506, 0.7555905099647993, 0.9488481187290276, 0.8033769788184568, 0.5631562532741552, 0.8014099496412947, 0.5181949537254934, 0.11506879972000661, 0.06744376312577371, 0.23565057058857375, 0.8752084739551355, 0.061180377375594786, 0.6329460382334434, 0.16110084342190412, 0.3670621704881337, 0.019989880656071435, 0.5268837239076324, 0.5164574250629774, 0.09201243331447051, 0.13217916941721208, 0.24345664587799876, 0.34860027192174736, 0.7230356055922489, 0.3576063182161492, 0.20449421643552845, 0.2163957736165718, 0.9130037054374955, 0.4644243478263905, 0.735755399539907, 0.5686647459544236, 0.2429428108284548, 0.5593766291961507, 0.9000500717904326, 0.027113707508267804, 0.2571499795540909, 0.9133890982738572, 0.10932768350865052, 0.7795049589890845, 0.2630227060636884, 0.8388503377298383, 0.3719460221336611, 0.41664054266834405, 0.7131179841139919, 0.8258252017206699, 0.2994182285205148, 0.3139395143680137, 0.03681224418869122, 0.6619831606210218, 0.7466619693331732, 0.9016378518084804, 0.47969373875722954, 0.9481148363450245, 0.18910654695186613, 0.5844123358555823, 0.9672361364583295, 0.20226292093976406, 0.034830227889218635, 0.04627250212078615, 0.024314380818230008, 0.21857131509005556, 0.22107156985694754, 0.15536937001140816, 0.8074175433677858, 0.1392735315345225, 0.9184725004686136, 0.906091464993567, 0.22929933744296782, 0.4951650149925354, 0.3787578067498396, 0.587753153424973, 0.05377025604807528, 0.1483818517157942, 0.49849626051069473, 0.24156570266631916, 0.793990616195299, 0.5662812855490722, 0.569580424609767, 0.6412438692180962, 0.9192646913179863, 0.33538751808763767, 0.22062844498053813, 0.9672644874579411, 0.8350182394131969, 0.834913729536208, 0.278327495771173, 0.33716432555104026, 0.2537578542609843, 0.0716490996226109, 0.5875194779940482, 0.9629573215839118, 0.02686372268842896, 0.505036405677112, 0.9350999967398452, 0.5108428592651749, 0.15213444361954598, 0.5415095310211715, 0.6774804821602164, 0.8829922158340103, 0.165208400735824, 0.3108585877567589, 0.3358852350954723, 0.3361703925221068, 0.9222839834698118, 0.4144280362126944, 0.9743954765608142, 0.9061412931698389, 0.5323381226832379, 0.8842230328357419, 0.3037505003451646, 0.9755798128201758, 0.7281444497908982, 0.7474210981111001, 0.6534218009586034, 0.7765889159961652, 0.5135995779765385, 0.8960039271341109, 0.6456058403738185, 0.1518809273260482, 0.06621200808466332, 0.6129208859186385, 0.11599965484030184, 0.5781449634693308, 0.7303254241050231, 0.9327286344576985, 0.90220607053578, 0.9491818313211401, 0.1502372712519484, 0.5374349790473407, 0.5781600257565208, 0.1929742327429168, 0.0838628661750026, 0.8847107791705554, 0.7590432548074065, 0.07423182921024796, 0.8007324379943688, 0.934437660757247, 0.08064973214925342, 0.23283257570975158, 0.3277373598644002, 0.31403309915608035, 0.23143800245366097, 0.8857746672022221, 0.3178649963383652, 0.5114821696773542, 0.863423518094319, 0.3533044093541462, 0.281520000456552, 0.2416593413653746, 0.8443131238386471, 0.6667500332073094, 0.9977709152125477, 0.8758023099359951, 0.24881257119503608, 0.19672951015279394, 0.3349148500875243, 0.2946392836197256, 0.761295874084015, 0.28165118773739195, 0.8670074216850567, 0.5265676840923198, 0.4143069944370441, 0.3101260901618589, 0.2704627640306444, 0.2605836416150684, 0.9778461009298269, 0.8136650300569587, 0.4309612214052615, 0.8218140945290667, 0.04996279548621363, 0.11232990340719429, 0.2624537460066758, 0.2685508190851692, 0.4356995299228401, 0.7931101177601443, 0.7132074656987122, 0.698056100158665, 0.9716189576649207, 0.17997991440758232, 0.48683282185976406, 0.48935579034033605, 0.2297794427410117, 0.4715531639043796, 0.5985380578131017, 0.339911911895171, 0.6308491649260871, 0.17239977088752534, 0.802908191315096, 0.5798194699615603, 0.0678672260374299, 0.8427053725830794, 0.8346584437554835, 0.33036892041354504, 0.5217939336947736, 0.12673381752628854, 0.9339113618479377, 0.5053461769592169, 0.23392817202896354, 0.2682428213226451, 0.20639086389074568, 0.3525677431865115, 0.06705320334621423, 0.9321110511693953, 0.18392089751566532, 0.7532340360165384, 0.6855934558351722, 0.29272886474265114, 0.6274976817427738, 0.21366633526943335, 0.3495460322054147, 0.9785983315195754, 0.9320419907045265, 0.49156224574267526, 0.08254488956495942, 0.24432285712065127, 0.6616041341348373, 0.602926150316848, 0.07680405308466098, 0.27816829547687005, 0.3443508418586959, 0.022549424419611386, 0.46701423073156645, 0.35261914224424973, 0.5397196277186849, 0.707327107627585, 0.01645071119732766, 0.6297812740003245, 0.2887890662471735, 0.24377397028028902, 0.5640091268610067, 0.7932583348624385, 0.749015001810717, 0.5636456889788449, 0.4379350650947217, 0.8870971489607097, 0.8731814188794147, 0.608964464581876, 0.31496682397239784, 0.9703153806774241, 0.5685619183896399, 0.9621751909032545, 0.15278994516472277, 0.6194079278616492, 0.10366884642741891, 0.8438344654626887, 0.5777356450864622, 0.018869000200597785, 0.9034398130374792, 0.5453190500223871, 0.26385355389786846, 0.4368358925509199, 0.6837877685196108, 0.8034131950846551, 0.14085296685861237, 0.19198776405744966, 0.14509614627928846, 0.16137776598309728, 0.6823756246647728, 0.584976350772472, 0.7668805221090594, 0.10479991186347781, 0.839507516716414, 0.9801078860986575, 0.9145302032411933, 0.4985927946872748, 0.2514020981887709, 0.565216166216643, 0.7840157653567872, 0.1938577438422313, 0.19808617974725418, 0.7760024001429406, 0.5298231479506837, 0.13960482416400777, 0.23596849425420052, 0.7104650914026046, 0.11856005262930147, 0.1483803171044049, 0.27569304426031127, 0.440402388824902, 0.10648392579531207, 0.03159022454897109, 0.9999911212843766, 0.644308473513144, 0.21084878728062895, 0.4293379061391813, 0.9289293014255476, 0.8052022875894904, 0.43729993610677653, 0.08954678913408476, 0.04729329850727648, 0.1623120397368285, 0.03298075347580409, 0.27743288134994704, 0.18699196359433456, 0.4097473816325504, 0.5154707973978885, 0.5537854316086077, 0.6657320126246499, 0.6257731957010838, 0.0697338172508497, 0.09934213241804035, 0.871387216221345, 0.17111948980504432, 0.024200176395974715, 0.6986175415665848, 0.07563644512843082, 0.2603847930176836, 0.9663497465059214, 0.37823118490460117, 0.9614001857059364, 0.3529848967414069, 0.9512613162837412, 0.8862423726246844, 0.2074375183425783, 0.40824211899418295, 0.7602715233981465, 0.3807354443717995, 0.997792741629555, 0.5860153338929565, 0.3339339032415235, 0.11734922767543221, 0.6085761968208329, 0.9694516070082108, 0.22015421435551674, 0.15840615145465098, 0.11477710640661953, 0.794220687679657, 0.09398484799745821, 0.10323295861445647, 0.8266695865639554, 0.6915939794276863, 0.9676120495223807, 0.5805897434861925, 0.10000433062531544, 0.6729571553389994, 0.2862314499196922, 0.4726183872500357, 0.4836284265846772, 0.15971799186837343, 0.41986798089497746, 0.6360374457094561, 0.9529420853920719, 0.9760872071100841, 0.43705826428060923, 0.9370973099522821, 0.4693652166175989, 0.8273169263026214, 0.9237552812355942, 0.5625535380745051, 0.12736280359784902, 0.19231690091137554, 0.261034483835921, 0.1926995147938334, 0.11087607766246621, 0.9364602776423769, 0.11360903719154314, 0.9661098707404234, 0.8059233637950237, 0.40329069218647107, 0.48123585410550174, 0.02326527872932571, 0.9892930537902871, 0.09730809638211924, 0.14150794156259672, 0.5031163942826802, 0.5763744462114605, 0.8221231509076518, 0.08356961836763344, 0.8245184891097237, 0.28908914212798864, 0.2272627022028253, 0.40983753306837045, 0.8726857007586575, 0.5761253582197762, 0.5247752146483183, 0.17899865166113804, 0.39300681476375865, 0.21543510498390805, 0.6240776575821503, 0.3683514728387376, 0.1984204776520987, 0.21564627071007791, 0.4522697325360483, 0.688170988537504, 0.2497292107956557, 0.9163169509899339, 0.45288846640651936, 0.6824685267975518, 0.6345558483816841, 0.5883525221043384, 0.048055897400834824, 0.7755315832723972, 0.5314763929898545, 0.49738199566663466, 0.8438882595360503, 0.3890015759959602, 0.8797769170565172, 0.801443958124346, 0.5843645448104847, 0.48383794699607086, 0.9587884423242303, 0.09178488236523419, 0.957227694704513, 0.5529310395089327, 0.5995067414226304, 0.31053226497903574, 0.7761155029517117, 0.6389316333183103, 0.5041344856738269, 0.1626220128459085, 0.6088310413094474, 0.7448013885729619, 0.6196468966682328, 0.11882650494579605, 0.7156878568432054, 0.7421546278316558, 0.8675106101114184, 0.22538273200808934, 0.38379132123430904, 0.7312601617251939, 0.6867240363154891, 0.6436473486368884, 0.7181493695709011, 0.9687140424647707, 0.3571076776145231, 0.43173110533093284, 0.04591310942641613, 0.16616278907449133, 0.8039866337532722, 0.42391833835632053, 0.6335929638174377, 0.5047020296752119, 0.721081691332604, 0.5547710437357003, 0.026723648389439192, 0.2913411739583218, 0.4176706390479762, 0.560913562312104, 0.4683119325289744, 0.5516323164459221, 0.5770898861854429, 0.5064458922534051, 0.7842510736757843, 0.829907075055862, 0.4558600262897793, 0.5703588592635548, 0.9042167611512973, 0.7886986692652936, 0.15169675813083328, 0.866292216441606, 0.08844017489802469, 0.18805526621985158, 0.8507161753867873, 0.9220764697306952, 0.8300616122962257, 0.4439238816062344, 0.4954992277731881, 0.8082862031660155, 0.3051413460394493, 0.5986933934210861, 0.46852459313916395, 0.026861218659740116, 0.27921151267031763, 0.2611826462944282, 0.9526346502353288, 0.8659574284241637, 0.7927262345467316, 0.4156977178888208, 0.07759624557697475, 0.9534109188592998, 0.01943577644392136, 0.9412447659133895, 0.19790132436660968, 0.879968517408631, 0.8127536366234077, 0.14468078629327719, 0.02037945940214836, 0.19920057523510337, 0.7865156609194738, 0.25109345643042325, 0.07439727067669755, 0.9579407704017449, 0.6218256176120956, 0.4614331418142531, 0.6710023770230114, 0.9626387468950334, 0.6737055021313485, 0.8465516385678002, 0.128172719839161, 0.5742921570961648, 0.5998156203177485, 0.11391546781798234, 0.3997501768228333, 0.28883196167386416, 0.8659631116103846, 0.2109167460169088, 0.620085952436781, 0.2414833164790574, 0.7628514956828298, 0.23609512343781036, 0.09368109840501226, 0.16658095265904016, 0.02009040631592307, 0.23649644545942816, 0.049260942109398353, 0.05948679101753551, 0.6414719502773015, 0.11954215435612914, 0.017534394993761637, 0.13261368573772625, 0.5134474643091114, 0.9841518142125629, 0.7101642293298555, 0.7965447854795613, 0.9580943209284399, 0.0961371796006597, 0.6210742200326592, 0.5074444135862183, 0.40107548534650717, 0.33857089493531856, 0.6476248646680135, 0.17276017956010115, 0.6467806656141128, 0.213923485043096, 0.19117353649979985, 0.11689112704745352, 0.24857251653104018, 0.14525478284223448, 0.4032539802362315, 0.6117952779560695, 0.09896134578534699, 0.3552644171134365, 0.037839363240819046, 0.04468994035223961, 0.8414636749684659, 0.5599218950507929, 0.2921495321267724, 0.7997645692131671, 0.5454736874897658, 0.3636706543719961, 0.479979319519113, 0.603037710697713, 0.7852430841156646, 0.09418563844519823, 0.019756675530533507, 0.6935873850455145, 0.9213626409203666, 0.09975289346130778, 0.1511814343970762, 0.7794728718245065, 0.7419233744308644, 0.5347038453240844, 0.8329852209991784, 0.3695017077500026, 0.526809801833984, 0.18632002398137704, 0.05880235279181889, 0.7069822461404229, 0.25941018598219234, 0.26452052513515256, 0.5541864490192145, 0.37498075809330456, 0.018362491823133542, 0.5804279290553717, 0.9142677351536019, 0.43427399385320886, 0.29886187442188894, 0.4927262359391996, 0.3175947408415354, 0.8346137472125522, 0.10531221693536708, 0.013101109702727598, 0.8028668251301607, 0.022201651001691136, 0.045852093079231326, 0.812341183791809, 0.07291339731652835, 0.6381843295656053, 0.5559100165562952, 0.7338480889457236, 0.5445769495381406, 0.9280400038408761, 0.6554350551560562, 0.6144537623502853, 0.28939407547296103, 0.2353600350764561, 0.6327153079476527, 0.04182675665854663, 0.4724987644135463, 0.7379197817777468, 0.5441335088953502, 0.7600847697493611, 0.5971635293123149, 0.20207753339131562, 0.8820716633332865, 0.30315864673868576, 0.5603485560326811, 0.20744261095165306, 0.8003295334864224, 0.5320607423541032, 0.6428755398688051, 0.0886272550740822, 0.5869508406504953, 0.06269492592691828, 0.980548588330378]', 'source_text': 'TEST 1 FREELANCERS - this is user freelancers dummy 1', 'embedding_metadata': '{"updated": true}', 'cond0': UUID('0982e8e2-802d-4fce-a773-9a9668e5ec92')}
+2026-03-31 13:46:27,736 | INFO | DATABASE |  | Updated rows in freelancer_embedding
+2026-03-31 13:46:27,736 | INFO | EMBEDDING_FUNCTIONS |  | Updated freelancer embedding: 0982e8e2-802d-4fce-a773-9a9668e5ec92
+2026-03-31 13:46:27,736 | INFO | FREELANCER_FUNCTIONS |  | Freelancer 2fd32253-90af-43d7-8994-51d013a6bb96 updated
+2026-03-31 13:46:27,738 | DEBUG | DATABASE |  | Executing query: SELECT * FROM freelancer WHERE freelancer_id = :param0 LIMIT 1 | params={'param0': '2fd32253-90af-43d7-8994-51d013a6bb96'}
+2026-03-31 13:46:27,745 | INFO | DATABASE |  | Fetched 1 rows from freelancer
+2026-03-31 13:46:27,746 | INFO | FREELANCER_FUNCTIONS |  | Freelancer 2fd32253-90af-43d7-8994-51d013a6bb96 found
+2026-03-31 13:46:27,746 | INFO | FREELANCER_ROUTER |  | Freelancer 2fd32253-90af-43d7-8994-51d013a6bb96 updated
+2026-03-31 13:46:52,361 | DEBUG | DATABASE |  | Executing query: SELECT * FROM freelancer WHERE freelancer_id = :param0 LIMIT 1 | params={'param0': 'adf87383-9ffc-4dd2-8aa7-15dfa70d9d52'}
+2026-03-31 13:46:52,365 | INFO | DATABASE |  | Fetched 0 rows from freelancer
+2026-03-31 13:46:52,369 | DEBUG | DATABASE |  | Executing query: SELECT * FROM freelancer WHERE user_id = :param0 LIMIT 1 | params={'param0': 'adf87383-9ffc-4dd2-8aa7-15dfa70d9d52'}
+2026-03-31 13:46:52,373 | INFO | DATABASE |  | Fetched 1 rows from freelancer
+2026-03-31 13:46:52,375 | INFO | FREELANCER_FUNCTIONS |  | Freelancer for user adf87383-9ffc-4dd2-8aa7-15dfa70d9d52 found
+2026-03-31 13:46:52,376 | DEBUG | DATABASE |  | Executing delete: DELETE FROM freelancer_embedding WHERE freelancer_id = :param0 | params={'param0': '2fd32253-90af-43d7-8994-51d013a6bb96'}
+2026-03-31 13:46:52,380 | INFO | DATABASE |  | Deleted rows from freelancer_embedding
+2026-03-31 13:46:52,381 | INFO | EMBEDDING_FUNCTIONS |  | Deleted freelancer embedding for 2fd32253-90af-43d7-8994-51d013a6bb96
+2026-03-31 13:46:52,382 | DEBUG | DATABASE |  | Executing delete: DELETE FROM freelancer WHERE freelancer_id = :param0 | params={'param0': '2fd32253-90af-43d7-8994-51d013a6bb96'}
+2026-03-31 13:46:52,398 | INFO | DATABASE |  | Deleted rows from freelancer
+2026-03-31 13:46:52,398 | INFO | FREELANCER_FUNCTIONS |  | Freelancer 2fd32253-90af-43d7-8994-51d013a6bb96 deleted
+2026-03-31 13:46:52,398 | INFO | FREELANCER_ROUTER |  | Freelancer 2fd32253-90af-43d7-8994-51d013a6bb96 deleted
+2026-03-31 13:47:44,440 | DEBUG | DATABASE |  | Executing query: SELECT user_id, email, type, created_at, updated_at FROM users WHERE user_id = :param0 LIMIT 1 | params={'param0': '718da02c-df9a-49f7-b525-6df9c3843f50'}
+2026-03-31 13:47:44,444 | INFO | DATABASE |  | Fetched 1 rows from users
+2026-03-31 13:47:44,445 | INFO | USERS_FUNCTIONS |  | User 718da02c-df9a-49f7-b525-6df9c3843f50 found
+2026-03-31 13:47:44,446 | DEBUG | DATABASE |  | Executing delete: DELETE FROM users WHERE user_id = :param0 | params={'param0': '718da02c-df9a-49f7-b525-6df9c3843f50'}
+2026-03-31 13:47:44,454 | INFO | DATABASE |  | Deleted rows from users
+2026-03-31 13:47:44,454 | INFO | USERS_FUNCTIONS |  | User 718da02c-df9a-49f7-b525-6df9c3843f50 deleted
+2026-03-31 13:47:44,454 | INFO | USERS_ROUTER |  | User 718da02c-df9a-49f7-b525-6df9c3843f50 deleted
+2026-03-31 13:48:00,456 | DEBUG | DATABASE |  | Executing query: SELECT user_id, email, type, created_at, updated_at FROM users WHERE user_id = :param0 LIMIT 1 | params={'param0': 'adf87383-9ffc-4dd2-8aa7-15dfa70d9d52'}
+2026-03-31 13:48:00,459 | INFO | DATABASE |  | Fetched 1 rows from users
+2026-03-31 13:48:00,459 | INFO | USERS_FUNCTIONS |  | User adf87383-9ffc-4dd2-8aa7-15dfa70d9d52 found
+2026-03-31 13:48:00,460 | DEBUG | DATABASE |  | Executing delete: DELETE FROM users WHERE user_id = :param0 | params={'param0': 'adf87383-9ffc-4dd2-8aa7-15dfa70d9d52'}
+2026-03-31 13:48:00,463 | INFO | DATABASE |  | Deleted rows from users
+2026-03-31 13:48:00,463 | INFO | USERS_FUNCTIONS |  | User adf87383-9ffc-4dd2-8aa7-15dfa70d9d52 deleted
+2026-03-31 13:48:00,463 | INFO | USERS_ROUTER |  | User adf87383-9ffc-4dd2-8aa7-15dfa70d9d52 deleted
+2026-03-31 14:28:59,408 | INFO | DB_MANAGER |  | Database connections closed
+2026-03-31 14:28:59,410 | INFO | LIFESPAN |  | Application shutdown complete - database connections closed
+2026-03-31 14:29:02,471 | INFO | DATABASE |  | Database engine established
+2026-03-31 14:29:03,042 | INFO | DATABASE |  | Database engine established
+2026-03-31 14:29:03,043 | INFO | DB_MANAGER |  | Global database engine initialized
+2026-03-31 14:29:03,043 | INFO | LIFESPAN |  | Application startup complete - database initialized
+2026-03-31 14:36:17,952 | INFO | DB_MANAGER |  | Database connections closed
+2026-03-31 14:36:17,953 | INFO | LIFESPAN |  | Application shutdown complete - database connections closed
+2026-03-31 14:36:20,108 | INFO | DATABASE |  | Database engine established
+2026-03-31 14:36:20,423 | INFO | DATABASE |  | Database engine established
+2026-03-31 14:36:20,423 | INFO | DB_MANAGER |  | Global database engine initialized
+2026-03-31 14:36:20,423 | INFO | LIFESPAN |  | Application startup complete - database initialized
+2026-03-31 14:36:56,725 | DEBUG | DATABASE |  | Executing query: SELECT user_id, email, password, type FROM users WHERE email = :email | params={'email': 'user@example.com'}
+2026-03-31 14:36:56,732 | INFO | DATABASE |  | Query returned 0 rows
+2026-03-31 14:36:56,876 | DEBUG | DATABASE |  | Executing query: 
+        INSERT INTO users (email, password, type)
+        VALUES (:email, :password, :user_type)
+        RETURNING user_id
+         | params={'email': 'user@example.com', 'password': '$argon2id$v=19$m=65536,t=3,p=4$qeSLxuW+yqknRpElvW8Bdg$FcF8xGp7znAUljw2r4Dl2j8kms4PvjDQsajqAtzGLF8', 'user_type': 'freelancer'}
+2026-03-31 14:36:56,879 | INFO | DATABASE |  | Query returned 1 rows
+2026-03-31 14:36:56,882 | INFO | DATABASE |  | Write query executed and committed
+2026-03-31 14:36:56,884 | DEBUG | DATABASE |  | Executing query: 
+            INSERT INTO freelancer (user_id, full_name)
+            VALUES (:user_id, :full_name)
+            RETURNING freelancer_id
+             | params={'user_id': '690218d1-f577-4b67-9b8a-098a0326716a', 'full_name': 'test'}
+2026-03-31 14:36:56,887 | INFO | DATABASE |  | Query returned 1 rows
+2026-03-31 14:36:56,888 | INFO | DATABASE |  | Write query executed and committed
+2026-03-31 14:36:56,889 | INFO | AUTH |  | User registered: user@example.com as freelancer
+2026-03-31 14:36:56,889 | INFO | AUTH |  | User registered: user@example.com
+2026-03-31 14:37:05,270 | DEBUG | DATABASE |  | Executing query: SELECT user_id, email, password, type FROM users WHERE email = :email | params={'email': 'user@example.com'}
+2026-03-31 14:37:05,272 | INFO | DATABASE |  | Query returned 1 rows
+2026-03-31 14:37:11,078 | DEBUG | DATABASE |  | Executing query: SELECT user_id, email, password, type FROM users WHERE email = :email | params={'email': 'user1@example.com'}
+2026-03-31 14:37:11,080 | INFO | DATABASE |  | Query returned 0 rows
+2026-03-31 14:37:11,189 | DEBUG | DATABASE |  | Executing query: 
+        INSERT INTO users (email, password, type)
+        VALUES (:email, :password, :user_type)
+        RETURNING user_id
+         | params={'email': 'user1@example.com', 'password': '$argon2id$v=19$m=65536,t=3,p=4$hfPLJGAzoKC1KhtPKDvTfw$LuJ3BES/qQ1tgZyrrW4vZBQI/NsvUn56UqaD6bQBXuk', 'user_type': 'freelancer'}
+2026-03-31 14:37:11,191 | INFO | DATABASE |  | Query returned 1 rows
+2026-03-31 14:37:11,193 | INFO | DATABASE |  | Write query executed and committed
+2026-03-31 14:37:11,193 | DEBUG | DATABASE |  | Executing query: 
+            INSERT INTO freelancer (user_id, full_name)
+            VALUES (:user_id, :full_name)
+            RETURNING freelancer_id
+             | params={'user_id': 'ddd2b168-858d-409c-8c36-e783cabc2732', 'full_name': 'test1'}
+2026-03-31 14:37:11,194 | INFO | DATABASE |  | Query returned 1 rows
+2026-03-31 14:37:11,195 | INFO | DATABASE |  | Write query executed and committed
+2026-03-31 14:37:11,195 | INFO | AUTH |  | User registered: user1@example.com as freelancer
+2026-03-31 14:37:11,195 | INFO | AUTH |  | User registered: user1@example.com
+2026-03-31 14:38:33,018 | DEBUG | DATABASE |  | Executing query: SELECT user_id, email, password, type FROM users WHERE email = :email | params={'email': 'user@example.com'}
+2026-03-31 14:38:33,019 | INFO | DATABASE |  | Query returned 1 rows
+2026-03-31 14:38:33,142 | INFO | AUTH |  | User logged in: user@example.com
+2026-03-31 15:38:05,050 | INFO | DB_MANAGER |  | Database connections closed
+2026-03-31 15:38:05,052 | INFO | LIFESPAN |  | Application shutdown complete - database connections closed
+2026-03-31 15:38:09,761 | INFO | DATABASE |  | Database engine established
+2026-03-31 15:38:10,270 | INFO | DATABASE |  | Database engine established
+2026-03-31 15:38:10,271 | INFO | DB_MANAGER |  | Global database engine initialized
+2026-03-31 15:38:10,271 | INFO | LIFESPAN |  | Application startup complete - database initialized
+2026-03-31 15:58:52,357 | DEBUG | DATABASE |  | Executing query: SELECT user_id, email, password, type FROM users WHERE email = :email | params={'email': 'user@example.com'}
+2026-03-31 15:58:52,368 | INFO | DATABASE |  | Query returned 1 rows
+2026-03-31 15:58:52,529 | INFO | AUTH | POST /auth/login | Login successful for user@example.com
+2026-03-31 15:59:38,158 | ERROR | AUTH |  | Token validation failed: 401: Could not validate credentials
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/jose/jws.py", line 180, in _load
+    signing_input, crypto_segment = jwt.rsplit(b".", 1)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: not enough values to unpack (expected 2, got 1)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/jose/jwt.py", line 159, in decode
+    payload = jws.verify(token, key, algorithms, verify=verify_signature)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/jose/jws.py", line 74, in verify
+    header, payload, signing_input, signature = _load(token)
+                                                ^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/jose/jws.py", line 184, in _load
+    raise JWSError("Not enough segments")
+jose.exceptions.JWSError: Not enough segments
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/app/functions/authentication.py", line 64, in verify_token
+    payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/jose/jwt.py", line 161, in decode
+    raise JWTError(e)
+jose.exceptions.JWTError: Not enough segments
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/app/functions/authentication.py", line 164, in get_current_user
+    token_data = verify_token(token, credentials_exception)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/functions/authentication.py", line 70, in verify_token
+    raise credentials_exception
+fastapi.exceptions.HTTPException: 401: Could not validate credentials
+2026-03-31 15:59:52,636 | DEBUG | DATABASE |  | Executing query: SELECT user_id, email, password, type FROM users WHERE email = :email | params={'email': 'user@example.com'}
+2026-03-31 15:59:52,640 | INFO | DATABASE |  | Query returned 1 rows
+2026-03-31 15:59:52,641 | INFO | AUTH | GET /auth/me | Retrieved user info for user@example.com - type: freelancer
+2026-03-31 16:00:59,991 | ERROR | AUTH |  | Token validation failed: 401: Could not validate credentials
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/jose/jws.py", line 180, in _load
+    signing_input, crypto_segment = jwt.rsplit(b".", 1)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: not enough values to unpack (expected 2, got 1)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/jose/jwt.py", line 159, in decode
+    payload = jws.verify(token, key, algorithms, verify=verify_signature)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/jose/jws.py", line 74, in verify
+    header, payload, signing_input, signature = _load(token)
+                                                ^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/jose/jws.py", line 184, in _load
+    raise JWSError("Not enough segments")
+jose.exceptions.JWSError: Not enough segments
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/app/functions/authentication.py", line 64, in verify_token
+    payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/jose/jwt.py", line 161, in decode
+    raise JWTError(e)
+jose.exceptions.JWTError: Not enough segments
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/app/functions/authentication.py", line 164, in get_current_user
+    token_data = verify_token(token, credentials_exception)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/functions/authentication.py", line 70, in verify_token
+    raise credentials_exception
+fastapi.exceptions.HTTPException: 401: Could not validate credentials
+2026-03-31 16:01:14,531 | ERROR | AUTH |  | Token validation failed: 401: Could not validate credentials
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/jose/jws.py", line 180, in _load
+    signing_input, crypto_segment = jwt.rsplit(b".", 1)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: not enough values to unpack (expected 2, got 1)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/jose/jwt.py", line 159, in decode
+    payload = jws.verify(token, key, algorithms, verify=verify_signature)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/jose/jws.py", line 74, in verify
+    header, payload, signing_input, signature = _load(token)
+                                                ^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/jose/jws.py", line 184, in _load
+    raise JWSError("Not enough segments")
+jose.exceptions.JWSError: Not enough segments
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/app/functions/authentication.py", line 64, in verify_token
+    payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/jose/jwt.py", line 161, in decode
+    raise JWTError(e)
+jose.exceptions.JWTError: Not enough segments
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/app/functions/authentication.py", line 164, in get_current_user
+    token_data = verify_token(token, credentials_exception)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/functions/authentication.py", line 70, in verify_token
+    raise credentials_exception
+fastapi.exceptions.HTTPException: 401: Could not validate credentials
+2026-03-31 16:01:20,411 | DEBUG | DATABASE |  | Executing query: SELECT user_id, email, password, type FROM users WHERE email = :email | params={'email': 'user@example.com'}
+2026-03-31 16:01:20,417 | INFO | DATABASE |  | Query returned 1 rows
+2026-03-31 16:01:20,534 | DEBUG | DATABASE |  | Executing query: SELECT user_id, email, type, created_at, updated_at FROM users ORDER BY created_at DESC LIMIT 10 | params={}
+2026-03-31 16:01:20,541 | INFO | DATABASE |  | Fetched 2 rows from users
+2026-03-31 16:01:20,542 | INFO | USERS_FUNCTIONS |  | Fetched 2 users
+2026-03-31 16:01:20,543 | INFO | USER | GET /users | Retrieved 2 users (limit: 10, offset: 0)
+2026-03-31 16:01:41,306 | DEBUG | DATABASE |  | Executing query: SELECT user_id, email, password, type FROM users WHERE email = :email | params={'email': 'user@example.com'}
+2026-03-31 16:01:41,309 | INFO | DATABASE |  | Query returned 1 rows
+2026-03-31 16:01:41,312 | DEBUG | DATABASE |  | Executing query: SELECT user_id, email, type, created_at, updated_at FROM users WHERE user_id = :param0 LIMIT 1 | params={'param0': '550e8400-e29b-41d4-a716-446655440000'}
+2026-03-31 16:01:41,315 | INFO | DATABASE |  | Fetched 0 rows from users
+2026-03-31 16:01:41,317 | WARNING | USERS_FUNCTIONS |  | User 550e8400-e29b-41d4-a716-446655440000 not found
+2026-03-31 16:01:41,318 | WARNING | USER | GET /users/{user_id} | User 550e8400-e29b-41d4-a716-446655440000 not found
+2026-03-31 16:11:16,854 | DEBUG | DATABASE |  | Executing query: SELECT user_id, email, password, type FROM users WHERE email = :email | params={'email': 'user@example.com'}
+2026-03-31 16:11:16,868 | INFO | DATABASE |  | Query returned 1 rows
+2026-03-31 16:11:16,872 | DEBUG | DATABASE |  | Executing query: SELECT user_id, email, type, created_at, updated_at FROM users WHERE user_id = :param0 LIMIT 1 | params={'param0': '550e8400-e29b-41d4-a716-446655440000'}
+2026-03-31 16:11:16,875 | INFO | DATABASE |  | Fetched 0 rows from users
+2026-03-31 16:11:16,877 | WARNING | USERS_FUNCTIONS |  | User 550e8400-e29b-41d4-a716-446655440000 not found
+2026-03-31 16:11:16,878 | WARNING | USER | GET /users/{user_id} | User 550e8400-e29b-41d4-a716-446655440000 not found
+2026-03-31 16:11:35,347 | DEBUG | DATABASE |  | Executing query: SELECT user_id, email, password, type FROM users WHERE email = :email | params={'email': 'user@example.com'}
+2026-03-31 16:11:35,350 | INFO | DATABASE |  | Query returned 1 rows
+2026-03-31 16:11:35,351 | DEBUG | DATABASE |  | Executing query: SELECT user_id, email, type, created_at, updated_at FROM users WHERE user_id = :param0 LIMIT 1 | params={'param0': '550e8400-e29b-41d4-a716-446655440000'}
+2026-03-31 16:11:35,353 | INFO | DATABASE |  | Fetched 0 rows from users
+2026-03-31 16:11:35,353 | WARNING | USERS_FUNCTIONS |  | User 550e8400-e29b-41d4-a716-446655440000 not found
+2026-03-31 16:11:35,354 | WARNING | USER | GET /users/{user_id} | User 550e8400-e29b-41d4-a716-446655440000 not found
+2026-03-31 16:12:05,050 | DEBUG | DATABASE |  | Executing query: SELECT user_id, email, password, type FROM users WHERE email = :email | params={'email': 'user@example.com'}
+2026-03-31 16:12:05,051 | INFO | DATABASE |  | Query returned 1 rows
+2026-03-31 16:12:05,052 | DEBUG | DATABASE |  | Executing query: SELECT user_id, email, type, created_at, updated_at FROM users WHERE user_id = :param0 LIMIT 1 | params={'param0': ':user_id'}
+2026-03-31 16:12:05,055 | ERROR | DATABASE |  | Fetch database error: (psycopg2.errors.InvalidTextRepresentation) invalid input syntax for type uuid: ":user_id"
+LINE 1: ...created_at, updated_at FROM users WHERE user_id = ':user_id'...
+                                                             ^
+
+[SQL: SELECT user_id, email, type, created_at, updated_at FROM users WHERE user_id = %(param0)s LIMIT 1]
+[parameters: {'param0': ':user_id'}]
+(Background on this error at: https://sqlalche.me/e/20/9h9h)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+psycopg2.errors.InvalidTextRepresentation: invalid input syntax for type uuid: ":user_id"
+LINE 1: ...created_at, updated_at FROM users WHERE user_id = ':user_id'...
+                                                             ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/functions/database.py", line 66, in fetch_data
+    result = conn.execute(text(query), params)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+    return meth(
+           ^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 527, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2363, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.DataError: (psycopg2.errors.InvalidTextRepresentation) invalid input syntax for type uuid: ":user_id"
+LINE 1: ...created_at, updated_at FROM users WHERE user_id = ':user_id'...
+                                                             ^
+
+[SQL: SELECT user_id, email, type, created_at, updated_at FROM users WHERE user_id = %(param0)s LIMIT 1]
+[parameters: {'param0': ':user_id'}]
+(Background on this error at: https://sqlalche.me/e/20/9h9h)
+2026-03-31 16:12:05,082 | ERROR | USERS_FUNCTIONS |  | Error fetching user :user_id: (psycopg2.errors.InvalidTextRepresentation) invalid input syntax for type uuid: ":user_id"
+LINE 1: ...created_at, updated_at FROM users WHERE user_id = ':user_id'...
+                                                             ^
+
+[SQL: SELECT user_id, email, type, created_at, updated_at FROM users WHERE user_id = %(param0)s LIMIT 1]
+[parameters: {'param0': ':user_id'}]
+(Background on this error at: https://sqlalche.me/e/20/9h9h)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+psycopg2.errors.InvalidTextRepresentation: invalid input syntax for type uuid: ":user_id"
+LINE 1: ...created_at, updated_at FROM users WHERE user_id = ':user_id'...
+                                                             ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/routes/users/users_functions.py", line 55, in get_user_by_id
+    rows = db.fetch_data(
+           ^^^^^^^^^^^^^^
+  File "/app/functions/database.py", line 66, in fetch_data
+    result = conn.execute(text(query), params)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+    return meth(
+           ^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 527, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2363, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.DataError: (psycopg2.errors.InvalidTextRepresentation) invalid input syntax for type uuid: ":user_id"
+LINE 1: ...created_at, updated_at FROM users WHERE user_id = ':user_id'...
+                                                             ^
+
+[SQL: SELECT user_id, email, type, created_at, updated_at FROM users WHERE user_id = %(param0)s LIMIT 1]
+[parameters: {'param0': ':user_id'}]
+(Background on this error at: https://sqlalche.me/e/20/9h9h)
+2026-03-31 16:12:05,084 | ERROR | USER | GET /users/{user_id} | Failed to fetch user :user_id: (psycopg2.errors.InvalidTextRepresentation) invalid input syntax for type uuid: ":user_id"
+LINE 1: ...created_at, updated_at FROM users WHERE user_id = ':user_id'...
+                                                             ^
+
+[SQL: SELECT user_id, email, type, created_at, updated_at FROM users WHERE user_id = %(param0)s LIMIT 1]
+[parameters: {'param0': ':user_id'}]
+(Background on this error at: https://sqlalche.me/e/20/9h9h)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+psycopg2.errors.InvalidTextRepresentation: invalid input syntax for type uuid: ":user_id"
+LINE 1: ...created_at, updated_at FROM users WHERE user_id = ':user_id'...
+                                                             ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/routes/users/users_routes.py", line 35, in get_user
+    users = UserFunctions.search_users(search_term)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/routes/users/users_functions.py", line 55, in get_user_by_id
+    rows = db.fetch_data(
+           ^^^^^^^^^^^^^^
+  File "/app/functions/database.py", line 66, in fetch_data
+    result = conn.execute(text(query), params)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+    return meth(
+           ^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 527, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2363, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.DataError: (psycopg2.errors.InvalidTextRepresentation) invalid input syntax for type uuid: ":user_id"
+LINE 1: ...created_at, updated_at FROM users WHERE user_id = ':user_id'...
+                                                             ^
+
+[SQL: SELECT user_id, email, type, created_at, updated_at FROM users WHERE user_id = %(param0)s LIMIT 1]
+[parameters: {'param0': ':user_id'}]
+(Background on this error at: https://sqlalche.me/e/20/9h9h)
+2026-03-31 16:34:58,604 | INFO | DB_MANAGER |  | Database connections closed
+2026-03-31 16:34:58,606 | INFO | LIFESPAN |  | Application shutdown complete - database connections closed
+2026-03-31 16:35:02,887 | INFO | DATABASE |  | Database engine established
+2026-03-31 16:41:40,039 | INFO | DATABASE |  | Database engine established
+2026-03-31 16:41:40,383 | INFO | DATABASE |  | Database engine established
+2026-03-31 16:41:40,383 | INFO | DB_MANAGER |  | Global database engine initialized
+2026-03-31 16:41:40,383 | INFO | LIFESPAN |  | Application startup complete - database initialized
+2026-03-31 16:41:48,404 | ERROR | AUTH |  | Token validation failed: 401: Could not validate credentials
+Traceback (most recent call last):
+  File "/app/functions/authentication.py", line 64, in verify_token
+    payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/jose/jwt.py", line 174, in decode
+    _validate_claims(
+  File "/usr/local/lib/python3.12/site-packages/jose/jwt.py", line 497, in _validate_claims
+    _validate_exp(claims, leeway=leeway)
+  File "/usr/local/lib/python3.12/site-packages/jose/jwt.py", line 331, in _validate_exp
+    raise ExpiredSignatureError("Signature has expired.")
+jose.exceptions.ExpiredSignatureError: Signature has expired.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/app/functions/authentication.py", line 164, in get_current_user
+    token_data = verify_token(token, credentials_exception)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/functions/authentication.py", line 70, in verify_token
+    raise credentials_exception
+fastapi.exceptions.HTTPException: 401: Could not validate credentials
+2026-03-31 16:41:57,223 | DEBUG | DATABASE |  | Executing query: SELECT user_id, email, password, type FROM users WHERE email = :email | params={'email': 'user@example.com'}
+2026-03-31 16:41:57,230 | INFO | DATABASE |  | Query returned 1 rows
+2026-03-31 16:41:57,401 | INFO | AUTH | POST /auth/login | Login successful for user@example.com
+2026-03-31 16:42:22,474 | DEBUG | DATABASE |  | Executing query: SELECT user_id, email, password, type FROM users WHERE email = :email | params={'email': 'user@example.com'}
+2026-03-31 16:42:22,479 | INFO | DATABASE |  | Query returned 1 rows
+2026-03-31 16:42:22,480 | INFO | AUTH | GET /auth/me | Retrieved user info for user@example.com - type: freelancer
+2026-03-31 16:42:48,012 | DEBUG | DATABASE |  | Executing query: SELECT user_id, email, password, type FROM users WHERE email = :email | params={'email': 'user@example.com'}
+2026-03-31 16:42:48,015 | INFO | DATABASE |  | Query returned 1 rows
+2026-03-31 16:42:48,042 | DEBUG | DATABASE |  | Executing query: SELECT user_id, email, type, created_at, updated_at FROM users WHERE user_id = :param0 LIMIT 1 | params={'param0': ':user_id'}
+2026-03-31 16:42:48,045 | ERROR | DATABASE |  | Fetch database error: (psycopg2.errors.InvalidTextRepresentation) invalid input syntax for type uuid: ":user_id"
+LINE 1: ...created_at, updated_at FROM users WHERE user_id = ':user_id'...
+                                                             ^
+
+[SQL: SELECT user_id, email, type, created_at, updated_at FROM users WHERE user_id = %(param0)s LIMIT 1]
+[parameters: {'param0': ':user_id'}]
+(Background on this error at: https://sqlalche.me/e/20/9h9h)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+psycopg2.errors.InvalidTextRepresentation: invalid input syntax for type uuid: ":user_id"
+LINE 1: ...created_at, updated_at FROM users WHERE user_id = ':user_id'...
+                                                             ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/functions/database.py", line 66, in fetch_data
+    result = conn.execute(text(query), params)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+    return meth(
+           ^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 527, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2363, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.DataError: (psycopg2.errors.InvalidTextRepresentation) invalid input syntax for type uuid: ":user_id"
+LINE 1: ...created_at, updated_at FROM users WHERE user_id = ':user_id'...
+                                                             ^
+
+[SQL: SELECT user_id, email, type, created_at, updated_at FROM users WHERE user_id = %(param0)s LIMIT 1]
+[parameters: {'param0': ':user_id'}]
+(Background on this error at: https://sqlalche.me/e/20/9h9h)
+2026-03-31 16:42:48,062 | ERROR | USERS_FUNCTIONS |  | Error fetching user :user_id: (psycopg2.errors.InvalidTextRepresentation) invalid input syntax for type uuid: ":user_id"
+LINE 1: ...created_at, updated_at FROM users WHERE user_id = ':user_id'...
+                                                             ^
+
+[SQL: SELECT user_id, email, type, created_at, updated_at FROM users WHERE user_id = %(param0)s LIMIT 1]
+[parameters: {'param0': ':user_id'}]
+(Background on this error at: https://sqlalche.me/e/20/9h9h)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+psycopg2.errors.InvalidTextRepresentation: invalid input syntax for type uuid: ":user_id"
+LINE 1: ...created_at, updated_at FROM users WHERE user_id = ':user_id'...
+                                                             ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/routes/users/users_functions.py", line 55, in get_user_by_id
+    rows = db.fetch_data(
+           ^^^^^^^^^^^^^^
+  File "/app/functions/database.py", line 66, in fetch_data
+    result = conn.execute(text(query), params)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+    return meth(
+           ^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 527, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2363, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.DataError: (psycopg2.errors.InvalidTextRepresentation) invalid input syntax for type uuid: ":user_id"
+LINE 1: ...created_at, updated_at FROM users WHERE user_id = ':user_id'...
+                                                             ^
+
+[SQL: SELECT user_id, email, type, created_at, updated_at FROM users WHERE user_id = %(param0)s LIMIT 1]
+[parameters: {'param0': ':user_id'}]
+(Background on this error at: https://sqlalche.me/e/20/9h9h)
+2026-03-31 16:42:48,065 | ERROR | USER | GET /users/{user_id} | Failed to fetch user :user_id: (psycopg2.errors.InvalidTextRepresentation) invalid input syntax for type uuid: ":user_id"
+LINE 1: ...created_at, updated_at FROM users WHERE user_id = ':user_id'...
+                                                             ^
+
+[SQL: SELECT user_id, email, type, created_at, updated_at FROM users WHERE user_id = %(param0)s LIMIT 1]
+[parameters: {'param0': ':user_id'}]
+(Background on this error at: https://sqlalche.me/e/20/9h9h)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+psycopg2.errors.InvalidTextRepresentation: invalid input syntax for type uuid: ":user_id"
+LINE 1: ...created_at, updated_at FROM users WHERE user_id = ':user_id'...
+                                                             ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/routes/users/users_routes.py", line 49, in get_user
+    user = UserFunctions.get_user_by_id(user_id)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/routes/users/users_functions.py", line 55, in get_user_by_id
+    rows = db.fetch_data(
+           ^^^^^^^^^^^^^^
+  File "/app/functions/database.py", line 66, in fetch_data
+    result = conn.execute(text(query), params)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+    return meth(
+           ^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 527, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2363, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.DataError: (psycopg2.errors.InvalidTextRepresentation) invalid input syntax for type uuid: ":user_id"
+LINE 1: ...created_at, updated_at FROM users WHERE user_id = ':user_id'...
+                                                             ^
+
+[SQL: SELECT user_id, email, type, created_at, updated_at FROM users WHERE user_id = %(param0)s LIMIT 1]
+[parameters: {'param0': ':user_id'}]
+(Background on this error at: https://sqlalche.me/e/20/9h9h)
+2026-03-31 16:42:52,161 | DEBUG | DATABASE |  | Executing query: SELECT user_id, email, password, type FROM users WHERE email = :email | params={'email': 'user@example.com'}
+2026-03-31 16:42:52,165 | INFO | DATABASE |  | Query returned 1 rows
+2026-03-31 16:42:52,167 | DEBUG | DATABASE |  | Executing query: SELECT user_id, email, type, created_at, updated_at FROM users WHERE user_id = :param0 LIMIT 1 | params={'param0': ':user_id'}
+2026-03-31 16:42:52,170 | ERROR | DATABASE |  | Fetch database error: (psycopg2.errors.InvalidTextRepresentation) invalid input syntax for type uuid: ":user_id"
+LINE 1: ...created_at, updated_at FROM users WHERE user_id = ':user_id'...
+                                                             ^
+
+[SQL: SELECT user_id, email, type, created_at, updated_at FROM users WHERE user_id = %(param0)s LIMIT 1]
+[parameters: {'param0': ':user_id'}]
+(Background on this error at: https://sqlalche.me/e/20/9h9h)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+psycopg2.errors.InvalidTextRepresentation: invalid input syntax for type uuid: ":user_id"
+LINE 1: ...created_at, updated_at FROM users WHERE user_id = ':user_id'...
+                                                             ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/functions/database.py", line 66, in fetch_data
+    result = conn.execute(text(query), params)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+    return meth(
+           ^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 527, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2363, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.DataError: (psycopg2.errors.InvalidTextRepresentation) invalid input syntax for type uuid: ":user_id"
+LINE 1: ...created_at, updated_at FROM users WHERE user_id = ':user_id'...
+                                                             ^
+
+[SQL: SELECT user_id, email, type, created_at, updated_at FROM users WHERE user_id = %(param0)s LIMIT 1]
+[parameters: {'param0': ':user_id'}]
+(Background on this error at: https://sqlalche.me/e/20/9h9h)
+2026-03-31 16:42:52,173 | ERROR | USERS_FUNCTIONS |  | Error fetching user :user_id: (psycopg2.errors.InvalidTextRepresentation) invalid input syntax for type uuid: ":user_id"
+LINE 1: ...created_at, updated_at FROM users WHERE user_id = ':user_id'...
+                                                             ^
+
+[SQL: SELECT user_id, email, type, created_at, updated_at FROM users WHERE user_id = %(param0)s LIMIT 1]
+[parameters: {'param0': ':user_id'}]
+(Background on this error at: https://sqlalche.me/e/20/9h9h)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+psycopg2.errors.InvalidTextRepresentation: invalid input syntax for type uuid: ":user_id"
+LINE 1: ...created_at, updated_at FROM users WHERE user_id = ':user_id'...
+                                                             ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/routes/users/users_functions.py", line 55, in get_user_by_id
+    rows = db.fetch_data(
+           ^^^^^^^^^^^^^^
+  File "/app/functions/database.py", line 66, in fetch_data
+    result = conn.execute(text(query), params)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+    return meth(
+           ^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 527, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2363, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.DataError: (psycopg2.errors.InvalidTextRepresentation) invalid input syntax for type uuid: ":user_id"
+LINE 1: ...created_at, updated_at FROM users WHERE user_id = ':user_id'...
+                                                             ^
+
+[SQL: SELECT user_id, email, type, created_at, updated_at FROM users WHERE user_id = %(param0)s LIMIT 1]
+[parameters: {'param0': ':user_id'}]
+(Background on this error at: https://sqlalche.me/e/20/9h9h)
+2026-03-31 16:42:52,176 | ERROR | USER | GET /users/{user_id} | Failed to fetch user :user_id: (psycopg2.errors.InvalidTextRepresentation) invalid input syntax for type uuid: ":user_id"
+LINE 1: ...created_at, updated_at FROM users WHERE user_id = ':user_id'...
+                                                             ^
+
+[SQL: SELECT user_id, email, type, created_at, updated_at FROM users WHERE user_id = %(param0)s LIMIT 1]
+[parameters: {'param0': ':user_id'}]
+(Background on this error at: https://sqlalche.me/e/20/9h9h)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+psycopg2.errors.InvalidTextRepresentation: invalid input syntax for type uuid: ":user_id"
+LINE 1: ...created_at, updated_at FROM users WHERE user_id = ':user_id'...
+                                                             ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/routes/users/users_routes.py", line 49, in get_user
+    user = UserFunctions.get_user_by_id(user_id)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/routes/users/users_functions.py", line 55, in get_user_by_id
+    rows = db.fetch_data(
+           ^^^^^^^^^^^^^^
+  File "/app/functions/database.py", line 66, in fetch_data
+    result = conn.execute(text(query), params)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+    return meth(
+           ^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 527, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2363, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.DataError: (psycopg2.errors.InvalidTextRepresentation) invalid input syntax for type uuid: ":user_id"
+LINE 1: ...created_at, updated_at FROM users WHERE user_id = ':user_id'...
+                                                             ^
+
+[SQL: SELECT user_id, email, type, created_at, updated_at FROM users WHERE user_id = %(param0)s LIMIT 1]
+[parameters: {'param0': ':user_id'}]
+(Background on this error at: https://sqlalche.me/e/20/9h9h)
+2026-03-31 16:57:28,869 | DEBUG | DATABASE |  | Executing query: SELECT user_id, email, password, type FROM users WHERE email = :email | params={'email': 'user@example.com'}
+2026-03-31 16:57:28,886 | INFO | DATABASE |  | Query returned 1 rows
+2026-03-31 16:57:28,889 | DEBUG | DATABASE |  | Executing query: SELECT user_id, email, type, created_at, updated_at FROM users WHERE user_id = :param0 LIMIT 1 | params={'param0': '690218d1-f577-4b67-9b8a-098a0326716a'}
+2026-03-31 16:57:28,896 | INFO | DATABASE |  | Fetched 1 rows from users
+2026-03-31 16:57:28,897 | INFO | USERS_FUNCTIONS |  | User 690218d1-f577-4b67-9b8a-098a0326716a found
+2026-03-31 16:57:28,897 | INFO | USER | GET /users/{user_id} | Retrieved user 690218d1-f577-4b67-9b8a-098a0326716a
+2026-03-31 16:59:44,541 | INFO | DB_MANAGER |  | Database connections closed
+2026-03-31 16:59:44,542 | INFO | LIFESPAN |  | Application shutdown complete - database connections closed

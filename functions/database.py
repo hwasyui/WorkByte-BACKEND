@@ -204,14 +204,27 @@ class Database:
 
             result = conn.execute(text(query), params or {})
 
+            # Check if this is a write operation (INSERT, UPDATE, DELETE)
+            query_upper = query.strip().upper()
+            is_write_query = query_upper.startswith(('INSERT', 'UPDATE', 'DELETE'))
+
             if result.returns_rows:
                 rows = result.mappings().all()
                 logger("DATABASE", f"Query returned {len(rows)} rows", level="INFO")
+                
+                # Commit write operations even if they return rows (e.g., INSERT ... RETURNING)
+                if is_write_query:
+                    conn.commit()
+                    logger("DATABASE", "Write query executed and committed", level="INFO")
+                
                 return rows
 
-            conn.commit()
-
-            logger("DATABASE", "Query executed successfully", level="INFO")
+            # For queries that don't return rows
+            if is_write_query:
+                conn.commit()
+                logger("DATABASE", "Write query executed and committed", level="INFO")
+            else:
+                logger("DATABASE", "Query executed successfully", level="INFO")
 
             return None
 
