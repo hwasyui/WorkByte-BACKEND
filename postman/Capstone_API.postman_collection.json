@@ -1,0 +1,2889 @@
+{
+  "info": {
+    "name": "Capstone API Collection",
+    "description": "Complete API documentation for the Capstone freelance platform with logging support",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"SecurePassword123!\",\n  \"user_type\": \"freelancer\",\n  \"full_name\": \"John Doe\",\n  \"company_name\": null\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Register a new user as either freelancer or client\nLogs: POST /auth/register with service AUTH"
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"SecurePassword123!\",\n  \"user_type\": \"freelancer\",\n  \"full_name\": \"John Doe\",\n  \"company_name\": null\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/auth/register",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "register"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": \"success\",\n  \"reason\": \"User user@example.com registered successfully as freelancer\",\n  \"data\": {\n    \"user_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"email\": \"user@example.com\",\n    \"type\": \"freelancer\"\n  }\n}"
+            },
+            {
+              "name": "Error - Email Already Registered",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"existing@example.com\",\n  \"password\": \"SecurePassword123!\",\n  \"user_type\": \"freelancer\",\n  \"full_name\": \"John Doe\",\n  \"company_name\": null\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/auth/register",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "register"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": \"error\",\n  \"reason\": \"Email already registered\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"SecurePassword123!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Login user with JSON credentials and get JWT bearer token\nLogs: POST /auth/login with service AUTH\n\nAfter successful login, copy the access_token value to the {{access_token}} variable for authenticated requests"
+          },
+          "response": [
+            {
+              "name": "Success - Token Returned",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"SecurePassword123!\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/auth/login",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"access_token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n  \"token_type\": \"bearer\"\n}"
+            },
+            {
+              "name": "Error - Invalid Credentials",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"WrongPassword\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/auth/login",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": \"error\",\n  \"reason\": \"Incorrect email or password\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            },
+            "description": "Get currently authenticated user info\nLogs: GET /auth/me with service AUTH\nRequires: Bearer token authentication"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/auth/me",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "me"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"user_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"email\": \"user@example.com\",\n  \"type\": \"freelancer\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users?limit=10&offset=0",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": "Fetch all users with pagination\nLogs: GET /users with service USER\nRequires: Bearer token authentication"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/users?limit=10&offset=0",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "users"
+                  ],
+                  "query": [
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    },
+                    {
+                      "key": "offset",
+                      "value": "0"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "[\n  {\n    \"user_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"email\": \"user@example.com\",\n    \"type\": \"freelancer\"\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "Get User by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/:user_id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users",
+                ":user_id"
+              ],
+              "variable": [
+                {
+                  "key": "user_id",
+                  "value": "550e8400-e29b-41d4-a716-446655440000"
+                }
+              ]
+            },
+            "description": "Fetch a single user by ID\nLogs: GET /users/{user_id} with service USER\nRequires: Bearer token authentication"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/users/550e8400-e29b-41d4-a716-446655440000",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "users",
+                    "550e8400-e29b-41d4-a716-446655440000"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"user_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"email\": \"user@example.com\",\n  \"type\": \"freelancer\"\n}"
+            },
+            {
+              "name": "Error - Not Found",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/users/non-existent-id",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "users",
+                    "non-existent-id"
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": \"error\",\n  \"reason\": \"User non-existent-id not found\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"550e8400-e29b-41d4-a716-446655440001\",\n  \"email\": \"newuser@example.com\",\n  \"password\": \"SecurePass123!\",\n  \"type\": \"client\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users"
+              ]
+            },
+            "description": "Create a new user\nLogs: POST /users with service USER\nRequires: Bearer token authentication"
+          },
+          "response": [
+            {
+              "name": "Success - Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"newuser@example.com\",\n  \"password\": \"SecurePass123!\",\n  \"type\": \"client\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/users",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "users"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": \"success\",\n  \"reason\": \"Created user abc123 with email newuser@example.com as type client\",\n  \"user_id\": \"550e8400-e29b-41d4-a716-446655440001\",\n  \"email\": \"newuser@example.com\",\n  \"type\": \"client\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"updated@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users/:user_id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users",
+                ":user_id"
+              ],
+              "variable": [
+                {
+                  "key": "user_id",
+                  "value": "550e8400-e29b-41d4-a716-446655440000"
+                }
+              ]
+            },
+            "description": "Update user information\nLogs: PUT /users/{user_id} with service USER\nRequires: Bearer token authentication"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"updated@example.com\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/users/550e8400-e29b-41d4-a716-446655440000",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "users",
+                    "550e8400-e29b-41d4-a716-446655440000"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": \"success\",\n  \"reason\": \"Updated user 550e8400-e29b-41d4-a716-446655440000 with fields: email\",\n  \"user_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"email\": \"updated@example.com\",\n  \"type\": \"freelancer\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/:user_id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users",
+                ":user_id"
+              ],
+              "variable": [
+                {
+                  "key": "user_id",
+                  "value": "550e8400-e29b-41d4-a716-446655440000"
+                }
+              ]
+            },
+            "description": "Delete a user\nLogs: DELETE /users/{user_id} with service USER\nRequires: Bearer token authentication\nReturns: Success/error status with reason"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/users/550e8400-e29b-41d4-a716-446655440000",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "users",
+                    "550e8400-e29b-41d4-a716-446655440000"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": \"success\",\n  \"reason\": \"User 550e8400-e29b-41d4-a716-446655440000 deleted successfully\",\n  \"deleted_id\": \"550e8400-e29b-41d4-a716-446655440000\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Search Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/search/:search_term",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users",
+                "search",
+                ":search_term"
+              ],
+              "variable": [
+                {
+                  "key": "search_term",
+                  "value": "user@example.com"
+                }
+              ]
+            },
+            "description": "Search users by email\nLogs: GET /users/search/{search_term} with service USER\nRequires: Bearer token authentication"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/users/search/user@example.com",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "users",
+                    "search",
+                    "user@example.com"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": \"success\",\n  \"reason\": \"Searched users for 'user@example.com', found 1 results\",\n  \"results\": [\n    {\n      \"user_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n      \"email\": \"user@example.com\",\n      \"type\": \"freelancer\"\n    }\n  ],\n  \"count\": 1\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Clients",
+      "item": [
+        {
+          "name": "Get All Clients",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/clients?limit=10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "clients"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Fetch all clients\nLogs: GET /clients with service CLIENT\nRequires: Bearer token authentication"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/clients?limit=10",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "clients"
+                  ],
+                  "query": [
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "[\n  {\n    \"client_id\": \"uuid-client-1\",\n    \"user_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"company_name\": \"Tech Corp\",\n    \"company_description\": \"A technology company\",\n    \"website_url\": \"https://techcorp.com\"\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "Get Client by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/clients/:identifier",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "clients",
+                ":identifier"
+              ],
+              "variable": [
+                {
+                  "key": "identifier",
+                  "value": "uuid-client-1"
+                }
+              ]
+            },
+            "description": "Fetch a single client by ID or user_id\nLogs: GET /clients/{identifier} with service CLIENT\nRequires: Bearer token authentication"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/clients/uuid-client-1",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "clients",
+                    "uuid-client-1"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"client_id\": \"uuid-client-1\",\n  \"user_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"company_name\": \"Tech Corp\",\n  \"company_description\": \"A technology company\",\n  \"website_url\": \"https://techcorp.com\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Client",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"company_name\": \"Tech Corp\",\n  \"company_description\": \"A technology company\",\n  \"website_url\": \"https://techcorp.com\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/clients",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "clients"
+              ]
+            },
+            "description": "Create a new client profile\nLogs: POST /clients with service CLIENT\nRequires: Bearer token authentication"
+          },
+          "response": [
+            {
+              "name": "Success - Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"user_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"company_name\": \"Tech Corp\",\n  \"company_description\": \"A technology company\",\n  \"website_url\": \"https://techcorp.com\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/clients",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "clients"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": \"success\",\n  \"reason\": \"Created client uuid-client-1 for user 550e8400-e29b-41d4-a716-446655440000 with company 'Tech Corp'\",\n  \"client_id\": \"uuid-client-1\",\n  \"user_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"company_name\": \"Tech Corp\",\n  \"company_description\": \"A technology company\",\n  \"website_url\": \"https://techcorp.com\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Client",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"company_description\": \"Updated company description\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/clients/:identifier",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "clients",
+                ":identifier"
+              ],
+              "variable": [
+                {
+                  "key": "identifier",
+                  "value": "uuid-client-1"
+                }
+              ]
+            },
+            "description": "Update client information\nLogs: PUT /clients/{identifier} with service CLIENT\nRequires: Bearer token authentication"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"company_description\": \"Updated company description\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/clients/uuid-client-1",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "clients",
+                    "uuid-client-1"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": \"success\",\n  \"reason\": \"Updated client uuid-client-1 with fields: company_description\",\n  \"client_id\": \"uuid-client-1\",\n  \"company_description\": \"Updated company description\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete Client",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/clients/:identifier",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "clients",
+                ":identifier"
+              ],
+              "variable": [
+                {
+                  "key": "identifier",
+                  "value": "uuid-client-1"
+                }
+              ]
+            },
+            "description": "Delete a client profile\nLogs: DELETE /clients/{identifier} with service CLIENT\nRequires: Bearer token authentication\nReturns: Success/error status with reason"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/clients/uuid-client-1",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "clients",
+                    "uuid-client-1"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": \"success\",\n  \"reason\": \"Client uuid-client-1 deleted successfully\",\n  \"deleted_id\": \"uuid-client-1\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Search Clients",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/clients/search/:search_term",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "clients",
+                "search",
+                ":search_term"
+              ],
+              "variable": [
+                {
+                  "key": "search_term",
+                  "value": "Tech"
+                }
+              ]
+            },
+            "description": "Search clients by company name\nLogs: GET /clients/search/{search_term} with service CLIENT\nRequires: Bearer token authentication"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/clients/search/Tech",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "clients",
+                    "search",
+                    "Tech"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": \"success\",\n  \"reason\": \"Searched clients for 'Tech', found 1 results\",\n  \"results\": [\n    {\n      \"client_id\": \"uuid-client-1\",\n      \"company_name\": \"Tech Corp\"\n    }\n  ],\n  \"count\": 1\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Freelancers",
+      "item": [
+        {
+          "name": "Get All Freelancers",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/freelancers?limit=10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "freelancers"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Fetch all freelancers\nLogs: GET /freelancers with service FREELANCER\nRequires: Bearer token authentication"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/freelancers?limit=10",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "freelancers"
+                  ],
+                  "query": [
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "[\n  {\n    \"freelancer_id\": \"uuid-freelancer-1\",\n    \"user_id\": \"550e8400-e29b-41d4-a716-446655440001\",\n    \"full_name\": \"Jane Developer\",\n    \"bio\": \"Full-stack developer with 5 years experience\",\n    \"estimated_rate\": 50,\n    \"rate_time\": \"hour\",\n    \"rate_currency\": \"USD\"\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "Get Freelancer by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/freelancers/:identifier",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "freelancers",
+                ":identifier"
+              ],
+              "variable": [
+                {
+                  "key": "identifier",
+                  "value": "uuid-freelancer-1"
+                }
+              ]
+            },
+            "description": "Fetch a single freelancer by ID or user_id\nLogs: GET /freelancers/{identifier} with service FREELANCER\nRequires: Bearer token authentication"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/freelancers/uuid-freelancer-1",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "freelancers",
+                    "uuid-freelancer-1"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"freelancer_id\": \"uuid-freelancer-1\",\n  \"user_id\": \"550e8400-e29b-41d4-a716-446655440001\",\n  \"full_name\": \"Jane Developer\",\n  \"bio\": \"Full-stack developer with 5 years experience\",\n  \"estimated_rate\": 50,\n  \"rate_time\": \"hour\",\n  \"rate_currency\": \"USD\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Freelancer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"550e8400-e29b-41d4-a716-446655440001\",\n  \"full_name\": \"Jane Developer\",\n  \"bio\": \"Full-stack developer with 5 years experience\",\n  \"estimated_rate\": 50,\n  \"rate_time\": \"hour\",\n  \"rate_currency\": \"USD\",\n  \"cv_file_url\": \"https://example.com/cv.pdf\",\n  \"profile_picture_url\": \"https://example.com/profile.jpg\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/freelancers",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "freelancers"
+              ]
+            },
+            "description": "Create a new freelancer profile\nLogs: POST /freelancers with service FREELANCER\nRequires: Bearer token authentication\nNote: Creates embedding automatically"
+          },
+          "response": [
+            {
+              "name": "Success - Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"user_id\": \"550e8400-e29b-41d4-a716-446655440001\",\n  \"full_name\": \"Jane Developer\",\n  \"bio\": \"Full-stack developer with 5 years experience\",\n  \"estimated_rate\": 50,\n  \"rate_time\": \"hour\",\n  \"rate_currency\": \"USD\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/freelancers",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "freelancers"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": \"success\",\n  \"reason\": \"Created freelancer uuid-freelancer-1 for user 550e8400-e29b-41d4-a716-446655440001 - Jane Developer\",\n  \"freelancer_id\": \"uuid-freelancer-1\",\n  \"full_name\": \"Jane Developer\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Freelancer",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bio\": \"Senior Full-stack developer with 7 years experience\",\n  \"estimated_rate\": 75\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/freelancers/:identifier",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "freelancers",
+                ":identifier"
+              ],
+              "variable": [
+                {
+                  "key": "identifier",
+                  "value": "uuid-freelancer-1"
+                }
+              ]
+            },
+            "description": "Update freelancer information\nLogs: PUT /freelancers/{identifier} with service FREELANCER\nRequires: Bearer token authentication\nNote: Updates embedding automatically"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"bio\": \"Senior Full-stack developer with 7 years experience\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/freelancers/uuid-freelancer-1",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "freelancers",
+                    "uuid-freelancer-1"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": \"success\",\n  \"reason\": \"Updated freelancer uuid-freelancer-1 with fields: bio, estimated_rate\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete Freelancer",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/freelancers/:identifier",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "freelancers",
+                ":identifier"
+              ],
+              "variable": [
+                {
+                  "key": "identifier",
+                  "value": "uuid-freelancer-1"
+                }
+              ]
+            },
+            "description": "Delete a freelancer profile\nLogs: DELETE /freelancers/{identifier} with service FREELANCER\nRequires: Bearer token authentication\nNote: Deletes embedding automatically\nReturns: Success/error status with reason"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/freelancers/uuid-freelancer-1",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "freelancers",
+                    "uuid-freelancer-1"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": \"success\",\n  \"reason\": \"Freelancer uuid-freelancer-1 deleted successfully\",\n  \"deleted_id\": \"uuid-freelancer-1\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Search Freelancers",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/freelancers/search/:search_term",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "freelancers",
+                "search",
+                ":search_term"
+              ],
+              "variable": [
+                {
+                  "key": "search_term",
+                  "value": "Jane"
+                }
+              ]
+            },
+            "description": "Search freelancers by name\nLogs: GET /freelancers/search/{search_term} with service FREELANCER\nRequires: Bearer token authentication"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/freelancers/search/Jane",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "freelancers",
+                    "search",
+                    "Jane"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": \"success\",\n  \"reason\": \"Searched freelancers for 'Jane', found 1 results\",\n  \"results\": [{\"freelancer_id\": \"uuid-freelancer-1\", \"full_name\": \"Jane Developer\"}],\n  \"count\": 1\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Freelancer Embedding",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/freelancers/:freelancer_id/embedding",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "freelancers",
+                ":freelancer_id",
+                "embedding"
+              ],
+              "variable": [
+                {
+                  "key": "freelancer_id",
+                  "value": "uuid-freelancer-1"
+                }
+              ]
+            },
+            "description": "Get freelancer embedding metadata\nLogs: GET /freelancers/{freelancer_id}/embedding with service FREELANCER\nRequires: Bearer token authentication\nNote: Returns metadata only, not actual vector"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/freelancers/uuid-freelancer-1/embedding",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "freelancers",
+                    "uuid-freelancer-1",
+                    "embedding"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"embedding_id\": \"uuid-embedding-1\",\n  \"freelancer_id\": \"uuid-freelancer-1\",\n  \"source_text\": \"Jane Developer - Full-stack developer with 5 years experience\",\n  \"created_at\": \"2026-03-31T10:00:00Z\",\n  \"updated_at\": \"2026-03-31T10:00:00Z\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Skills",
+      "item": [
+        {
+          "name": "Get All Skills",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/skills?limit=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "skills"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Fetch all skills\nLogs: GET /skills with service SKILL\nRequires: Bearer token authentication"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/skills?limit=20",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "skills"
+                  ],
+                  "query": [
+                    {
+                      "key": "limit",
+                      "value": "20"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "[\n  {\n    \"skill_id\": \"uuid-skill-1\",\n    \"skill_name\": \"Python\",\n    \"skill_category\": \"Programming\",\n    \"description\": \"Python programming language\"\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "Get Skill by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/skills/:skill_id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "skills",
+                ":skill_id"
+              ],
+              "variable": [
+                {
+                  "key": "skill_id",
+                  "value": "uuid-skill-1"
+                }
+              ]
+            },
+            "description": "Fetch a single skill by ID\nLogs: GET /skills/{skill_id} with service SKILL\nRequires: Bearer token authentication"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/skills/uuid-skill-1",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "skills",
+                    "uuid-skill-1"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"skill_id\": \"uuid-skill-1\",\n  \"skill_name\": \"Python\",\n  \"skill_category\": \"Programming\",\n  \"description\": \"Python programming language\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Skills by Category",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/skills/category/:category",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "skills",
+                "category",
+                ":category"
+              ],
+              "variable": [
+                {
+                  "key": "category",
+                  "value": "Programming"
+                }
+              ]
+            },
+            "description": "Get all skills in a category\nLogs: GET /skills/category/{category} with service SKILL\nRequires: Bearer token authentication"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/skills/category/Programming",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "skills",
+                    "category",
+                    "Programming"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "[\n  {\n    \"skill_id\": \"uuid-skill-1\",\n    \"skill_name\": \"Python\",\n    \"skill_category\": \"Programming\",\n    \"description\": \"Python programming language\"\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "Create Skill",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"skill_name\": \"Python\",\n  \"skill_category\": \"Programming\",\n  \"description\": \"Python programming language\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/skills",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "skills"
+              ]
+            },
+            "description": "Create a new skill\nLogs: POST /skills with service SKILL\nRequires: Bearer token authentication"
+          },
+          "response": [
+            {
+              "name": "Success - Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"skill_name\": \"Python\",\n  \"skill_category\": \"Programming\",\n  \"description\": \"Python programming language\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/skills",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "skills"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": \"success\",\n  \"reason\": \"Created skill uuid-skill-1: Python in category Programming\",\n  \"skill_id\": \"uuid-skill-1\",\n  \"skill_name\": \"Python\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Skill",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Python 3 programming language for web and data science\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/skills/:skill_id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "skills",
+                ":skill_id"
+              ],
+              "variable": [
+                {
+                  "key": "skill_id",
+                  "value": "uuid-skill-1"
+                }
+              ]
+            },
+            "description": "Update skill information\nLogs: PUT /skills/{skill_id} with service SKILL\nRequires: Bearer token authentication"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"description\": \"Python 3 programming language for web and data science\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/skills/uuid-skill-1",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "skills",
+                    "uuid-skill-1"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": \"success\",\n  \"reason\": \"Updated skill uuid-skill-1 with fields: description\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete Skill",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/skills/:skill_id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "skills",
+                ":skill_id"
+              ],
+              "variable": [
+                {
+                  "key": "skill_id",
+                  "value": "uuid-skill-1"
+                }
+              ]
+            },
+            "description": "Delete a skill\nLogs: DELETE /skills/{skill_id} with service SKILL\nRequires: Bearer token authentication\nReturns: Success/error status with reason"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/skills/uuid-skill-1",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "skills",
+                    "uuid-skill-1"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": \"success\",\n  \"reason\": \"Skill uuid-skill-1 deleted successfully\",\n  \"deleted_id\": \"uuid-skill-1\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Search Skills",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/skills/search/:search_term",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "skills",
+                "search",
+                ":search_term"
+              ],
+              "variable": [
+                {
+                  "key": "search_term",
+                  "value": "Python"
+                }
+              ]
+            },
+            "description": "Search skills by name\nLogs: GET /skills/search/{search_term} with service SKILL\nRequires: Bearer token authentication"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/skills/search/Python",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "skills",
+                    "search",
+                    "Python"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": \"success\",\n  \"reason\": \"Searched skills for 'Python', found 1 results\",\n  \"results\": [{\"skill_id\": \"uuid-skill-1\", \"skill_name\": \"Python\"}],\n  \"count\": 1\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Specialities",
+      "item": [
+        {
+          "name": "Get All Specialities",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/specialities?limit=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "specialities"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Fetch all specialities\nLogs: GET /specialities with service SPECIALITY\nRequires: Bearer token authentication"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/specialities?limit=20",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "specialities"
+                  ],
+                  "query": [
+                    {
+                      "key": "limit",
+                      "value": "20"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "[\n  {\n    \"speciality_id\": \"uuid-speciality-1\",\n    \"speciality_name\": \"Web Development\",\n    \"description\": \"Full-stack web development\"\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "Get Speciality by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/specialities/:speciality_id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "specialities",
+                ":speciality_id"
+              ],
+              "variable": [
+                {
+                  "key": "speciality_id",
+                  "value": "uuid-speciality-1"
+                }
+              ]
+            },
+            "description": "Fetch a single speciality by ID\nLogs: GET /specialities/{speciality_id} with service SPECIALITY\nRequires: Bearer token authentication"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/specialities/uuid-speciality-1",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "specialities",
+                    "uuid-speciality-1"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"speciality_id\": \"uuid-speciality-1\",\n  \"speciality_name\": \"Web Development\",\n  \"description\": \"Full-stack web development\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Speciality",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"speciality_name\": \"Web Development\",\n  \"description\": \"Full-stack web development\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/specialities",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "specialities"
+              ]
+            },
+            "description": "Create a new speciality\nLogs: POST /specialities with service SPECIALITY\nRequires: Bearer token authentication"
+          },
+          "response": [
+            {
+              "name": "Success - Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"speciality_name\": \"Web Development\",\n  \"description\": \"Full-stack web development\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/specialities",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "specialities"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": \"success\",\n  \"reason\": \"Created speciality uuid-speciality-1: Web Development\",\n  \"speciality_id\": \"uuid-speciality-1\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Speciality",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Full-stack web development including frontend, backend, and deployment\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/specialities/:speciality_id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "specialities",
+                ":speciality_id"
+              ],
+              "variable": [
+                {
+                  "key": "speciality_id",
+                  "value": "uuid-speciality-1"
+                }
+              ]
+            },
+            "description": "Update speciality information\nLogs: PUT /specialities/{speciality_id} with service SPECIALITY\nRequires: Bearer token authentication"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"description\": \"Full-stack web development including frontend, backend, and deployment\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/specialities/uuid-speciality-1",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "specialities",
+                    "uuid-speciality-1"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": \"success\",\n  \"reason\": \"Updated speciality uuid-speciality-1 with fields: description\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete Speciality",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/specialities/:speciality_id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "specialities",
+                ":speciality_id"
+              ],
+              "variable": [
+                {
+                  "key": "speciality_id",
+                  "value": "uuid-speciality-1"
+                }
+              ]
+            },
+            "description": "Delete a speciality\nLogs: DELETE /specialities/{speciality_id} with service SPECIALITY\nRequires: Bearer token authentication\nReturns: Success/error status with reason"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/specialities/uuid-speciality-1",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "specialities",
+                    "uuid-speciality-1"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": \"success\",\n  \"reason\": \"Speciality uuid-speciality-1 deleted successfully\",\n  \"deleted_id\": \"uuid-speciality-1\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Search Specialities",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/specialities/search/:search_term",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "specialities",
+                "search",
+                ":search_term"
+              ],
+              "variable": [
+                {
+                  "key": "search_term",
+                  "value": "Web"
+                }
+              ]
+            },
+            "description": "Search specialities by name\nLogs: GET /specialities/search/{search_term} with service SPECIALITY\nRequires: Bearer token authentication"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/specialities/search/Web",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "specialities",
+                    "search",
+                    "Web"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": \"success\",\n  \"reason\": \"Searched specialities for 'Web', found 1 results\",\n  \"results\": [{\"speciality_id\": \"uuid-speciality-1\", \"speciality_name\": \"Web Development\"}],\n  \"count\": 1\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Languages",
+      "item": [
+        {
+          "name": "Get All Languages",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/languages?limit=50",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "languages"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            },
+            "description": "Fetch all languages\nLogs: GET /languages with service LANGUAGE\nRequires: Bearer token authentication"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/languages?limit=50",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "languages"
+                  ],
+                  "query": [
+                    {
+                      "key": "limit",
+                      "value": "50"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "[\n  {\n    \"language_id\": \"uuid-lang-1\",\n    \"language_name\": \"English\",\n    \"iso_code\": \"en\"\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "Get Language by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/languages/:language_id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "languages",
+                ":language_id"
+              ],
+              "variable": [
+                {
+                  "key": "language_id",
+                  "value": "uuid-lang-1"
+                }
+              ]
+            },
+            "description": "Fetch a single language by ID\nLogs: GET /languages/{language_id} with service LANGUAGE\nRequires: Bearer token authentication"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/languages/uuid-lang-1",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "languages",
+                    "uuid-lang-1"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"language_id\": \"uuid-lang-1\",\n  \"language_name\": \"English\",\n  \"iso_code\": \"en\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Language",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"language_name\": \"English\",\n  \"iso_code\": \"en\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/languages",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "languages"
+              ]
+            },
+            "description": "Create a new language\nLogs: POST /languages with service LANGUAGE\nRequires: Bearer token authentication"
+          },
+          "response": [
+            {
+              "name": "Success - Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"language_name\": \"English\",\n  \"iso_code\": \"en\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/languages",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "languages"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": \"success\",\n  \"reason\": \"Created language uuid-lang-1: English (ISO: en)\",\n  \"language_id\": \"uuid-lang-1\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Language",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"language_name\": \"English (US)\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/languages/:language_id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "languages",
+                ":language_id"
+              ],
+              "variable": [
+                {
+                  "key": "language_id",
+                  "value": "uuid-lang-1"
+                }
+              ]
+            },
+            "description": "Update language information\nLogs: PUT /languages/{language_id} with service LANGUAGE\nRequires: Bearer token authentication"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"language_name\": \"English (US)\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/languages/uuid-lang-1",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "languages",
+                    "uuid-lang-1"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": \"success\",\n  \"reason\": \"Updated language uuid-lang-1 with fields: language_name\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete Language",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/languages/:language_id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "languages",
+                ":language_id"
+              ],
+              "variable": [
+                {
+                  "key": "language_id",
+                  "value": "uuid-lang-1"
+                }
+              ]
+            },
+            "description": "Delete a language\nLogs: DELETE /languages/{language_id} with service LANGUAGE\nRequires: Bearer token authentication\nReturns: Success/error status with reason"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/languages/uuid-lang-1",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "languages",
+                    "uuid-lang-1"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": \"success\",\n  \"reason\": \"Language uuid-lang-1 deleted successfully\",\n  \"deleted_id\": \"uuid-lang-1\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Search Languages",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/languages/search/:search_term",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "languages",
+                "search",
+                ":search_term"
+              ],
+              "variable": [
+                {
+                  "key": "search_term",
+                  "value": "English"
+                }
+              ]
+            },
+            "description": "Search languages by name\nLogs: GET /languages/search/{search_term} with service LANGUAGE\nRequires: Bearer token authentication"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/languages/search/English",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "languages",
+                    "search",
+                    "English"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": \"success\",\n  \"reason\": \"Searched languages for 'English', found 1 results\",\n  \"results\": [{\"language_id\": \"uuid-lang-1\", \"language_name\": \"English\"}],\n  \"count\": 1\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

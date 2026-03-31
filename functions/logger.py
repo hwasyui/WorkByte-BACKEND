@@ -16,7 +16,7 @@ class Logger:
             self.logger.setLevel(logging.DEBUG)
 
             formatter =  logging.Formatter("%(asctime)s | %(levelname)s | %(service)s | %(route)s | %(message)s")
-
+            
             console_handler = logging.StreamHandler()
             console_handler.setFormatter(formatter)
 
