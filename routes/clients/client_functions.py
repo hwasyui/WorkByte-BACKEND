@@ -31,8 +31,8 @@ class ClientFunctions:
             db = get_db()
             rows = db.fetch_data(
                 table_name="client",
-                columns=["client_id", "user_id", "company_name", "company_description", 
-                        "website_url", "total_jobs_posted", "total_projects_completed", 
+                columns=["client_id", "user_id", "full_name", "bio", "website_url", "profile_picture_url", 
+                        "total_jobs_posted", "total_projects_completed", 
                         "average_rating_given", "created_at", "updated_at"],
                 order_by="created_at DESC",
                 limit=limit
@@ -109,8 +109,9 @@ class ClientFunctions:
             raise
 
     @staticmethod
-    def create_client(client_id: str, user_id: str, company_name: Optional[str] = None,
-                     company_description: Optional[str] = None, website_url: Optional[str] = None) -> Dict:
+    def create_client(client_id: str, user_id: str, full_name: Optional[str] = None,
+                     bio: Optional[str] = None, website_url: Optional[str] = None,
+                     profile_picture_url: Optional[str] = None) -> Dict:
         """Create a new client profile"""
         try:
             db = get_db()
@@ -119,9 +120,10 @@ class ClientFunctions:
             client_data = {
                 "client_id": client_id,
                 "user_id": user_id,
-                "company_name": company_name,
-                "company_description": company_description,
+                "full_name": full_name,
+                "bio": bio,
                 "website_url": website_url,
+                "profile_picture_url": profile_picture_url,
                 "total_jobs_posted": 0,
                 "total_projects_completed": 0
             }
@@ -173,11 +175,11 @@ class ClientFunctions:
             raise
 
     @staticmethod
-    def search_clients_by_company(search_term: str) -> List[Dict]:
-        """Search clients by company name"""
+    def search_clients_by_full_name(search_term: str) -> List[Dict]:
+        """Search clients by full name"""
         try:
             db = get_db()
-            query = "SELECT * FROM client WHERE company_name ILIKE '%' || :search_term || '%' ORDER BY created_at DESC"
+            query = "SELECT * FROM client WHERE full_name ILIKE '%' || :search_term || '%' ORDER BY created_at DESC"
             rows = db.execute_query(query, {"search_term": search_term})
             
             logger("CLIENT_FUNCTIONS", f"Found {len(rows)} clients matching '{search_term}'", level="INFO")

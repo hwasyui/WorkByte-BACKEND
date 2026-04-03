@@ -134,13 +134,14 @@ def register_user(email: str, password: str, user_type: str = "freelancer", full
             if not profile_result:
                 raise HTTPException(status_code=500, detail="Failed to create freelancer profile")
         elif user_type == "client":
-            # Company name is optional for client, so always create profile
+            # Client profile uses full_name + bio now (company_name renamed to full_name in DB)
+            full_name_value = company_name or full_name
             profile_query = """
-            INSERT INTO client (user_id, company_name)
-            VALUES (:user_id, :company_name)
+            INSERT INTO client (user_id, full_name)
+            VALUES (:user_id, :full_name)
             RETURNING client_id
             """
-            profile_result = db.execute_query(profile_query, params={"user_id": user_id, "company_name": company_name})
+            profile_result = db.execute_query(profile_query, params={"user_id": user_id, "full_name": full_name_value})
             if not profile_result:
                 raise HTTPException(status_code=500, detail="Failed to create client profile")
         
