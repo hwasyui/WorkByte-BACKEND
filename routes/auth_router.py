@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, Depends, status
 from datetime import timedelta
 import sys, os
 
@@ -18,6 +18,7 @@ from functions.authentication import (
 from functions.database import Database
 from functions.logger import logger
 from functions.functions import db
+from functions.response_utils import ResponseSchema
 from functions.schema_model import UserRegister, UserLogin, Token, UserResponse
 from typing import Dict
 
@@ -32,19 +33,15 @@ async def register(user: UserRegister):
             password=user.password, 
             user_type=user.user_type,
             full_name=user.full_name,
-            company_name=user.company_name
+            company_name=user.company_name or user.full_name
         )
         success_msg = f"User {user.email} registered successfully as {user.user_type}"
         logger("AUTH", success_msg, "POST /auth/register", "INFO")
-        return {"status": "success", "reason": success_msg, "data": result}
-    except HTTPException as e:
-        error_msg = f"Registration failed: {str(e.detail)}"
-        logger("AUTH", error_msg, "POST /auth/register", "ERROR")
-        raise HTTPException(status_code=e.status_code, detail={"status": "error", "reason": error_msg})
+        return ResponseSchema.success(result, 201)
     except Exception as e:
-        error_msg = f"Registration error: {str(e)}"
+        error_msg = f"Registration failed: {str(e)}"
         logger("AUTH", error_msg, "POST /auth/register", "ERROR")
-        raise HTTPException(status_code=500, detail={"status": "error", "reason": error_msg})
+        return ResponseSchema.error(error_msg, 500)
 
 @auth_router.post("/login", response_model=Token)
 async def login(credentials: UserLogin):
@@ -54,26 +51,18 @@ async def login(credentials: UserLogin):
         if not user:
             error_msg = f"Login failed for {credentials.email}: Invalid email or password"
             logger("AUTH", error_msg, "POST /auth/login", "WARNING")
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail={"status": "error", "reason": "Incorrect email or password"},
-                headers={"WWW-Authenticate": "Bearer"},
-            )
+            return ResponseSchema.error(error_msg, 401)
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token(
             data={"sub": user.email}, expires_delta=access_token_expires
         )
         success_msg = f"Login successful for {user.email}"
         logger("AUTH", success_msg, "POST /auth/login", "INFO")
-        return {"access_token": access_token, "token_type": "bearer"}
-    except HTTPException as e:
-        if e.detail and isinstance(e.detail, dict):
-            logger("AUTH", f"Login error: {e.detail.get('reason', str(e.detail))}", "POST /auth/login", "WARNING")
-        raise e
+        return ResponseSchema.success({"access_token": access_token, "token_type": "bearer"}, 201)
     except Exception as e:
         error_msg = f"Login authentication error: {str(e)}"
         logger("AUTH", error_msg, "POST /auth/login", "ERROR")
-        raise HTTPException(status_code=500, detail={"status": "error", "reason": error_msg})
+        return ResponseSchema.error(error_msg, 500)
 
 @auth_router.get("/me", response_model=UserResponse)
 async def get_me(current_user: UserInDB = Depends(get_current_user)):
@@ -85,8 +74,8 @@ async def get_me(current_user: UserInDB = Depends(get_current_user)):
             type=current_user.type
         )
         logger("AUTH", f"Retrieved user info for {current_user.email} - type: {current_user.type}", "GET /auth/me", "INFO")
-        return response
+        return ResponseSchema.success(response.model_dump(), 200)
     except Exception as e:
         error_msg = f"Failed to retrieve user info: {str(e)}"
         logger("AUTH", error_msg, "GET /auth/me", "ERROR")
-        raise HTTPException(status_code=500, detail={"status": "error", "reason": error_msg})
+        return ResponseSchema.error(error_msg, 500)
