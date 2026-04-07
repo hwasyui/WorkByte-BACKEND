@@ -8,6 +8,7 @@ import uuid
 from functions.schema_model import UserCreate, UserUpdate, UserResponseDetail
 from functions.schema_model import UserInDB
 from functions.authentication import get_current_user
+from functions.access_control import assert_user_owns
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.users.users_functions import UserFunctions
@@ -17,12 +18,12 @@ users_router = APIRouter(prefix="/users", tags=["Users"])
 
 @users_router.get("", response_model=List[UserResponseDetail])
 async def get_all_users(limit: Optional[int] = None, offset: int = 0, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch all users - Authenticated users only - JSON response"""
+    """Fetch current user only - Authenticated users only - JSON response"""
     try:
-        users = UserFunctions.get_all_users(limit=limit, offset=offset)
-        success_msg = f"Retrieved {len(users)} users" + (f" (limit: {limit}, offset: {offset})" if limit else "")
+        user = UserFunctions.get_user_by_id(current_user.user_id)
+        success_msg = f"Retrieved current user {current_user.user_id}"
         logger("USER", success_msg, "GET /users", "INFO")
-        return ResponseSchema.success(users, 200)
+        return ResponseSchema.success([user], 200)
     except Exception as e:
         error_msg = f"Failed to fetch users: {str(e)}"
         logger("USER", error_msg, "GET /users", "ERROR")
@@ -30,8 +31,8 @@ async def get_all_users(limit: Optional[int] = None, offset: int = 0, current_us
 
 
 @users_router.get("/search/{search_term}", response_model=Dict)
-async def search_users(search_term: str):
-    """Search users by email - JSON response"""
+async def search_users(search_term: str, current_user: UserInDB = Depends(get_current_user)):
+    """Search users by email - Authenticated users only - JSON response"""
     try:
         users = UserFunctions.search_users(search_term)
         success_msg = f"Searched users for '{search_term}', found {len(users)} results"
@@ -48,6 +49,7 @@ async def search_users(search_term: str):
 async def get_user(user_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Fetch a single user by ID - Authenticated users only - JSON response"""
     try:
+        assert_user_owns(current_user, user_id)
         user = UserFunctions.get_user_by_id(user_id)
         if not user:
             error_msg = f"User {user_id} not found"
@@ -95,6 +97,7 @@ async def create_user(user: UserCreate, current_user: UserInDB = Depends(get_cur
 async def update_user(user_id: str, user_update: UserUpdate, current_user: UserInDB = Depends(get_current_user)):
     """Update user information - Authenticated users only"""
     try:
+        assert_user_owns(current_user, user_id)
         # Check if user exists
         existing_user = UserFunctions.get_user_by_id(user_id)
         if not existing_user:
@@ -126,6 +129,7 @@ async def update_user(user_id: str, user_update: UserUpdate, current_user: UserI
 async def delete_user(user_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Delete a user - Authenticated users only"""
     try:
+        assert_user_owns(current_user, user_id)
         # Check if user exists
         existing_user = UserFunctions.get_user_by_id(user_id)
         if not existing_user:

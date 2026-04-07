@@ -8,6 +8,7 @@ import uuid
 from functions.schema_model import ContractCreate, ContractUpdate, ContractResponse
 from functions.schema_model import UserInDB
 from functions.authentication import get_current_user
+from functions.access_control import assert_current_user_is_contract_party, assert_client_owns, assert_freelancer_owns, get_client_profile_for_user, get_freelancer_profile_for_user
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.contracts.contract_functions import ContractFunctions
@@ -19,8 +20,15 @@ contract_router = APIRouter(prefix="/contracts", tags=["Contracts"])
 async def get_all_contracts(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
     """Fetch all contracts - Authenticated users only - JSON response"""
     try:
-        contracts = ContractFunctions.get_all_contracts(limit=limit)
-        success_msg = f"Retrieved {len(contracts)} contracts" + (f" (limit: {limit})" if limit else "")
+        if current_user.type == "client":
+            client = get_client_profile_for_user(current_user)
+            contracts = ContractFunctions.get_contracts_by_client_id(client["client_id"])
+        elif current_user.type == "freelancer":
+            freelancer = get_freelancer_profile_for_user(current_user)
+            contracts = ContractFunctions.get_contracts_by_freelancer_id(freelancer["freelancer_id"])
+        else:
+            return ResponseSchema.error("Only clients and freelancers can access contracts", 403)
+        success_msg = f"Retrieved {len(contracts)} contracts for user {current_user.user_id}"
         logger("CONTRACT", success_msg, "GET /contracts", "INFO")
         return ResponseSchema.success(contracts, 200)
     except Exception as e:
@@ -38,6 +46,7 @@ async def get_contract(contract_id: str, current_user: UserInDB = Depends(get_cu
             error_msg = f"Contract {contract_id} not found"
             logger("CONTRACT", error_msg, "GET /contracts/{contract_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
+        assert_current_user_is_contract_party(current_user, contract)
         success_msg = f"Retrieved contract {contract_id}"
         logger("CONTRACT", success_msg, "GET /contracts/{contract_id}", "INFO")
         return ResponseSchema.success(contract, 200)
@@ -51,6 +60,7 @@ async def get_contract(contract_id: str, current_user: UserInDB = Depends(get_cu
 async def get_contracts_by_freelancer(freelancer_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Fetch all contracts for a specific freelancer - Authenticated users only - JSON response"""
     try:
+        assert_freelancer_owns(current_user, freelancer_id)
         contracts = ContractFunctions.get_contracts_by_freelancer_id(freelancer_id)
         success_msg = f"Retrieved {len(contracts)} contracts for freelancer {freelancer_id}"
         logger("CONTRACT", success_msg, "GET /contracts/freelancer/{freelancer_id}", "INFO")
@@ -65,6 +75,7 @@ async def get_contracts_by_freelancer(freelancer_id: str, current_user: UserInDB
 async def get_contracts_by_client(client_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Fetch all contracts for a specific client - Authenticated users only - JSON response"""
     try:
+        assert_client_owns(current_user, client_id)
         contracts = ContractFunctions.get_contracts_by_client_id(client_id)
         success_msg = f"Retrieved {len(contracts)} contracts for client {client_id}"
         logger("CONTRACT", success_msg, "GET /contracts/client/{client_id}", "INFO")
@@ -80,6 +91,16 @@ async def create_contract(contract: ContractCreate, current_user: UserInDB = Dep
     """Create a new contract - Authenticated users only - JSON body accepted"""
     try:
         contract_id = contract.contract_id or str(uuid.uuid4())
+        if current_user.type == "client":
+            client = get_client_profile_for_user(current_user)
+            if contract.client_id and str(contract.client_id) != str(client["client_id"]):
+                return ResponseSchema.error("Cannot create a contract for another client", 403)
+        elif current_user.type == "freelancer":
+            freelancer = get_freelancer_profile_for_user(current_user)
+            if contract.freelancer_id and str(contract.freelancer_id) != str(freelancer["freelancer_id"]):
+                return ResponseSchema.error("Cannot create a contract for another freelancer", 403)
+        else:
+            return ResponseSchema.error("Only clients or freelancers can create contracts", 403)
         
         new_contract = ContractFunctions.create_contract(
             job_post_id=contract.job_post_id,
@@ -123,6 +144,7 @@ async def update_contract(contract_id: str, contract_update: ContractUpdate, cur
             error_msg = f"Contract {contract_id} not found"
             logger("CONTRACT", error_msg, "PUT /contracts/{contract_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
+        assert_current_user_is_contract_party(current_user, existing_contract)
         
         update_data = contract_update.model_dump(exclude_unset=True)
         updated_contract = ContractFunctions.update_contract(contract_id, update_data)
@@ -145,6 +167,7 @@ async def delete_contract(contract_id: str, current_user: UserInDB = Depends(get
             error_msg = f"Contract {contract_id} not found"
             logger("CONTRACT", error_msg, "DELETE /contracts/{contract_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
+        assert_current_user_is_contract_party(current_user, existing_contract)
         
         ContractFunctions.delete_contract(contract_id)
         

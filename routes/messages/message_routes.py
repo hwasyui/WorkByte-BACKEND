@@ -8,9 +8,11 @@ import uuid
 from functions.schema_model import MessageCreate, MessageUpdate, MessageResponse
 from functions.schema_model import UserInDB
 from functions.authentication import get_current_user
+from functions.access_control import assert_current_user_is_contract_party
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.messages.message_functions import MessageFunctions
+from routes.contracts.contract_functions import ContractFunctions
 
 message_router = APIRouter(prefix="/messages", tags=["Messages"])
 
@@ -19,8 +21,10 @@ message_router = APIRouter(prefix="/messages", tags=["Messages"])
 async def get_all_messages(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
     """Fetch all messages - Authenticated users only - JSON response"""
     try:
-        messages = MessageFunctions.get_all_messages(limit=limit)
-        success_msg = f"Retrieved {len(messages)} messages" + (f" (limit: {limit})" if limit else "")
+        sent = MessageFunctions.get_messages_by_sender_id(current_user.user_id)
+        received = MessageFunctions.get_messages_by_receiver_id(current_user.user_id)
+        messages = sent + received
+        success_msg = f"Retrieved {len(messages)} messages for user {current_user.user_id}" + (f" (limit: {limit})" if limit else "")
         logger("MESSAGE", success_msg, "GET /messages", "INFO")
         return ResponseSchema.success(messages, 200)
     except Exception as e:
@@ -38,6 +42,10 @@ async def get_message(message_id: str, current_user: UserInDB = Depends(get_curr
             error_msg = f"Message {message_id} not found"
             logger("MESSAGE", error_msg, "GET /messages/{message_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
+        if str(current_user.user_id) not in [str(message["sender_id"]), str(message["receiver_id"])]:
+            return ResponseSchema.error("Cannot access another user's message", 403)
+            logger("MESSAGE", error_msg, "GET /messages/{message_id}", "WARNING")
+            return ResponseSchema.error(error_msg, 404)
         success_msg = f"Retrieved message {message_id}"
         logger("MESSAGE", success_msg, "GET /messages/{message_id}", "INFO")
         return ResponseSchema.success(message, 200)
@@ -51,6 +59,8 @@ async def get_message(message_id: str, current_user: UserInDB = Depends(get_curr
 async def get_messages_by_sender(sender_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Fetch all messages sent by a specific user - Authenticated users only - JSON response"""
     try:
+        if str(sender_id) != str(current_user.user_id):
+            return ResponseSchema.error("Cannot fetch another user's sent messages", 403)
         messages = MessageFunctions.get_messages_by_sender_id(sender_id)
         success_msg = f"Retrieved {len(messages)} messages from sender {sender_id}"
         logger("MESSAGE", success_msg, "GET /messages/sender/{sender_id}", "INFO")
@@ -65,6 +75,8 @@ async def get_messages_by_sender(sender_id: str, current_user: UserInDB = Depend
 async def get_messages_by_receiver(receiver_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Fetch all messages received by a specific user - Authenticated users only - JSON response"""
     try:
+        if str(receiver_id) != str(current_user.user_id):
+            return ResponseSchema.error("Cannot fetch another user's received messages", 403)
         messages = MessageFunctions.get_messages_by_receiver_id(receiver_id)
         success_msg = f"Retrieved {len(messages)} messages for receiver {receiver_id}"
         logger("MESSAGE", success_msg, "GET /messages/receiver/{receiver_id}", "INFO")
@@ -79,6 +91,8 @@ async def get_messages_by_receiver(receiver_id: str, current_user: UserInDB = De
 async def get_messages_by_contract(contract_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Fetch all messages for a specific contract - Authenticated users only - JSON response"""
     try:
+        contract = ContractFunctions.get_contract_by_id(contract_id)
+        assert_current_user_is_contract_party(current_user, contract)
         messages = MessageFunctions.get_messages_by_contract_id(contract_id)
         success_msg = f"Retrieved {len(messages)} messages for contract {contract_id}"
         logger("MESSAGE", success_msg, "GET /messages/contract/{contract_id}", "INFO")
@@ -95,6 +109,11 @@ async def create_message(message: MessageCreate, current_user: UserInDB = Depend
     try:
         message_id = message.message_id or str(uuid.uuid4())
         
+        if str(message.sender_id) != str(current_user.user_id):
+            return ResponseSchema.error("Cannot send messages on behalf of another user", 403)
+        if getattr(message, 'contract_id', None):
+            contract = ContractFunctions.get_contract_by_id(message.contract_id)
+            assert_current_user_is_contract_party(current_user, contract)
         new_message = MessageFunctions.create_message(
             sender_id=message.sender_id,
             receiver_id=message.receiver_id,
@@ -124,6 +143,8 @@ async def update_message(message_id: str, message_update: MessageUpdate, current
             error_msg = f"Message {message_id} not found"
             logger("MESSAGE", error_msg, "PUT /messages/{message_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
+        if str(existing_message["sender_id"]) != str(current_user.user_id):
+            return ResponseSchema.error("Cannot update another user's message", 403)
         
         update_data = message_update.model_dump(exclude_unset=True)
         updated_message = MessageFunctions.update_message(message_id, update_data)
@@ -146,6 +167,8 @@ async def delete_message(message_id: str, current_user: UserInDB = Depends(get_c
             error_msg = f"Message {message_id} not found"
             logger("MESSAGE", error_msg, "DELETE /messages/{message_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
+        if str(existing_message["sender_id"]) != str(current_user.user_id):
+            return ResponseSchema.error("Cannot delete another user's message", 403)
         
         MessageFunctions.delete_message(message_id)
         

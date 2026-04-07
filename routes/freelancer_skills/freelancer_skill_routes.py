@@ -8,6 +8,7 @@ import uuid
 from functions.schema_model import FreelancerSkillCreate, FreelancerSkillUpdate, FreelancerSkillResponse
 from functions.schema_model import UserInDB
 from functions.authentication import get_current_user
+from functions.access_control import assert_freelancer_owns, get_freelancer_profile_for_user
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.freelancer_skills.freelancer_skill_functions import FreelancerSkillFunctions
@@ -19,8 +20,9 @@ freelancer_skill_router = APIRouter(prefix="/freelancer-skills", tags=["Freelanc
 async def get_all_freelancer_skills(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
     """Fetch all freelancer skills - Authenticated users only - JSON response"""
     try:
-        skills = FreelancerSkillFunctions.get_all_freelancer_skills(limit=limit)
-        success_msg = f"Retrieved {len(skills)} freelancer skills" + (f" (limit: {limit})" if limit else "")
+        freelancer = get_freelancer_profile_for_user(current_user)
+        skills = FreelancerSkillFunctions.get_freelancer_skills_by_freelancer_id(freelancer["freelancer_id"])
+        success_msg = f"Retrieved {len(skills)} freelancer skills for freelancer {freelancer['freelancer_id']}"
         logger("FREELANCER_SKILL", success_msg, "GET /freelancer-skills", "INFO")
         return ResponseSchema.success(skills, 200)
     except Exception as e:
@@ -66,6 +68,7 @@ async def create_freelancer_skill(freelancer_skill: FreelancerSkillCreate, curre
     """Create a new freelancer skill - Authenticated users only - JSON body accepted"""
     try:
         freelancer_skill_id = freelancer_skill.freelancer_skill_id or str(uuid.uuid4())
+        assert_freelancer_owns(current_user, freelancer_skill.freelancer_id)
         
         new_skill = FreelancerSkillFunctions.create_freelancer_skill(
             freelancer_id=freelancer_skill.freelancer_id,
@@ -95,6 +98,7 @@ async def update_freelancer_skill(freelancer_skill_id: str, freelancer_skill_upd
             error_msg = f"Freelancer skill {freelancer_skill_id} not found"
             logger("FREELANCER_SKILL", error_msg, "PUT /freelancer-skills/{freelancer_skill_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
+        assert_freelancer_owns(current_user, existing_skill["freelancer_id"])
         
         update_data = freelancer_skill_update.model_dump(exclude_unset=True)
         updated_skill = FreelancerSkillFunctions.update_freelancer_skill(freelancer_skill_id, update_data)
@@ -117,6 +121,7 @@ async def delete_freelancer_skill(freelancer_skill_id: str, current_user: UserIn
             error_msg = f"Freelancer skill {freelancer_skill_id} not found"
             logger("FREELANCER_SKILL", error_msg, "DELETE /freelancer-skills/{freelancer_skill_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
+        assert_freelancer_owns(current_user, existing_skill["freelancer_id"])
         
         FreelancerSkillFunctions.delete_freelancer_skill(freelancer_skill_id)
         
@@ -133,6 +138,7 @@ async def delete_freelancer_skill(freelancer_skill_id: str, current_user: UserIn
 async def delete_freelancer_skill_by_ids(freelancer_id: str, skill_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Delete a freelancer skill by freelancer_id and skill_id - Authenticated users only"""
     try:
+        assert_freelancer_owns(current_user, freelancer_id)
         FreelancerSkillFunctions.delete_freelancer_skill_by_freelancer_and_skill(freelancer_id, skill_id)
         
         success_msg = f"Deleted skill {skill_id} from freelancer {freelancer_id}"

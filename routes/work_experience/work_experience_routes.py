@@ -8,6 +8,7 @@ import uuid
 from functions.schema_model import WorkExperienceCreate, WorkExperienceUpdate, WorkExperienceResponse
 from functions.schema_model import UserInDB
 from functions.authentication import get_current_user
+from functions.access_control import assert_freelancer_owns, get_freelancer_profile_for_user
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.work_experience.work_experience_functions import WorkExperienceFunctions
@@ -19,8 +20,9 @@ work_experience_router = APIRouter(prefix="/work-experiences", tags=["Work Exper
 async def get_all_work_experiences(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
     """Fetch all work experiences - Authenticated users only - JSON response"""
     try:
-        experiences = WorkExperienceFunctions.get_all_work_experiences(limit=limit)
-        success_msg = f"Retrieved {len(experiences)} work experiences" + (f" (limit: {limit})" if limit else "")
+        freelancer = get_freelancer_profile_for_user(current_user)
+        experiences = WorkExperienceFunctions.get_work_experiences_by_freelancer_id(freelancer["freelancer_id"])
+        success_msg = f"Retrieved {len(experiences)} work experiences for freelancer {freelancer['freelancer_id']}"
         logger("WORK_EXPERIENCE", success_msg, "GET /work-experiences", "INFO")
         return ResponseSchema.success(experiences, 200)
     except Exception as e:
@@ -66,7 +68,7 @@ async def create_work_experience(work_experience: WorkExperienceCreate, current_
     """Create a new work experience - Authenticated users only - JSON body accepted"""
     try:
         work_experience_id = work_experience.work_experience_id or str(uuid.uuid4())
-        
+        assert_freelancer_owns(current_user, work_experience.freelancer_id)
         new_experience = WorkExperienceFunctions.create_work_experience(
             freelancer_id=work_experience.freelancer_id,
             job_title=work_experience.job_title,
@@ -100,6 +102,7 @@ async def update_work_experience(work_experience_id: str, work_experience_update
             error_msg = f"Work experience {work_experience_id} not found"
             logger("WORK_EXPERIENCE", error_msg, "PUT /work-experiences/{work_experience_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
+        assert_freelancer_owns(current_user, existing_experience["freelancer_id"])
         
         update_data = work_experience_update.model_dump(exclude_unset=True)
         updated_experience = WorkExperienceFunctions.update_work_experience(work_experience_id, update_data)
@@ -122,6 +125,7 @@ async def delete_work_experience(work_experience_id: str, current_user: UserInDB
             error_msg = f"Work experience {work_experience_id} not found"
             logger("WORK_EXPERIENCE", error_msg, "DELETE /work-experiences/{work_experience_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
+        assert_freelancer_owns(current_user, existing_experience["freelancer_id"])
         
         WorkExperienceFunctions.delete_work_experience(work_experience_id)
         

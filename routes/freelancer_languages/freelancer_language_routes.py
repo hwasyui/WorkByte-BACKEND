@@ -8,6 +8,7 @@ import uuid
 from functions.schema_model import FreelancerLanguageCreate, FreelancerLanguageUpdate, FreelancerLanguageResponse
 from functions.schema_model import UserInDB
 from functions.authentication import get_current_user
+from functions.access_control import assert_freelancer_owns, get_freelancer_profile_for_user
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.freelancer_languages.freelancer_language_functions import FreelancerLanguageFunctions
@@ -17,10 +18,11 @@ freelancer_language_router = APIRouter(prefix="/freelancer-languages", tags=["Fr
 
 @freelancer_language_router.get("", response_model=List[FreelancerLanguageResponse])
 async def get_all_freelancer_languages(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch all freelancer languages - Authenticated users only - JSON response"""
+    """Fetch current user's freelancer languages - Authenticated users only - JSON response"""
     try:
-        languages = FreelancerLanguageFunctions.get_all_freelancer_languages(limit=limit)
-        success_msg = f"Retrieved {len(languages)} freelancer languages" + (f" (limit: {limit})" if limit else "")
+        freelancer = get_freelancer_profile_for_user(current_user)
+        languages = FreelancerLanguageFunctions.get_freelancer_languages_by_freelancer_id(freelancer["freelancer_id"])
+        success_msg = f"Retrieved {len(languages)} freelancer languages for freelancer {freelancer['freelancer_id']}"
         logger("FREELANCER_LANGUAGE", success_msg, "GET /freelancer-languages", "INFO")
         return ResponseSchema.success(languages, 200)
     except Exception as e:
@@ -66,7 +68,7 @@ async def create_freelancer_language(freelancer_language: FreelancerLanguageCrea
     """Create a new freelancer language - Authenticated users only - JSON body accepted"""
     try:
         freelancer_language_id = freelancer_language.freelancer_language_id or str(uuid.uuid4())
-        
+        assert_freelancer_owns(current_user, freelancer_language.freelancer_id)
         new_language = FreelancerLanguageFunctions.create_freelancer_language(
             freelancer_id=freelancer_language.freelancer_id,
             language_id=freelancer_language.language_id,
@@ -95,6 +97,7 @@ async def update_freelancer_language(freelancer_language_id: str, freelancer_lan
             error_msg = f"Freelancer language {freelancer_language_id} not found"
             logger("FREELANCER_LANGUAGE", error_msg, "PUT /freelancer-languages/{freelancer_language_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
+        assert_freelancer_owns(current_user, existing_language["freelancer_id"])
         
         update_data = freelancer_language_update.model_dump(exclude_unset=True)
         updated_language = FreelancerLanguageFunctions.update_freelancer_language(freelancer_language_id, update_data)
@@ -117,6 +120,7 @@ async def delete_freelancer_language(freelancer_language_id: str, current_user: 
             error_msg = f"Freelancer language {freelancer_language_id} not found"
             logger("FREELANCER_LANGUAGE", error_msg, "DELETE /freelancer-languages/{freelancer_language_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
+        assert_freelancer_owns(current_user, existing_language["freelancer_id"])
         
         FreelancerLanguageFunctions.delete_freelancer_language(freelancer_language_id)
         

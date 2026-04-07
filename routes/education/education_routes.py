@@ -8,6 +8,7 @@ import uuid
 from functions.schema_model import EducationCreate, EducationUpdate, EducationResponse
 from functions.schema_model import UserInDB
 from functions.authentication import get_current_user
+from functions.access_control import assert_freelancer_owns, get_freelancer_profile_for_user
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.education.education_functions import EducationFunctions
@@ -19,8 +20,9 @@ education_router = APIRouter(prefix="/educations", tags=["Educations"])
 async def get_all_educations(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
     """Fetch all educations - Authenticated users only - JSON response"""
     try:
-        educations = EducationFunctions.get_all_educations(limit=limit)
-        success_msg = f"Retrieved {len(educations)} educations" + (f" (limit: {limit})" if limit else "")
+        freelancer = get_freelancer_profile_for_user(current_user)
+        educations = EducationFunctions.get_educations_by_freelancer_id(freelancer["freelancer_id"])
+        success_msg = f"Retrieved {len(educations)} educations for freelancer {freelancer['freelancer_id']}"
         logger("EDUCATION", success_msg, "GET /educations", "INFO")
         return ResponseSchema.success(educations, 200)
     except Exception as e:
@@ -66,7 +68,7 @@ async def create_education(education: EducationCreate, current_user: UserInDB = 
     """Create a new education - Authenticated users only - JSON body accepted"""
     try:
         education_id = education.education_id or str(uuid.uuid4())
-        
+        assert_freelancer_owns(current_user, education.freelancer_id)
         new_education = EducationFunctions.create_education(
             freelancer_id=education.freelancer_id,
             institution_name=education.institution_name,
@@ -101,6 +103,7 @@ async def update_education(education_id: str, education_update: EducationUpdate,
             error_msg = f"Education {education_id} not found"
             logger("EDUCATION", error_msg, "PUT /educations/{education_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
+        assert_freelancer_owns(current_user, existing_education["freelancer_id"])
         
         update_data = education_update.model_dump(exclude_unset=True)
         updated_education = EducationFunctions.update_education(education_id, update_data)
@@ -123,6 +126,7 @@ async def delete_education(education_id: str, current_user: UserInDB = Depends(g
             error_msg = f"Education {education_id} not found"
             logger("EDUCATION", error_msg, "DELETE /educations/{education_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
+        assert_freelancer_owns(current_user, existing_education["freelancer_id"])
         
         EducationFunctions.delete_education(education_id)
         

@@ -30,8 +30,8 @@ async def get_all_specialities(limit: Optional[int] = None, current_user: UserIn
 
 
 @speciality_router.get("/search/{search_term}", response_model=Dict)
-async def search_specialities(search_term: str):
-    """Search specialities by name - JSON response"""
+async def search_specialities(search_term: str, current_user: UserInDB = Depends(get_current_user)):
+    """Search specialities by name - Authenticated users only - JSON response"""
     try:
         results = SpecialityFunctions.search_specialities_by_name(search_term)
         success_msg = f"Searched specialities for '{search_term}', found {len(results)} results"

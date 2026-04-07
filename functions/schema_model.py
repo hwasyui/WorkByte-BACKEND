@@ -904,3 +904,47 @@ class MessageResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# ==================== COMPREHENSIVE FREELANCER PROFILE ====================
+class FreelancerSkillWithDetails(BaseModel):
+    freelancer_skill_id: str
+    skill: SkillResponse
+    proficiency_level: str
+    created_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+class FreelancerSpecialityWithDetails(BaseModel):
+    freelancer_speciality_id: str
+    speciality: SpecialityResponse
+    is_primary: bool
+    created_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+class FreelancerLanguageWithDetails(BaseModel):
+    freelancer_language_id: str
+    language: LanguageResponse
+    proficiency_level: str
+    created_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+class FreelancerProfileComplete(BaseModel):
+    freelancer: FreelancerResponse
+    skills: List[FreelancerSkillWithDetails] = []
+    specialities: List[FreelancerSpecialityWithDetails] = []
+    languages: List[FreelancerLanguageWithDetails] = []
+    education: List[EducationResponse] = []
+    work_experience: List[WorkExperienceResponse] = []
+    portfolio: List[PortfolioResponse] = []
+    ratings: List[RatingResponse] = []  # Ratings received by this freelancer
+    total_ratings: Optional[int] = 0
+    average_rating: Optional[float] = None
+
+    class Config:
+        from_attributes = True

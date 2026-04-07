@@ -8,8 +8,10 @@ import uuid
 from functions.schema_model import JobRoleCreate, JobRoleUpdate, JobRoleResponse
 from functions.schema_model import UserInDB
 from functions.authentication import get_current_user
+from functions.access_control import assert_client_owns, get_client_profile_for_user
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
+from routes.job_posts.job_post_functions import JobPostFunctions
 from routes.job_roles.job_role_functions import JobRoleFunctions
 
 job_role_router = APIRouter(prefix="/job-roles", tags=["Job Roles"])
@@ -19,8 +21,9 @@ job_role_router = APIRouter(prefix="/job-roles", tags=["Job Roles"])
 async def get_all_job_roles(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
     """Fetch all job roles - Authenticated users only - JSON response"""
     try:
-        job_roles = JobRoleFunctions.get_all_job_roles(limit=limit)
-        success_msg = f"Retrieved {len(job_roles)} job roles" + (f" (limit: {limit})" if limit else "")
+        client = get_client_profile_for_user(current_user)
+        job_roles = JobRoleFunctions.get_job_roles_by_client_id(client["client_id"])
+        success_msg = f"Retrieved {len(job_roles)} job roles for client {client['client_id']}"
         logger("JOB_ROLE", success_msg, "GET /job-roles", "INFO")
         return ResponseSchema.success(job_roles, 200)
     except Exception as e:
@@ -38,6 +41,8 @@ async def get_job_role(job_role_id: str, current_user: UserInDB = Depends(get_cu
             error_msg = f"Job role {job_role_id} not found"
             logger("JOB_ROLE", error_msg, "GET /job-roles/{job_role_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
+        job_post = JobPostFunctions.get_job_post_by_id(job_role["job_post_id"])
+        assert_client_owns(current_user, job_post["client_id"])
         success_msg = f"Retrieved job role {job_role_id}"
         logger("JOB_ROLE", success_msg, "GET /job-roles/{job_role_id}", "INFO")
         return ResponseSchema.success(job_role, 200)
@@ -51,6 +56,8 @@ async def get_job_role(job_role_id: str, current_user: UserInDB = Depends(get_cu
 async def get_job_roles_by_job_post(job_post_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Fetch all job roles for a specific job post - Authenticated users only - JSON response"""
     try:
+        job_post = JobPostFunctions.get_job_post_by_id(job_post_id)
+        assert_client_owns(current_user, job_post["client_id"])
         job_roles = JobRoleFunctions.get_job_roles_by_job_post_id(job_post_id)
         success_msg = f"Retrieved {len(job_roles)} job roles for job post {job_post_id}"
         logger("JOB_ROLE", success_msg, "GET /job-roles/job-post/{job_post_id}", "INFO")
@@ -66,6 +73,8 @@ async def create_job_role(job_role: JobRoleCreate, current_user: UserInDB = Depe
     """Create a new job role - Authenticated users only - JSON body accepted"""
     try:
         job_role_id = job_role.job_role_id or str(uuid.uuid4())
+        job_post = JobPostFunctions.get_job_post_by_id(job_role.job_post_id)
+        assert_client_owns(current_user, job_post["client_id"])
         
         new_job_role = JobRoleFunctions.create_job_role(
             job_post_id=job_role.job_post_id,
@@ -101,6 +110,8 @@ async def update_job_role(job_role_id: str, job_role_update: JobRoleUpdate, curr
             error_msg = f"Job role {job_role_id} not found"
             logger("JOB_ROLE", error_msg, "PUT /job-roles/{job_role_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
+        job_post = JobPostFunctions.get_job_post_by_id(existing_job_role["job_post_id"])
+        assert_client_owns(current_user, job_post["client_id"])
         
         update_data = job_role_update.model_dump(exclude_unset=True)
         updated_job_role = JobRoleFunctions.update_job_role(job_role_id, update_data)
@@ -123,6 +134,8 @@ async def delete_job_role(job_role_id: str, current_user: UserInDB = Depends(get
             error_msg = f"Job role {job_role_id} not found"
             logger("JOB_ROLE", error_msg, "DELETE /job-roles/{job_role_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
+        job_post = JobPostFunctions.get_job_post_by_id(existing_job_role["job_post_id"])
+        assert_client_owns(current_user, job_post["client_id"])
         
         JobRoleFunctions.delete_job_role(job_role_id)
         

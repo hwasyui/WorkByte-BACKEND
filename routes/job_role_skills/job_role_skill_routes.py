@@ -8,9 +8,12 @@ import uuid
 from functions.schema_model import JobRoleSkillCreate, JobRoleSkillUpdate, JobRoleSkillResponse
 from functions.schema_model import UserInDB
 from functions.authentication import get_current_user
+from functions.access_control import assert_client_owns
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
+from routes.job_posts.job_post_functions import JobPostFunctions
 from routes.job_role_skills.job_role_skill_functions import JobRoleSkillFunctions
+from routes.job_roles.job_role_functions import JobRoleFunctions
 
 job_role_skill_router = APIRouter(prefix="/job-role-skills", tags=["Job Role Skills"])
 
@@ -38,6 +41,9 @@ async def get_job_role_skill(job_role_skill_id: str, current_user: UserInDB = De
             error_msg = f"Job role skill {job_role_skill_id} not found"
             logger("JOB_ROLE_SKILL", error_msg, "GET /job-role-skills/{job_role_skill_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
+        job_role = JobRoleFunctions.get_job_role_by_id(job_role_skill["job_role_id"])
+        job_post = JobPostFunctions.get_job_post_by_id(job_role["job_post_id"])
+        assert_client_owns(current_user, job_post["client_id"])
         success_msg = f"Retrieved job role skill {job_role_skill_id}"
         logger("JOB_ROLE_SKILL", success_msg, "GET /job-role-skills/{job_role_skill_id}", "INFO")
         return ResponseSchema.success(job_role_skill, 200)
@@ -51,6 +57,9 @@ async def get_job_role_skill(job_role_skill_id: str, current_user: UserInDB = De
 async def get_job_role_skills_by_job_role(job_role_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Fetch all skills for a specific job role - Authenticated users only - JSON response"""
     try:
+        job_role = JobRoleFunctions.get_job_role_by_id(job_role_id)
+        job_post = JobPostFunctions.get_job_post_by_id(job_role["job_post_id"])
+        assert_client_owns(current_user, job_post["client_id"])
         job_role_skills = JobRoleSkillFunctions.get_job_role_skills_by_job_role_id(job_role_id)
         success_msg = f"Retrieved {len(job_role_skills)} skills for job role {job_role_id}"
         logger("JOB_ROLE_SKILL", success_msg, "GET /job-role-skills/job-role/{job_role_id}", "INFO")
@@ -66,6 +75,9 @@ async def create_job_role_skill(job_role_skill: JobRoleSkillCreate, current_user
     """Create a new job role skill - Authenticated users only - JSON body accepted"""
     try:
         job_role_skill_id = job_role_skill.job_role_skill_id or str(uuid.uuid4())
+        job_role = JobRoleFunctions.get_job_role_by_id(job_role_skill.job_role_id)
+        job_post = JobPostFunctions.get_job_post_by_id(job_role["job_post_id"])
+        assert_client_owns(current_user, job_post["client_id"])
         
         new_job_role_skill = JobRoleSkillFunctions.create_job_role_skill(
             job_role_id=job_role_skill.job_role_id,
@@ -96,6 +108,9 @@ async def update_job_role_skill(job_role_skill_id: str, job_role_skill_update: J
             error_msg = f"Job role skill {job_role_skill_id} not found"
             logger("JOB_ROLE_SKILL", error_msg, "PUT /job-role-skills/{job_role_skill_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
+        job_role = JobRoleFunctions.get_job_role_by_id(existing_job_role_skill["job_role_id"])
+        job_post = JobPostFunctions.get_job_post_by_id(job_role["job_post_id"])
+        assert_client_owns(current_user, job_post["client_id"])
         
         update_data = job_role_skill_update.model_dump(exclude_unset=True)
         updated_job_role_skill = JobRoleSkillFunctions.update_job_role_skill(job_role_skill_id, update_data)
@@ -118,6 +133,9 @@ async def delete_job_role_skill(job_role_skill_id: str, current_user: UserInDB =
             error_msg = f"Job role skill {job_role_skill_id} not found"
             logger("JOB_ROLE_SKILL", error_msg, "DELETE /job-role-skills/{job_role_skill_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
+        job_role = JobRoleFunctions.get_job_role_by_id(existing_job_role_skill["job_role_id"])
+        job_post = JobPostFunctions.get_job_post_by_id(job_role["job_post_id"])
+        assert_client_owns(current_user, job_post["client_id"])
         
         JobRoleSkillFunctions.delete_job_role_skill(job_role_skill_id)
         

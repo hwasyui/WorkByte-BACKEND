@@ -7,6 +7,7 @@ from typing import List, Optional
 from functions.schema_model import FreelancerEmbeddingCreate, FreelancerEmbeddingUpdate, FreelancerEmbeddingResponse
 from functions.schema_model import UserInDB
 from functions.authentication import get_current_user
+from functions.access_control import assert_freelancer_owns, get_freelancer_profile_for_user
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.freelancer_embeddings.freelancer_embedding_functions import FreelancerEmbeddingFunctions
@@ -18,8 +19,9 @@ freelancer_embedding_router = APIRouter(prefix="/freelancer-embeddings", tags=["
 async def get_all_freelancer_embeddings(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
     """Fetch all freelancer embeddings - Authenticated users only - JSON response"""
     try:
-        embeddings = FreelancerEmbeddingFunctions.get_all_freelancer_embeddings(limit=limit)
-        success_msg = f"Retrieved {len(embeddings)} freelancer embeddings" + (f" (limit: {limit})" if limit else "")
+        freelancer = get_freelancer_profile_for_user(current_user)
+        embeddings = FreelancerEmbeddingFunctions.get_freelancer_embeddings_by_freelancer_id(freelancer["freelancer_id"])
+        success_msg = f"Retrieved {len(embeddings)} freelancer embeddings for freelancer {freelancer['freelancer_id']}"
         logger("FREELANCER_EMBEDDING", success_msg, "GET /freelancer-embeddings", "INFO")
         return ResponseSchema.success(embeddings, 200)
     except Exception as e:
@@ -37,6 +39,7 @@ async def get_freelancer_embedding(embedding_id: str, current_user: UserInDB = D
             error_msg = f"Freelancer embedding {embedding_id} not found"
             logger("FREELANCER_EMBEDDING", error_msg, "GET /freelancer-embeddings/{embedding_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
+        assert_freelancer_owns(current_user, embedding["freelancer_id"])
         success_msg = f"Retrieved freelancer embedding {embedding_id}"
         logger("FREELANCER_EMBEDDING", success_msg, "GET /freelancer-embeddings/{embedding_id}", "INFO")
         return ResponseSchema.success(embedding, 200)
@@ -55,6 +58,7 @@ async def get_freelancer_embedding_by_freelancer(freelancer_id: str, current_use
             error_msg = f"Freelancer embedding for freelancer {freelancer_id} not found"
             logger("FREELANCER_EMBEDDING", error_msg, "GET /freelancer-embeddings/freelancer/{freelancer_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
+        assert_freelancer_owns(current_user, freelancer_id)
         success_msg = f"Retrieved embedding for freelancer {freelancer_id}"
         logger("FREELANCER_EMBEDDING", success_msg, "GET /freelancer-embeddings/freelancer/{freelancer_id}", "INFO")
         return ResponseSchema.success(embedding, 200)
@@ -68,6 +72,7 @@ async def get_freelancer_embedding_by_freelancer(freelancer_id: str, current_use
 async def create_freelancer_embedding(embedding: FreelancerEmbeddingCreate, current_user: UserInDB = Depends(get_current_user)):
     """Create a new freelancer embedding - Authenticated users only - JSON body accepted"""
     try:
+        assert_freelancer_owns(current_user, embedding.freelancer_id)
         new_embedding = FreelancerEmbeddingFunctions.create_freelancer_embedding(
             freelancer_id=embedding.freelancer_id,
             embedding_vector=embedding.embedding_vector,
@@ -97,6 +102,7 @@ async def update_freelancer_embedding(embedding_id: str, embedding_update: Freel
             error_msg = f"Freelancer embedding {embedding_id} not found"
             logger("FREELANCER_EMBEDDING", error_msg, "PUT /freelancer-embeddings/{embedding_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
+        assert_freelancer_owns(current_user, existing_embedding["freelancer_id"])
         
         update_data = embedding_update.model_dump(exclude_unset=True)
         updated_embedding = FreelancerEmbeddingFunctions.update_freelancer_embedding(embedding_id, update_data)
@@ -119,6 +125,7 @@ async def delete_freelancer_embedding(embedding_id: str, current_user: UserInDB 
             error_msg = f"Freelancer embedding {embedding_id} not found"
             logger("FREELANCER_EMBEDDING", error_msg, "DELETE /freelancer-embeddings/{embedding_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
+        assert_freelancer_owns(current_user, existing_embedding["freelancer_id"])
         
         FreelancerEmbeddingFunctions.delete_freelancer_embedding(embedding_id)
         

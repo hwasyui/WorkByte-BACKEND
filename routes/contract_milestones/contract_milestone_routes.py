@@ -8,9 +8,11 @@ import uuid
 from functions.schema_model import ContractMilestoneCreate, ContractMilestoneUpdate, ContractMilestoneResponse
 from functions.schema_model import UserInDB
 from functions.authentication import get_current_user
+from functions.access_control import assert_current_user_is_contract_party
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.contract_milestones.contract_milestone_functions import ContractMilestoneFunctions
+from routes.contracts.contract_functions import ContractFunctions
 
 contract_milestone_router = APIRouter(prefix="/contract-milestones", tags=["Contract Milestones"])
 
@@ -19,8 +21,19 @@ contract_milestone_router = APIRouter(prefix="/contract-milestones", tags=["Cont
 async def get_all_contract_milestones(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
     """Fetch all contract milestones - Authenticated users only - JSON response"""
     try:
-        milestones = ContractMilestoneFunctions.get_all_contract_milestones(limit=limit)
-        success_msg = f"Retrieved {len(milestones)} contract milestones" + (f" (limit: {limit})" if limit else "")
+        # Limit milestone list to contracts involving the current user.
+        if current_user.type == "client":
+            client_contracts = ContractFunctions.get_contracts_by_client_id(get_current_user(current_user).user_id)
+            contract_ids = [c["contract_id"] for c in client_contracts]
+        elif current_user.type == "freelancer":
+            freelancer_contracts = ContractFunctions.get_contracts_by_freelancer_id(get_current_user(current_user).user_id)
+            contract_ids = [c["contract_id"] for c in freelancer_contracts]
+        else:
+            return ResponseSchema.error("Only clients and freelancers can access contract milestones", 403)
+        milestones = []
+        for contract_id in contract_ids:
+            milestones.extend(ContractMilestoneFunctions.get_contract_milestones_by_contract_id(contract_id))
+        success_msg = f"Retrieved {len(milestones)} contract milestones for current user"
         logger("CONTRACT_MILESTONE", success_msg, "GET /contract-milestones", "INFO")
         return ResponseSchema.success(milestones, 200)
     except Exception as e:
@@ -38,6 +51,8 @@ async def get_contract_milestone(milestone_id: str, current_user: UserInDB = Dep
             error_msg = f"Contract milestone {milestone_id} not found"
             logger("CONTRACT_MILESTONE", error_msg, "GET /contract-milestones/{milestone_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
+        contract = ContractFunctions.get_contract_by_id(milestone["contract_id"])
+        assert_current_user_is_contract_party(current_user, contract)
         success_msg = f"Retrieved contract milestone {milestone_id}"
         logger("CONTRACT_MILESTONE", success_msg, "GET /contract-milestones/{milestone_id}", "INFO")
         return ResponseSchema.success(milestone, 200)
@@ -51,6 +66,8 @@ async def get_contract_milestone(milestone_id: str, current_user: UserInDB = Dep
 async def get_contract_milestones_by_contract(contract_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Fetch all milestones for a specific contract - Authenticated users only - JSON response"""
     try:
+        contract = ContractFunctions.get_contract_by_id(contract_id)
+        assert_current_user_is_contract_party(current_user, contract)
         milestones = ContractMilestoneFunctions.get_contract_milestones_by_contract_id(contract_id)
         success_msg = f"Retrieved {len(milestones)} milestones for contract {contract_id}"
         logger("CONTRACT_MILESTONE", success_msg, "GET /contract-milestones/contract/{contract_id}", "INFO")
@@ -66,6 +83,8 @@ async def create_contract_milestone(milestone: ContractMilestoneCreate, current_
     """Create a new contract milestone - Authenticated users only - JSON body accepted"""
     try:
         milestone_id = milestone.milestone_id or str(uuid.uuid4())
+        contract = ContractFunctions.get_contract_by_id(milestone.contract_id)
+        assert_current_user_is_contract_party(current_user, contract)
         
         new_milestone = ContractMilestoneFunctions.create_contract_milestone(
             contract_id=milestone.contract_id,
@@ -100,6 +119,8 @@ async def update_contract_milestone(milestone_id: str, milestone_update: Contrac
             error_msg = f"Contract milestone {milestone_id} not found"
             logger("CONTRACT_MILESTONE", error_msg, "PUT /contract-milestones/{milestone_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
+        contract = ContractFunctions.get_contract_by_id(existing_milestone["contract_id"])
+        assert_current_user_is_contract_party(current_user, contract)
 
         update_data = milestone_update.model_dump(exclude_unset=True)
 
@@ -151,6 +172,8 @@ async def delete_contract_milestone(milestone_id: str, current_user: UserInDB = 
             error_msg = f"Contract milestone {milestone_id} not found"
             logger("CONTRACT_MILESTONE", error_msg, "DELETE /contract-milestones/{milestone_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
+        contract = ContractFunctions.get_contract_by_id(existing_milestone["contract_id"])
+        assert_current_user_is_contract_party(current_user, contract)
         
         ContractMilestoneFunctions.delete_contract_milestone(milestone_id)
         
@@ -173,6 +196,8 @@ async def confirm_milestone_payment(milestone_id: str, current_user: UserInDB = 
         existing_milestone = ContractMilestoneFunctions.get_contract_milestone_by_id(milestone_id)
         if not existing_milestone:
             return ResponseSchema.error("Contract milestone not found", 404)
+        contract = ContractFunctions.get_contract_by_id(existing_milestone["contract_id"])
+        assert_current_user_is_contract_party(current_user, contract)
 
         if not existing_milestone.get("payment_requested"):
             return ResponseSchema.error("No payment request pending", 400)
