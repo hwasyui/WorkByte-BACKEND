@@ -358,3 +358,119 @@ class FreelancerFunctions:
         except Exception as e:
             logger("FREELANCER_FUNCTIONS", f"Error fetching freelancer embedding: {str(e)}", level="ERROR")
             raise
+
+
+def get_comprehensive_freelancer_profile(freelancer_id: str) -> Optional[Dict]:
+    """Get complete freelancer profile with all related data"""
+    try:
+        db = get_db()
+        
+        # Get freelancer basic info
+        freelancer_conditions = [("freelancer_id", "=", freelancer_id)]
+        freelancer_rows = db.fetch_data(
+            table_name="freelancers",
+            conditions=freelancer_conditions,
+            limit=1
+        )
+        
+        if not freelancer_rows:
+            return None
+            
+        freelancer = dict(freelancer_rows[0])
+        
+        # Get skills with details
+        skills_query = """
+            SELECT fs.freelancer_skill_id, fs.proficiency_level, fs.created_at,
+                   s.skill_id, s.skill_name, s.skill_category, s.description, s.created_at as skill_created_at
+            FROM freelancer_skills fs
+            JOIN skills s ON fs.skill_id = s.skill_id
+            WHERE fs.freelancer_id = %s
+            ORDER BY fs.created_at DESC
+        """
+        skills_rows = db.execute_query(skills_query, (freelancer_id,))
+        skills = [dict(row) for row in skills_rows] if skills_rows else []
+        
+        # Get specialities with details
+        specialities_query = """
+            SELECT fsp.freelancer_speciality_id, fsp.is_primary, fsp.created_at,
+                   sp.speciality_id, sp.speciality_name, sp.description, sp.created_at as speciality_created_at
+            FROM freelancer_specialities fsp
+            JOIN specialities sp ON fsp.speciality_id = sp.speciality_id
+            WHERE fsp.freelancer_id = %s
+            ORDER BY fsp.is_primary DESC, fsp.created_at DESC
+        """
+        specialities_rows = db.execute_query(specialities_query, (freelancer_id,))
+        specialities = [dict(row) for row in specialities_rows] if specialities_rows else []
+        
+        # Get languages with details
+        languages_query = """
+            SELECT fl.freelancer_language_id, fl.proficiency_level, fl.created_at,
+                   l.language_id, l.language_name, l.iso_code, l.created_at as language_created_at
+            FROM freelancer_languages fl
+            JOIN languages l ON fl.language_id = l.language_id
+            WHERE fl.freelancer_id = %s
+            ORDER BY fl.created_at DESC
+        """
+        languages_rows = db.execute_query(languages_query, (freelancer_id,))
+        languages = [dict(row) for row in languages_rows] if languages_rows else []
+        
+        # Get education
+        education_conditions = [("freelancer_id", "=", freelancer_id)]
+        education_rows = db.fetch_data(
+            table_name="education",
+            conditions=education_conditions,
+            order_by="start_date DESC"
+        )
+        education = [dict(row) for row in education_rows] if education_rows else []
+        
+        # Get work experience
+        work_experience_conditions = [("freelancer_id", "=", freelancer_id)]
+        work_experience_rows = db.fetch_data(
+            table_name="work_experience",
+            conditions=work_experience_conditions,
+            order_by="start_date DESC"
+        )
+        work_experience = [dict(row) for row in work_experience_rows] if work_experience_rows else []
+        
+        # Get portfolio
+        portfolio_conditions = [("freelancer_id", "=", freelancer_id)]
+        portfolio_rows = db.fetch_data(
+            table_name="portfolio",
+            conditions=portfolio_conditions,
+            order_by="created_at DESC"
+        )
+        portfolio = [dict(row) for row in portfolio_rows] if portfolio_rows else []
+        
+        # Get ratings received by this freelancer
+        ratings_query = """
+            SELECT r.rating_id, r.contract_id, r.rater_id, r.ratee_id, r.rating_score, 
+                   r.rating_category, r.review_text, r.created_at
+            FROM ratings r
+            WHERE r.ratee_id = %s
+            ORDER BY r.created_at DESC
+        """
+        ratings_rows = db.execute_query(ratings_query, (freelancer_id,))
+        ratings = [dict(row) for row in ratings_rows] if ratings_rows else []
+        
+        # Calculate rating stats
+        total_ratings = len(ratings)
+        average_rating = None
+        if ratings:
+            average_rating = sum(r['rating_score'] for r in ratings) / total_ratings
+        
+        return {
+            "freelancer": freelancer,
+            "skills": skills,
+            "specialities": specialities,
+            "languages": languages,
+            "education": education,
+            "work_experience": work_experience,
+            "portfolio": portfolio,
+            "ratings": ratings,
+            "total_ratings": total_ratings,
+            "average_rating": average_rating
+        }
+        
+    except Exception as e:
+        logger("FREELANCER_FUNCTIONS", f"Error fetching comprehensive freelancer profile: {str(e)}", level="ERROR")
+        raise

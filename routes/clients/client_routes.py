@@ -7,7 +7,8 @@ from typing import List, Optional, Dict
 import uuid
 from functions.schema_model import ClientCreate, ClientUpdate, ClientResponse
 from functions.schema_model import UserInDB
-from functions.authentication import get_client_user
+from functions.authentication import get_current_user, get_client_user
+from functions.access_control import assert_client_owns, get_client_profile_for_user
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.clients.client_functions import ClientFunctions
@@ -16,13 +17,13 @@ client_router = APIRouter(prefix="/clients", tags=["Clients"])
 
 
 @client_router.get("", response_model=List[ClientResponse])
-async def get_all_clients(limit: Optional[int] = None, current_user: UserInDB = Depends(get_client_user)):
-    """Fetch all clients - Clients only - JSON response"""
+async def get_all_clients(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
+    """Fetch current client profile - Authenticated users only - JSON response"""
     try:
-        clients = ClientFunctions.get_all_clients(limit=limit)
-        success_msg = f"Retrieved {len(clients)} clients" + (f" (limit: {limit})" if limit else "")
+        client = get_client_profile_for_user(current_user)
+        success_msg = f"Retrieved client profile for user {current_user.user_id}"
         logger("CLIENT", success_msg, "GET /clients", "INFO")
-        return ResponseSchema.success(clients, 200)
+        return ResponseSchema.success([client], 200)
     except Exception as e:
         error_msg = f"Failed to fetch clients: {str(e)}"
         logger("CLIENT", error_msg, "GET /clients", "ERROR")
@@ -30,8 +31,8 @@ async def get_all_clients(limit: Optional[int] = None, current_user: UserInDB = 
 
 
 @client_router.get("/search/{search_term}", response_model=Dict)
-async def search_clients(search_term: str):
-    """Search clients by full name - JSON response"""
+async def search_clients(search_term: str, current_user: UserInDB = Depends(get_current_user)):
+    """Search clients by full name - Authenticated users only - JSON response"""
     try:
         results = ClientFunctions.search_clients_by_full_name(search_term)
         success_msg = f"Searched clients for '{search_term}', found {len(results)} results"
@@ -45,8 +46,8 @@ async def search_clients(search_term: str):
 
 
 @client_router.get("/{identifier}", response_model=ClientResponse)
-async def get_client(identifier: str, current_user: UserInDB = Depends(get_client_user)):
-    """Fetch a single client by ID (supports both client_id and user_id) - Clients only - JSON response"""
+async def get_client(identifier: str, current_user: UserInDB = Depends(get_current_user)):
+    """Fetch a single client by ID (supports both client_id and user_id) - Authenticated users only - JSON response"""
     try:
         client = ClientFunctions.get_client_by_id_or_user_id(identifier)
         if not client:
@@ -65,19 +66,18 @@ async def get_client(identifier: str, current_user: UserInDB = Depends(get_clien
 async def create_client(client: ClientCreate, current_user: UserInDB = Depends(get_client_user)):
     """Create a new client profile - Clients only - JSON body accepted"""
     try:
-        # Generate UUID if not provided
+        # The client profile must be created for the authenticated user only
         client_id = client.client_id or str(uuid.uuid4())
-        
-        # Check if client already exists for this user
-        existing = ClientFunctions.get_client_by_user_id(client.user_id)
-        if existing:
-            error_msg = f"Client profile already exists for user {client.user_id}"
+        current_client = get_client_profile_for_user(current_user)
+        if client.user_id and str(client.user_id) != str(current_user.user_id):
+            return ResponseSchema.error("Cannot create a client profile for another user", 403)
+        if current_client:
+            error_msg = f"Client profile already exists for user {current_user.user_id}"
             logger("CLIENT", error_msg, "POST /clients", "WARNING")
             return ResponseSchema.error(error_msg, 400)
-        
         new_client = ClientFunctions.create_client(
             client_id=client_id,
-            user_id=client.user_id,
+            user_id=current_user.user_id,
             full_name=client.full_name,
             bio=client.bio,
             website_url=client.website_url,
@@ -103,9 +103,8 @@ async def update_client(identifier: str, client_update: ClientUpdate, current_us
             error_msg = f"Client {identifier} not found for update"
             logger("CLIENT", error_msg, "PUT /clients/{identifier}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
-        
         client_id = existing["client_id"]
-        
+        assert_client_owns(current_user, client_id)
         update_data = {k: v for k, v in client_update.dict().items() if v is not None}
         updated_client = ClientFunctions.update_client(client_id, update_data)
         
@@ -128,8 +127,8 @@ async def delete_client(identifier: str, current_user: UserInDB = Depends(get_cl
             error_msg = f"Client {identifier} not found for deletion"
             logger("CLIENT", error_msg, "DELETE /clients/{identifier}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
-        
         client_id = existing["client_id"]
+        assert_client_owns(current_user, client_id)
         ClientFunctions.delete_client(client_id)
         success_msg = f"Client {client_id} deleted successfully"
         logger("CLIENT", success_msg, "DELETE /clients/{identifier}", "INFO")

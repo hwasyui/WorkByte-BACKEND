@@ -7,6 +7,7 @@ from typing import List, Optional
 from functions.schema_model import ClientTrustScoreCreate, ClientTrustScoreUpdate, ClientTrustScoreResponse
 from functions.schema_model import UserInDB
 from functions.authentication import get_current_user
+from functions.access_control import assert_client_owns
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.client_trust_scores.client_trust_score_functions import ClientTrustScoreFunctions
@@ -50,6 +51,7 @@ async def get_client_trust_score(client_id: str, current_user: UserInDB = Depend
 async def create_client_trust_score(score: ClientTrustScoreCreate, current_user: UserInDB = Depends(get_current_user)):
     """Create a new client trust score - Authenticated users only - JSON body accepted"""
     try:
+        assert_client_owns(current_user, score.client_id)
         new_score = ClientTrustScoreFunctions.create_client_trust_score(
             client_id=score.client_id,
             trust_score=getattr(score, 'trust_score', 0.0)
@@ -72,6 +74,7 @@ async def create_client_trust_score(score: ClientTrustScoreCreate, current_user:
 async def update_client_trust_score(client_id: str, score_update: ClientTrustScoreUpdate, current_user: UserInDB = Depends(get_current_user)):
     """Update client trust score - Authenticated users only"""
     try:
+        assert_client_owns(current_user, client_id)
         existing_score = ClientTrustScoreFunctions.get_client_trust_score_by_id(client_id)
         if not existing_score:
             error_msg = f"Client trust score for {client_id} not found"
@@ -94,6 +97,7 @@ async def update_client_trust_score(client_id: str, score_update: ClientTrustSco
 async def delete_client_trust_score(client_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Delete a client trust score - Authenticated users only"""
     try:
+        assert_client_owns(current_user, client_id)
         existing_score = ClientTrustScoreFunctions.get_client_trust_score_by_id(client_id)
         if not existing_score:
             error_msg = f"Client trust score for {client_id} not found"

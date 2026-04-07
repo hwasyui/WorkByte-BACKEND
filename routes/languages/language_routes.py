@@ -30,8 +30,8 @@ async def get_all_languages(limit: Optional[int] = None, current_user: UserInDB 
 
 
 @language_router.get("/search/{search_term}", response_model=Dict)
-async def search_languages(search_term: str):
-    """Search languages by name - JSON response"""
+async def search_languages(search_term: str, current_user: UserInDB = Depends(get_current_user)):
+    """Search languages by name - Authenticated users only - JSON response"""
     try:
         results = LanguageFunctions.search_languages_by_name(search_term)
         success_msg = f"Searched languages for '{search_term}', found {len(results)} results"

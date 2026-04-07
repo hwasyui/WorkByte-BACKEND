@@ -8,6 +8,7 @@ import uuid
 from functions.schema_model import JobPostCreate, JobPostUpdate, JobPostResponse
 from functions.schema_model import UserInDB
 from functions.authentication import get_current_user
+from functions.access_control import assert_client_owns, get_client_profile_for_user
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.job_posts.job_post_functions import JobPostFunctions
@@ -66,9 +67,12 @@ async def create_job_post(job_post: JobPostCreate, current_user: UserInDB = Depe
     """Create a new job post - Authenticated users only - JSON body accepted"""
     try:
         job_post_id = job_post.job_post_id or str(uuid.uuid4())
+        client = get_client_profile_for_user(current_user)
+        if job_post.client_id and str(job_post.client_id) != str(client["client_id"]):
+            return ResponseSchema.error("Cannot create a job post for another client", 403)
         
         new_job_post = JobPostFunctions.create_job_post(
-            client_id=job_post.client_id,
+            client_id=client["client_id"],
             job_title=job_post.job_title,
             job_description=job_post.job_description,
             project_type=job_post.project_type,
@@ -103,6 +107,7 @@ async def update_job_post(job_post_id: str, job_post_update: JobPostUpdate, curr
             error_msg = f"Job post {job_post_id} not found"
             logger("JOB_POST", error_msg, "PUT /job-posts/{job_post_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
+        assert_client_owns(current_user, existing_job_post["client_id"])
         
         update_data = job_post_update.model_dump(exclude_unset=True)
         updated_job_post = JobPostFunctions.update_job_post(job_post_id, update_data)
@@ -125,6 +130,7 @@ async def delete_job_post(job_post_id: str, current_user: UserInDB = Depends(get
             error_msg = f"Job post {job_post_id} not found"
             logger("JOB_POST", error_msg, "DELETE /job-posts/{job_post_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
+        assert_client_owns(current_user, existing_job_post["client_id"])
         
         JobPostFunctions.delete_job_post(job_post_id)
         

@@ -30,8 +30,8 @@ async def get_all_skills(limit: Optional[int] = None, current_user: UserInDB = D
 
 
 @skill_router.get("/search/{search_term}", response_model=Dict)
-async def search_skills(search_term: str):
-    """Search skills by name - JSON response"""
+async def search_skills(search_term: str, current_user: UserInDB = Depends(get_current_user)):
+    """Search skills by name - Authenticated users only - JSON response"""
     try:
         results = SkillFunctions.search_skills_by_name(search_term)
         success_msg = f"Searched skills for '{search_term}', found {len(results)} results"

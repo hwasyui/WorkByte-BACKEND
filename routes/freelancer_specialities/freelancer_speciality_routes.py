@@ -8,6 +8,7 @@ import uuid
 from functions.schema_model import FreelancerSpecialityCreate, FreelancerSpecialityUpdate, FreelancerSpecialityResponse
 from functions.schema_model import UserInDB
 from functions.authentication import get_current_user
+from functions.access_control import assert_freelancer_owns, get_freelancer_profile_for_user
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.freelancer_specialities.freelancer_speciality_functions import FreelancerSpecialityFunctions
@@ -17,10 +18,11 @@ freelancer_speciality_router = APIRouter(prefix="/freelancer-specialities", tags
 
 @freelancer_speciality_router.get("", response_model=List[FreelancerSpecialityResponse])
 async def get_all_freelancer_specialities(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch all freelancer specialities - Authenticated users only - JSON response"""
+    """Fetch current user's freelancer specialities - Authenticated users only - JSON response"""
     try:
-        specialities = FreelancerSpecialityFunctions.get_all_freelancer_specialities(limit=limit)
-        success_msg = f"Retrieved {len(specialities)} freelancer specialities" + (f" (limit: {limit})" if limit else "")
+        freelancer = get_freelancer_profile_for_user(current_user)
+        specialities = FreelancerSpecialityFunctions.get_freelancer_specialities_by_freelancer_id(freelancer["freelancer_id"], limit=limit)
+        success_msg = f"Retrieved {len(specialities)} freelancer specialities for freelancer {freelancer['freelancer_id']}" + (f" (limit: {limit})" if limit else "")
         logger("FREELANCER_SPECIALITY", success_msg, "GET /freelancer-specialities", "INFO")
         return ResponseSchema.success(specialities, 200)
     except Exception as e:
@@ -65,7 +67,7 @@ async def create_freelancer_speciality(freelancer_speciality: FreelancerSpeciali
     """Create a new freelancer speciality - Authenticated users only - JSON body accepted"""
     try:
         freelancer_speciality_id = freelancer_speciality.freelancer_speciality_id or str(uuid.uuid4())
-        
+        assert_freelancer_owns(current_user, freelancer_speciality.freelancer_id)
         new_speciality = FreelancerSpecialityFunctions.create_freelancer_speciality(
             freelancer_id=freelancer_speciality.freelancer_id,
             speciality_id=freelancer_speciality.speciality_id,
@@ -94,6 +96,7 @@ async def update_freelancer_speciality(freelancer_speciality_id: str, freelancer
             error_msg = f"Freelancer speciality {freelancer_speciality_id} not found"
             logger("FREELANCER_SPECIALITY", error_msg, "PUT /freelancer-specialities/{freelancer_speciality_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
+        assert_freelancer_owns(current_user, existing_speciality["freelancer_id"])
         
         update_data = freelancer_speciality_update.model_dump(exclude_unset=True)
         updated_speciality = FreelancerSpecialityFunctions.update_freelancer_speciality(freelancer_speciality_id, update_data)
@@ -115,6 +118,7 @@ async def delete_freelancer_speciality(freelancer_speciality_id: str, current_us
             error_msg = f"Freelancer speciality {freelancer_speciality_id} not found"
             logger("FREELANCER_SPECIALITY", error_msg, "DELETE /freelancer-specialities/{freelancer_speciality_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
+        assert_freelancer_owns(current_user, existing_speciality["freelancer_id"])
         
         FreelancerSpecialityFunctions.delete_freelancer_speciality(freelancer_speciality_id)
         
@@ -130,6 +134,7 @@ async def delete_freelancer_speciality(freelancer_speciality_id: str, current_us
 async def delete_freelancer_speciality_by_ids(freelancer_id: str, speciality_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Delete a freelancer speciality by freelancer_id and speciality_id - Authenticated users only"""
     try:
+        assert_freelancer_owns(current_user, freelancer_id)
         FreelancerSpecialityFunctions.delete_freelancer_speciality_by_freelancer_and_speciality(freelancer_id, speciality_id)
         
         success_msg = f"Deleted speciality {speciality_id} from freelancer {freelancer_id}"

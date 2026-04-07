@@ -8,6 +8,7 @@ import uuid
 from functions.schema_model import PortfolioCreate, PortfolioUpdate, PortfolioResponse
 from functions.schema_model import UserInDB
 from functions.authentication import get_current_user
+from functions.access_control import assert_freelancer_owns, get_freelancer_profile_for_user
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.portfolio.portfolio_functions import PortfolioFunctions
@@ -19,8 +20,9 @@ portfolio_router = APIRouter(prefix="/portfolios", tags=["Portfolio"])
 async def get_all_portfolios(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
     """Fetch all portfolios - Authenticated users only - JSON response"""
     try:
-        portfolios = PortfolioFunctions.get_all_portfolios(limit=limit)
-        success_msg = f"Retrieved {len(portfolios)} portfolios" + (f" (limit: {limit})" if limit else "")
+        freelancer = get_freelancer_profile_for_user(current_user)
+        portfolios = PortfolioFunctions.get_portfolios_by_freelancer_id(freelancer["freelancer_id"])
+        success_msg = f"Retrieved {len(portfolios)} portfolios for freelancer {freelancer['freelancer_id']}"
         logger("PORTFOLIO", success_msg, "GET /portfolios", "INFO")
         return ResponseSchema.success(portfolios, 200)
     except Exception as e:
@@ -66,7 +68,7 @@ async def create_portfolio(portfolio: PortfolioCreate, current_user: UserInDB = 
     """Create a new portfolio - Authenticated users only - JSON body accepted"""
     try:
         portfolio_id = portfolio.portfolio_id or str(uuid.uuid4())
-        
+        assert_freelancer_owns(current_user, portfolio.freelancer_id)
         new_portfolio = PortfolioFunctions.create_portfolio(
             freelancer_id=portfolio.freelancer_id,
             project_title=portfolio.project_title,
@@ -99,6 +101,7 @@ async def update_portfolio(portfolio_id: str, portfolio_update: PortfolioUpdate,
             error_msg = f"Portfolio {portfolio_id} not found"
             logger("PORTFOLIO", error_msg, "PUT /portfolios/{portfolio_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
+        assert_freelancer_owns(current_user, existing_portfolio["freelancer_id"])
         
         update_data = portfolio_update.model_dump(exclude_unset=True)
         updated_portfolio = PortfolioFunctions.update_portfolio(portfolio_id, update_data)
@@ -121,6 +124,7 @@ async def delete_portfolio(portfolio_id: str, current_user: UserInDB = Depends(g
             error_msg = f"Portfolio {portfolio_id} not found"
             logger("PORTFOLIO", error_msg, "DELETE /portfolios/{portfolio_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
+        assert_freelancer_owns(current_user, existing_portfolio["freelancer_id"])
         
         PortfolioFunctions.delete_portfolio(portfolio_id)
         
