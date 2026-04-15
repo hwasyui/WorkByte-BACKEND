@@ -1,0 +1,289 @@
+education_id,freelancer_id,institution_name,degree,field_of_study,start_date,end_date,is_current
+0a8c854d-0b85-49ff-9425-50bdfe0b335d,068c9af0-7a1b-4ec8-adcf-965e7b3216c9,ITS,B.Sc Computer Science,Blockchain,2018-08-01,2022-06-01,0
+8fdbd4d6-cf83-47eb-90f8-8e210032616a,eeb04b28-edcb-4969-946e-cc0e70aff232,ITS,B.Eng Software Engineering,Fullstack,2018-08-01,2022-06-01,0
+8b9ba407-a124-4e1e-b7c2-12d0b31ac549,3e51ac71-eb1d-4ae7-8b6f-c68b2bd85db5,ITB,M.Sc Computer Science,Fullstack,2018-08-01,2022-06-01,0
+fe5adf43-e4c0-436b-bda1-791bb97c6814,1e62ee30-e14b-489a-a43b-dd3784412cca,Tech Institute,B.Eng Software Engineering,Ml Ai,2018-08-01,2022-06-01,0
+416ba7d7-337e-4d58-9f30-acf502083e88,774c22ad-7af3-4a43-875d-3226e1e3cdf1,Tech Institute,M.Sc Computer Science,Mobile,2018-08-01,2022-06-01,0
+da865f56-7ab4-440a-9a0f-d3e9b9694774,dd667acc-1d35-4b7b-a695-df60e1e37409,State University,B.Sc Computer Science,Ml Ai,2018-08-01,2022-06-01,0
+454fcef9-e8d7-447d-b339-974eb206129b,eee57cc8-0424-4692-847a-e2fbbeb128eb,UI,B.Sc Computer Science,Blockchain,2018-08-01,2022-06-01,0
+ece2cc00-7e25-49b5-877b-eee6669980d1,91ddfa64-1d6e-48de-91f5-03352f4c6dd6,ITS,B.Sc Computer Science,Devops,2018-08-01,2022-06-01,0
+4e1ba99d-74cc-448b-a277-419279b3f4cc,cc69d3c2-f38b-47a6-bce7-df9d084b05ea,UI,M.Sc Computer Science,Backend,2018-08-01,2022-06-01,0
+1cbc3a63-668f-4c47-ad0b-5989e59f059c,10e727f9-945f-4416-9152-43643f546c24,UI,M.Sc Computer Science,Ml Ai,2018-08-01,2022-06-01,0
+f9a91ea9-b0a6-4d8c-b26a-28b746897bd0,b56d4e13-af27-44f7-ac0d-ff9d2799bc7b,NUS,B.Eng Software Engineering,Backend,2018-08-01,2022-06-01,0
+e42b9a43-f3f3-4ed5-a576-042419883f53,bbb94bde-c4c6-4bd8-8839-4e3e8600c4cf,UI,M.Sc Computer Science,Ml Ai,2018-08-01,2022-06-01,0
+f34405eb-923c-47cd-8420-e07ee81d9a24,59cdcd10-4b4c-4391-8eb2-fcb03d53f6d6,NUS,M.Sc Computer Science,Backend,2018-08-01,2022-06-01,0
+a837c48c-ae6c-4bec-8a62-b6a7faad429c,867e0ec8-4f04-4586-bcf3-ab5cfb04af37,NUS,B.Eng Software Engineering,Devops,2018-08-01,2022-06-01,0
+6ac4150a-8d32-460b-acdf-028a35ee11f2,d3f9dc98-6426-4413-839a-181958cb3e54,ITS,B.Sc Information Technology,Devops,2018-08-01,2022-06-01,0
+55710f9b-499f-436a-99df-e9628081b018,d1ae4f3c-9966-48f5-bdda-6fe4aa04fdb6,NUS,M.Sc Computer Science,Backend,2018-08-01,2022-06-01,0
+2f787971-f0a8-4450-a689-0c6c0f5dc3e1,e6948fb8-ee92-44fb-860e-3d249749b833,ITS,B.Eng Software Engineering,Backend,2018-08-01,2022-06-01,0
+63ed4dae-99aa-4eb6-87f4-8a0635e49561,79000fd1-cc2b-42f3-9b76-d52ebee1e884,NUS,B.Eng Software Engineering,Mobile,2018-08-01,2022-06-01,0
+50b520b1-9e7a-49d4-a4b3-82dd33b8a12c,e940aee5-f9e0-4436-bf8d-2cf77e03c612,NUS,M.Sc Computer Science,Backend,2018-08-01,2022-06-01,0
+3a977cb1-d5a3-466b-accd-b21b8d82059d,7e96e480-4394-4a69-ab9d-21fcb78f648f,ITB,B.Sc Information Technology,Backend,2018-08-01,2022-06-01,0
+1a254270-4ebd-4d1e-9bbc-fe2017b26fd4,92c088f2-9685-4abe-9bf9-e85a09387489,ITB,B.Sc Computer Science,Backend,2018-08-01,2022-06-01,0
+e71e0605-4810-49b3-9123-57c7b1e2cb8e,ff01beae-c458-49db-9bb1-1069004e42c5,UI,B.Sc Computer Science,Backend,2018-08-01,2022-06-01,0
+79fcd210-833a-4cdd-b97d-bac7a31f8c71,2c283439-b2bc-4ff6-96bc-3dbe27467169,State University,B.Eng Software Engineering,Design,2018-08-01,2022-06-01,0
+d9ff1411-6a62-4146-89fd-95469d7b5616,11bf9149-0185-415d-aa3c-e8526c5d958a,Tech Institute,B.Eng Software Engineering,Frontend,2018-08-01,2022-06-01,0
+41141b56-2626-43cb-935e-0a77d1186def,a08cf8b4-7fbe-4b25-b00f-671fc4f4f860,NUS,B.Sc Information Technology,Mobile,2018-08-01,2022-06-01,0
+96a53c4d-5851-46c5-a24b-d5a1336c5d38,91360cab-dc93-4741-9eb8-192cebbae384,NUS,B.Sc Computer Science,Devops,2018-08-01,2022-06-01,0
+71a3aa74-23a1-4800-8764-6a3d28cfacf3,6690e3f4-ad55-4114-8274-1e0a48c9abb1,NUS,B.Sc Computer Science,Frontend,2018-08-01,2022-06-01,0
+ce7f0cf1-135f-436b-9eb4-18af4ec627f5,4255cd43-96f4-4500-af3c-f2df564ee895,NUS,M.Sc Computer Science,Mobile,2018-08-01,2022-06-01,0
+b7161f13-fceb-4864-91c2-0a9ae07e2002,93988d10-5b34-4767-bb9a-07ae5da04772,ITS,M.Sc Computer Science,Devops,2018-08-01,2022-06-01,0
+8a9a359b-8175-4396-aa5b-dc0b32ee31f3,97de8924-cba5-4084-ac0e-43009ed706d2,UI,B.Sc Information Technology,Devops,2018-08-01,2022-06-01,0
+1af333e9-8fce-4bea-b528-4ad12a323aad,1ac35812-bd37-44d1-baeb-56f5f65ef98f,NUS,B.Eng Software Engineering,Frontend,2018-08-01,2022-06-01,0
+51ce950c-f897-4ab6-8815-1d45f81730af,eb26f0e1-6929-4040-94e2-cba39ba229ca,NUS,B.Sc Information Technology,Backend,2018-08-01,2022-06-01,0
+f807c931-d2ee-49a9-8ac4-c7484d0e574a,92a2e8a4-d134-4c19-bc9d-871d5f8d2d35,UI,B.Sc Information Technology,Ml Ai,2018-08-01,2022-06-01,0
+9062ce50-4dce-4f52-b5d1-4835abb681b8,55248b11-bfe4-4dae-b492-55e2e39c0631,ITS,B.Eng Software Engineering,Devops,2018-08-01,2022-06-01,0
+b75e9114-73ff-4f49-9296-baf97d961e93,a74a98e1-7096-4eca-a1de-f5e3bc42bdbd,UI,M.Sc Computer Science,Design,2018-08-01,2022-06-01,0
+51fd8183-66ab-4c66-ac77-1ddcc7c7361b,3819f15a-b821-468f-a5a0-407474c39d0e,Tech Institute,B.Eng Software Engineering,Frontend,2018-08-01,2022-06-01,0
+ba3fc827-ee75-48b0-aaaf-41f811bb491a,2fd03137-89be-4a49-a938-e4574bdcd230,ITB,M.Sc Computer Science,Frontend,2018-08-01,2022-06-01,0
+5b5c31fb-5431-4a76-8250-7d731cdae880,0734073e-2287-4457-98c9-3ede81ac86be,ITB,B.Eng Software Engineering,Fullstack,2018-08-01,2022-06-01,0
+1867be36-a563-41db-bafe-52f89e443555,975399f9-6178-4ce7-ac0e-f9bcacba0b88,ITS,B.Sc Information Technology,Frontend,2018-08-01,2022-06-01,0
+37c3bc41-f300-4051-8e52-61ad7a65a204,f32c705e-762f-455d-988b-e1ad38836a50,ITS,B.Sc Information Technology,Ml Ai,2018-08-01,2022-06-01,0
+ea216fa8-3f8f-4610-adde-6a374465e606,98b3a976-0162-4f22-8ff4-ed7ce49e3e24,Tech Institute,B.Sc Information Technology,Design,2018-08-01,2022-06-01,0
+b668dc40-1f23-491a-bc53-9bf094d02407,b3c63d5f-7c2c-4eb4-bd60-cd4592439232,Tech Institute,B.Eng Software Engineering,Devops,2018-08-01,2022-06-01,0
+40e71726-0570-408d-9764-33043f336f1e,e6159f16-f197-424d-b5d1-804090e8f6c2,UI,B.Eng Software Engineering,Frontend,2018-08-01,2022-06-01,0
+e33d49ca-23e2-4c1c-b840-96dc4be4e13e,ec07b1a9-e0c4-4617-bef7-fc59a5796ed9,ITB,B.Sc Computer Science,Backend,2018-08-01,2022-06-01,0
+329538f4-eca8-42ca-8e21-a813e79ba6da,8d792edb-8378-43b7-9d11-b075bac5b476,UI,M.Sc Computer Science,Fullstack,2018-08-01,2022-06-01,0
+17020146-bf05-4587-8d6d-9e11fe0c6f33,aa80ca15-f237-498c-b68e-8ba77ab8fc86,State University,M.Sc Computer Science,Design,2018-08-01,2022-06-01,0
+49e164a9-9bef-43f7-a45a-58a969ad936f,31dcef2c-4cf8-4fcd-84bd-722dcaafd8d4,ITS,B.Eng Software Engineering,Blockchain,2018-08-01,2022-06-01,0
+219177e0-dd08-4f91-9716-0d10f236e4bf,39d6ea95-5a73-45c1-86c5-8b893ff8b7f6,Tech Institute,B.Sc Information Technology,Mobile,2018-08-01,2022-06-01,0
+2ff46f95-bbc6-4ca4-8f55-6ada376e19a5,1c4f7e28-29da-4ed9-a48d-3d16efa86e76,NUS,M.Sc Computer Science,Devops,2018-08-01,2022-06-01,0
+d8775c5c-f7e4-43f4-b70e-012e657fdfe7,2b089709-85e3-4cd5-8de1-d532b05c05be,Tech Institute,B.Sc Computer Science,Fullstack,2018-08-01,2022-06-01,0
+c130b591-646a-496f-b41a-7ce66bbed4e8,6e8e7094-3033-443b-9f1e-f3f28815bd1f,ITB,B.Sc Information Technology,Frontend,2018-08-01,2022-06-01,0
+466457f2-e7ad-4777-bdf8-5575c8aca6c4,befc5408-562e-4154-97af-0ebdd7ed66a1,ITS,B.Sc Computer Science,Blockchain,2018-08-01,2022-06-01,0
+01e31716-d2ed-4917-b5aa-9afcdea8e1a9,4b15af35-0787-49b8-984d-a7e223ac1b86,Tech Institute,B.Sc Information Technology,Blockchain,2018-08-01,2022-06-01,0
+a7212706-ed76-4159-bb92-164145d6351a,704beaca-2481-466d-8413-131c65698249,NUS,B.Sc Information Technology,Blockchain,2018-08-01,2022-06-01,0
+f41844af-20d6-430d-9874-4de4942b128f,2705a8a0-7303-490c-b2f1-850aaf3b1e36,ITB,B.Sc Computer Science,Mobile,2018-08-01,2022-06-01,0
+3d7c18e8-3693-41a0-9839-c14ebcc2f9cb,e2e109e0-f8ba-49d7-91b2-fad16910b567,ITB,B.Sc Computer Science,Devops,2018-08-01,2022-06-01,0
+fb32f38b-b947-4a79-9ad6-1e54df3ad885,988cfd00-1ced-49be-b647-54b28e70c684,UI,B.Sc Information Technology,Backend,2018-08-01,2022-06-01,0
+fc86b9a1-2acb-4fe7-8822-f50dc54dd94c,880d2ddd-51ed-4e22-8781-58a73568f7d6,UI,M.Sc Computer Science,Blockchain,2018-08-01,2022-06-01,0
+2f7fc4bc-c1ea-4574-8dd0-527826fd8138,bfb5160f-a041-47af-aee4-fb126db81a5f,NUS,B.Eng Software Engineering,Design,2018-08-01,2022-06-01,0
+61372868-8786-40e7-b5bf-39f7146544cd,fd1f2712-4120-4de7-8124-74a57b5dcc86,Tech Institute,B.Sc Information Technology,Ml Ai,2018-08-01,2022-06-01,0
+7efa0304-adc0-404b-bfef-9a3e1d135207,989640f4-d60b-480a-ae5d-7a329c6a14a6,State University,B.Eng Software Engineering,Devops,2018-08-01,2022-06-01,0
+fc1bc946-b1f3-4f12-aa68-43232ed156bc,c6dec8f5-d49e-4a34-9cc0-b92944a5b189,ITS,B.Sc Information Technology,Ml Ai,2018-08-01,2022-06-01,0
+45dcb9d0-0c97-465d-af08-948a5171a6f5,9901b214-4d48-4b9f-b7d2-c45ab9c3feb4,Tech Institute,B.Eng Software Engineering,Ml Ai,2018-08-01,2022-06-01,0
+5ce608aa-85bd-4329-9437-202ec2e62d75,54dcaea0-79c8-497c-8b77-b72f49a6b277,State University,B.Sc Information Technology,Backend,2018-08-01,2022-06-01,0
+fb69cb0c-6744-4eb7-9102-70b2aad4bbe7,a965d137-241e-4067-9076-61d407fc64cc,State University,B.Sc Computer Science,Fullstack,2018-08-01,2022-06-01,0
+0bf55eee-d9fa-4447-a9ad-e7494b9a5e89,c0d7ea5a-b0fd-451b-9435-1a4d7c23c720,Tech Institute,B.Sc Computer Science,Blockchain,2018-08-01,2022-06-01,0
+d739ad88-1cab-4c69-88be-4127f90af409,75e75db4-32b0-42d9-9392-fb1507544e19,UI,B.Sc Computer Science,Ml Ai,2018-08-01,2022-06-01,0
+baf9b3a0-c6da-4a70-bfda-def1992a2c69,386e2ef5-b2c8-4152-a4f0-7e7f84e023ca,NUS,B.Sc Computer Science,Fullstack,2018-08-01,2022-06-01,0
+9a6dbee8-ed4e-440c-953f-0459ec409143,eba225ef-b696-4c16-8df2-8a740ca463d8,State University,B.Sc Information Technology,Blockchain,2018-08-01,2022-06-01,0
+de243431-ae78-4b6f-b76f-1395e748d4f0,3868b6fe-6abc-4745-a739-c89222570257,State University,B.Eng Software Engineering,Frontend,2018-08-01,2022-06-01,0
+bdf8df3b-6dc2-4576-b3ad-fd73bfcd07cf,e7c8e4fc-1b0d-4104-95d7-3a5b3440b219,State University,B.Eng Software Engineering,Fullstack,2018-08-01,2022-06-01,0
+e5a11802-22ce-42de-9ea4-56e55af6e9ff,1a682f3a-c413-4e30-9696-5e35baa64b00,ITS,B.Eng Software Engineering,Mobile,2018-08-01,2022-06-01,0
+3b7c1a0e-6549-4440-9279-17b7a45a32d1,a0308658-dce8-4634-a43d-5b806ff429eb,UI,B.Sc Computer Science,Fullstack,2018-08-01,2022-06-01,0
+58dbdedf-20e7-4b95-bbff-3b2cb54f95ed,016b144d-e0c4-4e33-9028-bf24e0a38939,ITS,B.Sc Information Technology,Ml Ai,2018-08-01,2022-06-01,0
+15583377-4552-4881-abae-1b1d4aef74f3,852e872e-5cf8-47fc-8062-45b4d3a0d080,State University,M.Sc Computer Science,Design,2018-08-01,2022-06-01,0
+012eafee-4673-4b42-9b74-bf90c409113e,42f0cea8-c564-4173-bc1c-53465daf38f8,NUS,B.Sc Computer Science,Design,2018-08-01,2022-06-01,0
+7cd455d8-cb95-490d-b0ca-e74f114177dc,f38e839a-7faa-40fe-b9d9-aba8da64c71b,State University,B.Sc Information Technology,Blockchain,2018-08-01,2022-06-01,0
+275851cd-fd04-407b-a834-06aef6892ee5,e0a40368-9362-4f7b-a09a-e5bcda6ac9b2,ITB,B.Sc Computer Science,Design,2018-08-01,2022-06-01,0
+e9483151-9d3b-41c4-aa59-9d98cc25be0b,ab061312-8142-41d7-9e37-6cbc61ae6018,ITB,M.Sc Computer Science,Mobile,2018-08-01,2022-06-01,0
+d96354f3-5e4c-4163-a529-43bb75cc07cd,9b8a764f-4913-4b4b-8f38-02c95127317f,UI,B.Sc Information Technology,Ml Ai,2018-08-01,2022-06-01,0
+c50a8c54-97e4-4889-9c7b-609f3e4dd31d,5b8ed391-0df5-455c-bf72-7b383a8531a0,ITB,M.Sc Computer Science,Devops,2018-08-01,2022-06-01,0
+de79b7ce-0aa5-4793-a37d-4d6feae92572,a5936989-eac8-441b-9ec7-b945ed35e5c0,Tech Institute,B.Sc Computer Science,Blockchain,2018-08-01,2022-06-01,0
+0211e5f3-ae37-47c8-8e68-e5cddb5555ca,f3fb8d20-95ae-4dfa-82a0-9c1fc2213232,UI,B.Eng Software Engineering,Design,2018-08-01,2022-06-01,0
+4f6cfef8-4ffe-4ad1-90b3-c6600837fdcd,8f3e8f91-384c-424a-9cdc-c8748f7df413,UI,B.Eng Software Engineering,Frontend,2018-08-01,2022-06-01,0
+16e58905-d19c-41cd-8a67-5595c6e80eb8,c1d503f0-3549-4fa4-b5fd-00eeed6e03eb,UI,B.Eng Software Engineering,Blockchain,2018-08-01,2022-06-01,0
+ff045ac5-2341-4382-b752-01463e4df129,67ab65a5-1a95-4077-b64d-d479515f81a1,Tech Institute,B.Sc Computer Science,Blockchain,2018-08-01,2022-06-01,0
+f2d65011-0298-4518-ad9f-6ba5cde86a4d,2e32a344-d4dd-4185-946e-378e775a8ba2,ITB,B.Eng Software Engineering,Fullstack,2018-08-01,2022-06-01,0
+edab9d8b-5f9d-4c16-9b6b-a7c380501007,e7c9e82d-39f4-48a6-9500-e6bb9426c951,Tech Institute,M.Sc Computer Science,Mobile,2018-08-01,2022-06-01,0
+fb3587d5-a85e-4f59-b9ad-ebb03a402708,742a919a-c20c-443b-912f-a872f928c979,ITS,B.Sc Computer Science,Mobile,2018-08-01,2022-06-01,0
+1fe4c6fb-0baa-48b2-aa39-54f69ed74042,635d010e-b74b-4de6-9d44-37cb533c2de1,Tech Institute,B.Sc Information Technology,Blockchain,2018-08-01,2022-06-01,0
+cd2487f8-4c94-456d-b54d-47f4e46aed75,184439d5-b58e-4a43-b104-fec393322905,UI,B.Sc Computer Science,Ml Ai,2018-08-01,2022-06-01,0
+347b2480-c996-4fdc-aada-6ee664e2f00c,a29203c7-c725-4a53-bb22-90a76ce2570e,State University,B.Sc Information Technology,Design,2018-08-01,2022-06-01,0
+673f8c84-a9b5-43f8-8394-1e7e46eacab7,84550548-a4ea-416f-9d17-7b3d1a2743eb,NUS,M.Sc Computer Science,Frontend,2018-08-01,2022-06-01,0
+8c71de98-3629-4aa1-af23-1a0c3fdeb677,a4506eb1-884f-4a17-b6fb-9b15a046f24a,NUS,B.Sc Information Technology,Ml Ai,2018-08-01,2022-06-01,0
+a6d6ca66-ab91-4c77-858b-ce8ff7a02c84,960d389c-eac3-4c35-bead-53f2b151899c,ITB,M.Sc Computer Science,Devops,2018-08-01,2022-06-01,0
+8ae0aec6-5ed1-41b7-8a77-7cf0a0463e6c,88efd37a-39f3-4e5c-a045-2b701347de5d,UI,B.Sc Computer Science,Fullstack,2018-08-01,2022-06-01,0
+1951dbc6-367f-44dd-b639-d9cfbbc3c8eb,157add59-3a41-47ac-9067-619e938d62c7,ITB,M.Sc Computer Science,Devops,2018-08-01,2022-06-01,0
+c78d47ea-18d5-46e8-a1f7-27dfedc7ef15,daa14e05-008c-4921-ae1f-99f8482fe141,Tech Institute,B.Sc Information Technology,Ml Ai,2018-08-01,2022-06-01,0
+aba9c70c-22ad-4784-8f5d-f76d4e90fe97,5d553306-c2e9-48cc-96e5-6c1ec2505e19,Tech Institute,M.Sc Computer Science,Mobile,2018-08-01,2022-06-01,0
+b1d0644e-850d-40ba-889a-75f98aee4b55,53be0c68-8058-485d-aa9b-739feb3aef26,ITS,M.Sc Computer Science,Design,2018-08-01,2022-06-01,0
+943b339a-7927-4416-83d0-11599f1b216d,de9fc804-2189-4750-8b3d-ea2a54941e92,NUS,B.Sc Computer Science,Fullstack,2018-08-01,2022-06-01,0
+35996ef4-56f6-4c34-b2fe-3b05b3162aed,21b3a9f9-0ab8-47f6-9f04-0f4f3c45fe56,NUS,M.Sc Computer Science,Blockchain,2018-08-01,2022-06-01,0
+98383181-3e2b-4fa9-979b-36c5b1d588d3,d69e237b-8448-4d58-8d60-79346f259b40,ITB,B.Sc Computer Science,Design,2018-08-01,2022-06-01,0
+2f664892-e158-4a2d-9a9e-e41f9267d440,3805d976-9cee-4d19-b7e7-6b20773bca1b,UI,B.Sc Computer Science,Blockchain,2018-08-01,2022-06-01,0
+d25b0a05-2169-4228-bd2e-6c7ecea5fd6f,7845fc22-aadc-4cb9-bd06-2bab99b7b0c9,ITB,B.Sc Information Technology,Backend,2018-08-01,2022-06-01,0
+a68e258d-2e07-4f73-b870-b2f9ec1d5237,f9c430d8-e534-4cfc-ad82-452fc6e6c97b,ITS,B.Eng Software Engineering,Devops,2018-08-01,2022-06-01,0
+8dcae5eb-d44e-418c-98cc-0e52aa2a15fe,0ef34b16-a1cd-4f79-946b-c39ac864f647,Tech Institute,B.Sc Computer Science,Frontend,2018-08-01,2022-06-01,0
+cc48e2e5-f393-4c7b-b990-6d4b13b34d62,7ca663fb-8d49-45d5-ac9f-8a57abf16fdd,UI,M.Sc Computer Science,Mobile,2018-08-01,2022-06-01,0
+3bb445d8-7857-4a42-bc22-2ba73c632a08,e3fb9177-229d-422d-94e3-4e2f79f0914b,Tech Institute,B.Eng Software Engineering,Backend,2018-08-01,2022-06-01,0
+63476a68-6a52-483c-a209-11bd899daf51,c5493162-e026-4a4c-8bb9-5bda22829298,NUS,B.Sc Information Technology,Backend,2018-08-01,2022-06-01,0
+f9f052db-9ecb-40c3-987c-4886ac99c4c9,c3416234-0bbe-4745-a4bf-3edf1d9f64ad,UI,B.Sc Computer Science,Fullstack,2018-08-01,2022-06-01,0
+b911c579-e108-4445-825b-8cb579b06994,7c27ab2c-e9eb-470d-85eb-733e6d3089c8,Tech Institute,M.Sc Computer Science,Fullstack,2018-08-01,2022-06-01,0
+284443e3-a310-43ae-b6a8-a4d0e6b2b5fb,aa0e64a0-afd9-4420-a682-affb828260a4,ITB,B.Sc Information Technology,Blockchain,2018-08-01,2022-06-01,0
+460e706c-02a6-4f18-b773-db6f43cf5234,06e0c157-0978-492a-897c-f79296b8c37d,State University,B.Eng Software Engineering,Blockchain,2018-08-01,2022-06-01,0
+84508efb-f307-4ad4-bc20-e825fb7d0c88,102d0916-71ad-4f6f-8f8a-4054b92f57a8,ITB,M.Sc Computer Science,Mobile,2018-08-01,2022-06-01,0
+fec25808-f796-4c27-9a0b-512c4a29bd1a,f605004b-b7db-4a0d-9e75-757847d22a7a,NUS,B.Sc Computer Science,Devops,2018-08-01,2022-06-01,0
+01febf5a-f0cd-46d5-8e07-6ca904273fb0,b169dcfe-0176-4e96-aca2-e4d3fb71bd6e,ITB,B.Sc Computer Science,Mobile,2018-08-01,2022-06-01,0
+d40a6b57-7cb8-424c-9a09-babed3887ed4,21367f7e-90e1-4f9c-b31e-4008b44dae75,State University,B.Eng Software Engineering,Blockchain,2018-08-01,2022-06-01,0
+9f99bbf9-0b47-44f2-9962-89d838d55c3a,357120e9-ef37-4910-ab77-9187ae1b52ca,UI,B.Sc Computer Science,Backend,2018-08-01,2022-06-01,0
+d563daae-36c6-4e2d-a6c7-2b454e43ad25,689ac0c5-4f1c-43a3-b7f6-d89ef6de625e,NUS,B.Sc Information Technology,Fullstack,2018-08-01,2022-06-01,0
+a5d0d350-9cc0-40f3-9bea-b6a0c94b6d08,ecf88ead-6776-4f6e-bb19-a03bfd0b01d1,ITB,B.Sc Information Technology,Blockchain,2018-08-01,2022-06-01,0
+48c3a6fe-352b-4d1e-b10d-2baffcb758e7,b90ab983-8167-4785-8259-66c3c9bcf31d,NUS,B.Sc Computer Science,Backend,2018-08-01,2022-06-01,0
+482da60b-dbe3-412b-8d85-5adbf2c0c11a,d24fa4c5-3d8c-4a22-afd3-87ec96b251b1,Tech Institute,B.Eng Software Engineering,Devops,2018-08-01,2022-06-01,0
+5c957198-7a63-4af0-ab73-8f2b7631554a,6ceca3b0-1ed3-4fab-a30e-d0fc77441f16,ITS,M.Sc Computer Science,Ml Ai,2018-08-01,2022-06-01,0
+5a3dade0-79c7-4470-a81a-74705de7a557,3e10de60-f09e-4edb-a1e2-42b033aca1eb,ITS,B.Sc Computer Science,Blockchain,2018-08-01,2022-06-01,0
+21cae3cd-a2be-4bc7-9067-64eab0bff9a3,b3c35c0a-8371-4246-95e0-b189272942bb,State University,B.Sc Information Technology,Backend,2018-08-01,2022-06-01,0
+9dee98bc-5e29-4176-b391-c07873ea3247,19a96817-9f36-4e19-b811-ec94e32770c8,State University,B.Eng Software Engineering,Design,2018-08-01,2022-06-01,0
+5c84ea05-a815-47d5-aa6c-02f43ba2336d,b44f658d-75f1-4215-8d0d-f12e6f07ca74,State University,B.Eng Software Engineering,Blockchain,2018-08-01,2022-06-01,0
+aa657a63-5a65-4920-b47b-6871d8cf7083,e7906ea7-c951-42d9-9fcb-335538ee18b4,ITS,M.Sc Computer Science,Devops,2018-08-01,2022-06-01,0
+2c1e5c34-17b2-4bf0-aa8e-fff37fa5b4e0,ba34cf08-d7e0-4c8d-b63b-7bb74daaf74d,ITS,B.Eng Software Engineering,Devops,2018-08-01,2022-06-01,0
+63947d10-fd4e-4f3b-8594-b09806ff7c75,7eed0f3c-f392-4491-bb2e-e66b107fd34e,State University,B.Eng Software Engineering,Frontend,2018-08-01,2022-06-01,0
+f7a0c563-4a72-440b-94fa-14ec045b376c,c8747447-e953-4b58-9784-fb6be0c9f6b8,ITB,B.Sc Information Technology,Design,2018-08-01,2022-06-01,0
+ca198ead-e27b-4ebe-9da4-33dce5453471,256e68c6-76cd-4a5d-b398-e2abfe398eff,NUS,B.Sc Information Technology,Ml Ai,2018-08-01,2022-06-01,0
+000c3476-94ee-4ce3-ad10-8025099f0ea2,a731792d-2bf0-492f-90b6-452a5326ae1f,State University,M.Sc Computer Science,Fullstack,2018-08-01,2022-06-01,0
+432b302e-cfbc-4696-abc4-623871d334dc,c21884fa-0f19-479e-b844-25c19d962939,State University,B.Sc Computer Science,Ml Ai,2018-08-01,2022-06-01,0
+62f88aad-6451-4c72-b7de-f98b27914007,9189876b-0325-461f-aa8c-3374485151cf,UI,M.Sc Computer Science,Blockchain,2018-08-01,2022-06-01,0
+6a005692-606e-4cb0-9635-dff740fd12f4,abf88349-d860-4c15-b2c0-36646cba770e,ITS,M.Sc Computer Science,Frontend,2018-08-01,2022-06-01,0
+ace86ef1-a5ff-426a-86f7-b615b503c492,827b2960-f199-4992-b40e-d7c77b03500f,NUS,B.Sc Information Technology,Fullstack,2018-08-01,2022-06-01,0
+b1539b95-c013-471f-9423-da0e5efe764b,b7c9d289-1244-4328-8029-5c9a09b88196,State University,B.Eng Software Engineering,Design,2018-08-01,2022-06-01,0
+5932bb33-419a-4213-b6e4-fa8be39ec0db,7301526c-dd77-46b3-9b3d-1a2e3bc6caeb,Tech Institute,B.Sc Computer Science,Design,2018-08-01,2022-06-01,0
+e616d866-5772-410b-8739-a2a042d07b2e,98fcd1f0-d578-47ef-9c6e-85a5bb19f067,UI,B.Eng Software Engineering,Blockchain,2018-08-01,2022-06-01,0
+3e4240b3-a4db-47af-b21e-3af1a3e65ac0,bab0783f-f1ba-401e-bf6f-2ed67bf4ab0b,ITS,B.Sc Information Technology,Ml Ai,2018-08-01,2022-06-01,0
+5b48c957-56bf-41fc-aa1d-e9c9ca485e30,9f4fb724-866b-4754-b650-18435b691d80,State University,B.Sc Information Technology,Blockchain,2018-08-01,2022-06-01,0
+169c9115-c927-4c39-8a9f-7da1e16d0a08,5709918f-22fd-47d9-8cd1-f751c2e75945,ITB,B.Eng Software Engineering,Devops,2018-08-01,2022-06-01,0
+4d4998d5-d520-40a6-92ce-54d3321c9541,bde0b58d-07e4-4fce-b4cb-0efe7b786edd,UI,B.Eng Software Engineering,Frontend,2018-08-01,2022-06-01,0
+ef2e92d6-9e9f-46eb-b209-6eaf93dd77d5,073d21c7-ae33-4132-a1d1-1e8a6dc83f1b,UI,B.Eng Software Engineering,Devops,2018-08-01,2022-06-01,0
+f1997fb6-31e2-4c6c-8b42-7c78b8e27dad,50a65e51-7284-4cbc-a172-28f79f72bf96,State University,B.Eng Software Engineering,Mobile,2018-08-01,2022-06-01,0
+7251c994-5f52-4acd-8143-cc7ff1c23359,f161b450-608f-46f7-8aa5-620a9a1bf07e,Tech Institute,B.Sc Information Technology,Frontend,2018-08-01,2022-06-01,0
+b054bec1-4a22-477a-9529-dbe736284355,4b07b91d-3f39-4307-b60f-82cccb6f5be2,ITB,M.Sc Computer Science,Fullstack,2018-08-01,2022-06-01,0
+119aded4-c23b-4a8c-a61b-1208d5c377eb,413c3380-abe5-4409-a4ba-47d3db02e453,Tech Institute,M.Sc Computer Science,Devops,2018-08-01,2022-06-01,0
+a1e9b800-d626-40f3-ac15-7d3891bb08f9,74bf7f0c-5f84-48c5-bc06-22d8fee830b0,State University,M.Sc Computer Science,Devops,2018-08-01,2022-06-01,0
+cbfeba55-ffb0-43ae-8830-c47ba40e99eb,884cb898-3f8a-4e21-814c-5140c498b164,UI,B.Sc Computer Science,Backend,2018-08-01,2022-06-01,0
+21b0331f-34e2-4472-8360-e92a1a9b9fb8,b097361d-f7c7-47e0-94ef-22036de6360c,NUS,B.Sc Information Technology,Frontend,2018-08-01,2022-06-01,0
+908fe076-042e-4c12-8dfd-0180c2eaf989,2d36949e-edf8-4b5b-91a7-5f8bfce72db9,State University,B.Eng Software Engineering,Fullstack,2018-08-01,2022-06-01,0
+50b2b1e8-5e02-4620-9e36-e0846e639de3,9a36c538-4f36-4a1d-96a0-c646192ba745,UI,B.Sc Computer Science,Fullstack,2018-08-01,2022-06-01,0
+0f272625-59eb-4319-b67f-9a9e5479b1c2,7fea8264-0280-47b9-8096-91315ae90638,ITB,B.Eng Software Engineering,Blockchain,2018-08-01,2022-06-01,0
+d0730db9-fbd6-43f0-8593-9361bc60392b,d2a2fa17-f4f9-4158-b6e2-d047bd4684a2,Tech Institute,B.Eng Software Engineering,Blockchain,2018-08-01,2022-06-01,0
+52ce06a3-4039-4ed4-8c76-4f93fc80dbc3,179836bf-c221-42cc-8afe-804c402e18a2,NUS,B.Sc Information Technology,Frontend,2018-08-01,2022-06-01,0
+0527ba2c-82cd-4a2e-b911-1dcf1488e7da,a5b09069-4037-4bb7-bc4c-d27c5ca2b8ca,Tech Institute,B.Sc Information Technology,Design,2018-08-01,2022-06-01,0
+57bd9941-2009-454b-9955-342dab894733,2d5d30bf-8098-4f0e-93c9-633eb1adb4db,UI,B.Sc Computer Science,Frontend,2018-08-01,2022-06-01,0
+581b1132-84a5-4df4-bcff-6e79c71e8247,d383baef-32e9-41e8-baa5-42a8ac98bb25,NUS,B.Sc Computer Science,Design,2018-08-01,2022-06-01,0
+e7d30235-32b8-4b5b-9ddc-2843f1f7f495,68e40bbc-de8e-4ead-9a8e-fc83a8008ebe,Tech Institute,B.Sc Computer Science,Fullstack,2018-08-01,2022-06-01,0
+a1179326-c715-4de2-bee4-ee39b29bb9d0,dcfe345a-c673-41d0-93fd-db7f4ab5394a,ITS,B.Sc Information Technology,Mobile,2018-08-01,2022-06-01,0
+724ac81a-42bc-4900-b96e-21c148482648,c3bf409d-1ed1-4c59-9aae-4248918bb07b,State University,B.Eng Software Engineering,Fullstack,2018-08-01,2022-06-01,0
+2a3b3961-767e-4c3f-a09a-009be6d5c368,dcc32055-5d59-43c2-bd2f-bc07b62dccdc,UI,B.Sc Computer Science,Backend,2018-08-01,2022-06-01,0
+3d218933-f62c-465a-816b-ed8d4259c91e,fbcdffd7-18fe-47bc-bf1c-a8d4323c084b,State University,B.Sc Computer Science,Devops,2018-08-01,2022-06-01,0
+02002406-5134-4598-90db-abc04ae6782d,0f20c4e9-9692-49c0-aaf1-3374f908ee1c,UI,B.Sc Computer Science,Blockchain,2018-08-01,2022-06-01,0
+3daeaa62-6d35-4ed3-b15a-538869ce3c42,7e1e43ef-97df-4945-acfd-2097842baa5f,NUS,B.Sc Information Technology,Backend,2018-08-01,2022-06-01,0
+fbd24630-1503-4025-b368-9d2b3847db39,c0edad50-035a-43a9-99a0-1dc761308149,ITS,M.Sc Computer Science,Devops,2018-08-01,2022-06-01,0
+f8102462-654a-49e0-81b5-8d3e3041960a,12adda37-2abf-4625-8903-d2efe01b8fca,Tech Institute,M.Sc Computer Science,Devops,2018-08-01,2022-06-01,0
+1d12b5ff-7993-44ba-808e-363ed2816d05,9408453e-4d9b-4548-9572-8a6d496bb1ee,NUS,B.Sc Computer Science,Frontend,2018-08-01,2022-06-01,0
+f169875a-7eed-49da-8d1a-74fcac54b25a,c6ce2e12-6e3b-4954-9a34-51a9a94ce89e,Tech Institute,B.Sc Computer Science,Ml Ai,2018-08-01,2022-06-01,0
+9b2a4048-ad95-427c-8fd6-d1fc356393a8,cd57c6ad-3fb2-483b-a1ce-cab710af138e,Tech Institute,M.Sc Computer Science,Design,2018-08-01,2022-06-01,0
+fd70e5bb-e866-4a10-a198-2ce89a5a6756,a96dcaa5-d546-419e-968e-7ce6d1a416e8,UI,B.Sc Information Technology,Backend,2018-08-01,2022-06-01,0
+060ccf19-daa9-4f6c-a669-1d49a5f3eb8b,5e746d8f-ec1e-4508-8c2f-e9554fef99d6,ITB,B.Sc Information Technology,Backend,2018-08-01,2022-06-01,0
+9c2fc61f-5545-4e25-93c6-031f196cb08c,a7b4f22f-496a-447f-b194-e5dfd14aedfa,ITB,B.Sc Computer Science,Mobile,2018-08-01,2022-06-01,0
+68587aeb-6f47-46f5-9710-c9795df77d93,82009ff7-342e-4a94-a5ba-d2f66ff088d0,ITS,B.Sc Computer Science,Mobile,2018-08-01,2022-06-01,0
+f9258330-fb05-4cb3-9d50-f62e49513752,69af508f-0bd9-48f8-8339-bd9e89c11ef7,State University,M.Sc Computer Science,Frontend,2018-08-01,2022-06-01,0
+94b37d1b-a5bd-4c7d-9b42-608693e562e7,ae43c8fb-8f8b-473e-b61a-b1260f9d677b,NUS,B.Sc Computer Science,Devops,2018-08-01,2022-06-01,0
+e6d07988-42be-4478-82bf-15b3245c6bc6,52f23038-b395-465c-a9d2-c479d8323911,ITB,B.Sc Information Technology,Mobile,2018-08-01,2022-06-01,0
+6cc57182-1d6b-4594-9392-0abdae199f02,b2af5334-544a-4da5-9ecc-87ee1ba7156b,ITB,B.Eng Software Engineering,Ml Ai,2018-08-01,2022-06-01,0
+af34bce7-1ee3-4f18-91cd-1814ec9c5592,ae0e918c-30e2-44ac-9907-a87d6e07fffd,ITB,B.Sc Information Technology,Devops,2018-08-01,2022-06-01,0
+72241da0-bcf3-445d-bcff-ddc3cc6deb64,0737f992-fbc6-47fb-8f30-771d476c2a44,ITB,M.Sc Computer Science,Mobile,2018-08-01,2022-06-01,0
+900dc3e4-a83f-4011-b4ff-0b4b429922bb,f934b6c7-7cd2-4948-98dc-8d52ed3b14a4,State University,B.Sc Information Technology,Frontend,2018-08-01,2022-06-01,0
+ea38f516-b499-4610-80c5-33fb8f36e93b,e67c4c8b-f41b-4e9d-9ade-5050b3fbbfba,ITS,B.Sc Computer Science,Blockchain,2018-08-01,2022-06-01,0
+f4234da6-e1f2-4d6b-82c7-61523d583d19,3cb042e5-73f2-4fc8-8648-d0bc212516f4,ITB,B.Sc Information Technology,Fullstack,2018-08-01,2022-06-01,0
+236392a8-db92-41f4-a48c-3a81b2e15a60,9b6487be-ffb3-4e0e-928c-3853f15dade2,Tech Institute,B.Sc Information Technology,Devops,2018-08-01,2022-06-01,0
+dea31bce-9946-49d9-a46c-91033f788b95,4dfd4026-4f34-4230-900d-7a170fca313d,State University,B.Sc Computer Science,Backend,2018-08-01,2022-06-01,0
+cab6dbf1-bf82-4805-8c46-19cc9d1578f7,94a0c605-ca9d-4bee-8c7f-2f299aff1413,Tech Institute,M.Sc Computer Science,Design,2018-08-01,2022-06-01,0
+96f75b4b-82fc-481b-af45-30e707636e14,0df0cd1f-6fb6-43a1-ae0d-e6198086c914,ITS,B.Eng Software Engineering,Backend,2018-08-01,2022-06-01,0
+ec604506-65cb-4fc3-9b0d-d039f2520c03,9c9eaefe-3dae-492a-a9cd-20201c31ced6,UI,B.Sc Information Technology,Backend,2018-08-01,2022-06-01,0
+0de5211d-d51f-4e81-95e9-f890a16c3913,347da82d-665c-428d-b2d6-07d763d5d0ec,Tech Institute,B.Sc Information Technology,Design,2018-08-01,2022-06-01,0
+0e730e64-d047-4a76-b1c5-4d9f7f058cfd,dc071ffd-6f1b-4792-8dd7-144d23376e34,State University,M.Sc Computer Science,Frontend,2018-08-01,2022-06-01,0
+99963a37-034a-4b6c-aa69-768fb00a68a0,7f2dc283-e5c5-4430-9b42-a0bbfb8632e0,Tech Institute,B.Sc Computer Science,Devops,2018-08-01,2022-06-01,0
+bcb56e15-a15d-412d-bada-2d3a17da6326,0301e851-75d5-422a-aaf9-1afb4a074e72,UI,B.Eng Software Engineering,Devops,2018-08-01,2022-06-01,0
+cbacc277-8b11-42c5-b73f-1b57bb707483,2fc0f09d-466d-4e76-9d47-81370149ca9b,Tech Institute,B.Eng Software Engineering,Design,2018-08-01,2022-06-01,0
+28482477-2641-46b5-98b1-60fca648ea8a,44873e67-c80f-4755-a82f-698920d23bcf,ITS,B.Sc Computer Science,Ml Ai,2018-08-01,2022-06-01,0
+67694b85-9016-4145-9065-8d0c0891cb31,8932a01b-7f2f-41a0-b257-f4b81caadff5,NUS,B.Eng Software Engineering,Blockchain,2018-08-01,2022-06-01,0
+d6e9faf6-39cd-4015-b69b-4b5deb4a8ca2,6a92faec-3154-49c7-9888-3a3c82fb67f8,State University,M.Sc Computer Science,Frontend,2018-08-01,2022-06-01,0
+5e6781ac-191a-4bbd-a9a1-a0e2783a31ad,04e36126-bc71-41b5-9fce-448120185d1b,ITS,B.Sc Information Technology,Ml Ai,2018-08-01,2022-06-01,0
+f6271695-a5a9-42f7-894b-030a2d8c12d6,ba8430b7-1bcc-48dc-86df-962c265dbf99,Tech Institute,B.Sc Information Technology,Mobile,2018-08-01,2022-06-01,0
+2aea3089-7d10-4204-9fe2-c49032a1a29d,c548ec61-18e5-400a-a6d2-c99c0c36350a,ITB,M.Sc Computer Science,Frontend,2018-08-01,2022-06-01,0
+7129c9a8-ae21-4216-9a62-708852618407,77275936-3937-4c2e-99d1-9a7e893e4a30,UI,B.Eng Software Engineering,Frontend,2018-08-01,2022-06-01,0
+bbf3fb11-f958-419a-bf38-34968ffe2800,b1507287-1213-4f2a-b433-f00c49cd3d1c,ITB,M.Sc Computer Science,Fullstack,2018-08-01,2022-06-01,0
+df626e26-02c1-4895-b5c6-895b1cbe1892,a3a02a70-7ca5-4154-8d70-b2ba46a41306,NUS,B.Sc Information Technology,Mobile,2018-08-01,2022-06-01,0
+e079cb7a-7c96-470f-96da-5476182f1485,7129a758-f3d2-4009-9a0a-ba36778d7521,UI,B.Sc Computer Science,Ml Ai,2018-08-01,2022-06-01,0
+52da3afe-b97b-4fc8-8b01-731b8140a024,f1e72511-2d5c-4962-9d7c-9319b3543ad7,State University,B.Sc Information Technology,Blockchain,2018-08-01,2022-06-01,0
+cc868bd4-0b63-455e-b7a9-e108ac4d275b,068143f0-0dc3-462b-8870-5422535ee345,UI,B.Eng Software Engineering,Frontend,2018-08-01,2022-06-01,0
+30cb779f-e50f-4fb8-aaa4-b28832e95b3c,ba249ab4-2a16-485f-b72b-02a95cc00040,ITS,M.Sc Computer Science,Ml Ai,2018-08-01,2022-06-01,0
+74e50b2f-61b3-45f4-ba58-7137594b1270,2dc32538-68fb-41b3-ba2f-e01b559266ff,State University,B.Eng Software Engineering,Design,2018-08-01,2022-06-01,0
+5f29f755-a4f4-45dd-bdb3-61414251e871,5f8fdd0c-bab0-4402-b5fa-8982adcdd4e3,ITS,B.Sc Computer Science,Ml Ai,2018-08-01,2022-06-01,0
+37ab77f0-6d3d-4101-a144-adf93fc7d2d6,b3d7022f-b6dd-47c3-aa9a-76f096581948,NUS,M.Sc Computer Science,Devops,2018-08-01,2022-06-01,0
+ea65cdad-7a71-4e5e-9498-6ec32b53a986,6bf6d84c-31c4-42c9-a4ae-2df5ff051fa1,State University,B.Sc Information Technology,Mobile,2018-08-01,2022-06-01,0
+8eedf0cf-60a8-441e-80f7-a0a894b2596d,e9134477-43d7-4bb6-a1e2-a4c7783ea732,State University,M.Sc Computer Science,Fullstack,2018-08-01,2022-06-01,0
+e9df7707-2402-4859-921e-f15604035295,55cc362e-7371-49d1-9a85-13101f4daa78,UI,B.Sc Information Technology,Fullstack,2018-08-01,2022-06-01,0
+eb5edc67-2e10-4578-9850-da762db5192f,853d8d9e-e67a-4e35-a446-c197b5580e0c,UI,B.Sc Information Technology,Blockchain,2018-08-01,2022-06-01,0
+a85c6d80-f3c8-4d01-85da-40ced626d611,20ed26d7-1d24-4e82-a6ff-87cc13fa471a,Tech Institute,B.Sc Computer Science,Devops,2018-08-01,2022-06-01,0
+0675cb0b-2815-4135-a98f-8a3a77c0f202,f3372b50-bfde-41da-8a77-d7d0373d86c2,Tech Institute,B.Eng Software Engineering,Design,2018-08-01,2022-06-01,0
+b3d45720-f01f-41e2-9518-28a3e20803ce,e1adc6b6-2182-4481-aa6e-723c5840de19,Tech Institute,B.Eng Software Engineering,Blockchain,2018-08-01,2022-06-01,0
+2b179beb-b07c-4fde-8dc5-ef4e6666c1ec,ca3838a9-5751-406b-a648-c67f59df8688,NUS,B.Sc Computer Science,Devops,2018-08-01,2022-06-01,0
+d5418732-c50c-4c31-93b1-334e19b44028,babf4f0d-1d8e-4cc0-a71c-5947b57cd2a2,NUS,B.Eng Software Engineering,Ml Ai,2018-08-01,2022-06-01,0
+c18c457b-8121-4059-992e-72707bbfdc56,2a1468ed-9c21-49d3-8fd6-446283205791,ITB,B.Sc Computer Science,Blockchain,2018-08-01,2022-06-01,0
+a17e5ab1-7bfc-4a21-ac1e-75453d27f899,72d12888-eb3c-42c1-8baf-eade54440059,Tech Institute,B.Sc Information Technology,Mobile,2018-08-01,2022-06-01,0
+7c6f2fff-d9f7-4af6-b805-a0452e86d423,10740eb1-c3bb-48ce-8605-0a8bb1016356,ITB,B.Eng Software Engineering,Mobile,2018-08-01,2022-06-01,0
+73564d87-3cf8-4034-ba53-e0ace322948f,4e60c551-eac9-435a-a1ca-4840baa55c2a,ITB,B.Sc Information Technology,Mobile,2018-08-01,2022-06-01,0
+33390cbc-2271-42f4-bd83-d05354d0cb46,e83bf799-4415-45b5-a2fc-ae3147311369,UI,B.Eng Software Engineering,Backend,2018-08-01,2022-06-01,0
+1e36e1bb-68ce-4948-8bd0-2fe309797675,e723dfe0-bffd-4949-8a96-11317c7cd38f,ITB,B.Sc Information Technology,Backend,2018-08-01,2022-06-01,0
+e296a165-f12e-4d47-aa66-6259aeb03487,b995af9a-b304-4027-96bb-0b83c10aaec9,Tech Institute,B.Eng Software Engineering,Ml Ai,2018-08-01,2022-06-01,0
+3b723725-e033-4efa-b7b3-db36f75da2c6,7a898e8b-590d-4c02-8d2e-79dfd759ddc1,ITB,B.Sc Computer Science,Devops,2018-08-01,2022-06-01,0
+5317e8ca-5d92-4cb4-a053-0916111ee582,bb3418a8-f994-4d1c-a993-4625008c237f,ITB,B.Sc Information Technology,Design,2018-08-01,2022-06-01,0
+adc83253-d3a4-4502-8dee-871a493ec1be,2c379236-cbf5-41a8-aec1-753bc8b6ffed,UI,B.Sc Information Technology,Ml Ai,2018-08-01,2022-06-01,0
+144f291f-2d68-40f7-b6c8-a8538cc399ff,01320d19-8657-4645-ac5f-f5c0cc74425b,State University,B.Sc Information Technology,Mobile,2018-08-01,2022-06-01,0
+f4ae074f-c7a6-4a5e-9197-bfd8833353c6,8a3edd80-2f90-408f-9a3e-2b43a485b782,Tech Institute,B.Sc Information Technology,Design,2018-08-01,2022-06-01,0
+0a00c49a-f0ba-48c8-b417-bce23a14cf38,1cc84af0-8db0-487b-804a-c2c057c7c014,UI,B.Sc Information Technology,Frontend,2018-08-01,2022-06-01,0
+d6e79b51-d067-43d3-b5b9-555dd86351d0,0e1e20f7-46e3-4d71-9ef3-55be49d030ba,State University,B.Sc Information Technology,Fullstack,2018-08-01,2022-06-01,0
+805f8c97-1f5f-4dc2-9df0-bf625994e8cb,428e2b84-8214-48a1-8eca-f8fff19f8877,ITS,B.Eng Software Engineering,Ml Ai,2018-08-01,2022-06-01,0
+69560f4f-59f3-41a8-bada-97529ba766e5,8ba2b41c-d283-4395-9919-a14e2e7ba9bf,ITS,B.Sc Information Technology,Ml Ai,2018-08-01,2022-06-01,0
+60507ae6-37b4-4778-8150-304155f230c3,99b27421-efb4-4e02-ae22-aaef2e6cf69f,Tech Institute,B.Eng Software Engineering,Blockchain,2018-08-01,2022-06-01,0
+739a4239-d941-4ad6-a9ac-a5c5ee4539db,2e5f4ed5-079e-41f5-b626-098eb04ec0f4,Tech Institute,B.Sc Computer Science,Fullstack,2018-08-01,2022-06-01,0
+6d90e189-1c8a-4d9b-a353-43fb20f10a8b,3ca06348-6e24-48f9-b3c2-fe82998bdec3,State University,M.Sc Computer Science,Devops,2018-08-01,2022-06-01,0
+19ac5710-4507-46c9-9e0d-6ec10b9d9556,7147be97-e902-41ed-9398-eaec3611bd6b,ITB,B.Sc Computer Science,Mobile,2018-08-01,2022-06-01,0
+de159b5c-0d36-4733-9cf8-ecc4b2033962,9b1ab468-996b-48f7-826f-7551a186d66b,ITB,B.Eng Software Engineering,Ml Ai,2018-08-01,2022-06-01,0
+8e6ca376-45e3-4fef-be92-ba63900a409a,33f5743a-c341-4c03-9cc2-b08e2352e674,Tech Institute,B.Eng Software Engineering,Design,2018-08-01,2022-06-01,0
+d46f64b5-7520-4fef-a9a3-601129a454ca,52c96214-eb4f-4879-94b8-b48c56b8a2aa,Tech Institute,B.Sc Information Technology,Backend,2018-08-01,2022-06-01,0
+d31fc432-b4af-45e8-a4f7-c62b5f698bb3,8e1202c7-da9f-42e1-a25b-3827466509ed,State University,B.Eng Software Engineering,Backend,2018-08-01,2022-06-01,0
+6b7e4e5e-a3c5-4840-a30a-e2a7c508640b,17154193-1071-49dc-829c-0038c9182c29,State University,B.Sc Computer Science,Backend,2018-08-01,2022-06-01,0
+65e294b4-0697-4913-bde5-64328fafebbe,cb69df38-87e6-4bf4-bcf7-e46c0b91d898,ITS,B.Sc Computer Science,Fullstack,2018-08-01,2022-06-01,0
+0194db61-8b36-4a35-9a72-5ba456138fbf,f5385ab3-91e0-486f-b123-c81133e8c8fc,UI,B.Sc Computer Science,Frontend,2018-08-01,2022-06-01,0
+14844df4-f2c0-421e-b4a9-ee1d0738b63d,12e31f13-569a-47d6-b27e-2e820349e947,UI,B.Eng Software Engineering,Frontend,2018-08-01,2022-06-01,0
+ed036c06-8b98-4125-b20d-0544dd524de3,ee2e4f91-7dca-476f-a33d-3cd55b6c29a4,Tech Institute,B.Eng Software Engineering,Ml Ai,2018-08-01,2022-06-01,0
+14cc590e-b123-4ed3-b368-ca705b5ea139,6db8581b-b978-4b98-85b0-26612e44cdf9,State University,M.Sc Computer Science,Blockchain,2018-08-01,2022-06-01,0
+d075a2cc-880a-4602-925f-b9ebe85625b0,7ab8a8f3-097c-4615-946c-a3844135ee4d,State University,B.Sc Information Technology,Blockchain,2018-08-01,2022-06-01,0
+48b31524-0e82-49eb-a44b-fde4db9b7062,bdeb78df-9f6f-4306-965e-014b3a153150,State University,B.Sc Information Technology,Backend,2018-08-01,2022-06-01,0
+69e9bf07-ddc3-46b9-aea4-19b2a377fe6c,0ae55ff3-4c43-4eb2-ac34-061a69af7172,ITB,M.Sc Computer Science,Devops,2018-08-01,2022-06-01,0
+91e30e21-0e40-42b6-8384-adc495b2087c,58dccc6f-82bf-4420-9a58-f3a78c256825,ITB,M.Sc Computer Science,Mobile,2018-08-01,2022-06-01,0
+424c9b1c-ef1e-4a43-acee-e4590be6dbff,20731ee2-b665-44fd-a85f-129028ddee73,ITS,B.Sc Computer Science,Devops,2018-08-01,2022-06-01,0
+f82e54c9-8d43-4d9f-9096-377b5ba7e981,20fbd7be-f7a8-463b-91fc-fcd8472a665d,State University,M.Sc Computer Science,Blockchain,2018-08-01,2022-06-01,0
+1a5a0e72-1fae-447e-84c7-934e1bd10904,484c8be0-ef3c-4f24-a9be-475871feaa5c,Tech Institute,B.Eng Software Engineering,Mobile,2018-08-01,2022-06-01,0
+42ac8e87-c2ce-4f17-ad5f-ba7188bde27f,75a7194d-f21f-4200-8781-fb66f2415720,ITS,B.Sc Information Technology,Mobile,2018-08-01,2022-06-01,0
+d07ce59c-cb57-434e-9b15-36fbef3bb594,d344c569-4e8e-4d62-9db8-a8094fc8e13a,UI,B.Sc Information Technology,Devops,2018-08-01,2022-06-01,0
+0b89b54a-f642-41d2-995c-565bef6798c7,d531a0a5-e6b7-409e-9b2f-1b0b2bfc03c6,ITB,B.Sc Information Technology,Backend,2018-08-01,2022-06-01,0
+bf6d9bd4-7415-4cf4-b771-7084d71aade0,16d506cc-902d-47b5-9d29-5b08a65bdf84,State University,B.Eng Software Engineering,Fullstack,2018-08-01,2022-06-01,0
+4b940a98-5c69-4a33-aef4-b0b35b43d5f7,0ed7d5e8-57ea-4048-aa80-8207f2f276d1,UI,B.Sc Information Technology,Blockchain,2018-08-01,2022-06-01,0
+9450477c-3953-4085-937a-f1d884850c58,d752f740-d00e-42e3-933c-b5c1a0398447,Tech Institute,B.Eng Software Engineering,Fullstack,2018-08-01,2022-06-01,0
+33443ec9-d780-44b9-9a8f-f7fd1fa9ee3f,b5f81280-7e57-4697-9313-18b7c9c06836,UI,M.Sc Computer Science,Devops,2018-08-01,2022-06-01,0
+a97d73e5-9798-48fe-940b-73854ae57a41,cb9bf1de-8305-43f0-a5cf-dc4bf0eb6bb5,UI,B.Sc Information Technology,Ml Ai,2018-08-01,2022-06-01,0
+b0502e34-37d0-40e2-a731-4849ce4f77e2,dbfd251a-c3c8-49f8-bb9b-eba19b6456d3,ITS,B.Sc Information Technology,Mobile,2018-08-01,2022-06-01,0
+040ac8d9-d7c4-4edd-9a0d-8f053ff4eac2,c1068bcc-d315-43a9-ae19-c4a392a7bed8,ITS,B.Eng Software Engineering,Fullstack,2018-08-01,2022-06-01,0
+78d0c119-164f-4aa8-be9e-b18f22321bed,3d1a84f0-7d06-4aaa-ac26-5d3cdaa5c89c,State University,B.Eng Software Engineering,Frontend,2018-08-01,2022-06-01,0
+3383e468-a009-4de6-b255-729153328154,df0172fc-e648-4c41-8ba3-82161f83f82d,NUS,M.Sc Computer Science,Devops,2018-08-01,2022-06-01,0
+cb9d7d6c-957d-4ee8-b882-6ce097cd89a8,00b61a80-507b-4636-a69f-7072024eaef8,ITS,B.Sc Computer Science,Fullstack,2018-08-01,2022-06-01,0
+3577213c-6b50-41c1-9ea8-1fa3af4da6f3,f18ae44d-1636-4432-b923-4f5b277bfacb,Tech Institute,B.Sc Computer Science,Ml Ai,2018-08-01,2022-06-01,0
+fa71c92f-cd7d-4c43-918b-1f5de9ce83a3,cce1fbbb-2bd5-4c5a-99f9-386b03799b06,State University,B.Sc Computer Science,Mobile,2018-08-01,2022-06-01,0
+241ae5ac-6f42-4846-ab81-e591d9d47f77,ce71adfc-de90-4849-9da5-e0c992556bf5,UI,B.Eng Software Engineering,Blockchain,2018-08-01,2022-06-01,0
+3ea6bcb7-2b26-45b5-8e9c-63a2aa24bb39,02123b02-eddb-410b-8000-8320c6ad1a11,UI,B.Sc Information Technology,Mobile,2018-08-01,2022-06-01,0
+07e70664-6c45-4c2f-935c-0f7cb94011ba,d80c9f2e-ec46-4052-84cd-b8aa0781b9b4,ITS,M.Sc Computer Science,Fullstack,2018-08-01,2022-06-01,0
+fa4cd334-67eb-44b9-966c-64038a0ebdb6,3ce3f5fa-219e-44e8-befc-ade5befb04af,UI,M.Sc Computer Science,Ml Ai,2018-08-01,2022-06-01,0
+f14e58ab-2df7-4858-9a48-5fbc90d37d13,baa3f9c4-a49d-4cc8-8abc-7db3860616ca,Tech Institute,M.Sc Computer Science,Ml Ai,2018-08-01,2022-06-01,0
+4777adc6-a9b4-41e2-9574-a8d90c63d086,34e449af-25d3-495d-bd87-eb18fa75be14,ITB,B.Eng Software Engineering,Mobile,2018-08-01,2022-06-01,0
+8aec93cc-4627-4f03-a85c-1e2a80ab8cbf,84ee8db6-0376-492f-a520-323107b5e244,Tech Institute,B.Sc Information Technology,Devops,2018-08-01,2022-06-01,0
+f29dd649-e235-4a62-bfb2-7ccbeb901270,2cb0abfc-77c6-4389-a263-5e1e98aa467e,ITS,M.Sc Computer Science,Mobile,2018-08-01,2022-06-01,0
+e077d395-a7c9-4a3c-b9f9-81fe0ad07889,1040914d-05bc-4ed0-a968-cc12d45fb5c5,ITB,B.Sc Information Technology,Mobile,2018-08-01,2022-06-01,0
+4ad1de3d-0848-4ff9-bb5b-6d5d6587cbfd,84a752ed-2a2f-4e6c-8232-3b82f9b527fe,State University,B.Sc Computer Science,Devops,2018-08-01,2022-06-01,0
+4a93e0c9-8ffc-4a87-934c-4790dcedfefd,97c171ac-0584-4469-94d8-63c79e79e470,ITB,M.Sc Computer Science,Mobile,2018-08-01,2022-06-01,0
+7b40e878-bd85-4082-a392-9eef46cdb880,8fa92f8d-05a5-451b-a57c-83aa3e9ef531,Tech Institute,B.Sc Computer Science,Design,2018-08-01,2022-06-01,0
+6b77cdc2-a78f-4f63-ac73-a4ff54d568cb,bff08a43-8f7a-4acf-9346-480449c403d0,ITS,B.Sc Computer Science,Frontend,2018-08-01,2022-06-01,0
+99f40f78-a439-4133-a09e-19c6d615c50b,1c37f3d2-6101-4f7c-b43d-26abd640c04e,Tech Institute,M.Sc Computer Science,Blockchain,2018-08-01,2022-06-01,0
+14bde197-030b-49de-8028-f3ceecd52292,8246a4c1-fa84-47b8-9bac-504610c84411,Tech Institute,M.Sc Computer Science,Devops,2018-08-01,2022-06-01,0

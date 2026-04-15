@@ -1,0 +1,1306 @@
+work_experience_id,freelancer_id,job_title,company_name,start_date,end_date,is_current,description
+cd0cddb0-31b6-401b-ac7c-506573cfee35,068c9af0-7a1b-4ec8-adcf-965e7b3216c9,Senior Blockchain Engineer,Digital Agency,2024-08-19,,1,Built blockchain solutions.
+94a785a6-5d9c-44d8-a903-00d9d194d6f0,207507dc-c332-48de-b09c-d04c03e98c48,Senior Devops Engineer,BigCo,2024-03-22,,1,Built devops solutions.
+b2048a11-bd38-480c-973f-7c7230900433,207507dc-c332-48de-b09c-d04c03e98c48,Devops Engineer,BigCo,2022-11-28,2024-01-22,0,Built devops solutions.
+2ef32a42-fccd-4626-81f7-108218ea5181,207507dc-c332-48de-b09c-d04c03e98c48,Devops Engineer,Consultancy,2022-05-02,2022-09-29,0,Built devops solutions.
+187a3cda-f616-4ab1-9eeb-a3b2b861a20d,af1825e2-3879-450c-b717-2abe807aae56,Senior Devops Engineer,Fintech Co,2023-12-23,,1,Built devops solutions.
+fc9d5c24-7e2f-46f1-be19-aff4c90ac759,af1825e2-3879-450c-b717-2abe807aae56,Devops Engineer,Consultancy,2022-04-02,2023-10-24,0,Built devops solutions.
+23045dcb-393e-46b9-8070-bc1610ed1d18,af1825e2-3879-450c-b717-2abe807aae56,Devops Engineer,BigCo,2019-11-14,2022-02-01,0,Built devops solutions.
+77955ae0-4363-4d80-a73d-b9a7f8cee4f6,af1825e2-3879-450c-b717-2abe807aae56,Devops Engineer,Consultancy,2017-01-28,2019-09-15,0,Built devops solutions.
+bcb7a0d2-7594-4779-b3be-6983f8515185,eeb04b28-edcb-4969-946e-cc0e70aff232,Senior Fullstack Engineer,TechCorp,2025-10-13,,1,Built fullstack solutions.
+d37d4857-b0ad-433e-aa1d-0d3652d63b2d,eeb04b28-edcb-4969-946e-cc0e70aff232,Fullstack Engineer,TechCorp,2024-04-21,2025-08-14,0,Built fullstack solutions.
+f41d79de-cc63-49fd-8988-88b4f55f8342,eeb04b28-edcb-4969-946e-cc0e70aff232,Fullstack Engineer,TechCorp,2022-05-02,2024-02-21,0,Built fullstack solutions.
+33cbe71e-eb97-4f4d-b2d9-6e182d6a103d,80a3149f-42c0-4608-b1d8-b79bb4e62dce,Senior Frontend Engineer,Consultancy,2023-04-27,,1,Built frontend solutions.
+42f178f3-9c2c-4504-9a8d-588a74b5ff73,80a3149f-42c0-4608-b1d8-b79bb4e62dce,Frontend Engineer,Consultancy,2020-09-09,2023-02-26,0,Built frontend solutions.
+40f70387-8617-44ee-b4df-cb6bdce9575a,3e51ac71-eb1d-4ae7-8b6f-c68b2bd85db5,Senior Fullstack Engineer,TechCorp,2025-03-17,,1,Built fullstack solutions.
+085c7f25-9441-431a-b7d8-5601b21ecc02,3e51ac71-eb1d-4ae7-8b6f-c68b2bd85db5,Fullstack Engineer,E-Commerce Ltd,2022-12-28,2025-01-16,0,Built fullstack solutions.
+6d026bfe-4f08-4dc2-aeaa-6ced728b2079,3e51ac71-eb1d-4ae7-8b6f-c68b2bd85db5,Fullstack Engineer,E-Commerce Ltd,2021-10-04,2022-10-29,0,Built fullstack solutions.
+1640874b-bd16-4f61-839c-5616318fe2ed,7dc7ed8c-a942-4e49-b3d5-b95fdac243fb,Senior Design Engineer,Digital Agency,2025-01-16,,1,Built design solutions.
+87d109a8-8960-426f-9606-83c4a5cd3507,7dc7ed8c-a942-4e49-b3d5-b95fdac243fb,Design Engineer,Digital Agency,2022-03-03,2024-11-17,0,Built design solutions.
+119e3c50-c238-4791-a459-389a79d97080,913c8f2d-383f-4887-a7a4-7f3927b68815,Senior Devops Engineer,Fintech Co,2025-02-15,,1,Built devops solutions.
+5295d4e7-2005-40d1-a85f-eb1fd84b0255,913c8f2d-383f-4887-a7a4-7f3927b68815,Devops Engineer,BigCo,2024-05-21,2024-12-17,0,Built devops solutions.
+b9673ac8-55f3-4f2e-a2aa-a9c58c563cea,aa69163e-15af-4b6d-b4d4-7263cf34398d,Senior Ml Ai Engineer,Consultancy,2023-08-25,,1,Built ml ai solutions.
+3a59fc6a-2a93-458b-8710-f6914ba31cb7,aa69163e-15af-4b6d-b4d4-7263cf34398d,Ml Ai Engineer,Fintech Co,2021-02-06,2023-06-26,0,Built ml ai solutions.
+52ccaa3b-9c2b-4d8f-a27c-a06f78fd0b95,aa69163e-15af-4b6d-b4d4-7263cf34398d,Ml Ai Engineer,Digital Agency,2020-07-11,2020-12-08,0,Built ml ai solutions.
+fe1d00f6-c374-4df7-87ff-f6bf0a01de1b,aa69163e-15af-4b6d-b4d4-7263cf34398d,Ml Ai Engineer,Consultancy,2018-04-23,2020-05-12,0,Built ml ai solutions.
+129aa124-943f-4ddc-a7a3-6436e7419173,1c437d95-87e9-458a-8bd8-4e07934bccd4,Senior Frontend Engineer,E-Commerce Ltd,2023-10-24,,1,Built frontend solutions.
+9280a826-66ee-493e-ba4c-6c29252a3eeb,1c437d95-87e9-458a-8bd8-4e07934bccd4,Frontend Engineer,Consultancy,2021-06-06,2023-08-25,0,Built frontend solutions.
+81289f69-1883-4349-976c-edbade19595a,1c437d95-87e9-458a-8bd8-4e07934bccd4,Frontend Engineer,BigCo,2020-02-12,2021-04-07,0,Built frontend solutions.
+e5e25e53-f3e4-4e2d-987e-b18914624624,1c437d95-87e9-458a-8bd8-4e07934bccd4,Frontend Engineer,TechCorp,2018-01-23,2019-12-14,0,Built frontend solutions.
+b6ed66a5-d038-4a3e-bd12-7e78be274872,1e62ee30-e14b-489a-a43b-dd3784412cca,Senior Ml Ai Engineer,E-Commerce Ltd,2025-09-13,,1,Built ml ai solutions.
+3640652b-0bc8-413b-a20c-2438b0475bd8,1e62ee30-e14b-489a-a43b-dd3784412cca,Ml Ai Engineer,Consultancy,2023-04-27,2025-07-15,0,Built ml ai solutions.
+4da64bd9-a19c-4273-af2f-2aa91119b5ac,c5ea944d-ab0b-4a71-9c7d-8b72234dcf32,Senior Fullstack Engineer,Digital Agency,2025-01-16,,1,Built fullstack solutions.
+8a56a365-1dce-4b42-be82-49fe695bc229,c5ea944d-ab0b-4a71-9c7d-8b72234dcf32,Fullstack Engineer,Fintech Co,2022-05-02,2024-11-17,0,Built fullstack solutions.
+e9f40627-87cc-4f97-97cc-1528cd04fcea,774c22ad-7af3-4a43-875d-3226e1e3cdf1,Senior Mobile Engineer,Consultancy,2024-10-18,,1,Built mobile solutions.
+9cc08697-c402-42a6-a751-2998433635b7,774c22ad-7af3-4a43-875d-3226e1e3cdf1,Mobile Engineer,E-Commerce Ltd,2022-02-01,2024-08-19,0,Built mobile solutions.
+292f2f61-ee98-40d7-9c4b-bd53681b2466,774c22ad-7af3-4a43-875d-3226e1e3cdf1,Mobile Engineer,StartupXYZ,2019-04-18,2021-12-03,0,Built mobile solutions.
+1a05bc51-dde2-4444-9d2e-8696229dcb0c,dd667acc-1d35-4b7b-a695-df60e1e37409,Senior Ml Ai Engineer,Digital Agency,2024-09-18,,1,Built ml ai solutions.
+64c62280-ecac-409c-b800-787549c13dc4,dd667acc-1d35-4b7b-a695-df60e1e37409,Ml Ai Engineer,BigCo,2023-09-24,2024-07-20,0,Built ml ai solutions.
+ec11086c-1013-4245-9e83-74b6397c8e8d,dd667acc-1d35-4b7b-a695-df60e1e37409,Ml Ai Engineer,Consultancy,2022-08-30,2023-07-26,0,Built ml ai solutions.
+7a3184d2-6dd6-4548-85b9-6964adb80011,eee57cc8-0424-4692-847a-e2fbbeb128eb,Senior Blockchain Engineer,E-Commerce Ltd,2025-05-16,,1,Built blockchain solutions.
+9dfdf99e-462d-480a-a21f-48ca9a1cfc93,eee57cc8-0424-4692-847a-e2fbbeb128eb,Blockchain Engineer,Consultancy,2024-10-18,2025-03-17,0,Built blockchain solutions.
+48bbc295-2b12-44d4-8339-5996e4ce19b5,99246378-1f5b-4ff7-ab44-7eed87a515bb,Senior Blockchain Engineer,Digital Agency,2023-10-24,,1,Built blockchain solutions.
+b111192d-4dc2-4163-9b57-e944f2c70b59,91ddfa64-1d6e-48de-91f5-03352f4c6dd6,Senior Devops Engineer,Fintech Co,2024-05-21,,1,Built devops solutions.
+d758d9d7-fa3b-42f4-8b58-8c766f76ef68,91ddfa64-1d6e-48de-91f5-03352f4c6dd6,Devops Engineer,Consultancy,2023-04-27,2024-03-22,0,Built devops solutions.
+a3a6d459-bec5-40bd-897d-ac10dc88682d,91ddfa64-1d6e-48de-91f5-03352f4c6dd6,Devops Engineer,Consultancy,2022-04-02,2023-02-26,0,Built devops solutions.
+0a5dd6f0-3abd-4590-8d3b-cc31b28f0d47,a0599347-2da1-4a36-aa85-e9dbbb1e36e3,Senior Devops Engineer,TechCorp,2025-02-15,,1,Built devops solutions.
+a1fb7e27-e0e3-4d00-966c-69a3957b697d,a0599347-2da1-4a36-aa85-e9dbbb1e36e3,Devops Engineer,BigCo,2022-12-28,2024-12-17,0,Built devops solutions.
+ed303c81-9e62-4516-96af-d93f1d500da7,094c4567-6032-499a-8a48-40d73e4c3aba,Senior Blockchain Engineer,StartupXYZ,2025-01-16,,1,Built blockchain solutions.
+dbf63d8b-2c83-4208-86c3-552463f17a0b,ac995400-992b-423f-8c79-c1850e4a2798,Senior Mobile Engineer,StartupXYZ,2025-03-17,,1,Built mobile solutions.
+81257bb2-7db8-4045-853e-430af3414e58,ac995400-992b-423f-8c79-c1850e4a2798,Mobile Engineer,TechCorp,2023-03-28,2025-01-16,0,Built mobile solutions.
+2d552e77-524d-4bd2-9cfa-8631d79c76ea,ac995400-992b-423f-8c79-c1850e4a2798,Mobile Engineer,Fintech Co,2020-04-12,2023-01-27,0,Built mobile solutions.
+8cf159fd-b76a-4473-bb20-a5479807d77a,cc69d3c2-f38b-47a6-bce7-df9d084b05ea,Senior Backend Engineer,Digital Agency,2025-03-17,,1,Built backend solutions.
+aefddf4c-88ef-4031-a2fa-7f6ec3b8930c,cc69d3c2-f38b-47a6-bce7-df9d084b05ea,Backend Engineer,Consultancy,2024-03-22,2025-01-16,0,Built backend solutions.
+aaaed8cf-6a40-4bf8-970a-9514f356fc58,10e727f9-945f-4416-9152-43643f546c24,Senior Ml Ai Engineer,Fintech Co,2024-05-21,,1,Built ml ai solutions.
+5194f150-7cbf-4f84-bb94-39f4bd17b15a,10e727f9-945f-4416-9152-43643f546c24,Ml Ai Engineer,BigCo,2023-05-27,2024-03-22,0,Built ml ai solutions.
+20b21f6d-7f37-4a91-ae7c-8453ed497d23,375a8c44-f210-4e1e-82ff-1198081195b5,Senior Design Engineer,Consultancy,2023-05-27,,1,Built design solutions.
+c9f4658e-1902-4e5e-a146-06febf30dbdf,375a8c44-f210-4e1e-82ff-1198081195b5,Design Engineer,StartupXYZ,2022-06-01,2023-03-28,0,Built design solutions.
+7e7eaa6b-2011-402c-91b6-922975bb9dd8,375a8c44-f210-4e1e-82ff-1198081195b5,Design Engineer,Digital Agency,2019-11-14,2022-04-02,0,Built design solutions.
+353ff9db-6d26-40a2-9017-589ad33cbb8a,375a8c44-f210-4e1e-82ff-1198081195b5,Design Engineer,BigCo,2016-10-30,2019-09-15,0,Built design solutions.
+2126689c-c6a3-4f92-bb34-cf41704e1bf2,e719dcf7-507b-4930-b2db-0377d20d9308,Senior Blockchain Engineer,TechCorp,2025-10-13,,1,Built blockchain solutions.
+1185733e-4f1e-4fd7-8290-a98338995607,e719dcf7-507b-4930-b2db-0377d20d9308,Blockchain Engineer,TechCorp,2023-03-28,2025-08-14,0,Built blockchain solutions.
+d4820a38-f70d-4fae-80b9-8e4bd2c50065,fd50fbe5-2f59-4bf2-a609-71ab37b0e157,Senior Mobile Engineer,TechCorp,2025-10-13,,1,Built mobile solutions.
+ded3a22c-392c-44da-a93c-8662322ccfa2,fd50fbe5-2f59-4bf2-a609-71ab37b0e157,Mobile Engineer,E-Commerce Ltd,2025-01-16,2025-08-14,0,Built mobile solutions.
+e85fa606-e7f4-4268-b182-bcbd2b7b85cb,fd50fbe5-2f59-4bf2-a609-71ab37b0e157,Mobile Engineer,Digital Agency,2022-08-30,2024-11-17,0,Built mobile solutions.
+f14a7cee-eb9d-4eea-b9d6-80fa281d69e4,fd50fbe5-2f59-4bf2-a609-71ab37b0e157,Mobile Engineer,Digital Agency,2020-10-09,2022-07-01,0,Built mobile solutions.
+0aba7dff-088c-474b-a8c6-0ff089ab51fb,b56d4e13-af27-44f7-ac0d-ff9d2799bc7b,Senior Backend Engineer,E-Commerce Ltd,2023-06-26,,1,Built backend solutions.
+f4f02bd3-67b0-4155-b70d-bbcb7df80cf4,b56d4e13-af27-44f7-ac0d-ff9d2799bc7b,Backend Engineer,Digital Agency,2021-11-03,2023-04-27,0,Built backend solutions.
+b324324a-3127-4e23-99df-47e08c2d181c,b56d4e13-af27-44f7-ac0d-ff9d2799bc7b,Backend Engineer,Consultancy,2019-08-16,2021-09-04,0,Built backend solutions.
+155cb562-d49b-4198-8443-002b6f1fbe64,bbb94bde-c4c6-4bd8-8839-4e3e8600c4cf,Senior Ml Ai Engineer,Consultancy,2024-10-18,,1,Built ml ai solutions.
+ec16f396-3ae4-4f98-b145-7aa6d2dc86fa,59cdcd10-4b4c-4391-8eb2-fcb03d53f6d6,Senior Backend Engineer,Fintech Co,2023-04-27,,1,Built backend solutions.
+8d59ccbb-bf68-41a5-be36-50634555f81d,59cdcd10-4b4c-4391-8eb2-fcb03d53f6d6,Backend Engineer,E-Commerce Ltd,2020-10-09,2023-02-26,0,Built backend solutions.
+dfb0b69f-94d0-4b9c-be7c-d801bf824fb0,59cdcd10-4b4c-4391-8eb2-fcb03d53f6d6,Backend Engineer,BigCo,2019-08-16,2020-08-10,0,Built backend solutions.
+df306cd4-a9ea-4895-a40a-ece16c901342,071afcbc-7917-4ec2-a456-c39c9a762665,Senior Blockchain Engineer,Consultancy,2023-07-26,,1,Built blockchain solutions.
+1c0d5806-1d63-4934-b29b-c092e33a676d,071afcbc-7917-4ec2-a456-c39c9a762665,Blockchain Engineer,Consultancy,2020-09-09,2023-05-27,0,Built blockchain solutions.
+63ede364-0f73-4f2a-bf6b-52384389c1fa,f22d3ba3-2410-4485-9ed4-2be207d07327,Senior Backend Engineer,BigCo,2025-05-16,,1,Built backend solutions.
+fccee684-8be8-4b2f-8de3-d0e20379bb2e,867e0ec8-4f04-4586-bcf3-ab5cfb04af37,Senior Devops Engineer,StartupXYZ,2023-09-24,,1,Built devops solutions.
+479a769a-8bc3-46d3-b060-3c35f5cc7471,867e0ec8-4f04-4586-bcf3-ab5cfb04af37,Devops Engineer,BigCo,2022-07-31,2023-07-26,0,Built devops solutions.
+6f29dbe3-419e-4342-abd4-81fb6f42d56e,867e0ec8-4f04-4586-bcf3-ab5cfb04af37,Devops Engineer,BigCo,2021-10-04,2022-06-01,0,Built devops solutions.
+40301003-b171-4c14-9c6f-c04c42811e88,867e0ec8-4f04-4586-bcf3-ab5cfb04af37,Devops Engineer,TechCorp,2021-01-07,2021-08-05,0,Built devops solutions.
+46c29a75-a700-43db-8990-a505923d0a97,d3f9dc98-6426-4413-839a-181958cb3e54,Senior Devops Engineer,TechCorp,2024-10-18,,1,Built devops solutions.
+e0812188-8cc2-4e4a-965f-cb678244bfae,d1ae4f3c-9966-48f5-bdda-6fe4aa04fdb6,Senior Backend Engineer,E-Commerce Ltd,2025-01-16,,1,Built backend solutions.
+2f096c44-ef57-42f9-ac96-acfac30b96ae,d1ae4f3c-9966-48f5-bdda-6fe4aa04fdb6,Backend Engineer,E-Commerce Ltd,2022-09-29,2024-11-17,0,Built backend solutions.
+a165dff4-8aa7-4406-a385-ae10741021eb,d1ae4f3c-9966-48f5-bdda-6fe4aa04fdb6,Backend Engineer,TechCorp,2021-10-04,2022-07-31,0,Built backend solutions.
+4131ddba-8c8d-4044-aae8-78e77c46b61a,d1ae4f3c-9966-48f5-bdda-6fe4aa04fdb6,Backend Engineer,Digital Agency,2019-10-15,2021-08-05,0,Built backend solutions.
+be6362e8-141a-4ad4-9fea-6a95bf3fe60c,fd55d99e-5984-4514-8245-03c38032bdb5,Senior Design Engineer,E-Commerce Ltd,2024-01-22,,1,Built design solutions.
+60f02efe-8335-482a-aa15-355600eb8835,e6948fb8-ee92-44fb-860e-3d249749b833,Senior Backend Engineer,Fintech Co,2025-02-15,,1,Built backend solutions.
+a36b7a09-c398-45df-902e-ea0d704be3d5,e6948fb8-ee92-44fb-860e-3d249749b833,Backend Engineer,Digital Agency,2022-11-28,2024-12-17,0,Built backend solutions.
+de72f0e7-b42d-4830-b301-7b0f9cb3b619,e6948fb8-ee92-44fb-860e-3d249749b833,Backend Engineer,TechCorp,2021-06-06,2022-09-29,0,Built backend solutions.
+2338bae3-e010-465a-8c60-b3bc37601625,e6948fb8-ee92-44fb-860e-3d249749b833,Backend Engineer,TechCorp,2020-08-10,2021-04-07,0,Built backend solutions.
+aa0b0e44-62a9-435e-a6e7-3a9719efc205,fae635b0-e19d-4c34-be0b-97b5716d0fbd,Senior Frontend Engineer,E-Commerce Ltd,2025-05-16,,1,Built frontend solutions.
+969a4aee-0b21-4cfb-80b5-4a241d29bdfd,b0e6b519-90eb-4bc3-8d5c-934d18a15189,Senior Design Engineer,Consultancy,2023-04-27,,1,Built design solutions.
+107585f8-11a4-4863-9669-ebebab68eeb5,79000fd1-cc2b-42f3-9b76-d52ebee1e884,Senior Mobile Engineer,BigCo,2024-05-21,,1,Built mobile solutions.
+1dbc29b8-bd8f-40af-a0fb-d7a7f53b0414,e940aee5-f9e0-4436-bf8d-2cf77e03c612,Senior Backend Engineer,TechCorp,2024-10-18,,1,Built backend solutions.
+1209e2b2-d72a-4f2e-a90c-a1e87a8cd40d,e940aee5-f9e0-4436-bf8d-2cf77e03c612,Backend Engineer,Consultancy,2021-10-04,2024-08-19,0,Built backend solutions.
+1ce0a633-cba7-451a-a687-77fc4d7d4cb7,e940aee5-f9e0-4436-bf8d-2cf77e03c612,Backend Engineer,TechCorp,2020-08-10,2021-08-05,0,Built backend solutions.
+cce192dd-497d-48ac-a54b-18d4a0692269,e940aee5-f9e0-4436-bf8d-2cf77e03c612,Backend Engineer,TechCorp,2019-05-18,2020-06-11,0,Built backend solutions.
+bd070937-50a2-4286-9375-2cf292fdeac9,7e96e480-4394-4a69-ab9d-21fcb78f648f,Senior Backend Engineer,E-Commerce Ltd,2024-04-21,,1,Built backend solutions.
+ce69f05b-7f51-4d1b-a428-c0dd00f647e2,7e96e480-4394-4a69-ab9d-21fcb78f648f,Backend Engineer,Digital Agency,2021-09-04,2024-02-21,0,Built backend solutions.
+69822c24-9b95-40c7-8673-8ca78524d11d,7e96e480-4394-4a69-ab9d-21fcb78f648f,Backend Engineer,Consultancy,2020-11-08,2021-07-06,0,Built backend solutions.
+e1c88aa2-d473-4547-bd24-da1e33110b47,b6dc3a58-1e53-4f2d-8b88-f858490e3c70,Senior Ml Ai Engineer,Digital Agency,2025-05-16,,1,Built ml ai solutions.
+7c961620-f22c-4ca3-b097-251e656a440a,b6dc3a58-1e53-4f2d-8b88-f858490e3c70,Ml Ai Engineer,E-Commerce Ltd,2023-11-23,2025-03-17,0,Built ml ai solutions.
+7f2a9b75-7873-4334-af04-de8636b0885d,b6dc3a58-1e53-4f2d-8b88-f858490e3c70,Ml Ai Engineer,Consultancy,2022-03-03,2023-09-24,0,Built ml ai solutions.
+5a6920b9-d691-449b-806e-cbe4bb5a8e7e,b6dc3a58-1e53-4f2d-8b88-f858490e3c70,Ml Ai Engineer,BigCo,2020-11-08,2022-01-02,0,Built ml ai solutions.
+d5f6c3c9-9355-4c25-8c62-8d4da2031329,bfea403c-e134-4f40-b43d-ecd0620c9612,Senior Blockchain Engineer,Digital Agency,2024-07-20,,1,Built blockchain solutions.
+dc5abab7-7a8a-4fc7-9018-571e2c1a0d78,bfea403c-e134-4f40-b43d-ecd0620c9612,Blockchain Engineer,Fintech Co,2022-08-30,2024-05-21,0,Built blockchain solutions.
+956693e5-f2e4-41c8-9a80-33d35b60bda7,92c088f2-9685-4abe-9bf9-e85a09387489,Senior Backend Engineer,Fintech Co,2024-12-17,,1,Built backend solutions.
+3bcbcbe2-4de6-4613-801c-04b87338a123,ff01beae-c458-49db-9bb1-1069004e42c5,Senior Backend Engineer,BigCo,2024-12-17,,1,Built backend solutions.
+1443d4cc-5366-4be5-8b15-956aa5d79693,ff01beae-c458-49db-9bb1-1069004e42c5,Backend Engineer,TechCorp,2023-06-26,2024-10-18,0,Built backend solutions.
+78b5ff5d-e784-418e-bdc7-ae4c2d99b7db,ff01beae-c458-49db-9bb1-1069004e42c5,Backend Engineer,BigCo,2022-11-28,2023-04-27,0,Built backend solutions.
+da434638-5b8e-42be-b80b-8fafab4c943e,ff01beae-c458-49db-9bb1-1069004e42c5,Backend Engineer,Fintech Co,2020-01-13,2022-09-29,0,Built backend solutions.
+e5b843a4-d686-4191-884b-dfc59bc05a5f,87d38227-d692-4576-b420-fe1cdafa91c4,Senior Blockchain Engineer,StartupXYZ,2025-05-16,,1,Built blockchain solutions.
+229131f5-300e-4cf0-bc86-e22c3c691ec7,87d38227-d692-4576-b420-fe1cdafa91c4,Blockchain Engineer,Fintech Co,2023-11-23,2025-03-17,0,Built blockchain solutions.
+c380d400-86ff-4808-9da9-a1008be7cf74,87d38227-d692-4576-b420-fe1cdafa91c4,Blockchain Engineer,TechCorp,2022-04-02,2023-09-24,0,Built blockchain solutions.
+9d654538-4177-4917-b4bd-0ed40ccaefb6,87d38227-d692-4576-b420-fe1cdafa91c4,Blockchain Engineer,E-Commerce Ltd,2020-10-09,2022-02-01,0,Built blockchain solutions.
+0539968c-02ed-4ad4-a6ea-4e639db44485,2c283439-b2bc-4ff6-96bc-3dbe27467169,Senior Design Engineer,TechCorp,2025-06-15,,1,Built design solutions.
+39ad8dd2-60e7-4c54-8c02-5c9dd5633a36,2c283439-b2bc-4ff6-96bc-3dbe27467169,Design Engineer,TechCorp,2022-06-01,2025-04-16,0,Built design solutions.
+3515ba94-5519-43c2-b8c8-3580de9a7810,2c283439-b2bc-4ff6-96bc-3dbe27467169,Design Engineer,TechCorp,2019-10-15,2022-04-02,0,Built design solutions.
+62dab4fc-9b33-4a28-89a9-94347a75c4d2,2c283439-b2bc-4ff6-96bc-3dbe27467169,Design Engineer,StartupXYZ,2018-11-19,2019-08-16,0,Built design solutions.
+2ce939c8-a219-4ba2-8ae4-1a5abaae07f8,11bf9149-0185-415d-aa3c-e8526c5d958a,Senior Frontend Engineer,TechCorp,2025-03-17,,1,Built frontend solutions.
+e616d11b-de86-4ad1-84ec-17ce316cfd6e,11bf9149-0185-415d-aa3c-e8526c5d958a,Frontend Engineer,Digital Agency,2024-04-21,2025-01-16,0,Built frontend solutions.
+48e2feef-83c9-4662-b566-4541dd23e5dd,a08cf8b4-7fbe-4b25-b00f-671fc4f4f860,Senior Mobile Engineer,TechCorp,2025-05-16,,1,Built mobile solutions.
+ab3c2e8e-6cae-4cac-9559-b32e3be279ec,91360cab-dc93-4741-9eb8-192cebbae384,Senior Devops Engineer,Consultancy,2025-04-16,,1,Built devops solutions.
+c57c56e8-53e1-4d99-a64e-c66993078edf,91360cab-dc93-4741-9eb8-192cebbae384,Devops Engineer,TechCorp,2023-09-24,2025-02-15,0,Built devops solutions.
+d6110336-3734-4b5d-aa5e-cdb2bd988a90,91360cab-dc93-4741-9eb8-192cebbae384,Devops Engineer,TechCorp,2020-11-08,2023-07-26,0,Built devops solutions.
+28c6bbae-137a-45a9-9604-e902a12acd37,d703f3ab-5f66-4ea2-902b-bc78eeb359cc,Senior Fullstack Engineer,Consultancy,2024-06-20,,1,Built fullstack solutions.
+7ab32d19-cea8-49d0-a46e-d5ef6c7d5ea8,d703f3ab-5f66-4ea2-902b-bc78eeb359cc,Fullstack Engineer,TechCorp,2021-11-03,2024-04-21,0,Built fullstack solutions.
+8e6297e0-2006-4cf0-83f8-0252a069616f,d703f3ab-5f66-4ea2-902b-bc78eeb359cc,Fullstack Engineer,Consultancy,2020-11-08,2021-09-04,0,Built fullstack solutions.
+1ff5e52f-83c9-4df0-adbe-7672bef8fe11,d703f3ab-5f66-4ea2-902b-bc78eeb359cc,Fullstack Engineer,Fintech Co,2019-08-16,2020-09-09,0,Built fullstack solutions.
+aeee3373-77ef-4753-900a-d2aba9019b42,6690e3f4-ad55-4114-8274-1e0a48c9abb1,Senior Frontend Engineer,Consultancy,2025-05-16,,1,Built frontend solutions.
+fb7182b0-be60-42d8-a7dc-a923f23f0c94,e44791c2-e8c5-4d6c-8e32-c8c3f8fd8bd2,Senior Design Engineer,Consultancy,2024-02-21,,1,Built design solutions.
+54332d66-0dd5-445d-bf2b-d95bb39eb02e,e44791c2-e8c5-4d6c-8e32-c8c3f8fd8bd2,Design Engineer,BigCo,2022-08-30,2023-12-23,0,Built design solutions.
+69d37942-f16a-467e-a7c7-c7eac38ddb4a,e44791c2-e8c5-4d6c-8e32-c8c3f8fd8bd2,Design Engineer,Fintech Co,2021-12-03,2022-07-01,0,Built design solutions.
+d45d7d0d-4311-4937-9611-66186662cce3,a32e9d43-1a56-47b8-9785-a5e54e97449f,Senior Devops Engineer,BigCo,2024-12-17,,1,Built devops solutions.
+c1fc7b27-7a2c-43d3-8d2b-b566c4a7de6e,a32e9d43-1a56-47b8-9785-a5e54e97449f,Devops Engineer,Consultancy,2023-11-23,2024-10-18,0,Built devops solutions.
+45c2b79a-d01e-41c0-adbd-f0f7d1c9b035,4255cd43-96f4-4500-af3c-f2df564ee895,Senior Mobile Engineer,Consultancy,2024-01-22,,1,Built mobile solutions.
+d9d6eecc-b7c4-4418-9f54-9057ca36f272,4255cd43-96f4-4500-af3c-f2df564ee895,Mobile Engineer,TechCorp,2022-12-28,2023-11-23,0,Built mobile solutions.
+5f4b7b79-7aa2-46c8-8031-adea0d6e0875,4255cd43-96f4-4500-af3c-f2df564ee895,Mobile Engineer,TechCorp,2022-02-01,2022-10-29,0,Built mobile solutions.
+de90057d-8c29-4f77-bd1b-4b4768d6ab09,4255cd43-96f4-4500-af3c-f2df564ee895,Mobile Engineer,StartupXYZ,2020-06-11,2021-12-03,0,Built mobile solutions.
+f9349dac-b18a-4120-9f82-708f2a185f89,926b7980-3d50-4b0a-b8b2-1b0c4d198cbf,Senior Design Engineer,TechCorp,2023-09-24,,1,Built design solutions.
+f4ca18b3-3446-41e6-9170-211ffb95fa52,1d7ac49a-11b9-4f44-b735-34db75465b0e,Senior Backend Engineer,BigCo,2025-06-15,,1,Built backend solutions.
+42759124-b0e4-471e-96f3-83b0f758d247,1d7ac49a-11b9-4f44-b735-34db75465b0e,Backend Engineer,BigCo,2023-03-28,2025-04-16,0,Built backend solutions.
+abe5835e-9798-47d2-a94a-a60e4cde3b51,1d7ac49a-11b9-4f44-b735-34db75465b0e,Backend Engineer,Fintech Co,2022-02-01,2023-01-27,0,Built backend solutions.
+0db77cea-9bf3-40c9-890d-fe9bf9b15afd,1d7ac49a-11b9-4f44-b735-34db75465b0e,Backend Engineer,Fintech Co,2020-07-11,2021-12-03,0,Built backend solutions.
+d644d3f8-a7d1-40d6-ace2-7f6660750c61,f8068338-51b8-4b45-b9f6-68252e42c66a,Senior Ml Ai Engineer,Digital Agency,2024-01-22,,1,Built ml ai solutions.
+547cc1c9-3514-45c1-9533-fcb26a6a045b,f8068338-51b8-4b45-b9f6-68252e42c66a,Ml Ai Engineer,Fintech Co,2023-02-26,2023-11-23,0,Built ml ai solutions.
+1e953446-d99c-4194-a356-bd626d4b1d25,93988d10-5b34-4767-bb9a-07ae5da04772,Senior Devops Engineer,E-Commerce Ltd,2025-05-16,,1,Built devops solutions.
+39c06e95-99ee-4336-90d7-bf799e732e84,93988d10-5b34-4767-bb9a-07ae5da04772,Devops Engineer,BigCo,2023-10-24,2025-03-17,0,Built devops solutions.
+27ca1a11-b729-4be6-8587-f13aea8f34c1,97de8924-cba5-4084-ac0e-43009ed706d2,Senior Devops Engineer,Digital Agency,2024-05-21,,1,Built devops solutions.
+cf81a987-2f68-4ad0-8033-e561e10d9d70,97de8924-cba5-4084-ac0e-43009ed706d2,Devops Engineer,StartupXYZ,2021-05-07,2024-03-22,0,Built devops solutions.
+01e9a497-294c-4feb-901d-946be74e1e3a,97de8924-cba5-4084-ac0e-43009ed706d2,Devops Engineer,TechCorp,2018-05-23,2021-03-08,0,Built devops solutions.
+7b63567c-b5e3-4258-a533-4e169989d944,038950f3-ce15-421c-b40b-2200c4266552,Senior Frontend Engineer,StartupXYZ,2025-08-14,,1,Built frontend solutions.
+06c20ad4-1d6c-4771-b9ba-986493c7f97f,038950f3-ce15-421c-b40b-2200c4266552,Frontend Engineer,TechCorp,2024-11-17,2025-06-15,0,Built frontend solutions.
+e6b607aa-65d5-44d1-af72-01ec5b972906,1ac35812-bd37-44d1-baeb-56f5f65ef98f,Senior Frontend Engineer,Digital Agency,2024-01-22,,1,Built frontend solutions.
+77ffd0ef-73c1-402f-9bfa-1324c0f0c8c5,1ac35812-bd37-44d1-baeb-56f5f65ef98f,Frontend Engineer,Fintech Co,2022-02-01,2023-11-23,0,Built frontend solutions.
+c64429ea-148d-42a7-93f3-94e9b6c5b741,1ac35812-bd37-44d1-baeb-56f5f65ef98f,Frontend Engineer,BigCo,2019-05-18,2021-12-03,0,Built frontend solutions.
+a63a6c08-1a9e-49a9-a9be-3e6e85df9ce9,1ac35812-bd37-44d1-baeb-56f5f65ef98f,Frontend Engineer,Consultancy,2016-06-02,2019-03-19,0,Built frontend solutions.
+4fd57e29-8f1c-40f6-a39c-272f9bfb4570,3fb997f5-9ee6-4ac1-8fe2-002efa6e2339,Senior Mobile Engineer,BigCo,2025-04-16,,1,Built mobile solutions.
+18ff9c40-57dd-4cb8-87d6-699aec07a6cd,3fb997f5-9ee6-4ac1-8fe2-002efa6e2339,Mobile Engineer,TechCorp,2024-06-20,2025-02-15,0,Built mobile solutions.
+70e12d17-0442-4191-ba4b-5afcd3066ff2,3fb997f5-9ee6-4ac1-8fe2-002efa6e2339,Mobile Engineer,BigCo,2023-09-24,2024-04-21,0,Built mobile solutions.
+a0213544-b5a6-4530-b8d8-880be4e6be94,3fb997f5-9ee6-4ac1-8fe2-002efa6e2339,Mobile Engineer,E-Commerce Ltd,2021-08-05,2023-07-26,0,Built mobile solutions.
+62bba2ca-3309-44e0-8dab-4e48ad6effce,e1db353f-5caf-40e8-99bd-fc495d0a145f,Senior Blockchain Engineer,BigCo,2025-08-14,,1,Built blockchain solutions.
+abd93f75-a494-4610-b905-50d35a0b3230,e1db353f-5caf-40e8-99bd-fc495d0a145f,Blockchain Engineer,BigCo,2025-01-16,2025-06-15,0,Built blockchain solutions.
+b7d2372b-3088-41ac-a930-e57b1b4b088f,e1db353f-5caf-40e8-99bd-fc495d0a145f,Blockchain Engineer,BigCo,2022-07-01,2024-11-17,0,Built blockchain solutions.
+b607abdd-f44f-426d-86f9-d4d4d5a7b344,eb26f0e1-6929-4040-94e2-cba39ba229ca,Senior Backend Engineer,Fintech Co,2023-10-24,,1,Built backend solutions.
+97d57984-ccd4-489f-9344-3b7f08be8984,eb26f0e1-6929-4040-94e2-cba39ba229ca,Backend Engineer,Consultancy,2022-10-29,2023-08-25,0,Built backend solutions.
+e8128dfa-6537-4b80-bafc-3ebf1a980884,92a2e8a4-d134-4c19-bc9d-871d5f8d2d35,Senior Ml Ai Engineer,BigCo,2023-05-27,,1,Built ml ai solutions.
+ef8af932-4706-4897-a45c-0640b29425bf,92a2e8a4-d134-4c19-bc9d-871d5f8d2d35,Ml Ai Engineer,TechCorp,2022-06-01,2023-03-28,0,Built ml ai solutions.
+7edac6ea-1f42-4e70-81f2-6ae4b88ae7e0,55248b11-bfe4-4dae-b492-55e2e39c0631,Senior Devops Engineer,E-Commerce Ltd,2025-06-15,,1,Built devops solutions.
+7cfdd9dd-7aeb-4080-b4c1-2e4e3b0fdd63,a74a98e1-7096-4eca-a1de-f5e3bc42bdbd,Senior Design Engineer,Fintech Co,2025-06-15,,1,Built design solutions.
+2aca501f-d650-4d75-8d49-0e1dfdf99537,a74a98e1-7096-4eca-a1de-f5e3bc42bdbd,Design Engineer,BigCo,2024-05-21,2025-04-16,0,Built design solutions.
+5df8feb9-fe49-483b-a039-daec27e3ef9d,a74a98e1-7096-4eca-a1de-f5e3bc42bdbd,Design Engineer,TechCorp,2022-05-02,2024-03-22,0,Built design solutions.
+3d26843c-ae1c-46c5-bb0b-e1293a946183,a74a98e1-7096-4eca-a1de-f5e3bc42bdbd,Design Engineer,E-Commerce Ltd,2020-03-13,2022-03-03,0,Built design solutions.
+05bac44a-6dc8-44a1-955e-74e0126ed0da,699df42f-be28-4e64-89a3-3dfaca83a061,Senior Design Engineer,E-Commerce Ltd,2023-04-27,,1,Built design solutions.
+c40f1a5b-3e78-4789-b928-651ea784b7b4,699df42f-be28-4e64-89a3-3dfaca83a061,Design Engineer,StartupXYZ,2022-01-02,2023-02-26,0,Built design solutions.
+3a197036-969c-46ac-afe8-af0f16fd8ef5,699df42f-be28-4e64-89a3-3dfaca83a061,Design Engineer,BigCo,2020-12-08,2021-11-03,0,Built design solutions.
+f172bbcb-5e6d-4d56-85c9-ca6c9ea9f279,3819f15a-b821-468f-a5a0-407474c39d0e,Senior Frontend Engineer,Digital Agency,2024-02-21,,1,Built frontend solutions.
+ad9f988a-d6d2-4288-a9ab-17f345b469d2,3819f15a-b821-468f-a5a0-407474c39d0e,Frontend Engineer,Consultancy,2021-12-03,2023-12-23,0,Built frontend solutions.
+856bcb3d-4338-42f0-beee-a2ab34b116cb,e3b17692-97f4-49e4-a5d7-0ce17077ab29,Senior Design Engineer,Digital Agency,2024-05-21,,1,Built design solutions.
+4cfd3c2b-ba20-4c71-a1e1-5d931207c733,e3b17692-97f4-49e4-a5d7-0ce17077ab29,Design Engineer,BigCo,2022-10-29,2024-03-22,0,Built design solutions.
+c14c4765-8def-4b06-9613-2f98f6d86cab,e92b9d02-e2b9-43e7-a0df-3786314d9288,Senior Frontend Engineer,StartupXYZ,2025-07-15,,1,Built frontend solutions.
+600e0133-a8c4-4979-b0b9-e2d9b9aaf934,e92b9d02-e2b9-43e7-a0df-3786314d9288,Frontend Engineer,Digital Agency,2022-09-29,2025-05-16,0,Built frontend solutions.
+58d412ba-e2b9-43bb-9c88-5e54c010854c,e92b9d02-e2b9-43e7-a0df-3786314d9288,Frontend Engineer,TechCorp,2019-09-15,2022-07-31,0,Built frontend solutions.
+731593f3-3bca-4050-922e-6d02f0578342,e92b9d02-e2b9-43e7-a0df-3786314d9288,Frontend Engineer,E-Commerce Ltd,2018-03-24,2019-07-17,0,Built frontend solutions.
+bddd0e5a-2955-4863-9652-e1ab4db36bb1,2fd03137-89be-4a49-a938-e4574bdcd230,Senior Frontend Engineer,Fintech Co,2024-03-22,,1,Built frontend solutions.
+2ab50ec1-3236-4e35-b3d1-716849c05afa,2fd03137-89be-4a49-a938-e4574bdcd230,Frontend Engineer,E-Commerce Ltd,2022-08-30,2024-01-22,0,Built frontend solutions.
+bd91e08a-a861-4de4-a6e5-257cef001a78,0734073e-2287-4457-98c9-3ede81ac86be,Senior Fullstack Engineer,Digital Agency,2025-10-13,,1,Built fullstack solutions.
+fe74f171-3ce7-40cd-bae3-7066cd172f7f,975399f9-6178-4ce7-ac0e-f9bcacba0b88,Senior Frontend Engineer,Consultancy,2023-05-27,,1,Built frontend solutions.
+e19557d1-6f95-40f0-a249-67de5bea6c8a,975399f9-6178-4ce7-ac0e-f9bcacba0b88,Frontend Engineer,TechCorp,2022-07-31,2023-03-28,0,Built frontend solutions.
+d4a28d48-474d-4aa3-9bc2-03ea6e789884,975399f9-6178-4ce7-ac0e-f9bcacba0b88,Frontend Engineer,BigCo,2021-09-04,2022-06-01,0,Built frontend solutions.
+ecda2109-4039-4af9-a9c8-8e4356e00e26,975399f9-6178-4ce7-ac0e-f9bcacba0b88,Frontend Engineer,StartupXYZ,2020-06-11,2021-07-06,0,Built frontend solutions.
+32cedb4c-957a-4d10-9ea6-0e5c6b29edd9,0533f501-935d-41de-bf78-94fd12957899,Senior Blockchain Engineer,BigCo,2025-07-15,,1,Built blockchain solutions.
+e4bd2b72-24eb-4eb7-9d08-242ca10280a2,5d9dc26c-62f4-4762-9bfd-3e84952706b4,Senior Design Engineer,Fintech Co,2024-11-17,,1,Built design solutions.
+c6ff29ed-3442-4092-90aa-c07155fd0124,f32c705e-762f-455d-988b-e1ad38836a50,Senior Ml Ai Engineer,Consultancy,2023-04-27,,1,Built ml ai solutions.
+44758fb8-b13f-45eb-8652-88e4de95e296,e10e9472-c359-4264-b999-4c6e4add93dc,Senior Backend Engineer,Consultancy,2025-07-15,,1,Built backend solutions.
+dbf1e83e-a700-4ca3-bae0-3cd382744419,e10e9472-c359-4264-b999-4c6e4add93dc,Backend Engineer,Fintech Co,2024-04-21,2025-05-16,0,Built backend solutions.
+ab95c102-9224-49da-987c-b0dbc7a297a8,32e8e806-0a90-4e6d-907a-cffd6b8c7230,Senior Frontend Engineer,Consultancy,2023-06-26,,1,Built frontend solutions.
+671afc6d-2ee1-4078-ace6-c92c51b0acc1,2baca5e4-3e03-4780-bad4-adad4287b8dd,Senior Backend Engineer,BigCo,2023-08-25,,1,Built backend solutions.
+8477ace7-add8-4b01-bd6c-e78a672c7132,a881af57-1296-461b-8434-bbe3827a4663,Senior Backend Engineer,BigCo,2025-08-14,,1,Built backend solutions.
+9dc15017-4519-49ae-b93b-6ec996696165,a881af57-1296-461b-8434-bbe3827a4663,Backend Engineer,Fintech Co,2024-03-22,2025-06-15,0,Built backend solutions.
+b8f51b9a-65a0-435e-b0e6-37015c80d792,a881af57-1296-461b-8434-bbe3827a4663,Backend Engineer,E-Commerce Ltd,2022-02-01,2024-01-22,0,Built backend solutions.
+47230c1a-4b96-4e6d-b062-b8ec320ad8ca,caf062e4-3047-453b-8705-445743fd527f,Senior Backend Engineer,BigCo,2023-10-24,,1,Built backend solutions.
+d25eec9c-14f2-46e3-b766-85e76b5e693a,caf062e4-3047-453b-8705-445743fd527f,Backend Engineer,TechCorp,2021-06-06,2023-08-25,0,Built backend solutions.
+c5466a41-35cd-4139-88ee-23a52a517120,caf062e4-3047-453b-8705-445743fd527f,Backend Engineer,Consultancy,2019-12-14,2021-04-07,0,Built backend solutions.
+e02511f9-90a4-48e5-87ee-896186a645f0,98b3a976-0162-4f22-8ff4-ed7ce49e3e24,Senior Design Engineer,Consultancy,2023-07-26,,1,Built design solutions.
+dd77a044-34e1-49ef-8cd3-8df64ed74e37,98b3a976-0162-4f22-8ff4-ed7ce49e3e24,Design Engineer,StartupXYZ,2021-09-04,2023-05-27,0,Built design solutions.
+2fec41e6-0930-4b77-af41-eb1c4e2bab96,98b3a976-0162-4f22-8ff4-ed7ce49e3e24,Design Engineer,Digital Agency,2019-02-17,2021-07-06,0,Built design solutions.
+33645d7e-fc61-4bca-a4dd-0d54172b89e9,98b3a976-0162-4f22-8ff4-ed7ce49e3e24,Design Engineer,TechCorp,2018-01-23,2018-12-19,0,Built design solutions.
+5636bc5d-4bad-4940-8264-38a415d79a25,ec0ec497-4470-4e7e-a63b-979a164e6e1f,Senior Backend Engineer,TechCorp,2024-11-17,,1,Built backend solutions.
+9d8e7c14-fcfd-4be3-a1ce-fe61e343082f,ec0ec497-4470-4e7e-a63b-979a164e6e1f,Backend Engineer,Fintech Co,2024-03-22,2024-09-18,0,Built backend solutions.
+edfd5d9e-deb6-4ca8-b36b-0e55160eb3c4,ec0ec497-4470-4e7e-a63b-979a164e6e1f,Backend Engineer,Fintech Co,2022-08-30,2024-01-22,0,Built backend solutions.
+5d3a4d6a-9667-4b2a-9aac-5ec677483736,b3c63d5f-7c2c-4eb4-bd60-cd4592439232,Senior Devops Engineer,E-Commerce Ltd,2023-11-23,,1,Built devops solutions.
+8a871b1c-5da9-4397-a148-a9b9e8130ebd,b3c63d5f-7c2c-4eb4-bd60-cd4592439232,Devops Engineer,Fintech Co,2021-01-07,2023-09-24,0,Built devops solutions.
+00295bb9-2773-47db-9eb3-f4c6361904d3,08fb8e99-f773-4c38-9c51-ecd2192b3d31,Senior Fullstack Engineer,TechCorp,2025-06-15,,1,Built fullstack solutions.
+a8ad3c6b-88e8-40a5-89de-3f93d48deb96,08fb8e99-f773-4c38-9c51-ecd2192b3d31,Fullstack Engineer,Digital Agency,2023-02-26,2025-04-16,0,Built fullstack solutions.
+aa609844-b345-4702-b097-7787930e8a49,08fb8e99-f773-4c38-9c51-ecd2192b3d31,Fullstack Engineer,BigCo,2021-07-06,2022-12-28,0,Built fullstack solutions.
+b3f70607-4457-4298-990f-f11a5bef79f7,08fb8e99-f773-4c38-9c51-ecd2192b3d31,Fullstack Engineer,StartupXYZ,2020-12-08,2021-05-07,0,Built fullstack solutions.
+c3af1c13-9845-434b-b31a-49cbd5c658af,d313124d-e496-4f61-92ef-c29519c127a3,Senior Frontend Engineer,Digital Agency,2024-08-19,,1,Built frontend solutions.
+04964efd-d74f-4bb1-a727-318e825aff49,d313124d-e496-4f61-92ef-c29519c127a3,Frontend Engineer,BigCo,2022-03-03,2024-06-20,0,Built frontend solutions.
+790c164f-e346-4596-992e-f2e42b3c37d9,d313124d-e496-4f61-92ef-c29519c127a3,Frontend Engineer,BigCo,2020-03-13,2022-01-02,0,Built frontend solutions.
+692c7a32-fdc6-4fb6-befa-8a5e9c4567b7,63edce65-02a8-4746-afc1-4ed2980c281c,Senior Frontend Engineer,StartupXYZ,2024-11-17,,1,Built frontend solutions.
+8ca32376-a791-42be-be14-ee9dee84871d,63edce65-02a8-4746-afc1-4ed2980c281c,Frontend Engineer,TechCorp,2022-06-01,2024-09-18,0,Built frontend solutions.
+309ba601-28cd-4dd0-8a65-7be6a004acaa,63edce65-02a8-4746-afc1-4ed2980c281c,Frontend Engineer,Digital Agency,2021-05-07,2022-04-02,0,Built frontend solutions.
+278d67d9-0de7-44a7-96ef-d61fcaa45821,63edce65-02a8-4746-afc1-4ed2980c281c,Frontend Engineer,TechCorp,2019-02-17,2021-03-08,0,Built frontend solutions.
+0491e068-2c77-4232-81de-6162b42e7975,766733a8-7d73-4755-96b6-bd23402a83ae,Senior Fullstack Engineer,Fintech Co,2024-08-19,,1,Built fullstack solutions.
+444deeef-32a2-4311-a91f-f1a57f998dc6,766733a8-7d73-4755-96b6-bd23402a83ae,Fullstack Engineer,Consultancy,2023-09-24,2024-06-20,0,Built fullstack solutions.
+7afff9e5-68a4-4098-a3a9-53b9fa302577,e6159f16-f197-424d-b5d1-804090e8f6c2,Senior Frontend Engineer,StartupXYZ,2025-01-16,,1,Built frontend solutions.
+b424bc6a-3fb0-428e-b225-bfe27974c838,ec07b1a9-e0c4-4617-bef7-fc59a5796ed9,Senior Backend Engineer,BigCo,2024-08-19,,1,Built backend solutions.
+214ac019-279b-45d5-bb44-f7104b152cf4,ec07b1a9-e0c4-4617-bef7-fc59a5796ed9,Backend Engineer,Digital Agency,2022-12-28,2024-06-20,0,Built backend solutions.
+fc96a075-f4ce-4c45-a866-61008bc023e4,ec07b1a9-e0c4-4617-bef7-fc59a5796ed9,Backend Engineer,Digital Agency,2021-05-07,2022-10-29,0,Built backend solutions.
+1ec4dd2e-8cea-4b83-8181-7d32bc834057,8d792edb-8378-43b7-9d11-b075bac5b476,Senior Fullstack Engineer,Consultancy,2024-12-17,,1,Built fullstack solutions.
+ead7c628-d804-478c-9a7d-82b11f6df00d,aa80ca15-f237-498c-b68e-8ba77ab8fc86,Senior Design Engineer,StartupXYZ,2025-03-17,,1,Built design solutions.
+e933d361-36d3-4c31-86eb-da71e240ed9e,31dcef2c-4cf8-4fcd-84bd-722dcaafd8d4,Senior Blockchain Engineer,Fintech Co,2024-11-17,,1,Built blockchain solutions.
+deac2014-92c8-404d-97f4-48d71bfdbd1c,31dcef2c-4cf8-4fcd-84bd-722dcaafd8d4,Blockchain Engineer,Digital Agency,2023-08-25,2024-09-18,0,Built blockchain solutions.
+e5792984-a178-413b-9285-1e84492c786b,31dcef2c-4cf8-4fcd-84bd-722dcaafd8d4,Blockchain Engineer,Fintech Co,2022-02-01,2023-06-26,0,Built blockchain solutions.
+7fc7ac8c-ef94-42e8-bb44-2681fc4b99fa,31dcef2c-4cf8-4fcd-84bd-722dcaafd8d4,Blockchain Engineer,TechCorp,2019-06-17,2021-12-03,0,Built blockchain solutions.
+a72d7325-a5a7-4b47-8b57-bb5cf06a9074,39d6ea95-5a73-45c1-86c5-8b893ff8b7f6,Senior Mobile Engineer,Fintech Co,2023-06-26,,1,Built mobile solutions.
+dc209c68-7273-4732-a60c-27966cab8b82,39d6ea95-5a73-45c1-86c5-8b893ff8b7f6,Mobile Engineer,Digital Agency,2021-08-05,2023-04-27,0,Built mobile solutions.
+0ef60ef8-c0a4-490f-b44b-42cc816aa382,39d6ea95-5a73-45c1-86c5-8b893ff8b7f6,Mobile Engineer,TechCorp,2019-09-15,2021-06-06,0,Built mobile solutions.
+8c38d51c-ce12-4797-a271-1cf8a01143bc,1c4f7e28-29da-4ed9-a48d-3d16efa86e76,Senior Devops Engineer,TechCorp,2025-03-17,,1,Built devops solutions.
+dfb26370-b309-4258-bca9-f22475b76242,1c4f7e28-29da-4ed9-a48d-3d16efa86e76,Devops Engineer,TechCorp,2022-11-28,2025-01-16,0,Built devops solutions.
+c1ba0186-11fb-408c-93fc-caf955f7057b,2b089709-85e3-4cd5-8de1-d532b05c05be,Senior Fullstack Engineer,StartupXYZ,2025-03-17,,1,Built fullstack solutions.
+dee36b9f-2998-453b-bf1e-1d1255e49ee0,2b089709-85e3-4cd5-8de1-d532b05c05be,Fullstack Engineer,StartupXYZ,2022-09-29,2025-01-16,0,Built fullstack solutions.
+42ff1581-fdcc-4b39-8a59-9a91aa12e7b1,2b089709-85e3-4cd5-8de1-d532b05c05be,Fullstack Engineer,E-Commerce Ltd,2021-02-06,2022-07-31,0,Built fullstack solutions.
+b53de509-00da-4250-a8ad-14c6c6e9a363,6e8e7094-3033-443b-9f1e-f3f28815bd1f,Senior Frontend Engineer,TechCorp,2024-04-21,,1,Built frontend solutions.
+08c78964-ec49-4c22-bfc7-016be1f0913a,befc5408-562e-4154-97af-0ebdd7ed66a1,Senior Blockchain Engineer,Consultancy,2023-07-26,,1,Built blockchain solutions.
+b0186415-ee79-47e7-b32f-1afe936c85a0,befc5408-562e-4154-97af-0ebdd7ed66a1,Blockchain Engineer,Consultancy,2020-08-10,2023-05-27,0,Built blockchain solutions.
+56a84d58-c4ca-44c2-bc0f-3c800e0c7858,4b15af35-0787-49b8-984d-a7e223ac1b86,Senior Blockchain Engineer,Consultancy,2023-06-26,,1,Built blockchain solutions.
+ae8ecf1d-794a-46d1-b6f1-8909239fbe2b,6fccf19a-2864-4f1a-aaf0-cfee6adedcd3,Senior Mobile Engineer,Fintech Co,2024-01-22,,1,Built mobile solutions.
+ffa20ab5-b6c3-48fa-8658-8f3ba91963f0,6fccf19a-2864-4f1a-aaf0-cfee6adedcd3,Mobile Engineer,TechCorp,2021-08-05,2023-11-23,0,Built mobile solutions.
+53a1260c-ad70-4e0c-ab19-476cc47ecfd1,6fccf19a-2864-4f1a-aaf0-cfee6adedcd3,Mobile Engineer,Digital Agency,2019-08-16,2021-06-06,0,Built mobile solutions.
+5250ca17-d9f1-4baa-afa8-19f32a97d845,6fccf19a-2864-4f1a-aaf0-cfee6adedcd3,Mobile Engineer,Digital Agency,2018-12-19,2019-06-17,0,Built mobile solutions.
+6e875ca5-a60d-4203-9922-91e9e3f26973,820485ed-9d3b-4ae9-bbb4-980c5802991d,Senior Design Engineer,BigCo,2025-05-16,,1,Built design solutions.
+824b6ce5-a111-429e-a9e8-bd95750e4c06,820485ed-9d3b-4ae9-bbb4-980c5802991d,Design Engineer,BigCo,2024-09-18,2025-03-17,0,Built design solutions.
+08267ba3-2096-46ff-9caa-635dbcc2943a,820485ed-9d3b-4ae9-bbb4-980c5802991d,Design Engineer,Consultancy,2023-03-28,2024-07-20,0,Built design solutions.
+79f93c74-ec18-4d7e-88cc-26bef61eb878,820485ed-9d3b-4ae9-bbb4-980c5802991d,Design Engineer,StartupXYZ,2021-01-07,2023-01-27,0,Built design solutions.
+63186383-162d-45ca-9662-110602b6bc34,aeaecf4a-5e75-4cfc-93e7-4cb590c4942d,Senior Fullstack Engineer,BigCo,2025-09-13,,1,Built fullstack solutions.
+dfc2cd26-b84f-4906-8ad8-b868ce0e1466,4b3843a0-c075-40d7-b65e-57675d038954,Senior Backend Engineer,BigCo,2025-09-13,,1,Built backend solutions.
+df508a6a-62fa-4816-9846-3c611684ee05,1bb94398-22aa-4f79-8794-48fd89600861,Senior Devops Engineer,TechCorp,2023-09-24,,1,Built devops solutions.
+b7755815-5d4d-4e4a-94d2-ff5154c25341,704beaca-2481-466d-8413-131c65698249,Senior Blockchain Engineer,BigCo,2024-03-22,,1,Built blockchain solutions.
+d05b9bbe-2d54-4bb3-87a3-63322e324acb,2705a8a0-7303-490c-b2f1-850aaf3b1e36,Senior Mobile Engineer,E-Commerce Ltd,2025-02-15,,1,Built mobile solutions.
+c57a28dc-4d28-4ffa-8369-d92ab278f948,2705a8a0-7303-490c-b2f1-850aaf3b1e36,Mobile Engineer,StartupXYZ,2023-04-27,2024-12-17,0,Built mobile solutions.
+180854af-c7a5-46ef-a8f0-4615f184d895,2705a8a0-7303-490c-b2f1-850aaf3b1e36,Mobile Engineer,Fintech Co,2022-03-03,2023-02-26,0,Built mobile solutions.
+3e85e364-565d-4c06-b416-d1cf120de328,e2e109e0-f8ba-49d7-91b2-fad16910b567,Senior Devops Engineer,TechCorp,2024-11-17,,1,Built devops solutions.
+afbd37a9-80bc-448c-b8a1-3f56c7310b9b,e2e109e0-f8ba-49d7-91b2-fad16910b567,Devops Engineer,Consultancy,2024-02-21,2024-09-18,0,Built devops solutions.
+2a7264ee-1665-41d4-8658-f07acfc4d6d6,988cfd00-1ced-49be-b647-54b28e70c684,Senior Backend Engineer,Consultancy,2025-07-15,,1,Built backend solutions.
+f19eb0ed-49cc-411d-833d-51ea5d389370,0e5b32c8-9409-4833-8241-df0ba1ca51a7,Senior Backend Engineer,Consultancy,2024-01-22,,1,Built backend solutions.
+8349ee37-7c49-4fd3-a356-cdcb5c496d0d,0e5b32c8-9409-4833-8241-df0ba1ca51a7,Backend Engineer,Digital Agency,2022-03-03,2023-11-23,0,Built backend solutions.
+8f6b9775-08f8-468b-83b3-83d538377590,0e5b32c8-9409-4833-8241-df0ba1ca51a7,Backend Engineer,BigCo,2020-10-09,2022-01-02,0,Built backend solutions.
+4ae29571-a9aa-4d3d-8a70-3d30f4c8f684,0e5b32c8-9409-4833-8241-df0ba1ca51a7,Backend Engineer,E-Commerce Ltd,2019-09-15,2020-08-10,0,Built backend solutions.
+7187f6c8-aa08-4605-93f9-43ce9573d73e,156d11f2-e08f-4df0-886a-8dd4451f0ff7,Senior Design Engineer,Consultancy,2023-05-27,,1,Built design solutions.
+945c75b0-2cda-45dc-b570-1afc941cf474,156d11f2-e08f-4df0-886a-8dd4451f0ff7,Design Engineer,E-Commerce Ltd,2022-04-02,2023-03-28,0,Built design solutions.
+d0dc91cf-22ab-45a8-82fb-5dee7230fb72,57e83efd-a33a-4825-a1be-d809a6df9910,Senior Blockchain Engineer,BigCo,2024-09-18,,1,Built blockchain solutions.
+c4d30e93-9254-42ac-8b80-b54370c67d5e,880d2ddd-51ed-4e22-8781-58a73568f7d6,Senior Blockchain Engineer,TechCorp,2023-11-23,,1,Built blockchain solutions.
+49205449-8e74-4fec-911c-781f446e9dad,bfb5160f-a041-47af-aee4-fb126db81a5f,Senior Design Engineer,BigCo,2025-01-16,,1,Built design solutions.
+4a7ae6ec-1f93-4e66-be75-0b9c0ca15c39,bfb5160f-a041-47af-aee4-fb126db81a5f,Design Engineer,BigCo,2023-06-26,2024-11-17,0,Built design solutions.
+2f4cbb73-4d2e-473f-8199-0bf73c38a143,bfb5160f-a041-47af-aee4-fb126db81a5f,Design Engineer,StartupXYZ,2020-12-08,2023-04-27,0,Built design solutions.
+d37e9d1d-dcff-4145-8707-221f22e6c4eb,bfb5160f-a041-47af-aee4-fb126db81a5f,Design Engineer,StartupXYZ,2017-11-24,2020-10-09,0,Built design solutions.
+6a11838e-6b78-4107-a0bd-60685b15777b,fd1f2712-4120-4de7-8124-74a57b5dcc86,Senior Ml Ai Engineer,Digital Agency,2025-10-13,,1,Built ml ai solutions.
+df67b56c-65e4-46cf-b7b6-e3c12c3e85ac,fd1f2712-4120-4de7-8124-74a57b5dcc86,Ml Ai Engineer,E-Commerce Ltd,2023-01-27,2025-08-14,0,Built ml ai solutions.
+2761f4c4-c6c8-4dc9-849c-4225278ab538,1d613e01-8628-4ce1-bc72-ab9a80940961,Senior Design Engineer,Digital Agency,2025-02-15,,1,Built design solutions.
+7b83c58b-1033-4b4f-9be2-4cca5fba5043,1d613e01-8628-4ce1-bc72-ab9a80940961,Design Engineer,Fintech Co,2022-11-28,2024-12-17,0,Built design solutions.
+a33ba6ce-359f-4098-912f-a852bdeb300a,1d613e01-8628-4ce1-bc72-ab9a80940961,Design Engineer,Fintech Co,2021-01-07,2022-09-29,0,Built design solutions.
+80c097fd-bc47-4775-9e5d-072a924e8b92,989640f4-d60b-480a-ae5d-7a329c6a14a6,Senior Devops Engineer,Digital Agency,2023-11-23,,1,Built devops solutions.
+9edb3406-27dc-4127-b7af-82f6e8527eb1,989640f4-d60b-480a-ae5d-7a329c6a14a6,Devops Engineer,StartupXYZ,2022-07-31,2023-09-24,0,Built devops solutions.
+1901af71-7041-4eda-971d-dbc7045c9069,c6dec8f5-d49e-4a34-9cc0-b92944a5b189,Senior Ml Ai Engineer,Digital Agency,2024-09-18,,1,Built ml ai solutions.
+7dc4dc1f-fb0b-438a-a39a-9920713ab91f,c6dec8f5-d49e-4a34-9cc0-b92944a5b189,Ml Ai Engineer,StartupXYZ,2023-04-27,2024-07-20,0,Built ml ai solutions.
+638511f3-c830-4317-9fc6-a393fb58bff5,c6dec8f5-d49e-4a34-9cc0-b92944a5b189,Ml Ai Engineer,Digital Agency,2021-01-07,2023-02-26,0,Built ml ai solutions.
+01f908e7-2192-4a71-9050-bb29bba4e42c,9f4c6b6d-dd15-49a0-a9e3-12e901eabd71,Senior Fullstack Engineer,Digital Agency,2025-02-15,,1,Built fullstack solutions.
+b5e833db-8454-400a-be25-b68f3479b98e,9901b214-4d48-4b9f-b7d2-c45ab9c3feb4,Senior Ml Ai Engineer,StartupXYZ,2024-06-20,,1,Built ml ai solutions.
+45cdd416-9b55-48d8-a292-0ac4d31855dc,928043e7-2964-4181-9f36-e4a323997cf2,Senior Backend Engineer,BigCo,2025-09-13,,1,Built backend solutions.
+8118e2e1-81c6-4244-9fca-a575c55a0df4,928043e7-2964-4181-9f36-e4a323997cf2,Backend Engineer,TechCorp,2023-03-28,2025-07-15,0,Built backend solutions.
+f3fb9790-79d5-41b4-928a-798d6179072f,54dcaea0-79c8-497c-8b77-b72f49a6b277,Senior Backend Engineer,Consultancy,2024-09-18,,1,Built backend solutions.
+00a6eeab-2cc6-4034-81a2-dcae848f2f0c,54dcaea0-79c8-497c-8b77-b72f49a6b277,Backend Engineer,TechCorp,2022-04-02,2024-07-20,0,Built backend solutions.
+bcebd39f-2fd7-485f-ad7f-ac560b2a1fd5,54dcaea0-79c8-497c-8b77-b72f49a6b277,Backend Engineer,BigCo,2020-12-08,2022-02-01,0,Built backend solutions.
+0a50631b-317f-415c-a872-77d01d77e0bd,89fabd8a-56c8-430d-b828-2136980461ff,Senior Fullstack Engineer,TechCorp,2024-04-21,,1,Built fullstack solutions.
+c661cf74-9ca9-403c-907e-8e49a0c11bd5,89fabd8a-56c8-430d-b828-2136980461ff,Fullstack Engineer,BigCo,2022-02-01,2024-02-21,0,Built fullstack solutions.
+9cfe6b56-d894-4066-bf32-bcf3fcfa4750,89fabd8a-56c8-430d-b828-2136980461ff,Fullstack Engineer,StartupXYZ,2020-09-09,2021-12-03,0,Built fullstack solutions.
+2adafc47-58aa-481c-a08a-41fe5a4cc4dc,89fabd8a-56c8-430d-b828-2136980461ff,Fullstack Engineer,Fintech Co,2018-01-23,2020-07-11,0,Built fullstack solutions.
+876cfcf0-e1c5-4714-b6bf-0a70ec48796a,66650e3a-bb7e-46f0-b6ad-d261360a6ea4,Senior Frontend Engineer,Fintech Co,2024-12-17,,1,Built frontend solutions.
+fc4379f9-4f50-4f16-b52b-08765cb68a79,a965d137-241e-4067-9076-61d407fc64cc,Senior Fullstack Engineer,Fintech Co,2024-06-20,,1,Built fullstack solutions.
+8c721357-3fba-4640-bd1d-c163ec86ed81,a965d137-241e-4067-9076-61d407fc64cc,Fullstack Engineer,StartupXYZ,2023-08-25,2024-04-21,0,Built fullstack solutions.
+06d13637-e465-4a1e-bc82-86b6b2aded25,628ea516-c208-4d47-b5e3-1f58a97d86a0,Senior Fullstack Engineer,Consultancy,2024-06-20,,1,Built fullstack solutions.
+128c0160-4dbe-46c4-bf07-5005b1259848,628ea516-c208-4d47-b5e3-1f58a97d86a0,Fullstack Engineer,Digital Agency,2023-03-28,2024-04-21,0,Built fullstack solutions.
+93abad66-d68a-4f8f-a606-0c68871a9a2f,628ea516-c208-4d47-b5e3-1f58a97d86a0,Fullstack Engineer,StartupXYZ,2021-07-06,2023-01-27,0,Built fullstack solutions.
+dc49dd2d-7702-4351-8d2e-db160160a200,b02897a9-722a-4822-a25e-245388e39599,Senior Frontend Engineer,TechCorp,2024-02-21,,1,Built frontend solutions.
+f567d0aa-fe08-453f-aecb-e4cc8163f070,b02897a9-722a-4822-a25e-245388e39599,Frontend Engineer,StartupXYZ,2021-03-08,2023-12-23,0,Built frontend solutions.
+efae7ae8-caa3-42c6-ae68-a27dd3961178,b02897a9-722a-4822-a25e-245388e39599,Frontend Engineer,BigCo,2019-12-14,2021-01-07,0,Built frontend solutions.
+63547abe-0c40-402f-83e2-8a73cd0d845e,7822a4ee-7a27-423b-8f5e-f3938551c871,Senior Ml Ai Engineer,StartupXYZ,2023-09-24,,1,Built ml ai solutions.
+f4ab7f83-7b5f-41a6-bb82-a9d88df81fe3,833467db-a92d-499c-b6cf-eb1d9a0d61c2,Senior Blockchain Engineer,BigCo,2024-11-17,,1,Built blockchain solutions.
+6bdc974e-1ee1-4cfa-8760-cf816003c27b,833467db-a92d-499c-b6cf-eb1d9a0d61c2,Blockchain Engineer,Consultancy,2022-03-03,2024-09-18,0,Built blockchain solutions.
+a3cd104b-2c68-4b31-afda-8448677ebfe2,833467db-a92d-499c-b6cf-eb1d9a0d61c2,Blockchain Engineer,Consultancy,2020-10-09,2022-01-02,0,Built blockchain solutions.
+2bf626c7-67e7-48c5-b188-338b342b9936,833467db-a92d-499c-b6cf-eb1d9a0d61c2,Blockchain Engineer,Consultancy,2020-01-13,2020-08-10,0,Built blockchain solutions.
+2b051a6a-497a-4f56-b34b-8d5ddfc529eb,c0d7ea5a-b0fd-451b-9435-1a4d7c23c720,Senior Blockchain Engineer,Digital Agency,2025-04-16,,1,Built blockchain solutions.
+f0ebffb1-1262-4c6f-853d-b192911c209a,75e75db4-32b0-42d9-9392-fb1507544e19,Senior Ml Ai Engineer,Digital Agency,2025-05-16,,1,Built ml ai solutions.
+115e0fa6-be40-4029-ba6a-110621711e8f,75e75db4-32b0-42d9-9392-fb1507544e19,Ml Ai Engineer,E-Commerce Ltd,2022-11-28,2025-03-17,0,Built ml ai solutions.
+380ef2fa-7fef-4d70-931d-ca2501f919a9,75e75db4-32b0-42d9-9392-fb1507544e19,Ml Ai Engineer,E-Commerce Ltd,2020-09-09,2022-09-29,0,Built ml ai solutions.
+175a148a-d2b4-4dfc-937f-09ffcd406b1b,75e75db4-32b0-42d9-9392-fb1507544e19,Ml Ai Engineer,E-Commerce Ltd,2018-09-20,2020-07-11,0,Built ml ai solutions.
+7d350e7d-9488-4818-a197-ade0d9f89c71,01cd646b-142d-4494-a47a-fa6dee4161f5,Senior Fullstack Engineer,StartupXYZ,2025-08-14,,1,Built fullstack solutions.
+900756c8-7aaa-4fe9-abd8-bb9898c558f8,386e2ef5-b2c8-4152-a4f0-7e7f84e023ca,Senior Fullstack Engineer,TechCorp,2025-08-14,,1,Built fullstack solutions.
+caa1b92f-08cb-408e-aec3-81a52edff912,386e2ef5-b2c8-4152-a4f0-7e7f84e023ca,Fullstack Engineer,TechCorp,2022-08-30,2025-06-15,0,Built fullstack solutions.
+02902c9e-7c09-46ab-bc98-263032ab033e,386e2ef5-b2c8-4152-a4f0-7e7f84e023ca,Fullstack Engineer,Fintech Co,2021-09-04,2022-07-01,0,Built fullstack solutions.
+5b2690c5-d485-4e97-8f2c-7736feee23f9,386e2ef5-b2c8-4152-a4f0-7e7f84e023ca,Fullstack Engineer,StartupXYZ,2020-12-08,2021-07-06,0,Built fullstack solutions.
+3dbc5dbd-2204-40d6-b462-928c0f5e2c5a,24320130-2d24-467f-aa62-4c3f59e856c3,Senior Fullstack Engineer,Fintech Co,2023-10-24,,1,Built fullstack solutions.
+c92d0f79-a1dd-40d2-b9dc-5802d1dd5d47,24320130-2d24-467f-aa62-4c3f59e856c3,Fullstack Engineer,Digital Agency,2021-12-03,2023-08-25,0,Built fullstack solutions.
+eb8a65fc-f4a3-4a4d-bc12-aceffdadb9f1,24320130-2d24-467f-aa62-4c3f59e856c3,Fullstack Engineer,Fintech Co,2019-03-19,2021-10-04,0,Built fullstack solutions.
+d787d992-5f27-4004-af25-fc9fe5c65e03,eba225ef-b696-4c16-8df2-8a740ca463d8,Senior Blockchain Engineer,BigCo,2024-04-21,,1,Built blockchain solutions.
+2b280fd2-3c24-425b-84bf-0c7709cb51ae,eba225ef-b696-4c16-8df2-8a740ca463d8,Blockchain Engineer,Consultancy,2022-10-29,2024-02-21,0,Built blockchain solutions.
+1c144378-8f9c-4f7c-a602-0e65eef282cd,eba225ef-b696-4c16-8df2-8a740ca463d8,Blockchain Engineer,Fintech Co,2021-04-07,2022-08-30,0,Built blockchain solutions.
+2154dc81-4ebb-4bbb-b8d4-3871b3da77da,eba225ef-b696-4c16-8df2-8a740ca463d8,Blockchain Engineer,TechCorp,2019-03-19,2021-02-06,0,Built blockchain solutions.
+0083a022-2b2b-4652-92c0-c089c14550b6,3868b6fe-6abc-4745-a739-c89222570257,Senior Frontend Engineer,BigCo,2023-11-23,,1,Built frontend solutions.
+fb9abcef-9faf-4db9-8546-2a34e2f3a1cc,3868b6fe-6abc-4745-a739-c89222570257,Frontend Engineer,BigCo,2021-10-04,2023-09-24,0,Built frontend solutions.
+7f7c347b-42c2-4282-a27c-e478e2542b86,3868b6fe-6abc-4745-a739-c89222570257,Frontend Engineer,Fintech Co,2019-12-14,2021-08-05,0,Built frontend solutions.
+756fe800-af3a-46d9-9da4-289d4b212188,e7c8e4fc-1b0d-4104-95d7-3a5b3440b219,Senior Fullstack Engineer,Digital Agency,2025-05-16,,1,Built fullstack solutions.
+052a5d7f-272c-4da8-8824-ba422df7f9ef,e7c8e4fc-1b0d-4104-95d7-3a5b3440b219,Fullstack Engineer,Fintech Co,2024-10-18,2025-03-17,0,Built fullstack solutions.
+a7221c4b-b9f6-4acd-960e-3999969f42d4,e7c8e4fc-1b0d-4104-95d7-3a5b3440b219,Fullstack Engineer,StartupXYZ,2023-11-23,2024-08-19,0,Built fullstack solutions.
+6702d986-8b85-469d-baab-ab4ba1056ea2,e7c8e4fc-1b0d-4104-95d7-3a5b3440b219,Fullstack Engineer,StartupXYZ,2021-01-07,2023-09-24,0,Built fullstack solutions.
+3c62fd0c-9e45-49eb-8619-971f17925142,9e6eb5f7-7084-4d1d-aab1-fa50e26b74d5,Senior Frontend Engineer,E-Commerce Ltd,2024-10-18,,1,Built frontend solutions.
+69fd0939-d6b8-4076-8073-6cd59fc644ed,9e6eb5f7-7084-4d1d-aab1-fa50e26b74d5,Frontend Engineer,BigCo,2023-05-27,2024-08-19,0,Built frontend solutions.
+8ece1596-a918-4287-87aa-1bb53a1a221f,1a682f3a-c413-4e30-9696-5e35baa64b00,Senior Mobile Engineer,StartupXYZ,2025-09-13,,1,Built mobile solutions.
+b4e0fe71-c014-4bf4-89af-01d8497eb3f8,1a682f3a-c413-4e30-9696-5e35baa64b00,Mobile Engineer,Digital Agency,2024-05-21,2025-07-15,0,Built mobile solutions.
+f7c728d9-3cd1-4449-bcb1-2550d30d80a0,2806eb9c-d07a-48c5-9faa-f16345cde764,Senior Ml Ai Engineer,Digital Agency,2024-01-22,,1,Built ml ai solutions.
+e81c6087-3c8b-4fd9-82dd-e0fee9ccdf7c,2806eb9c-d07a-48c5-9faa-f16345cde764,Ml Ai Engineer,Digital Agency,2023-06-26,2023-11-23,0,Built ml ai solutions.
+648e8708-0583-44d3-9dc0-f1fd2f7f19e5,2806eb9c-d07a-48c5-9faa-f16345cde764,Ml Ai Engineer,Fintech Co,2021-04-07,2023-04-27,0,Built ml ai solutions.
+e9c64dcd-078d-4b3b-b78e-220de8d11ba7,2806eb9c-d07a-48c5-9faa-f16345cde764,Ml Ai Engineer,Digital Agency,2019-09-15,2021-02-06,0,Built ml ai solutions.
+c5e49444-6c5a-48fc-b3ed-79ebe7eff155,a0308658-dce8-4634-a43d-5b806ff429eb,Senior Fullstack Engineer,BigCo,2024-08-19,,1,Built fullstack solutions.
+e6d1376f-6de3-4575-a7ae-19f584ab40a1,a0308658-dce8-4634-a43d-5b806ff429eb,Fullstack Engineer,Consultancy,2023-12-23,2024-06-20,0,Built fullstack solutions.
+69d6ee93-3623-46a5-9c79-9c0367e82e3e,a0308658-dce8-4634-a43d-5b806ff429eb,Fullstack Engineer,BigCo,2021-09-04,2023-10-24,0,Built fullstack solutions.
+64a374d6-4ab7-4429-8565-f405eacd3b77,a0308658-dce8-4634-a43d-5b806ff429eb,Fullstack Engineer,Digital Agency,2020-06-11,2021-07-06,0,Built fullstack solutions.
+55c61251-b498-4cb0-88e6-41128294b847,2a451c18-78f7-4579-81fd-a0d2d3361308,Senior Design Engineer,Consultancy,2023-12-23,,1,Built design solutions.
+bb776603-361f-4078-8f4c-ee58ba46ec1d,2a451c18-78f7-4579-81fd-a0d2d3361308,Design Engineer,E-Commerce Ltd,2022-10-29,2023-10-24,0,Built design solutions.
+30ec463f-f5db-4bb0-8a1c-6a4a32d2f04c,2a451c18-78f7-4579-81fd-a0d2d3361308,Design Engineer,E-Commerce Ltd,2019-12-14,2022-08-30,0,Built design solutions.
+1043eeb8-6360-4d9e-8d57-8ba3a882c75b,2a451c18-78f7-4579-81fd-a0d2d3361308,Design Engineer,Fintech Co,2016-12-29,2019-10-15,0,Built design solutions.
+63cc9d63-501f-4df2-8c0e-a70546ca44e4,9d56982f-d60c-4f17-beb8-abfd11310cad,Senior Ml Ai Engineer,Fintech Co,2023-04-27,,1,Built ml ai solutions.
+80851ea0-0342-42ca-a6d3-86b6f2e3216f,9d56982f-d60c-4f17-beb8-abfd11310cad,Ml Ai Engineer,Fintech Co,2022-02-01,2023-02-26,0,Built ml ai solutions.
+15b119e7-47d5-46b5-8bb7-a26adecd7993,365e066e-fb94-43c7-a64a-a3693d594476,Senior Ml Ai Engineer,BigCo,2025-02-15,,1,Built ml ai solutions.
+1b989fab-adea-478f-a1fa-bc92a14860a0,365e066e-fb94-43c7-a64a-a3693d594476,Ml Ai Engineer,Consultancy,2023-05-27,2024-12-17,0,Built ml ai solutions.
+9e6d24c5-265c-4604-9934-d9134ebbbbbf,016b144d-e0c4-4e33-9028-bf24e0a38939,Senior Ml Ai Engineer,Digital Agency,2025-06-15,,1,Built ml ai solutions.
+cdb12907-f864-4cac-a764-b9da03e0a609,016b144d-e0c4-4e33-9028-bf24e0a38939,Ml Ai Engineer,Fintech Co,2022-08-30,2025-04-16,0,Built ml ai solutions.
+4be67a07-a08f-45c6-b22a-eae5cb6a84ef,016b144d-e0c4-4e33-9028-bf24e0a38939,Ml Ai Engineer,StartupXYZ,2020-11-08,2022-07-01,0,Built ml ai solutions.
+7184c609-18e6-42b6-9cf2-db7442fd8e15,016b144d-e0c4-4e33-9028-bf24e0a38939,Ml Ai Engineer,Fintech Co,2018-11-19,2020-09-09,0,Built ml ai solutions.
+f496d484-b652-4b49-bab8-77b75ae1ae61,93592920-cdee-4919-a89f-5f1ebb5cdd80,Senior Mobile Engineer,StartupXYZ,2025-04-16,,1,Built mobile solutions.
+e492a580-c33c-4cc1-a54d-bb0de2558d7f,93592920-cdee-4919-a89f-5f1ebb5cdd80,Mobile Engineer,Consultancy,2024-06-20,2025-02-15,0,Built mobile solutions.
+6a9f2a3c-4f48-4ca4-bc59-f9b9db97714c,93592920-cdee-4919-a89f-5f1ebb5cdd80,Mobile Engineer,StartupXYZ,2023-02-26,2024-04-21,0,Built mobile solutions.
+52a4b506-cde4-4fdf-8308-0c331ccabaea,93592920-cdee-4919-a89f-5f1ebb5cdd80,Mobile Engineer,StartupXYZ,2020-05-12,2022-12-28,0,Built mobile solutions.
+27543477-c0bf-4cc7-b40c-7df0b26373e7,852e872e-5cf8-47fc-8062-45b4d3a0d080,Senior Design Engineer,TechCorp,2025-01-16,,1,Built design solutions.
+ed666e5a-f0a6-41e3-997d-e062db2d88eb,852e872e-5cf8-47fc-8062-45b4d3a0d080,Design Engineer,E-Commerce Ltd,2023-01-27,2024-11-17,0,Built design solutions.
+af0f866f-5163-4f89-9fb8-5963e3787b2f,852e872e-5cf8-47fc-8062-45b4d3a0d080,Design Engineer,E-Commerce Ltd,2021-09-04,2022-11-28,0,Built design solutions.
+7cc8e3f4-86d2-4d0a-bd14-4a5407ab6867,852e872e-5cf8-47fc-8062-45b4d3a0d080,Design Engineer,Fintech Co,2019-12-14,2021-07-06,0,Built design solutions.
+8c1cfe01-c164-405a-8c5e-2a37ef6ee251,4f25603c-7002-4125-bf3f-bd16f37e17f7,Senior Blockchain Engineer,Consultancy,2024-05-21,,1,Built blockchain solutions.
+fe9f95cc-8017-46bb-b761-84f700a65365,4f25603c-7002-4125-bf3f-bd16f37e17f7,Blockchain Engineer,StartupXYZ,2021-08-05,2024-03-22,0,Built blockchain solutions.
+b6c7e3f8-b2db-4d32-96bc-ae78924c4305,4f25603c-7002-4125-bf3f-bd16f37e17f7,Blockchain Engineer,StartupXYZ,2018-10-20,2021-06-06,0,Built blockchain solutions.
+129344ee-abe3-42b2-9d60-ae3365761b23,4f25603c-7002-4125-bf3f-bd16f37e17f7,Blockchain Engineer,BigCo,2017-01-28,2018-08-21,0,Built blockchain solutions.
+68ea650b-f241-4f45-8a8d-830c37f1420c,e9f7bed0-fc4c-438e-8ffc-afe88c5e26a1,Senior Devops Engineer,Consultancy,2023-07-26,,1,Built devops solutions.
+d3fc8c04-33de-4191-9ea4-959566ebd30a,e9f7bed0-fc4c-438e-8ffc-afe88c5e26a1,Devops Engineer,E-Commerce Ltd,2021-10-04,2023-05-27,0,Built devops solutions.
+280f23f0-3300-4624-8df1-c757f46786bc,e9f7bed0-fc4c-438e-8ffc-afe88c5e26a1,Devops Engineer,TechCorp,2020-03-13,2021-08-05,0,Built devops solutions.
+0a5b929d-f287-46a9-9d77-ed2768553327,e9f7bed0-fc4c-438e-8ffc-afe88c5e26a1,Devops Engineer,Digital Agency,2017-07-27,2020-01-13,0,Built devops solutions.
+43ba5a9e-a3ff-42d1-a0b8-12fc9757756e,42f0cea8-c564-4173-bc1c-53465daf38f8,Senior Design Engineer,BigCo,2024-01-22,,1,Built design solutions.
+8fb4347e-dd32-4a02-abe3-d717a41e0406,42f0cea8-c564-4173-bc1c-53465daf38f8,Design Engineer,StartupXYZ,2023-02-26,2023-11-23,0,Built design solutions.
+37aa43b6-79b9-4ed3-8562-b5b807dda95d,42f0cea8-c564-4173-bc1c-53465daf38f8,Design Engineer,Digital Agency,2020-07-11,2022-12-28,0,Built design solutions.
+2cf71a38-e9e5-497f-bc19-f8ccb93bb4ab,42f0cea8-c564-4173-bc1c-53465daf38f8,Design Engineer,BigCo,2019-06-17,2020-05-12,0,Built design solutions.
+c49db371-06f5-47e3-8afe-4317631b56c8,eb56464c-1ae7-4a4e-975c-c717db7fbd37,Senior Blockchain Engineer,Fintech Co,2025-06-15,,1,Built blockchain solutions.
+10285055-1e82-41bd-9608-00d9edd8da0a,eb56464c-1ae7-4a4e-975c-c717db7fbd37,Blockchain Engineer,Fintech Co,2022-10-29,2025-04-16,0,Built blockchain solutions.
+f6781dc7-a2ed-4fd3-9e82-3f3dcee9b14e,eb56464c-1ae7-4a4e-975c-c717db7fbd37,Blockchain Engineer,StartupXYZ,2021-12-03,2022-08-30,0,Built blockchain solutions.
+1aa54000-e7d7-4095-9f0a-9265601c640f,f38e839a-7faa-40fe-b9d9-aba8da64c71b,Senior Blockchain Engineer,StartupXYZ,2024-02-21,,1,Built blockchain solutions.
+24da632d-09af-4432-a328-ec8bacb8919e,f38e839a-7faa-40fe-b9d9-aba8da64c71b,Blockchain Engineer,Consultancy,2021-05-07,2023-12-23,0,Built blockchain solutions.
+2b7633d3-c7e8-4178-a1a2-e80ea3598173,f38e839a-7faa-40fe-b9d9-aba8da64c71b,Blockchain Engineer,StartupXYZ,2019-07-17,2021-03-08,0,Built blockchain solutions.
+27805bf6-d3ba-41dd-a161-23a52a018a3f,f38e839a-7faa-40fe-b9d9-aba8da64c71b,Blockchain Engineer,Digital Agency,2017-09-25,2019-05-18,0,Built blockchain solutions.
+8f7dd512-d073-43e5-85c8-3383dab6526f,f0e88f66-53c8-4785-87ff-2693701f06ca,Senior Blockchain Engineer,Consultancy,2025-02-15,,1,Built blockchain solutions.
+11c39a9e-2b57-430a-8c6d-7dbb80c474bc,e0a40368-9362-4f7b-a09a-e5bcda6ac9b2,Senior Design Engineer,E-Commerce Ltd,2024-04-21,,1,Built design solutions.
+f97b2ca5-bf08-4df7-86c6-eb3546087244,e0a40368-9362-4f7b-a09a-e5bcda6ac9b2,Design Engineer,Digital Agency,2022-04-02,2024-02-21,0,Built design solutions.
+99473e27-56e9-4399-be4b-53af0cd6ad99,ab061312-8142-41d7-9e37-6cbc61ae6018,Senior Mobile Engineer,Digital Agency,2023-10-24,,1,Built mobile solutions.
+d5859e98-86fc-4a28-8fee-ff5dfadd1501,ab061312-8142-41d7-9e37-6cbc61ae6018,Mobile Engineer,BigCo,2021-09-04,2023-08-25,0,Built mobile solutions.
+429e5481-a4fa-471c-bb8b-f484a76359a8,ab061312-8142-41d7-9e37-6cbc61ae6018,Mobile Engineer,Fintech Co,2019-11-14,2021-07-06,0,Built mobile solutions.
+963e77a1-03a2-42a7-a9fa-39706997c59f,9b8a764f-4913-4b4b-8f38-02c95127317f,Senior Ml Ai Engineer,E-Commerce Ltd,2025-04-16,,1,Built ml ai solutions.
+1bf6bf33-d66f-466f-975f-c9d28a029c6d,9b8a764f-4913-4b4b-8f38-02c95127317f,Ml Ai Engineer,E-Commerce Ltd,2024-06-20,2025-02-15,0,Built ml ai solutions.
+a7e92280-bfb0-41d2-8f60-a5064882fc6c,00d86d71-1502-4122-8504-ae758555005a,Senior Design Engineer,E-Commerce Ltd,2023-05-27,,1,Built design solutions.
+75c580c7-e699-459c-896d-a351e256e9b9,00d86d71-1502-4122-8504-ae758555005a,Design Engineer,BigCo,2020-09-09,2023-03-28,0,Built design solutions.
+23cd3004-15aa-412b-822f-2e5b98013e44,00d86d71-1502-4122-8504-ae758555005a,Design Engineer,StartupXYZ,2019-03-19,2020-07-11,0,Built design solutions.
+cfd21d7d-dd4f-4da0-91bf-9c6f4549a76f,00d86d71-1502-4122-8504-ae758555005a,Design Engineer,BigCo,2017-11-24,2019-01-18,0,Built design solutions.
+83287536-21d3-4cee-98be-f497a5712bbb,5b8ed391-0df5-455c-bf72-7b383a8531a0,Senior Devops Engineer,Digital Agency,2023-09-24,,1,Built devops solutions.
+006bdd40-1829-4903-943c-64d5480835d0,5b8ed391-0df5-455c-bf72-7b383a8531a0,Devops Engineer,Consultancy,2022-05-02,2023-07-26,0,Built devops solutions.
+02c778a6-2018-41f3-b6bf-a0676aac1fbc,5b8ed391-0df5-455c-bf72-7b383a8531a0,Devops Engineer,Fintech Co,2020-05-12,2022-03-03,0,Built devops solutions.
+e50e5b3b-7e13-44b4-b34b-443d0ad72d46,5b8ed391-0df5-455c-bf72-7b383a8531a0,Devops Engineer,E-Commerce Ltd,2019-04-18,2020-03-13,0,Built devops solutions.
+379af021-6849-4f75-9002-6dc7bd74aec1,a5936989-eac8-441b-9ec7-b945ed35e5c0,Senior Blockchain Engineer,Consultancy,2025-02-15,,1,Built blockchain solutions.
+8cf77a21-beb9-42b6-9d09-cc00a973c66f,a5936989-eac8-441b-9ec7-b945ed35e5c0,Blockchain Engineer,Digital Agency,2023-08-25,2024-12-17,0,Built blockchain solutions.
+ba12144e-82b6-401e-b793-af129aac5f2d,a5936989-eac8-441b-9ec7-b945ed35e5c0,Blockchain Engineer,BigCo,2020-09-09,2023-06-26,0,Built blockchain solutions.
+e4adfd79-55f9-4c15-9cb6-aa3d3666a8c6,f3fb8d20-95ae-4dfa-82a0-9c1fc2213232,Senior Design Engineer,BigCo,2025-05-16,,1,Built design solutions.
+01eb3baa-30a7-4680-a4ae-c292a6ab5a1b,f3fb8d20-95ae-4dfa-82a0-9c1fc2213232,Design Engineer,StartupXYZ,2023-08-25,2025-03-17,0,Built design solutions.
+95196b69-e8dc-4058-be33-a23c410a5dc6,0b15194d-8af2-43f4-b657-46f4483332e5,Senior Blockchain Engineer,TechCorp,2024-02-21,,1,Built blockchain solutions.
+dd80c172-9708-4fce-9a9e-8ec46e8d14be,0b15194d-8af2-43f4-b657-46f4483332e5,Blockchain Engineer,TechCorp,2021-09-04,2023-12-23,0,Built blockchain solutions.
+1cdf95be-2c42-4c87-aba5-dfbd2cbc824c,0b15194d-8af2-43f4-b657-46f4483332e5,Blockchain Engineer,TechCorp,2019-08-16,2021-07-06,0,Built blockchain solutions.
+cce6146a-b226-424d-b645-3410ea178acf,8f3e8f91-384c-424a-9cdc-c8748f7df413,Senior Frontend Engineer,BigCo,2025-03-17,,1,Built frontend solutions.
+fc1e62f1-6da0-4622-bd57-15f3113f9658,c1d503f0-3549-4fa4-b5fd-00eeed6e03eb,Senior Blockchain Engineer,StartupXYZ,2024-01-22,,1,Built blockchain solutions.
+07a7a9dd-eae2-4843-a124-5cd26c70f216,c1d503f0-3549-4fa4-b5fd-00eeed6e03eb,Blockchain Engineer,BigCo,2022-12-28,2023-11-23,0,Built blockchain solutions.
+b1564201-2ea6-4728-accd-37fe92860a31,67ab65a5-1a95-4077-b64d-d479515f81a1,Senior Blockchain Engineer,Consultancy,2024-06-20,,1,Built blockchain solutions.
+c85bf2bb-4b37-4e87-a9dd-f15cf732aa81,67ab65a5-1a95-4077-b64d-d479515f81a1,Blockchain Engineer,Consultancy,2022-01-02,2024-04-21,0,Built blockchain solutions.
+69bd9b21-a080-4f8c-a686-4b19daa206fd,2e32a344-d4dd-4185-946e-378e775a8ba2,Senior Fullstack Engineer,StartupXYZ,2025-09-13,,1,Built fullstack solutions.
+30a063c1-f439-4cf8-80ff-8d7de3d0ff35,2e32a344-d4dd-4185-946e-378e775a8ba2,Fullstack Engineer,StartupXYZ,2022-11-28,2025-07-15,0,Built fullstack solutions.
+f5511860-e431-473b-aaaa-48cabb7f9095,2e32a344-d4dd-4185-946e-378e775a8ba2,Fullstack Engineer,Consultancy,2021-12-03,2022-09-29,0,Built fullstack solutions.
+5e421540-15bf-41d7-b7f8-dfdb3492e876,e7c9e82d-39f4-48a6-9500-e6bb9426c951,Senior Mobile Engineer,Digital Agency,2023-06-26,,1,Built mobile solutions.
+ddeba764-6ea1-42b9-95d4-9eba1ed411ef,c7fd8a00-ec6a-4f8e-8139-52538b5d6d16,Senior Devops Engineer,StartupXYZ,2025-06-15,,1,Built devops solutions.
+17ba9aed-9fc3-4ad4-b848-763ab2f96d0c,c7fd8a00-ec6a-4f8e-8139-52538b5d6d16,Devops Engineer,StartupXYZ,2023-07-26,2025-04-16,0,Built devops solutions.
+6a3e0333-bbc3-4d34-88e9-e8dccfab5b7e,742a919a-c20c-443b-912f-a872f928c979,Senior Mobile Engineer,Fintech Co,2024-04-21,,1,Built mobile solutions.
+8c3e3e9d-4ecb-47ce-8952-c3b7af15267b,742a919a-c20c-443b-912f-a872f928c979,Mobile Engineer,E-Commerce Ltd,2021-05-07,2024-02-21,0,Built mobile solutions.
+05dc4916-20e6-4ca3-98be-2e0deb7694e5,635d010e-b74b-4de6-9d44-37cb533c2de1,Senior Blockchain Engineer,Fintech Co,2025-07-15,,1,Built blockchain solutions.
+666acc00-2ba7-4097-b843-ad30f4545af7,635d010e-b74b-4de6-9d44-37cb533c2de1,Blockchain Engineer,Fintech Co,2024-04-21,2025-05-16,0,Built blockchain solutions.
+093178b0-6d2a-4fb2-ba98-9cdcff666ba7,635d010e-b74b-4de6-9d44-37cb533c2de1,Blockchain Engineer,Consultancy,2021-10-04,2024-02-21,0,Built blockchain solutions.
+3cd58017-9048-484b-86c6-d1630650b7a3,635d010e-b74b-4de6-9d44-37cb533c2de1,Blockchain Engineer,BigCo,2018-10-20,2021-08-05,0,Built blockchain solutions.
+5b0235de-a57b-4d84-809e-c126409831b9,1726d17b-fbbe-4b65-85a3-d4f6a969f612,Senior Ml Ai Engineer,TechCorp,2023-10-24,,1,Built ml ai solutions.
+758a26a0-27bd-40e8-8bb2-96fe06b4dd94,1726d17b-fbbe-4b65-85a3-d4f6a969f612,Ml Ai Engineer,Fintech Co,2022-09-29,2023-08-25,0,Built ml ai solutions.
+40034c11-d3cb-4504-82b6-22359ec96449,184439d5-b58e-4a43-b104-fec393322905,Senior Ml Ai Engineer,Consultancy,2024-10-18,,1,Built ml ai solutions.
+9fc98451-9618-4c59-a5f8-478d0a08d69d,184439d5-b58e-4a43-b104-fec393322905,Ml Ai Engineer,Digital Agency,2023-02-26,2024-08-19,0,Built ml ai solutions.
+7145725c-cdc2-4fa9-b87f-3e8601f60738,184439d5-b58e-4a43-b104-fec393322905,Ml Ai Engineer,BigCo,2021-06-06,2022-12-28,0,Built ml ai solutions.
+2aab94dd-aaac-4b10-8db1-0c6ee971c6a0,a29203c7-c725-4a53-bb22-90a76ce2570e,Senior Design Engineer,BigCo,2024-01-22,,1,Built design solutions.
+bb264753-a94b-4108-96c2-d093246d7625,a29203c7-c725-4a53-bb22-90a76ce2570e,Design Engineer,BigCo,2021-07-06,2023-11-23,0,Built design solutions.
+ab4c0564-a331-4c05-a00d-998fdcd49728,b69b2bd3-b383-4348-9614-c2e311a88bc6,Senior Devops Engineer,Fintech Co,2025-08-14,,1,Built devops solutions.
+cf88cbb5-d58e-4e49-89ec-709d4b0901a4,84550548-a4ea-416f-9d17-7b3d1a2743eb,Senior Frontend Engineer,Consultancy,2025-03-17,,1,Built frontend solutions.
+57182c8f-986f-4095-aad2-561b7069d660,84550548-a4ea-416f-9d17-7b3d1a2743eb,Frontend Engineer,StartupXYZ,2023-05-27,2025-01-16,0,Built frontend solutions.
+dfcf4a8a-ddfb-425d-ad31-f48bbe6ae7c8,84550548-a4ea-416f-9d17-7b3d1a2743eb,Frontend Engineer,Digital Agency,2021-05-07,2023-03-28,0,Built frontend solutions.
+ce3e7dc7-b61a-4a0c-a520-f7e9dcb08ea2,84550548-a4ea-416f-9d17-7b3d1a2743eb,Frontend Engineer,BigCo,2019-01-18,2021-03-08,0,Built frontend solutions.
+08546f02-cac4-40be-bd18-289eee63853d,a4506eb1-884f-4a17-b6fb-9b15a046f24a,Senior Ml Ai Engineer,Consultancy,2025-04-16,,1,Built ml ai solutions.
+5bc9e389-60ff-433b-b995-20deb717d1d7,b5467c3e-0131-460a-b327-363021787774,Senior Mobile Engineer,E-Commerce Ltd,2024-12-17,,1,Built mobile solutions.
+cb50d86e-d40c-47e1-982d-e868fff0ec28,b5467c3e-0131-460a-b327-363021787774,Mobile Engineer,TechCorp,2023-08-25,2024-10-18,0,Built mobile solutions.
+96d0bb02-acc4-46df-8f8b-054a65b9ccad,960d389c-eac3-4c35-bead-53f2b151899c,Senior Devops Engineer,TechCorp,2025-04-16,,1,Built devops solutions.
+c2693be2-ce37-4f33-b7d3-d89f3ccf4078,88efd37a-39f3-4e5c-a045-2b701347de5d,Senior Fullstack Engineer,Consultancy,2025-03-17,,1,Built fullstack solutions.
+b4eefb95-650c-4ea4-a5c3-d59c4e6b4133,a7ef6fa6-7b74-456c-8c61-4533a10235b8,Senior Ml Ai Engineer,Consultancy,2024-02-21,,1,Built ml ai solutions.
+aa7788d1-6ec4-4a82-8a9b-71bd1a735097,a7ef6fa6-7b74-456c-8c61-4533a10235b8,Ml Ai Engineer,Digital Agency,2021-04-07,2023-12-23,0,Built ml ai solutions.
+585c42ab-61a0-4f90-93c4-e2129ae7ae24,a7ef6fa6-7b74-456c-8c61-4533a10235b8,Ml Ai Engineer,BigCo,2018-10-20,2021-02-06,0,Built ml ai solutions.
+0a355347-25c3-4fd5-aeab-ae4e4f863cc8,a7ef6fa6-7b74-456c-8c61-4533a10235b8,Ml Ai Engineer,E-Commerce Ltd,2016-06-02,2018-08-21,0,Built ml ai solutions.
+8a9edd3a-47af-4e16-a63c-6db5df42273c,7169ca6a-2ee1-42e3-8c71-6d2bacd163fd,Senior Backend Engineer,BigCo,2023-11-23,,1,Built backend solutions.
+60002c0f-df37-4b8b-a5a2-9394ea30e798,7169ca6a-2ee1-42e3-8c71-6d2bacd163fd,Backend Engineer,Fintech Co,2021-07-06,2023-09-24,0,Built backend solutions.
+50832556-802b-4312-9def-7a7ced002cdb,157add59-3a41-47ac-9067-619e938d62c7,Senior Devops Engineer,Fintech Co,2025-08-14,,1,Built devops solutions.
+6f351c54-a798-4443-bd13-f87d81fe0394,157add59-3a41-47ac-9067-619e938d62c7,Devops Engineer,Consultancy,2024-05-21,2025-06-15,0,Built devops solutions.
+b7910446-8245-4edf-9005-373de1acd6e3,157add59-3a41-47ac-9067-619e938d62c7,Devops Engineer,Fintech Co,2023-02-26,2024-03-22,0,Built devops solutions.
+c76e8074-de6d-4016-884b-67e8dcc10ba8,3934a43d-8531-47dd-9a9e-83e55ee7ba4c,Senior Backend Engineer,Digital Agency,2024-06-20,,1,Built backend solutions.
+a06526ec-7b8a-4dd8-813f-44f85ad94ad5,daa14e05-008c-4921-ae1f-99f8482fe141,Senior Ml Ai Engineer,StartupXYZ,2024-11-17,,1,Built ml ai solutions.
+fc9c36aa-9bbc-4225-b34d-d9c4947bac27,daa14e05-008c-4921-ae1f-99f8482fe141,Ml Ai Engineer,Digital Agency,2022-07-01,2024-09-18,0,Built ml ai solutions.
+de6e82b8-1f9e-490b-aca1-6702a8b68de2,daa14e05-008c-4921-ae1f-99f8482fe141,Ml Ai Engineer,BigCo,2019-08-16,2022-05-02,0,Built ml ai solutions.
+ba3b02ed-770f-4052-b9c2-e50c89591601,d32a16c2-3289-4735-8e6c-bc7d7cbef6ff,Senior Blockchain Engineer,BigCo,2024-10-18,,1,Built blockchain solutions.
+b6a4a421-fa85-4f53-b2f8-d3ab8301d39c,d32a16c2-3289-4735-8e6c-bc7d7cbef6ff,Blockchain Engineer,E-Commerce Ltd,2024-03-22,2024-08-19,0,Built blockchain solutions.
+d3085a61-de7b-4ad7-a6d5-b5e57084483c,d32a16c2-3289-4735-8e6c-bc7d7cbef6ff,Blockchain Engineer,Consultancy,2021-05-07,2024-01-22,0,Built blockchain solutions.
+2bfae3aa-60c8-4970-9384-fde42a052c7c,bc8e3326-8c94-40a2-9a37-17ba927a2a11,Senior Ml Ai Engineer,BigCo,2023-09-24,,1,Built ml ai solutions.
+906b4f72-8761-4285-819f-26e4ec3e5310,877167d0-a7da-4734-98fa-edcb7ffc248f,Senior Mobile Engineer,E-Commerce Ltd,2025-03-17,,1,Built mobile solutions.
+3c478f2e-75aa-4302-90e6-86c89b3111c2,877167d0-a7da-4734-98fa-edcb7ffc248f,Mobile Engineer,StartupXYZ,2023-05-27,2025-01-16,0,Built mobile solutions.
+3810aaa9-93f9-49f8-af10-5b580b9c98cd,9b2d4c71-3754-4b6e-a4d2-01e8a8c5b578,Senior Frontend Engineer,BigCo,2025-07-15,,1,Built frontend solutions.
+b86f37a4-e4f3-4447-b94a-de8bc1e05859,9b2d4c71-3754-4b6e-a4d2-01e8a8c5b578,Frontend Engineer,Digital Agency,2023-07-26,2025-05-16,0,Built frontend solutions.
+cab60c5d-f98c-4f03-b522-b58728be5afe,9b2d4c71-3754-4b6e-a4d2-01e8a8c5b578,Frontend Engineer,Digital Agency,2021-06-06,2023-05-27,0,Built frontend solutions.
+60edfd69-b543-4efb-94df-c5d3e0b7c98b,9b2d4c71-3754-4b6e-a4d2-01e8a8c5b578,Frontend Engineer,Digital Agency,2020-02-12,2021-04-07,0,Built frontend solutions.
+45cd6868-e742-404d-8e5c-bfdfc0709583,5d553306-c2e9-48cc-96e5-6c1ec2505e19,Senior Mobile Engineer,StartupXYZ,2023-06-26,,1,Built mobile solutions.
+02f6092c-e016-4a89-9fce-a4e66e8a8cba,5d553306-c2e9-48cc-96e5-6c1ec2505e19,Mobile Engineer,BigCo,2021-02-06,2023-04-27,0,Built mobile solutions.
+9bc2c382-2bd1-448c-a755-e46b7d605f69,53be0c68-8058-485d-aa9b-739feb3aef26,Senior Design Engineer,Fintech Co,2025-04-16,,1,Built design solutions.
+8bd1e4f2-a607-4d6a-be1b-1d309b7cd89d,53be0c68-8058-485d-aa9b-739feb3aef26,Design Engineer,BigCo,2022-10-29,2025-02-15,0,Built design solutions.
+0dcfb59b-6e8a-47a2-a518-a70cd8a7d497,53be0c68-8058-485d-aa9b-739feb3aef26,Design Engineer,Fintech Co,2021-03-08,2022-08-30,0,Built design solutions.
+29098ba5-a6a6-4873-b5ee-fad07bd4c86f,f2b89d44-7185-4876-8293-c85372a2c8e5,Senior Mobile Engineer,E-Commerce Ltd,2024-10-18,,1,Built mobile solutions.
+3688295f-1ca1-48f8-a307-995ad54e38f5,0f146989-d97a-4e45-8a22-7fdc477abf13,Senior Ml Ai Engineer,TechCorp,2024-04-21,,1,Built ml ai solutions.
+8ff2478a-a299-4cd3-9282-d67f15e4f872,de9fc804-2189-4750-8b3d-ea2a54941e92,Senior Fullstack Engineer,StartupXYZ,2024-05-21,,1,Built fullstack solutions.
+11bd92de-195d-4e76-bb7c-a3bb274ad0de,de9fc804-2189-4750-8b3d-ea2a54941e92,Fullstack Engineer,Consultancy,2023-06-26,2024-03-22,0,Built fullstack solutions.
+adbf106a-e4c5-4c6c-b44c-4fdc39acc283,de9fc804-2189-4750-8b3d-ea2a54941e92,Fullstack Engineer,BigCo,2020-06-11,2023-04-27,0,Built fullstack solutions.
+1f1430ae-982f-4d08-9b3d-31b6dbe15ad5,21b3a9f9-0ab8-47f6-9f04-0f4f3c45fe56,Senior Blockchain Engineer,Consultancy,2024-04-21,,1,Built blockchain solutions.
+48e0fc93-2abc-4807-8656-25ef6c8e1d58,808ba693-15bf-490e-9324-b399cef9cfe3,Senior Frontend Engineer,Fintech Co,2024-09-18,,1,Built frontend solutions.
+2931e786-1910-4804-b464-a2b61f374f35,808ba693-15bf-490e-9324-b399cef9cfe3,Frontend Engineer,Consultancy,2021-11-03,2024-07-20,0,Built frontend solutions.
+abd170e3-8392-4f2a-8f02-339f0cb7d41a,808ba693-15bf-490e-9324-b399cef9cfe3,Frontend Engineer,StartupXYZ,2019-01-18,2021-09-04,0,Built frontend solutions.
+8b18a0dd-9d42-471b-9694-bd44ce4309f6,808ba693-15bf-490e-9324-b399cef9cfe3,Frontend Engineer,StartupXYZ,2017-06-27,2018-11-19,0,Built frontend solutions.
+ee034970-2c17-4e7d-8e4e-fe6099c1885d,96f00f2f-167c-4224-82b4-ea4d52f7ac21,Senior Frontend Engineer,Digital Agency,2025-06-15,,1,Built frontend solutions.
+1c4c4dcb-6b6c-4538-8729-ee8a111fb33e,96f00f2f-167c-4224-82b4-ea4d52f7ac21,Frontend Engineer,Consultancy,2024-08-19,2025-04-16,0,Built frontend solutions.
+0721f358-8dd6-48aa-82b1-572695cd1859,96f00f2f-167c-4224-82b4-ea4d52f7ac21,Frontend Engineer,Digital Agency,2022-06-01,2024-06-20,0,Built frontend solutions.
+ea585d8e-d922-4ec4-bfda-d8953bf24295,96f00f2f-167c-4224-82b4-ea4d52f7ac21,Frontend Engineer,E-Commerce Ltd,2021-02-06,2022-04-02,0,Built frontend solutions.
+1bcad7ce-6e39-423a-833c-1df6fda33caf,d69e237b-8448-4d58-8d60-79346f259b40,Senior Design Engineer,Digital Agency,2024-12-17,,1,Built design solutions.
+91018b71-20ce-4496-b937-5995c8f1c6de,d69e237b-8448-4d58-8d60-79346f259b40,Design Engineer,E-Commerce Ltd,2023-10-24,2024-10-18,0,Built design solutions.
+331481a4-74ef-4aaa-a9bc-d962b627eb3c,d69e237b-8448-4d58-8d60-79346f259b40,Design Engineer,StartupXYZ,2021-05-07,2023-08-25,0,Built design solutions.
+746c0926-e4a4-4c07-81ca-860c3579de5f,d69e237b-8448-4d58-8d60-79346f259b40,Design Engineer,Digital Agency,2018-10-20,2021-03-08,0,Built design solutions.
+646c8c33-6536-41e6-ba18-3c579cb213a8,3805d976-9cee-4d19-b7e7-6b20773bca1b,Senior Blockchain Engineer,E-Commerce Ltd,2024-04-21,,1,Built blockchain solutions.
+a616d72a-52fc-48ed-b65d-724ed1645ba8,3805d976-9cee-4d19-b7e7-6b20773bca1b,Blockchain Engineer,Digital Agency,2022-07-31,2024-02-21,0,Built blockchain solutions.
+992b07a5-aebf-40b8-b414-cf464f03515c,3805d976-9cee-4d19-b7e7-6b20773bca1b,Blockchain Engineer,Fintech Co,2021-03-08,2022-06-01,0,Built blockchain solutions.
+9d55ab3f-e78a-446c-a10e-47d25912f747,9ce84eb4-67b1-4f1c-bf32-7d492a6d606b,Senior Blockchain Engineer,Digital Agency,2024-07-20,,1,Built blockchain solutions.
+69f47f37-0488-406c-81e3-c5f2cd585be2,9ce84eb4-67b1-4f1c-bf32-7d492a6d606b,Blockchain Engineer,StartupXYZ,2022-09-29,2024-05-21,0,Built blockchain solutions.
+b05fd177-a68b-40ff-bb85-cd189fe5be76,9ce84eb4-67b1-4f1c-bf32-7d492a6d606b,Blockchain Engineer,TechCorp,2020-03-13,2022-07-31,0,Built blockchain solutions.
+d4c82b06-5fd9-422c-8b58-1f98721f40a0,9ce84eb4-67b1-4f1c-bf32-7d492a6d606b,Blockchain Engineer,Fintech Co,2018-02-22,2020-01-13,0,Built blockchain solutions.
+0625f052-9576-41b7-ae51-f96754a9ef36,7845fc22-aadc-4cb9-bd06-2bab99b7b0c9,Senior Backend Engineer,Consultancy,2025-10-13,,1,Built backend solutions.
+8242c58a-3e84-4007-a304-f00568d39736,7845fc22-aadc-4cb9-bd06-2bab99b7b0c9,Backend Engineer,Consultancy,2022-11-28,2025-08-14,0,Built backend solutions.
+e6c036ee-b79b-4911-98f6-381125372b14,7845fc22-aadc-4cb9-bd06-2bab99b7b0c9,Backend Engineer,StartupXYZ,2021-04-07,2022-09-29,0,Built backend solutions.
+bb15d020-d07c-493d-9a49-dc8376c6d796,7845fc22-aadc-4cb9-bd06-2bab99b7b0c9,Backend Engineer,E-Commerce Ltd,2019-10-15,2021-02-06,0,Built backend solutions.
+c2fc5bc0-4150-4576-9ddf-2b2d4b1642b7,f9c430d8-e534-4cfc-ad82-452fc6e6c97b,Senior Devops Engineer,Consultancy,2023-11-23,,1,Built devops solutions.
+cbeab7b6-e44e-4ebf-9195-353159f78482,0ef34b16-a1cd-4f79-946b-c39ac864f647,Senior Frontend Engineer,StartupXYZ,2025-08-14,,1,Built frontend solutions.
+9e1a3604-42a3-4964-9c9f-191a03627293,0ef34b16-a1cd-4f79-946b-c39ac864f647,Frontend Engineer,TechCorp,2024-02-21,2025-06-15,0,Built frontend solutions.
+2c142140-7fa4-4940-96dc-a8fbd9a235d1,e7756af7-b2a1-46d3-9717-acddda1baa6a,Senior Devops Engineer,TechCorp,2025-05-16,,1,Built devops solutions.
+b5090334-e240-436b-ae38-d21303584772,fa454d36-8430-4afa-a5bf-c1cd01eced4f,Senior Fullstack Engineer,Digital Agency,2025-05-16,,1,Built fullstack solutions.
+0b1eb01e-d844-43c3-8844-862a3b24e841,fa454d36-8430-4afa-a5bf-c1cd01eced4f,Fullstack Engineer,E-Commerce Ltd,2023-02-26,2025-03-17,0,Built fullstack solutions.
+d0dad7fc-1e40-497e-88ce-dedeca2d9ce9,c624296d-6b31-4e7b-be36-00a6bfa13e40,Senior Fullstack Engineer,Consultancy,2024-12-17,,1,Built fullstack solutions.
+6b404e2e-8d96-47ce-9b8d-9fef9ddce56f,c53fa105-be54-478f-9e5c-3a330ce61061,Senior Devops Engineer,TechCorp,2024-09-18,,1,Built devops solutions.
+4521380e-2cb6-4f60-a190-20515943141c,c53fa105-be54-478f-9e5c-3a330ce61061,Devops Engineer,StartupXYZ,2021-12-03,2024-07-20,0,Built devops solutions.
+bee9f687-6767-4ca4-92cc-0e34f1b95ccf,c53fa105-be54-478f-9e5c-3a330ce61061,Devops Engineer,BigCo,2019-04-18,2021-10-04,0,Built devops solutions.
+d0b25253-0f8d-4304-903c-4632f45124c8,c53fa105-be54-478f-9e5c-3a330ce61061,Devops Engineer,E-Commerce Ltd,2017-09-25,2019-02-17,0,Built devops solutions.
+e3d14d26-699b-4d9c-b3b3-b3cb6574d119,7ca663fb-8d49-45d5-ac9f-8a57abf16fdd,Senior Mobile Engineer,E-Commerce Ltd,2023-04-27,,1,Built mobile solutions.
+c80a46a1-6198-48e3-8a0c-7e82801cd836,7ca663fb-8d49-45d5-ac9f-8a57abf16fdd,Mobile Engineer,Digital Agency,2022-05-02,2023-02-26,0,Built mobile solutions.
+e3a0f703-de94-4415-9bd9-3eaa309318f3,7ca663fb-8d49-45d5-ac9f-8a57abf16fdd,Mobile Engineer,TechCorp,2020-01-13,2022-03-03,0,Built mobile solutions.
+6010fdd9-ad6e-4490-9039-735d10aba63a,7ca663fb-8d49-45d5-ac9f-8a57abf16fdd,Mobile Engineer,TechCorp,2018-07-22,2019-11-14,0,Built mobile solutions.
+2ce2af19-6fec-4c81-8312-f1dffd9a6be0,e3fb9177-229d-422d-94e3-4e2f79f0914b,Senior Backend Engineer,Digital Agency,2025-10-13,,1,Built backend solutions.
+41de2bf0-4a65-4357-9605-26acf252f83c,c5493162-e026-4a4c-8bb9-5bda22829298,Senior Backend Engineer,Digital Agency,2024-06-20,,1,Built backend solutions.
+6389cbb9-d5fd-4969-8a3b-94e1c4486cce,1fc061ed-1ba1-4251-ad0e-09a21c062637,Senior Backend Engineer,E-Commerce Ltd,2025-03-17,,1,Built backend solutions.
+8e0fd944-acb5-4888-af41-702d808e3bfc,1fc061ed-1ba1-4251-ad0e-09a21c062637,Backend Engineer,Digital Agency,2023-08-25,2025-01-16,0,Built backend solutions.
+aeeae27d-4c85-46d3-87ec-9fcbe6a01fdc,1fc061ed-1ba1-4251-ad0e-09a21c062637,Backend Engineer,E-Commerce Ltd,2021-04-07,2023-06-26,0,Built backend solutions.
+66e0b49e-a9ca-45e4-a572-59fcad06b14a,046de70f-b12d-4a30-815e-64f34a985cf3,Senior Design Engineer,StartupXYZ,2025-01-16,,1,Built design solutions.
+8ae5e79c-ffc7-4bca-9367-4c3d4e8c7408,046de70f-b12d-4a30-815e-64f34a985cf3,Design Engineer,StartupXYZ,2022-12-28,2024-11-17,0,Built design solutions.
+84e92923-51e6-446b-b967-f93f7d0113d0,046de70f-b12d-4a30-815e-64f34a985cf3,Design Engineer,TechCorp,2021-08-05,2022-10-29,0,Built design solutions.
+8de4b745-b5d5-4373-b13b-c12f481f2e71,046de70f-b12d-4a30-815e-64f34a985cf3,Design Engineer,TechCorp,2020-10-09,2021-06-06,0,Built design solutions.
+ea66c2da-33de-49d3-bb39-1087fb10c479,2b8f52e1-f52a-4d4a-8a34-6e17a709a220,Senior Mobile Engineer,TechCorp,2025-06-15,,1,Built mobile solutions.
+bfab5263-e5f2-482f-bb6d-3c67e584d6e4,2b8f52e1-f52a-4d4a-8a34-6e17a709a220,Mobile Engineer,StartupXYZ,2023-07-26,2025-04-16,0,Built mobile solutions.
+c967e658-812d-4527-a108-2eef6fbabf1e,0d91c474-ed1c-431a-830e-fbe6c1eb87c2,Senior Fullstack Engineer,Fintech Co,2025-09-13,,1,Built fullstack solutions.
+403d94b3-4d41-475e-8329-b3fb5b26d6b1,76acca45-16bc-4bf6-ac8f-a3316758efd4,Senior Devops Engineer,TechCorp,2024-04-21,,1,Built devops solutions.
+00204d5f-172e-4c2e-90c0-7e5372cadd61,76acca45-16bc-4bf6-ac8f-a3316758efd4,Devops Engineer,StartupXYZ,2023-03-28,2024-02-21,0,Built devops solutions.
+150dde2e-d13d-476c-bade-ae5c31d2fbd5,84cba348-d8f6-40da-9052-6c4f0cb07433,Senior Devops Engineer,BigCo,2025-04-16,,1,Built devops solutions.
+5fae23ed-411a-4021-a659-ecd8e622fc68,84cba348-d8f6-40da-9052-6c4f0cb07433,Devops Engineer,BigCo,2022-06-01,2025-02-15,0,Built devops solutions.
+569763a9-2a55-4a60-be6a-8422dd5574a9,84cba348-d8f6-40da-9052-6c4f0cb07433,Devops Engineer,TechCorp,2020-11-08,2022-04-02,0,Built devops solutions.
+ff2e9d8c-68d8-4181-a62e-0d00a027631e,c3416234-0bbe-4745-a4bf-3edf1d9f64ad,Senior Fullstack Engineer,E-Commerce Ltd,2024-04-21,,1,Built fullstack solutions.
+937f6a4e-b4d1-4b97-b7ff-3139a66112cc,c3416234-0bbe-4745-a4bf-3edf1d9f64ad,Fullstack Engineer,StartupXYZ,2023-01-27,2024-02-21,0,Built fullstack solutions.
+44116cbd-17b5-4b0c-8667-16a531321fea,7c27ab2c-e9eb-470d-85eb-733e6d3089c8,Senior Fullstack Engineer,BigCo,2025-09-13,,1,Built fullstack solutions.
+7ed58b1d-dfeb-4481-94db-9dcd67bd7609,aa0e64a0-afd9-4420-a682-affb828260a4,Senior Blockchain Engineer,Fintech Co,2025-08-14,,1,Built blockchain solutions.
+8893da19-048b-46e4-bf16-bfa312a7cf12,442147a7-5b03-4209-af9b-3468dc92eae3,Senior Ml Ai Engineer,E-Commerce Ltd,2023-04-27,,1,Built ml ai solutions.
+7fbccc04-3ae3-44f5-94ad-27a30a897713,442147a7-5b03-4209-af9b-3468dc92eae3,Ml Ai Engineer,StartupXYZ,2022-04-02,2023-02-26,0,Built ml ai solutions.
+6f5546ef-1a94-4a18-afde-509da0fef4fa,442147a7-5b03-4209-af9b-3468dc92eae3,Ml Ai Engineer,Digital Agency,2019-11-14,2022-02-01,0,Built ml ai solutions.
+7e79588f-5d1a-450d-9a49-35117d987c86,5bf071ec-a1e3-4dd0-b4d8-173f196bcea7,Senior Mobile Engineer,StartupXYZ,2024-09-18,,1,Built mobile solutions.
+bbce6218-fbe5-443f-b677-13001bef0182,5bf071ec-a1e3-4dd0-b4d8-173f196bcea7,Mobile Engineer,Digital Agency,2022-08-30,2024-07-20,0,Built mobile solutions.
+07fe43b0-1505-433e-b4da-45a7114d03b5,5bf071ec-a1e3-4dd0-b4d8-173f196bcea7,Mobile Engineer,Digital Agency,2021-03-08,2022-07-01,0,Built mobile solutions.
+642afcf1-15e1-4da0-a776-5f39bdcaad1d,11a6722d-b1d7-40ee-9d86-c21ffd4f5345,Senior Mobile Engineer,Fintech Co,2024-05-21,,1,Built mobile solutions.
+48ce25e4-c5bc-4d08-af20-3216c1c16253,11a6722d-b1d7-40ee-9d86-c21ffd4f5345,Mobile Engineer,Fintech Co,2021-09-04,2024-03-22,0,Built mobile solutions.
+43526b8e-adf3-4c39-9ec2-ffc0ea8cf9c4,11a6722d-b1d7-40ee-9d86-c21ffd4f5345,Mobile Engineer,E-Commerce Ltd,2020-09-09,2021-07-06,0,Built mobile solutions.
+bbefd8dd-def0-47d2-8478-0cd9806cb297,1ec83937-0601-4f48-984d-4e815a2a8f18,Senior Devops Engineer,Digital Agency,2023-11-23,,1,Built devops solutions.
+2a41667b-39d4-4a9d-ad13-c01df407cd17,1ec83937-0601-4f48-984d-4e815a2a8f18,Devops Engineer,E-Commerce Ltd,2021-07-06,2023-09-24,0,Built devops solutions.
+03b5b9fe-9d90-44db-87c8-b4b881448d2b,1ec83937-0601-4f48-984d-4e815a2a8f18,Devops Engineer,StartupXYZ,2020-09-09,2021-05-07,0,Built devops solutions.
+42d64559-f06b-4ec7-8678-2bf0aff87439,62986a5c-f67a-4b10-9998-57fb06bb5158,Senior Design Engineer,Digital Agency,2024-12-17,,1,Built design solutions.
+e8c6a00c-e69e-46da-8d87-68e564b148d1,62986a5c-f67a-4b10-9998-57fb06bb5158,Design Engineer,StartupXYZ,2023-06-26,2024-10-18,0,Built design solutions.
+b4fb8b0d-430d-428c-8b89-e555555e1494,62986a5c-f67a-4b10-9998-57fb06bb5158,Design Engineer,Digital Agency,2022-03-03,2023-04-27,0,Built design solutions.
+cb148b37-b731-40ff-b1e2-4d545df2b14d,06e0c157-0978-492a-897c-f79296b8c37d,Senior Blockchain Engineer,BigCo,2024-07-20,,1,Built blockchain solutions.
+79fafcbc-e8ad-48d8-b3e7-2a18013c95c5,102d0916-71ad-4f6f-8f8a-4054b92f57a8,Senior Mobile Engineer,Consultancy,2025-02-15,,1,Built mobile solutions.
+a6a88125-ae9a-4b56-aab8-77cece07cbfe,f605004b-b7db-4a0d-9e75-757847d22a7a,Senior Devops Engineer,Fintech Co,2025-03-17,,1,Built devops solutions.
+a09c3671-65e7-4b8e-8784-d7e2398d9948,f605004b-b7db-4a0d-9e75-757847d22a7a,Devops Engineer,E-Commerce Ltd,2023-06-26,2025-01-16,0,Built devops solutions.
+26858218-cba5-456d-a14c-94eca78dfcec,f605004b-b7db-4a0d-9e75-757847d22a7a,Devops Engineer,TechCorp,2021-02-06,2023-04-27,0,Built devops solutions.
+d3dc4a01-6401-416c-b12c-f65577024fc3,f605004b-b7db-4a0d-9e75-757847d22a7a,Devops Engineer,StartupXYZ,2020-04-12,2020-12-08,0,Built devops solutions.
+49ead9b1-ebfb-4a9a-8ab8-bcf7d37114b5,b169dcfe-0176-4e96-aca2-e4d3fb71bd6e,Senior Mobile Engineer,TechCorp,2024-07-20,,1,Built mobile solutions.
+50033af9-8e02-4a98-bfb1-ec53398b7b3b,b169dcfe-0176-4e96-aca2-e4d3fb71bd6e,Mobile Engineer,Fintech Co,2021-12-03,2024-05-21,0,Built mobile solutions.
+1d4072d5-eb10-46b7-9abb-54516de628d7,b169dcfe-0176-4e96-aca2-e4d3fb71bd6e,Mobile Engineer,Consultancy,2020-12-08,2021-10-04,0,Built mobile solutions.
+74870949-3137-4136-bf38-3f76db731a0b,21367f7e-90e1-4f9c-b31e-4008b44dae75,Senior Blockchain Engineer,Fintech Co,2025-04-16,,1,Built blockchain solutions.
+91ca8267-cb1a-4def-92b6-4262c3a21e92,21367f7e-90e1-4f9c-b31e-4008b44dae75,Blockchain Engineer,Digital Agency,2023-06-26,2025-02-15,0,Built blockchain solutions.
+371a7d46-0b23-4ad7-a3d4-e3884b89c23f,3e3d3a8f-983a-4102-885b-94a6cd4b07ac,Senior Fullstack Engineer,Digital Agency,2024-10-18,,1,Built fullstack solutions.
+f6f99bf7-ea75-4d46-accf-b383b48e2ffb,3e3d3a8f-983a-4102-885b-94a6cd4b07ac,Fullstack Engineer,E-Commerce Ltd,2022-08-30,2024-08-19,0,Built fullstack solutions.
+e9e6d941-efa8-49f1-8329-73a5fad329ca,3e3d3a8f-983a-4102-885b-94a6cd4b07ac,Fullstack Engineer,StartupXYZ,2019-11-14,2022-07-01,0,Built fullstack solutions.
+9ae7d143-3e3a-4af0-bd68-f8ceeafc94cc,357120e9-ef37-4910-ab77-9187ae1b52ca,Senior Backend Engineer,BigCo,2024-07-20,,1,Built backend solutions.
+3c5c8218-9f28-4067-9425-cb266184921b,357120e9-ef37-4910-ab77-9187ae1b52ca,Backend Engineer,Fintech Co,2023-10-24,2024-05-21,0,Built backend solutions.
+f9d82339-b180-4671-b338-e571f296afce,689ac0c5-4f1c-43a3-b7f6-d89ef6de625e,Senior Fullstack Engineer,E-Commerce Ltd,2025-04-16,,1,Built fullstack solutions.
+82f9f88e-20c0-4cbb-aadf-0b451b207b3b,689ac0c5-4f1c-43a3-b7f6-d89ef6de625e,Fullstack Engineer,Consultancy,2023-07-26,2025-02-15,0,Built fullstack solutions.
+9ff29611-c995-41c5-bca1-a98f1054a4dd,689ac0c5-4f1c-43a3-b7f6-d89ef6de625e,Fullstack Engineer,StartupXYZ,2021-09-04,2023-05-27,0,Built fullstack solutions.
+e6886d05-2aad-48af-9627-7b6f39a70061,ecf88ead-6776-4f6e-bb19-a03bfd0b01d1,Senior Blockchain Engineer,TechCorp,2025-10-13,,1,Built blockchain solutions.
+aef4dd73-166a-40f9-8bd3-605ab90f76c2,ecf88ead-6776-4f6e-bb19-a03bfd0b01d1,Blockchain Engineer,E-Commerce Ltd,2024-09-18,2025-08-14,0,Built blockchain solutions.
+e04c9d8a-5a8c-4e27-9fdf-4ff3e3f675cd,ecf88ead-6776-4f6e-bb19-a03bfd0b01d1,Blockchain Engineer,BigCo,2021-10-04,2024-07-20,0,Built blockchain solutions.
+48ed28df-619a-46ea-9a6c-0ad5a03268ff,ecf88ead-6776-4f6e-bb19-a03bfd0b01d1,Blockchain Engineer,Digital Agency,2018-10-20,2021-08-05,0,Built blockchain solutions.
+5fd561f4-ef96-4313-a138-af336133fb87,b90ab983-8167-4785-8259-66c3c9bcf31d,Senior Backend Engineer,E-Commerce Ltd,2025-06-15,,1,Built backend solutions.
+e40f4f53-62ec-4b8f-8305-21f6a1694fc8,b90ab983-8167-4785-8259-66c3c9bcf31d,Backend Engineer,Fintech Co,2024-08-19,2025-04-16,0,Built backend solutions.
+bf3c003b-ba8c-49ac-98ca-18c0a91875e9,b90ab983-8167-4785-8259-66c3c9bcf31d,Backend Engineer,Digital Agency,2022-05-02,2024-06-20,0,Built backend solutions.
+17e04bf3-b8d7-4b94-adcc-0469d1b61a49,d24fa4c5-3d8c-4a22-afd3-87ec96b251b1,Senior Devops Engineer,Digital Agency,2023-07-26,,1,Built devops solutions.
+623c4d4e-0f47-4d70-9d6c-9ec789e010f2,d24fa4c5-3d8c-4a22-afd3-87ec96b251b1,Devops Engineer,StartupXYZ,2022-06-01,2023-05-27,0,Built devops solutions.
+b84eb825-844e-4ad2-8008-9a5d25358356,6ceca3b0-1ed3-4fab-a30e-d0fc77441f16,Senior Ml Ai Engineer,E-Commerce Ltd,2024-09-18,,1,Built ml ai solutions.
+cf65e614-2558-4b08-a09a-b9706fe2ca4c,6ceca3b0-1ed3-4fab-a30e-d0fc77441f16,Ml Ai Engineer,Consultancy,2021-11-03,2024-07-20,0,Built ml ai solutions.
+59a54107-54c6-4fb7-9229-76b24256ae44,6ceca3b0-1ed3-4fab-a30e-d0fc77441f16,Ml Ai Engineer,BigCo,2020-06-11,2021-09-04,0,Built ml ai solutions.
+1fc25e4d-5642-453f-bada-c6430dbed1a5,6ceca3b0-1ed3-4fab-a30e-d0fc77441f16,Ml Ai Engineer,Digital Agency,2019-11-14,2020-04-12,0,Built ml ai solutions.
+d3af67f3-a8f6-4e25-9b95-3f3e67b3708c,3e10de60-f09e-4edb-a1e2-42b033aca1eb,Senior Blockchain Engineer,Consultancy,2024-10-18,,1,Built blockchain solutions.
+7f627ef7-52ac-4b98-aee5-27093395e91a,b3c35c0a-8371-4246-95e0-b189272942bb,Senior Backend Engineer,Consultancy,2025-08-14,,1,Built backend solutions.
+ca3234b9-96d7-457f-94be-773bf8d5dded,b3c35c0a-8371-4246-95e0-b189272942bb,Backend Engineer,Consultancy,2023-03-28,2025-06-15,0,Built backend solutions.
+cc5ec6bc-b491-4947-9071-14ee258d554a,372fc4fd-3269-4d1c-bb21-6f3b381cf56e,Senior Backend Engineer,Fintech Co,2024-03-22,,1,Built backend solutions.
+18dc4105-3c24-477b-8b92-f4976b6274c2,372fc4fd-3269-4d1c-bb21-6f3b381cf56e,Backend Engineer,TechCorp,2023-06-26,2024-01-22,0,Built backend solutions.
+2fc213f2-d7e5-410f-80c3-5ea08f0e9283,19a96817-9f36-4e19-b811-ec94e32770c8,Senior Design Engineer,E-Commerce Ltd,2024-04-21,,1,Built design solutions.
+28678374-8556-4ea7-a953-7352688133b1,19a96817-9f36-4e19-b811-ec94e32770c8,Design Engineer,Digital Agency,2023-01-27,2024-02-21,0,Built design solutions.
+538e075e-b941-4cd1-8bc2-b014fa83e364,19a96817-9f36-4e19-b811-ec94e32770c8,Design Engineer,Digital Agency,2021-12-03,2022-11-28,0,Built design solutions.
+5fff4eab-3033-4b3a-8f57-3d006854459f,b44f658d-75f1-4215-8d0d-f12e6f07ca74,Senior Blockchain Engineer,BigCo,2023-10-24,,1,Built blockchain solutions.
+507944d0-aa33-43db-9a41-f0b87ca33069,b44f658d-75f1-4215-8d0d-f12e6f07ca74,Blockchain Engineer,Digital Agency,2021-12-03,2023-08-25,0,Built blockchain solutions.
+e14b8dea-2e66-446e-a9a0-262d50c9514e,b44f658d-75f1-4215-8d0d-f12e6f07ca74,Blockchain Engineer,Consultancy,2020-12-08,2021-10-04,0,Built blockchain solutions.
+8d54fbdb-7183-4399-a546-79a248b8285c,b44f658d-75f1-4215-8d0d-f12e6f07ca74,Blockchain Engineer,Digital Agency,2018-02-22,2020-10-09,0,Built blockchain solutions.
+282a9df3-a1b5-4831-9c9a-52c8501707a4,48817884-badd-437a-b977-62b3b8080c33,Senior Backend Engineer,StartupXYZ,2024-11-17,,1,Built backend solutions.
+c47e0073-2034-42cb-8910-ff73e3346afa,48817884-badd-437a-b977-62b3b8080c33,Backend Engineer,StartupXYZ,2023-02-26,2024-09-18,0,Built backend solutions.
+41426144-fb5c-4513-8e63-ffbaf01aea8b,48817884-badd-437a-b977-62b3b8080c33,Backend Engineer,TechCorp,2021-07-06,2022-12-28,0,Built backend solutions.
+2f7e6a1a-a98e-4987-a7da-54e5b62bbc1c,48817884-badd-437a-b977-62b3b8080c33,Backend Engineer,StartupXYZ,2020-05-12,2021-05-07,0,Built backend solutions.
+fae03cb9-e914-4801-b9fc-967ee650229d,e7906ea7-c951-42d9-9fcb-335538ee18b4,Senior Devops Engineer,TechCorp,2025-09-13,,1,Built devops solutions.
+b792ed85-fcd8-40cd-bf91-12919ab514ed,e7906ea7-c951-42d9-9fcb-335538ee18b4,Devops Engineer,StartupXYZ,2023-10-24,2025-07-15,0,Built devops solutions.
+ef7a0bf8-e9ad-4f03-ae1b-3b14adb92615,e7906ea7-c951-42d9-9fcb-335538ee18b4,Devops Engineer,Consultancy,2021-08-05,2023-08-25,0,Built devops solutions.
+3262a5b4-104e-44f3-a5e6-b7afa1f2c4db,ba34cf08-d7e0-4c8d-b63b-7bb74daaf74d,Senior Devops Engineer,StartupXYZ,2025-06-15,,1,Built devops solutions.
+eac5ed0a-d503-4c13-8a5e-d98000636ffa,ba34cf08-d7e0-4c8d-b63b-7bb74daaf74d,Devops Engineer,StartupXYZ,2022-11-28,2025-04-16,0,Built devops solutions.
+e56b196f-268c-4695-93cc-d9b4fed3a97d,ba34cf08-d7e0-4c8d-b63b-7bb74daaf74d,Devops Engineer,Consultancy,2022-03-03,2022-09-29,0,Built devops solutions.
+22ee074a-e87e-4317-960c-eec69574bc00,7eed0f3c-f392-4491-bb2e-e66b107fd34e,Senior Frontend Engineer,Fintech Co,2025-02-15,,1,Built frontend solutions.
+70bc50c1-1a1f-44dd-8186-2e7c83a8a0c4,c8747447-e953-4b58-9784-fb6be0c9f6b8,Senior Design Engineer,BigCo,2025-02-15,,1,Built design solutions.
+aabb09c2-2ea4-43aa-b075-d08253ff846a,c8747447-e953-4b58-9784-fb6be0c9f6b8,Design Engineer,Consultancy,2022-02-01,2024-12-17,0,Built design solutions.
+1b925555-513c-43bf-bb00-0112fe1aeb04,c8747447-e953-4b58-9784-fb6be0c9f6b8,Design Engineer,Digital Agency,2020-10-09,2021-12-03,0,Built design solutions.
+c0618d11-8d1c-4fdc-b631-253cb962386a,c8747447-e953-4b58-9784-fb6be0c9f6b8,Design Engineer,Digital Agency,2018-04-23,2020-08-10,0,Built design solutions.
+909efcd3-aaf2-4391-a33b-f667a5afc5a6,d67daa87-1e68-4b34-b8af-9c596393ba7d,Senior Ml Ai Engineer,Fintech Co,2023-04-27,,1,Built ml ai solutions.
+df5ef314-c6f3-4257-889c-4d76a9a9b569,d67daa87-1e68-4b34-b8af-9c596393ba7d,Ml Ai Engineer,E-Commerce Ltd,2022-07-31,2023-02-26,0,Built ml ai solutions.
+30a64721-b144-423d-82dd-205a4dda12e0,d67daa87-1e68-4b34-b8af-9c596393ba7d,Ml Ai Engineer,TechCorp,2021-03-08,2022-06-01,0,Built ml ai solutions.
+300bf04d-82ae-4894-85a9-41bb22b35cae,d67daa87-1e68-4b34-b8af-9c596393ba7d,Ml Ai Engineer,Digital Agency,2019-07-17,2021-01-07,0,Built ml ai solutions.
+fedbfd95-1ee9-421e-b5da-263835c85080,1a8ec5bd-47b4-49ac-8123-c1f917540f47,Senior Devops Engineer,StartupXYZ,2024-12-17,,1,Built devops solutions.
+24d77e43-32a3-4080-a99e-2b0d16c08d0b,1a8ec5bd-47b4-49ac-8123-c1f917540f47,Devops Engineer,BigCo,2022-10-29,2024-10-18,0,Built devops solutions.
+e56f395e-c0d2-4217-ac85-6e67d9680718,256e68c6-76cd-4a5d-b398-e2abfe398eff,Senior Ml Ai Engineer,StartupXYZ,2025-09-13,,1,Built ml ai solutions.
+25bba92a-57bc-48e2-93ef-924ef4627818,256e68c6-76cd-4a5d-b398-e2abfe398eff,Ml Ai Engineer,E-Commerce Ltd,2024-05-21,2025-07-15,0,Built ml ai solutions.
+e4b1c306-1bac-4c89-8c05-0edcbcca13b2,a731792d-2bf0-492f-90b6-452a5326ae1f,Senior Fullstack Engineer,E-Commerce Ltd,2024-03-22,,1,Built fullstack solutions.
+9959abf6-daf5-4cb0-9ee9-324d6d1d5379,a731792d-2bf0-492f-90b6-452a5326ae1f,Fullstack Engineer,TechCorp,2022-05-02,2024-01-22,0,Built fullstack solutions.
+c3ea1fe9-ba00-4630-9362-96256f35b1ae,a731792d-2bf0-492f-90b6-452a5326ae1f,Fullstack Engineer,Consultancy,2019-08-16,2022-03-03,0,Built fullstack solutions.
+c6649d6f-de36-4cbe-ac56-b7b8267c987b,c21884fa-0f19-479e-b844-25c19d962939,Senior Ml Ai Engineer,StartupXYZ,2025-04-16,,1,Built ml ai solutions.
+1d9469cb-576d-4e5e-be6b-c32d66b2d634,c21884fa-0f19-479e-b844-25c19d962939,Ml Ai Engineer,StartupXYZ,2023-07-26,2025-02-15,0,Built ml ai solutions.
+fed351b2-f14f-4176-b029-9d86cd248327,c21884fa-0f19-479e-b844-25c19d962939,Ml Ai Engineer,StartupXYZ,2021-03-08,2023-05-27,0,Built ml ai solutions.
+f27d36e5-3988-46b7-b0df-e151f1ffbf69,9189876b-0325-461f-aa8c-3374485151cf,Senior Blockchain Engineer,StartupXYZ,2024-10-18,,1,Built blockchain solutions.
+6c0e405c-fc8a-43ce-9563-8bc04ba0b4ed,9189876b-0325-461f-aa8c-3374485151cf,Blockchain Engineer,TechCorp,2023-04-27,2024-08-19,0,Built blockchain solutions.
+4f5bb689-e04b-4a46-9949-08e9206afec0,2e7f43c7-b7c5-4351-9adb-2f4d171b3cd3,Senior Frontend Engineer,BigCo,2023-04-27,,1,Built frontend solutions.
+b31a2ee3-1a2d-452c-b3d9-63ba1d5c64fb,2e7f43c7-b7c5-4351-9adb-2f4d171b3cd3,Frontend Engineer,StartupXYZ,2020-05-12,2023-02-26,0,Built frontend solutions.
+0323a260-f8b1-4fab-93d3-c255c2f6de9a,2e7f43c7-b7c5-4351-9adb-2f4d171b3cd3,Frontend Engineer,StartupXYZ,2017-11-24,2020-03-13,0,Built frontend solutions.
+bff7eafd-bc7f-4353-bf96-71c12828cf83,2e7f43c7-b7c5-4351-9adb-2f4d171b3cd3,Frontend Engineer,TechCorp,2016-04-03,2017-09-25,0,Built frontend solutions.
+8199322b-4084-4817-9db5-4bb2e7ff4388,abf88349-d860-4c15-b2c0-36646cba770e,Senior Frontend Engineer,BigCo,2025-09-13,,1,Built frontend solutions.
+1237f019-c921-4555-8ea7-968c2334395b,abf88349-d860-4c15-b2c0-36646cba770e,Frontend Engineer,TechCorp,2024-04-21,2025-07-15,0,Built frontend solutions.
+e38848be-1845-414e-ade3-cd9cfd9b3614,abf88349-d860-4c15-b2c0-36646cba770e,Frontend Engineer,Consultancy,2022-08-30,2024-02-21,0,Built frontend solutions.
+1540000b-2925-47e3-9a8b-bb444727e358,abf88349-d860-4c15-b2c0-36646cba770e,Frontend Engineer,E-Commerce Ltd,2020-06-11,2022-07-01,0,Built frontend solutions.
+eb2b9795-bc51-4c8f-942b-0a0368603047,827b2960-f199-4992-b40e-d7c77b03500f,Senior Fullstack Engineer,E-Commerce Ltd,2024-05-21,,1,Built fullstack solutions.
+3dd9a06b-9110-4196-99d0-9df272dddeec,827b2960-f199-4992-b40e-d7c77b03500f,Fullstack Engineer,Consultancy,2021-07-06,2024-03-22,0,Built fullstack solutions.
+6710dae1-0757-4d14-90b8-7555411388fb,827b2960-f199-4992-b40e-d7c77b03500f,Fullstack Engineer,Digital Agency,2018-06-22,2021-05-07,0,Built fullstack solutions.
+1e1ee5b1-9633-43a5-9abe-580485929629,530c1c7f-effe-4cae-b7be-4f1e6bc897c7,Senior Devops Engineer,StartupXYZ,2023-11-23,,1,Built devops solutions.
+f2eadad6-3ddb-4cd8-bcbe-4d623d650e08,530c1c7f-effe-4cae-b7be-4f1e6bc897c7,Devops Engineer,TechCorp,2022-06-01,2023-09-24,0,Built devops solutions.
+0bf8cf2e-208f-4d8e-97ca-0d7d1661c64b,e33ffc3d-5782-4dc1-a1a9-04e5a6c19530,Senior Mobile Engineer,BigCo,2024-05-21,,1,Built mobile solutions.
+67c9eeaf-7cee-4a6c-95b3-c9bf2d6d79e9,e33ffc3d-5782-4dc1-a1a9-04e5a6c19530,Mobile Engineer,TechCorp,2021-12-03,2024-03-22,0,Built mobile solutions.
+93510d2a-922c-4cc0-88ff-ebf9c895b323,879aa9f5-1f97-4d22-aa80-01f5c2dd3b6c,Senior Fullstack Engineer,TechCorp,2025-04-16,,1,Built fullstack solutions.
+97bfdfab-4da3-4cbc-a26d-d061b8664412,879aa9f5-1f97-4d22-aa80-01f5c2dd3b6c,Fullstack Engineer,Digital Agency,2024-08-19,2025-02-15,0,Built fullstack solutions.
+ab9a1e6a-f4ab-4316-9803-26c2aab2845b,879aa9f5-1f97-4d22-aa80-01f5c2dd3b6c,Fullstack Engineer,TechCorp,2023-07-26,2024-06-20,0,Built fullstack solutions.
+f1b371fc-2513-42b4-bebe-c340efc6cc72,6f7e9eb4-9fb4-4e1a-807b-c553b9cc8fee,Senior Design Engineer,TechCorp,2025-01-16,,1,Built design solutions.
+4b1affad-7198-41be-81ea-d549f803e692,6f7e9eb4-9fb4-4e1a-807b-c553b9cc8fee,Design Engineer,TechCorp,2022-04-02,2024-11-17,0,Built design solutions.
+6184f7c2-f932-4b9f-866e-b03bfd22b12b,6f7e9eb4-9fb4-4e1a-807b-c553b9cc8fee,Design Engineer,BigCo,2021-08-05,2022-02-01,0,Built design solutions.
+12a762c1-66c2-4277-8f7c-7dbacc6332e2,6f7e9eb4-9fb4-4e1a-807b-c553b9cc8fee,Design Engineer,StartupXYZ,2019-04-18,2021-06-06,0,Built design solutions.
+51cfbd1c-9ae2-41ec-a9d4-ad82038a44dc,b7c9d289-1244-4328-8029-5c9a09b88196,Senior Design Engineer,BigCo,2023-10-24,,1,Built design solutions.
+b6c6e896-4dd3-4234-a3ac-060857bd3c6a,b7c9d289-1244-4328-8029-5c9a09b88196,Design Engineer,TechCorp,2022-06-01,2023-08-25,0,Built design solutions.
+769674b1-d08d-4543-953f-5fcc588c067a,b7c9d289-1244-4328-8029-5c9a09b88196,Design Engineer,Consultancy,2021-06-06,2022-04-02,0,Built design solutions.
+77d02e9a-e9d3-4244-bb8c-ccf18e12074b,a14ef145-9d9e-4eac-8a90-c6daa18649f2,Senior Design Engineer,Consultancy,2024-10-18,,1,Built design solutions.
+0d4f2071-2c78-4608-88c5-3f5aeb6341f0,a14ef145-9d9e-4eac-8a90-c6daa18649f2,Design Engineer,BigCo,2023-12-23,2024-08-19,0,Built design solutions.
+86a39931-0a85-460a-9556-4e5069be3579,a14ef145-9d9e-4eac-8a90-c6daa18649f2,Design Engineer,Consultancy,2022-12-28,2023-10-24,0,Built design solutions.
+7720bcb7-25a9-4d2a-9906-4948388d6dd9,7301526c-dd77-46b3-9b3d-1a2e3bc6caeb,Senior Design Engineer,E-Commerce Ltd,2024-04-21,,1,Built design solutions.
+5811c6b0-1eb2-4d38-9df2-b9eaf7540177,7301526c-dd77-46b3-9b3d-1a2e3bc6caeb,Design Engineer,E-Commerce Ltd,2021-11-03,2024-02-21,0,Built design solutions.
+cb7c09fe-8a0f-4f86-b8fc-bcdf40cd9e44,7301526c-dd77-46b3-9b3d-1a2e3bc6caeb,Design Engineer,StartupXYZ,2019-02-17,2021-09-04,0,Built design solutions.
+f3468138-9c85-4756-ae46-ae4d4139658c,20ce76bd-37d7-4d2c-9f27-cd4917d3f92c,Senior Fullstack Engineer,StartupXYZ,2025-03-17,,1,Built fullstack solutions.
+20da4697-52b7-49d4-83a7-195da31f7b89,98fcd1f0-d578-47ef-9c6e-85a5bb19f067,Senior Blockchain Engineer,Fintech Co,2024-08-19,,1,Built blockchain solutions.
+e924945f-6818-4689-ba99-0faf6e2afda3,98fcd1f0-d578-47ef-9c6e-85a5bb19f067,Blockchain Engineer,E-Commerce Ltd,2023-07-26,2024-06-20,0,Built blockchain solutions.
+23c187a1-25c1-4a2b-ac80-b6c5556589a2,98fcd1f0-d578-47ef-9c6e-85a5bb19f067,Blockchain Engineer,StartupXYZ,2021-05-07,2023-05-27,0,Built blockchain solutions.
+848bf319-2e1e-467c-be99-2ff9e7a32152,bab0783f-f1ba-401e-bf6f-2ed67bf4ab0b,Senior Ml Ai Engineer,E-Commerce Ltd,2023-12-23,,1,Built ml ai solutions.
+3484f869-cf40-4234-93af-cff3516d8580,bab0783f-f1ba-401e-bf6f-2ed67bf4ab0b,Ml Ai Engineer,E-Commerce Ltd,2022-09-29,2023-10-24,0,Built ml ai solutions.
+899e964c-6d86-4120-ad57-1129f6744529,9f4fb724-866b-4754-b650-18435b691d80,Senior Blockchain Engineer,Digital Agency,2024-02-21,,1,Built blockchain solutions.
+3f9a143a-2620-4f85-a280-209ef31ddc7d,9f4fb724-866b-4754-b650-18435b691d80,Blockchain Engineer,TechCorp,2022-04-02,2023-12-23,0,Built blockchain solutions.
+1cfe8500-b65e-4c8c-a0f2-2773a3e4ab34,5709918f-22fd-47d9-8cd1-f751c2e75945,Senior Devops Engineer,StartupXYZ,2024-07-20,,1,Built devops solutions.
+05ed9a3c-7e27-41b9-b86b-a68acc5ec52f,5709918f-22fd-47d9-8cd1-f751c2e75945,Devops Engineer,Consultancy,2022-11-28,2024-05-21,0,Built devops solutions.
+c0f69d46-4cb6-435f-b51c-1abb0ba33ccb,5709918f-22fd-47d9-8cd1-f751c2e75945,Devops Engineer,Fintech Co,2022-05-02,2022-09-29,0,Built devops solutions.
+82383509-8a8d-4f0e-b429-548a91e28ee2,bde0b58d-07e4-4fce-b4cb-0efe7b786edd,Senior Frontend Engineer,StartupXYZ,2023-06-26,,1,Built frontend solutions.
+7a1c67f1-57df-455f-a485-968c139a8f20,bde0b58d-07e4-4fce-b4cb-0efe7b786edd,Frontend Engineer,BigCo,2022-09-29,2023-04-27,0,Built frontend solutions.
+f19479d3-60f3-4a2e-bfd1-d1f01ef5a7d1,bde0b58d-07e4-4fce-b4cb-0efe7b786edd,Frontend Engineer,StartupXYZ,2019-10-15,2022-07-31,0,Built frontend solutions.
+63a98419-297f-4757-a312-3b10d12686f7,bde0b58d-07e4-4fce-b4cb-0efe7b786edd,Frontend Engineer,TechCorp,2017-08-26,2019-08-16,0,Built frontend solutions.
+5ace4e51-147b-47cd-b1b1-b7a6c5e1c0b3,073d21c7-ae33-4132-a1d1-1e8a6dc83f1b,Senior Devops Engineer,Consultancy,2024-02-21,,1,Built devops solutions.
+eeaa7003-14cd-4ad9-9fd8-3ca1a86d0281,50a65e51-7284-4cbc-a172-28f79f72bf96,Senior Mobile Engineer,StartupXYZ,2023-08-25,,1,Built mobile solutions.
+3005d1ea-4a4b-4253-973b-533f05eaadeb,5fcf67b9-e2db-4300-b69e-6fdca021cc27,Senior Fullstack Engineer,Consultancy,2025-05-16,,1,Built fullstack solutions.
+3c91b732-906d-4ed6-8f85-1e1f15b61b90,5fcf67b9-e2db-4300-b69e-6fdca021cc27,Fullstack Engineer,E-Commerce Ltd,2022-08-30,2025-03-17,0,Built fullstack solutions.
+94cf67d2-775f-463e-8168-6c2b679eabba,5fcf67b9-e2db-4300-b69e-6fdca021cc27,Fullstack Engineer,BigCo,2020-12-08,2022-07-01,0,Built fullstack solutions.
+2cae4ad1-9298-4138-9452-d051ef0684d0,5fcf67b9-e2db-4300-b69e-6fdca021cc27,Fullstack Engineer,BigCo,2019-07-17,2020-10-09,0,Built fullstack solutions.
+37814576-36b2-4086-9ae2-3b9b2fcc47f4,03b45056-ac20-4d47-bf3f-689a8bd1dfa2,Senior Frontend Engineer,Consultancy,2025-03-17,,1,Built frontend solutions.
+f70a66f0-c5a8-4453-bd1f-478869c941bb,1a4ff3e1-93f7-413f-bab4-36ccf9f65606,Senior Blockchain Engineer,Fintech Co,2024-09-18,,1,Built blockchain solutions.
+94a4ea1e-96cb-40c5-b66b-90ce72339387,f161b450-608f-46f7-8aa5-620a9a1bf07e,Senior Frontend Engineer,E-Commerce Ltd,2025-09-13,,1,Built frontend solutions.
+ac3cbf89-8c7a-4bd4-a958-b4e560c8708a,f161b450-608f-46f7-8aa5-620a9a1bf07e,Frontend Engineer,Fintech Co,2023-06-26,2025-07-15,0,Built frontend solutions.
+f8bc49a2-149a-42fd-8eae-5d37f1f83ac8,f161b450-608f-46f7-8aa5-620a9a1bf07e,Frontend Engineer,Consultancy,2020-06-11,2023-04-27,0,Built frontend solutions.
+e2382908-3858-44b2-8d49-396208ee9d58,4b07b91d-3f39-4307-b60f-82cccb6f5be2,Senior Fullstack Engineer,Digital Agency,2024-12-17,,1,Built fullstack solutions.
+d2dfc872-11f0-4ced-a01f-020649ed9c61,413c3380-abe5-4409-a4ba-47d3db02e453,Senior Devops Engineer,TechCorp,2023-11-23,,1,Built devops solutions.
+0fe74caa-2ce8-4c70-a9a6-bed545ff6677,413c3380-abe5-4409-a4ba-47d3db02e453,Devops Engineer,Fintech Co,2021-12-03,2023-09-24,0,Built devops solutions.
+7d8a0e54-b86d-4550-bd18-cdbbd8cbd1a7,413c3380-abe5-4409-a4ba-47d3db02e453,Devops Engineer,Fintech Co,2021-04-07,2021-10-04,0,Built devops solutions.
+b5a5a9c4-4634-40ac-bf00-0604952eaa4a,413c3380-abe5-4409-a4ba-47d3db02e453,Devops Engineer,TechCorp,2019-06-17,2021-02-06,0,Built devops solutions.
+0ccd02a3-0ff6-446c-b678-ca62a3be7dc2,74bf7f0c-5f84-48c5-bc06-22d8fee830b0,Senior Devops Engineer,StartupXYZ,2023-06-26,,1,Built devops solutions.
+9657fc3d-173a-4c08-a8a0-d7795430ee1d,74bf7f0c-5f84-48c5-bc06-22d8fee830b0,Devops Engineer,StartupXYZ,2021-08-05,2023-04-27,0,Built devops solutions.
+818f033d-c616-4204-bf76-7b822ca38b59,74bf7f0c-5f84-48c5-bc06-22d8fee830b0,Devops Engineer,Fintech Co,2020-01-13,2021-06-06,0,Built devops solutions.
+c5f664ac-29da-4d2c-9682-4eb94e2f841b,74bf7f0c-5f84-48c5-bc06-22d8fee830b0,Devops Engineer,StartupXYZ,2017-06-27,2019-11-14,0,Built devops solutions.
+d7678a87-6e88-4218-87a9-6fae9fdcce9a,884cb898-3f8a-4e21-814c-5140c498b164,Senior Backend Engineer,Fintech Co,2023-04-27,,1,Built backend solutions.
+627faa74-6ce5-4a7a-be86-a1c29db3c7df,884cb898-3f8a-4e21-814c-5140c498b164,Backend Engineer,StartupXYZ,2021-10-04,2023-02-26,0,Built backend solutions.
+5a0d18df-9be6-427d-bb05-3a6bb1fe8e0e,884cb898-3f8a-4e21-814c-5140c498b164,Backend Engineer,E-Commerce Ltd,2020-04-12,2021-08-05,0,Built backend solutions.
+1434a309-b651-4c4d-953f-724a1bb663ad,b097361d-f7c7-47e0-94ef-22036de6360c,Senior Frontend Engineer,StartupXYZ,2023-11-23,,1,Built frontend solutions.
+3308abd5-21d6-4f58-bebb-50e9632ea326,b097361d-f7c7-47e0-94ef-22036de6360c,Frontend Engineer,Consultancy,2022-03-03,2023-09-24,0,Built frontend solutions.
+221a2c89-68b0-4cf1-a640-f0859c48f91b,b097361d-f7c7-47e0-94ef-22036de6360c,Frontend Engineer,Fintech Co,2019-06-17,2022-01-02,0,Built frontend solutions.
+e698160d-a5b4-476a-9587-616efb037a62,1dde8597-b06e-4f54-ae19-c9b63920b2d8,Senior Frontend Engineer,BigCo,2024-02-21,,1,Built frontend solutions.
+b2bd007c-b42d-4833-92f0-41c6b61f5971,1dde8597-b06e-4f54-ae19-c9b63920b2d8,Frontend Engineer,TechCorp,2022-12-28,2023-12-23,0,Built frontend solutions.
+18ae82a6-5796-460d-a2d1-ef019460af2e,1dde8597-b06e-4f54-ae19-c9b63920b2d8,Frontend Engineer,Digital Agency,2020-02-12,2022-10-29,0,Built frontend solutions.
+27d970a4-8b0e-40bf-af5b-9d3a60255914,1dde8597-b06e-4f54-ae19-c9b63920b2d8,Frontend Engineer,TechCorp,2017-04-28,2019-12-14,0,Built frontend solutions.
+0a96521e-b4da-4a12-8f31-feb8d6f96b75,c53e88f5-11e2-4bb5-ac05-94d3f6ee9a71,Senior Devops Engineer,Fintech Co,2025-02-15,,1,Built devops solutions.
+3f797c1d-c66b-4ebf-966f-aef8e5a39574,c53e88f5-11e2-4bb5-ac05-94d3f6ee9a71,Devops Engineer,E-Commerce Ltd,2023-10-24,2024-12-17,0,Built devops solutions.
+918bf4c8-6799-4256-b459-4f6c2b352855,c53e88f5-11e2-4bb5-ac05-94d3f6ee9a71,Devops Engineer,TechCorp,2021-09-04,2023-08-25,0,Built devops solutions.
+bb75c2e2-f950-40e2-92e7-6816c8ecc570,c53e88f5-11e2-4bb5-ac05-94d3f6ee9a71,Devops Engineer,Fintech Co,2018-08-21,2021-07-06,0,Built devops solutions.
+5e8fbb4c-8f87-43c8-b51d-d67ee7d5c782,2d36949e-edf8-4b5b-91a7-5f8bfce72db9,Senior Fullstack Engineer,StartupXYZ,2023-04-27,,1,Built fullstack solutions.
+a1e0b5b4-8ce9-4f36-b37a-899c34f0cad2,2d36949e-edf8-4b5b-91a7-5f8bfce72db9,Fullstack Engineer,Consultancy,2021-03-08,2023-02-26,0,Built fullstack solutions.
+01bac07f-86b5-416d-bc6e-e026562592ee,cb6c94d0-80d3-4cf6-86c4-76b72f101fbb,Senior Design Engineer,E-Commerce Ltd,2024-09-18,,1,Built design solutions.
+2d73fa48-323b-4d73-9d6b-f687708fc952,cb6c94d0-80d3-4cf6-86c4-76b72f101fbb,Design Engineer,TechCorp,2021-12-03,2024-07-20,0,Built design solutions.
+43d95c91-9b2e-47ba-a934-f2534b90a772,84b9b6c3-dda5-4692-b3de-ccc5263a8152,Senior Devops Engineer,E-Commerce Ltd,2024-06-20,,1,Built devops solutions.
+b7df76a8-48fb-41fe-bdf7-458f3428a9e4,84b9b6c3-dda5-4692-b3de-ccc5263a8152,Devops Engineer,BigCo,2023-03-28,2024-04-21,0,Built devops solutions.
+5bd586de-196f-4ac3-ab40-b120e25b8680,9a36c538-4f36-4a1d-96a0-c646192ba745,Senior Fullstack Engineer,Fintech Co,2024-08-19,,1,Built fullstack solutions.
+80ab2bc5-e3c6-4a7e-b243-9c8caa99cee9,9a36c538-4f36-4a1d-96a0-c646192ba745,Fullstack Engineer,TechCorp,2022-04-02,2024-06-20,0,Built fullstack solutions.
+9559a125-c17a-4c47-9ebb-6b4b06bb707e,9a36c538-4f36-4a1d-96a0-c646192ba745,Fullstack Engineer,E-Commerce Ltd,2020-02-12,2022-02-01,0,Built fullstack solutions.
+27963ff1-85ef-4529-bd23-1c2244b81cd1,7fea8264-0280-47b9-8096-91315ae90638,Senior Blockchain Engineer,Consultancy,2025-08-14,,1,Built blockchain solutions.
+910ce556-41da-4873-b8f3-e2443ffd8185,7fea8264-0280-47b9-8096-91315ae90638,Blockchain Engineer,StartupXYZ,2024-04-21,2025-06-15,0,Built blockchain solutions.
+e562f20f-4eda-4269-83ec-f966fc71aaed,7fea8264-0280-47b9-8096-91315ae90638,Blockchain Engineer,E-Commerce Ltd,2022-05-02,2024-02-21,0,Built blockchain solutions.
+15c945e6-0669-436b-9c80-1462d2d14956,7fea8264-0280-47b9-8096-91315ae90638,Blockchain Engineer,Consultancy,2020-11-08,2022-03-03,0,Built blockchain solutions.
+a99f835c-fde1-43f9-a55c-4085ec212e59,6db0e38e-58ed-4e77-8234-94d63b94a70b,Senior Devops Engineer,Consultancy,2024-04-21,,1,Built devops solutions.
+e49bba9b-eebd-4813-a206-2b64cddaa21e,6db0e38e-58ed-4e77-8234-94d63b94a70b,Devops Engineer,TechCorp,2021-04-07,2024-02-21,0,Built devops solutions.
+7935dcf1-bd87-46ba-93cf-ecdc579aef89,6db0e38e-58ed-4e77-8234-94d63b94a70b,Devops Engineer,Consultancy,2019-08-16,2021-02-06,0,Built devops solutions.
+5068d383-46d4-434d-b128-3be56aee1787,6db0e38e-58ed-4e77-8234-94d63b94a70b,Devops Engineer,TechCorp,2017-03-29,2019-06-17,0,Built devops solutions.
+86898fd3-b9b3-48bc-ae92-f141ff972cdc,ea8dc35f-a34e-43df-b6ca-251332ffaef6,Senior Blockchain Engineer,BigCo,2023-06-26,,1,Built blockchain solutions.
+2a2381c5-a1d2-49bb-8a4e-628344ed4a47,496ef1d3-e82e-4ba0-9f41-fbfce5fdb2eb,Senior Ml Ai Engineer,Digital Agency,2024-11-17,,1,Built ml ai solutions.
+42943ba5-d7f1-4151-9a13-92cb69c470cc,496ef1d3-e82e-4ba0-9f41-fbfce5fdb2eb,Ml Ai Engineer,TechCorp,2022-08-30,2024-09-18,0,Built ml ai solutions.
+6c8f0a58-bc0e-4300-8e82-2c20704c7945,496ef1d3-e82e-4ba0-9f41-fbfce5fdb2eb,Ml Ai Engineer,E-Commerce Ltd,2019-09-15,2022-07-01,0,Built ml ai solutions.
+8ab3b434-603b-4450-908c-159b4278a063,496ef1d3-e82e-4ba0-9f41-fbfce5fdb2eb,Ml Ai Engineer,TechCorp,2018-08-21,2019-07-17,0,Built ml ai solutions.
+c65a6fce-2e3b-4633-a819-0e21fbdaf366,3706de12-2b06-461e-a1d9-e8737e771907,Senior Blockchain Engineer,Consultancy,2023-07-26,,1,Built blockchain solutions.
+ed5a0a3e-5369-4170-938d-08340035034e,3706de12-2b06-461e-a1d9-e8737e771907,Blockchain Engineer,Fintech Co,2022-05-02,2023-05-27,0,Built blockchain solutions.
+68124e25-f2e4-40b1-bdca-e1a616e43fec,3706de12-2b06-461e-a1d9-e8737e771907,Blockchain Engineer,TechCorp,2019-06-17,2022-03-03,0,Built blockchain solutions.
+6c257d7f-3a0b-484a-bd24-c53995d59d55,cf690255-e50b-4124-a75d-4f5b824c5df2,Senior Design Engineer,TechCorp,2024-06-20,,1,Built design solutions.
+86dc09b2-d7ce-4631-898b-ed893b4166b2,cf690255-e50b-4124-a75d-4f5b824c5df2,Design Engineer,Fintech Co,2022-05-02,2024-04-21,0,Built design solutions.
+dfdc0f5f-f397-4857-9b31-c53f02dd8007,cf690255-e50b-4124-a75d-4f5b824c5df2,Design Engineer,TechCorp,2021-02-06,2022-03-03,0,Built design solutions.
+dd74c79d-b054-433e-ace9-77645d0f3984,cf690255-e50b-4124-a75d-4f5b824c5df2,Design Engineer,Fintech Co,2019-10-15,2020-12-08,0,Built design solutions.
+f9b9e768-6ee4-42af-8f02-ba3ba4bbf3c0,9fc87c2b-20d2-4dc1-86e5-cb1cf4bf0088,Senior Mobile Engineer,TechCorp,2025-05-16,,1,Built mobile solutions.
+bba6f21c-974e-4004-85c5-2d836e402a6a,9fc87c2b-20d2-4dc1-86e5-cb1cf4bf0088,Mobile Engineer,Digital Agency,2022-12-28,2025-03-17,0,Built mobile solutions.
+f299a54f-e807-4590-a8d4-969924ba7c47,9fc87c2b-20d2-4dc1-86e5-cb1cf4bf0088,Mobile Engineer,StartupXYZ,2020-02-12,2022-10-29,0,Built mobile solutions.
+c9ddbc87-cc3a-422c-8ed0-6b2d5f920575,9fc87c2b-20d2-4dc1-86e5-cb1cf4bf0088,Mobile Engineer,Digital Agency,2017-08-26,2019-12-14,0,Built mobile solutions.
+3b26a26e-79b9-4735-9537-d051ed280fe1,3bbff999-1e17-4c3d-b165-6e650c4b10a2,Senior Blockchain Engineer,Fintech Co,2024-11-17,,1,Built blockchain solutions.
+deb0e61d-5e9e-4b0a-ac45-c9b3fe9e4f6f,3bbff999-1e17-4c3d-b165-6e650c4b10a2,Blockchain Engineer,StartupXYZ,2021-12-03,2024-09-18,0,Built blockchain solutions.
+435c39d3-fd34-4fc3-92aa-181fa936a041,3bbff999-1e17-4c3d-b165-6e650c4b10a2,Blockchain Engineer,BigCo,2020-11-08,2021-10-04,0,Built blockchain solutions.
+5a7a0fae-59e3-4347-97f2-66ff38492505,792984a3-84a9-4213-93c8-2bae8d94468c,Senior Design Engineer,Fintech Co,2025-08-14,,1,Built design solutions.
+8b925d6c-c555-49b9-af3d-cc536a77333b,792984a3-84a9-4213-93c8-2bae8d94468c,Design Engineer,BigCo,2023-08-25,2025-06-15,0,Built design solutions.
+3e123cb5-0280-4316-8057-d0ed9ee321ee,792984a3-84a9-4213-93c8-2bae8d94468c,Design Engineer,BigCo,2022-05-02,2023-06-26,0,Built design solutions.
+2fdb4489-d8b3-4801-ab81-b6691b38a9c9,792984a3-84a9-4213-93c8-2bae8d94468c,Design Engineer,TechCorp,2020-04-12,2022-03-03,0,Built design solutions.
+c33a6b38-0abd-4dbe-864a-f2412386b176,57a236c2-47c1-434c-a14f-eaa2806aab47,Senior Mobile Engineer,Consultancy,2024-01-22,,1,Built mobile solutions.
+1f6363ea-5cc2-469c-8566-2a49fa316983,57a236c2-47c1-434c-a14f-eaa2806aab47,Mobile Engineer,StartupXYZ,2023-01-27,2023-11-23,0,Built mobile solutions.
+b5d71ee6-3d3e-489e-971d-61d3d0816588,57a236c2-47c1-434c-a14f-eaa2806aab47,Mobile Engineer,TechCorp,2022-05-02,2022-11-28,0,Built mobile solutions.
+0d14890c-ce8b-424c-9c30-fc46ae17e8b7,57a236c2-47c1-434c-a14f-eaa2806aab47,Mobile Engineer,StartupXYZ,2019-08-16,2022-03-03,0,Built mobile solutions.
+7a851610-f7cf-4c51-8a9b-02e86944c969,1d4ade34-5bb4-4ab0-91b5-dc4b46a15550,Senior Fullstack Engineer,E-Commerce Ltd,2024-07-20,,1,Built fullstack solutions.
+772053df-6e7a-4d59-bd82-80a094f6cd67,2ca9ea39-5732-43cb-8636-0dfd3d8449d2,Senior Frontend Engineer,Fintech Co,2024-12-17,,1,Built frontend solutions.
+ca72ebd4-62cd-4d16-b1ca-c14f370b7db8,2ca9ea39-5732-43cb-8636-0dfd3d8449d2,Frontend Engineer,TechCorp,2023-12-23,2024-10-18,0,Built frontend solutions.
+4b8f2e10-f793-4078-9691-b4091d4c65ae,2ca9ea39-5732-43cb-8636-0dfd3d8449d2,Frontend Engineer,Fintech Co,2022-06-01,2023-10-24,0,Built frontend solutions.
+1391f1d1-4c9c-4fb3-8e7d-8c9fa56619fc,a05e15db-b3a5-4c9b-a500-602f46a51dcb,Senior Fullstack Engineer,TechCorp,2025-06-15,,1,Built fullstack solutions.
+abac471a-a4aa-463a-9753-348cdfc79acb,a05e15db-b3a5-4c9b-a500-602f46a51dcb,Fullstack Engineer,BigCo,2022-08-30,2025-04-16,0,Built fullstack solutions.
+be492c48-669b-4486-9cb9-9fb1acaf83c4,d2a2fa17-f4f9-4158-b6e2-d047bd4684a2,Senior Blockchain Engineer,BigCo,2025-08-14,,1,Built blockchain solutions.
+d123a8b0-a4a3-45fc-b1ed-efe16c785fd6,d2a2fa17-f4f9-4158-b6e2-d047bd4684a2,Blockchain Engineer,StartupXYZ,2022-08-30,2025-06-15,0,Built blockchain solutions.
+4c3bda21-8c37-4d0c-9f54-18b80b93374f,d2a2fa17-f4f9-4158-b6e2-d047bd4684a2,Blockchain Engineer,Consultancy,2021-07-06,2022-07-01,0,Built blockchain solutions.
+38f778df-fe29-47a1-836b-d3712e80d538,d2a2fa17-f4f9-4158-b6e2-d047bd4684a2,Blockchain Engineer,Digital Agency,2019-12-14,2021-05-07,0,Built blockchain solutions.
+454ab833-250d-4c4c-acb0-22faae2160d3,179836bf-c221-42cc-8afe-804c402e18a2,Senior Frontend Engineer,Fintech Co,2024-01-22,,1,Built frontend solutions.
+a0b695b6-6fe8-4358-b12a-5c8d8d051367,179836bf-c221-42cc-8afe-804c402e18a2,Frontend Engineer,StartupXYZ,2021-06-06,2023-11-23,0,Built frontend solutions.
+f5761469-b907-41bd-8d93-41365d918b6b,a5b09069-4037-4bb7-bc4c-d27c5ca2b8ca,Senior Design Engineer,E-Commerce Ltd,2023-08-25,,1,Built design solutions.
+559376ca-3eb3-445f-94e1-5a614523f64d,a5b09069-4037-4bb7-bc4c-d27c5ca2b8ca,Design Engineer,BigCo,2021-07-06,2023-06-26,0,Built design solutions.
+77f4fe50-5636-4435-b49a-ca38071b13d3,a5b09069-4037-4bb7-bc4c-d27c5ca2b8ca,Design Engineer,Fintech Co,2020-07-11,2021-05-07,0,Built design solutions.
+41420896-6654-4131-9136-7ddd56972448,2d5d30bf-8098-4f0e-93c9-633eb1adb4db,Senior Frontend Engineer,Fintech Co,2024-05-21,,1,Built frontend solutions.
+192dc3fb-53fc-439d-9bc0-45b1da50095f,683e99c1-87f4-41a6-aad3-119ec3a87594,Senior Devops Engineer,StartupXYZ,2024-04-21,,1,Built devops solutions.
+f0f2a19b-bf08-4cd1-8edc-0598280acc72,683e99c1-87f4-41a6-aad3-119ec3a87594,Devops Engineer,E-Commerce Ltd,2023-01-27,2024-02-21,0,Built devops solutions.
+195109aa-db72-41cb-bf88-8df7d260b7a0,683e99c1-87f4-41a6-aad3-119ec3a87594,Devops Engineer,TechCorp,2022-06-01,2022-11-28,0,Built devops solutions.
+39c93ffa-4ebc-4e35-9c3a-7f310dced2ff,d383baef-32e9-41e8-baa5-42a8ac98bb25,Senior Design Engineer,TechCorp,2025-09-13,,1,Built design solutions.
+9701a8b4-3016-4a38-bfe9-36e21a97ccc3,d383baef-32e9-41e8-baa5-42a8ac98bb25,Design Engineer,Consultancy,2022-08-30,2025-07-15,0,Built design solutions.
+f7938edf-bac1-40fa-806f-f704c54e159b,d383baef-32e9-41e8-baa5-42a8ac98bb25,Design Engineer,E-Commerce Ltd,2021-06-06,2022-07-01,0,Built design solutions.
+b64d0468-08f5-4631-bf26-89f5ce6fbbce,478bd79d-cd70-4af4-99d7-671fac4c5ec3,Senior Backend Engineer,StartupXYZ,2024-10-18,,1,Built backend solutions.
+2f191e02-855b-4d27-a4da-cd9823e9d164,478bd79d-cd70-4af4-99d7-671fac4c5ec3,Backend Engineer,StartupXYZ,2021-12-03,2024-08-19,0,Built backend solutions.
+7f5c58f7-7206-4a62-962a-cedc4ffda3e0,478bd79d-cd70-4af4-99d7-671fac4c5ec3,Backend Engineer,BigCo,2018-12-19,2021-10-04,0,Built backend solutions.
+1477e956-f759-4d85-bae1-748f0d463dfc,c571b8d1-7bdd-46c7-88e1-14453915bc99,Senior Fullstack Engineer,TechCorp,2024-12-17,,1,Built fullstack solutions.
+e0c0ee12-b2e6-4b28-9162-2a7051337e43,c571b8d1-7bdd-46c7-88e1-14453915bc99,Fullstack Engineer,E-Commerce Ltd,2024-01-22,2024-10-18,0,Built fullstack solutions.
+bedc828a-842e-49f9-ae3d-d0e3d7999b1b,c571b8d1-7bdd-46c7-88e1-14453915bc99,Fullstack Engineer,TechCorp,2023-06-26,2023-11-23,0,Built fullstack solutions.
+968b3916-007b-4f5f-8a40-ff1c48a7ff58,c571b8d1-7bdd-46c7-88e1-14453915bc99,Fullstack Engineer,StartupXYZ,2022-10-29,2023-04-27,0,Built fullstack solutions.
+1342da90-cfaf-44f4-a538-3787c9789b1a,ed5babef-5330-4d8f-865c-3f06f479ffaf,Senior Fullstack Engineer,Digital Agency,2024-09-18,,1,Built fullstack solutions.
+105bb0a1-8329-4c05-b12f-1b7c78441303,ed5babef-5330-4d8f-865c-3f06f479ffaf,Fullstack Engineer,Fintech Co,2021-11-03,2024-07-20,0,Built fullstack solutions.
+3bf025ed-497b-4140-bffc-ddda2807aaeb,37adba77-acbf-4bd9-a4a3-d459c83109e6,Senior Frontend Engineer,StartupXYZ,2025-06-15,,1,Built frontend solutions.
+ee171980-2555-4377-a62f-a7e081beda19,68e40bbc-de8e-4ead-9a8e-fc83a8008ebe,Senior Fullstack Engineer,BigCo,2023-11-23,,1,Built fullstack solutions.
+3e283836-5f05-4488-a3cf-161c7d699fc9,68e40bbc-de8e-4ead-9a8e-fc83a8008ebe,Fullstack Engineer,Fintech Co,2021-12-03,2023-09-24,0,Built fullstack solutions.
+f0631902-6fd8-4f18-979e-7c90352a8122,68e40bbc-de8e-4ead-9a8e-fc83a8008ebe,Fullstack Engineer,Digital Agency,2020-09-09,2021-10-04,0,Built fullstack solutions.
+e5de4e63-cecf-404d-aec1-93aee4a3fd73,623670f5-c6ee-4f98-acdc-075d54947a29,Senior Devops Engineer,Digital Agency,2025-04-16,,1,Built devops solutions.
+0a838767-d883-4113-8824-d316f86192f8,623670f5-c6ee-4f98-acdc-075d54947a29,Devops Engineer,Fintech Co,2022-08-30,2025-02-15,0,Built devops solutions.
+f6b74415-28b5-4f22-a2a3-9aa0be638148,dcfe345a-c673-41d0-93fd-db7f4ab5394a,Senior Mobile Engineer,Digital Agency,2025-07-15,,1,Built mobile solutions.
+e417b4ea-0b7e-4a25-99af-999c93605d86,dcfe345a-c673-41d0-93fd-db7f4ab5394a,Mobile Engineer,Fintech Co,2023-01-27,2025-05-16,0,Built mobile solutions.
+ecab5d58-3e29-4543-8d1e-b02c3ac175fd,dcfe345a-c673-41d0-93fd-db7f4ab5394a,Mobile Engineer,Fintech Co,2021-05-07,2022-11-28,0,Built mobile solutions.
+1a09101b-d0ec-4db8-89a7-b3498230401f,dcfe345a-c673-41d0-93fd-db7f4ab5394a,Mobile Engineer,Digital Agency,2018-11-19,2021-03-08,0,Built mobile solutions.
+9335e5bd-02b0-4b9a-bf54-c2c5f43ab0ad,480a4079-8c69-4146-a93b-8634bcb1d2cb,Senior Frontend Engineer,StartupXYZ,2025-06-15,,1,Built frontend solutions.
+d50bf5f7-3e5c-4657-bc17-50b736c7c858,480a4079-8c69-4146-a93b-8634bcb1d2cb,Frontend Engineer,E-Commerce Ltd,2024-11-17,2025-04-16,0,Built frontend solutions.
+801207a1-a721-4d16-80bd-01d0d53ae03a,9f62b2fc-12bd-495c-be56-6101db9c899b,Senior Frontend Engineer,Consultancy,2024-02-21,,1,Built frontend solutions.
+d3a76def-1669-4e0b-9635-eb8b87d8df91,9f62b2fc-12bd-495c-be56-6101db9c899b,Frontend Engineer,TechCorp,2022-07-31,2023-12-23,0,Built frontend solutions.
+2c814dc7-13da-41fd-a10e-d0dcd749cfac,e7229f45-3f03-4693-aab8-08cc7f9ffea1,Senior Fullstack Engineer,Consultancy,2025-09-13,,1,Built fullstack solutions.
+d1c856bd-a064-4ca8-a583-559ddc968d7b,e7229f45-3f03-4693-aab8-08cc7f9ffea1,Fullstack Engineer,StartupXYZ,2022-12-28,2025-07-15,0,Built fullstack solutions.
+c21f4fb5-eebb-4330-9262-68f3167c6912,c3bf409d-1ed1-4c59-9aae-4248918bb07b,Senior Fullstack Engineer,TechCorp,2025-07-15,,1,Built fullstack solutions.
+39a21e30-dff6-48ec-bf06-e2235a23b538,9c27f58d-099e-47c3-9fc1-b17eba2628da,Senior Blockchain Engineer,StartupXYZ,2024-12-17,,1,Built blockchain solutions.
+f728908f-6ba8-4995-8d7e-f19e48a57994,9c27f58d-099e-47c3-9fc1-b17eba2628da,Blockchain Engineer,TechCorp,2022-12-28,2024-10-18,0,Built blockchain solutions.
+9f8e89d6-475d-4ec9-9d40-34daaa5f71ef,9c27f58d-099e-47c3-9fc1-b17eba2628da,Blockchain Engineer,StartupXYZ,2020-09-09,2022-10-29,0,Built blockchain solutions.
+71c8e602-a0a9-4ab9-ba3a-09ffeecdff4e,9c27f58d-099e-47c3-9fc1-b17eba2628da,Blockchain Engineer,Fintech Co,2018-12-19,2020-07-11,0,Built blockchain solutions.
+d4f77e2e-7a45-4300-aca4-e331c90de3c6,33645144-8da1-47b9-9e73-16d8922a2d17,Senior Devops Engineer,StartupXYZ,2023-09-24,,1,Built devops solutions.
+9d3fd258-4ef7-4729-bb52-aa092f09c61b,0fc873c3-9f77-4bdf-be4f-1b8d831b6394,Senior Mobile Engineer,Fintech Co,2023-06-26,,1,Built mobile solutions.
+e97e3946-3ad0-452e-ac0a-811958076a3b,dcc32055-5d59-43c2-bd2f-bc07b62dccdc,Senior Backend Engineer,StartupXYZ,2024-09-18,,1,Built backend solutions.
+47566d68-ffe1-41bd-922b-10e1dbfe3aaa,fbcdffd7-18fe-47bc-bf1c-a8d4323c084b,Senior Devops Engineer,TechCorp,2023-08-25,,1,Built devops solutions.
+387e5e4f-b8a1-496d-b070-74921781a1e8,fbcdffd7-18fe-47bc-bf1c-a8d4323c084b,Devops Engineer,E-Commerce Ltd,2022-09-29,2023-06-26,0,Built devops solutions.
+42c42fb6-993e-49a3-abcb-a8520c5c7719,fbcdffd7-18fe-47bc-bf1c-a8d4323c084b,Devops Engineer,BigCo,2020-02-12,2022-07-31,0,Built devops solutions.
+c6eb94ba-e097-486b-8542-8743bb33f4a2,fbcdffd7-18fe-47bc-bf1c-a8d4323c084b,Devops Engineer,Digital Agency,2018-05-23,2019-12-14,0,Built devops solutions.
+f7839891-d8d8-4cd2-8944-3c0d8e11bbe3,0f20c4e9-9692-49c0-aaf1-3374f908ee1c,Senior Blockchain Engineer,Fintech Co,2023-07-26,,1,Built blockchain solutions.
+be002bbf-9002-471c-b682-60ee78363a39,37b9f781-7979-418b-a3a1-7cc1635543eb,Senior Design Engineer,Consultancy,2024-11-17,,1,Built design solutions.
+291098f7-a60b-451c-a334-0656241640e2,37b9f781-7979-418b-a3a1-7cc1635543eb,Design Engineer,Consultancy,2022-02-01,2024-09-18,0,Built design solutions.
+36487e3b-bdd1-436f-ae68-a3ba3833d25e,9c952905-2797-4cf9-84c9-5b666fff4f4a,Senior Design Engineer,TechCorp,2024-04-21,,1,Built design solutions.
+cc326c6a-1f39-4660-baa5-6fe302e1e41b,9c952905-2797-4cf9-84c9-5b666fff4f4a,Design Engineer,StartupXYZ,2022-06-01,2024-02-21,0,Built design solutions.
+49d91bb6-e54a-4a85-8dbd-6da18c00d447,9c952905-2797-4cf9-84c9-5b666fff4f4a,Design Engineer,StartupXYZ,2019-09-15,2022-04-02,0,Built design solutions.
+456fd990-6b06-47ec-9c5b-204219c181aa,7e1e43ef-97df-4945-acfd-2097842baa5f,Senior Backend Engineer,StartupXYZ,2024-04-21,,1,Built backend solutions.
+801681b4-2503-47ac-bf1d-a09c213bca52,7e1e43ef-97df-4945-acfd-2097842baa5f,Backend Engineer,E-Commerce Ltd,2022-05-02,2024-02-21,0,Built backend solutions.
+a9f6602b-79f5-4e8a-ba16-057d70617b5c,7e1e43ef-97df-4945-acfd-2097842baa5f,Backend Engineer,Consultancy,2019-04-18,2022-03-03,0,Built backend solutions.
+b8cb167c-0013-49f0-a923-057cba625c47,c0edad50-035a-43a9-99a0-1dc761308149,Senior Devops Engineer,TechCorp,2024-01-22,,1,Built devops solutions.
+34505540-a97d-4304-88af-4232f519bf87,c0edad50-035a-43a9-99a0-1dc761308149,Devops Engineer,Digital Agency,2021-05-07,2023-11-23,0,Built devops solutions.
+92ed759e-7a1f-46a6-adeb-7119d8831ebb,c0edad50-035a-43a9-99a0-1dc761308149,Devops Engineer,Consultancy,2019-10-15,2021-03-08,0,Built devops solutions.
+6d5979b0-7409-4d05-aee6-65867374500a,c0edad50-035a-43a9-99a0-1dc761308149,Devops Engineer,Fintech Co,2017-10-25,2019-08-16,0,Built devops solutions.
+b6ab168c-77b1-4a02-b41f-22e07233c05a,12adda37-2abf-4625-8903-d2efe01b8fca,Senior Devops Engineer,Digital Agency,2023-06-26,,1,Built devops solutions.
+a0263f32-f699-409e-a797-3fe72db4e7a9,12adda37-2abf-4625-8903-d2efe01b8fca,Devops Engineer,Fintech Co,2020-09-09,2023-04-27,0,Built devops solutions.
+b55148bc-7009-4061-9498-69973d86a169,7a59c9dc-7df3-41a2-92c2-d11dc4053579,Senior Ml Ai Engineer,Fintech Co,2023-05-27,,1,Built ml ai solutions.
+7a29047a-af6b-49a6-8358-5a37ea38ef5c,7a59c9dc-7df3-41a2-92c2-d11dc4053579,Ml Ai Engineer,TechCorp,2021-07-06,2023-03-28,0,Built ml ai solutions.
+d54ae674-9295-41d1-8e9d-c9e91caa097a,7a59c9dc-7df3-41a2-92c2-d11dc4053579,Ml Ai Engineer,E-Commerce Ltd,2018-10-20,2021-05-07,0,Built ml ai solutions.
+ff3d83ff-8ca8-4c2c-a5e4-19a742e90699,9408453e-4d9b-4548-9572-8a6d496bb1ee,Senior Frontend Engineer,Digital Agency,2024-09-18,,1,Built frontend solutions.
+d34ea09e-8dbd-4ae4-bdeb-8762591936c1,4e06dd10-470a-4f16-bbc6-06142c4f6e3b,Senior Mobile Engineer,Fintech Co,2024-01-22,,1,Built mobile solutions.
+102a384f-2714-4e83-b93e-9a81f6272038,4e06dd10-470a-4f16-bbc6-06142c4f6e3b,Mobile Engineer,BigCo,2023-05-27,2023-11-23,0,Built mobile solutions.
+bdcebe74-4e5d-490a-a646-336524cbb4a5,4e06dd10-470a-4f16-bbc6-06142c4f6e3b,Mobile Engineer,Consultancy,2022-09-29,2023-03-28,0,Built mobile solutions.
+84114016-5e85-4438-8301-c496929db6ea,4e06dd10-470a-4f16-bbc6-06142c4f6e3b,Mobile Engineer,StartupXYZ,2021-04-07,2022-07-31,0,Built mobile solutions.
+575e9dd1-f54d-4e92-bed9-d9d79a93d258,19f653d0-70b1-4e0b-89d2-8e98202f16e9,Senior Fullstack Engineer,Consultancy,2023-08-25,,1,Built fullstack solutions.
+d87127c3-2bdb-4e26-9159-be0b11223ab6,19f653d0-70b1-4e0b-89d2-8e98202f16e9,Fullstack Engineer,Digital Agency,2022-02-01,2023-06-26,0,Built fullstack solutions.
+0810684f-6609-4edc-a980-734f08491c95,19f653d0-70b1-4e0b-89d2-8e98202f16e9,Fullstack Engineer,StartupXYZ,2020-02-12,2021-12-03,0,Built fullstack solutions.
+b3faf291-0fcd-44f4-a9e8-3346ccf3e07c,9b16bce1-839e-41a7-b13d-58f23e9e3f47,Senior Design Engineer,Consultancy,2025-02-15,,1,Built design solutions.
+fd1b8950-7d05-4569-aff9-e103afb27a90,9b16bce1-839e-41a7-b13d-58f23e9e3f47,Design Engineer,Consultancy,2023-07-26,2024-12-17,0,Built design solutions.
+0a160d88-206a-49f0-abde-11b35ab624e4,c6ce2e12-6e3b-4954-9a34-51a9a94ce89e,Senior Ml Ai Engineer,StartupXYZ,2025-07-15,,1,Built ml ai solutions.
+c8190b33-f645-4859-b03a-837f49383e48,c6ce2e12-6e3b-4954-9a34-51a9a94ce89e,Ml Ai Engineer,Digital Agency,2024-06-20,2025-05-16,0,Built ml ai solutions.
+2d0bab58-7fe3-4f9c-8be2-579a0cf4a044,c6ce2e12-6e3b-4954-9a34-51a9a94ce89e,Ml Ai Engineer,Digital Agency,2022-01-02,2024-04-21,0,Built ml ai solutions.
+4be1758c-d4fe-4e92-98c3-81c4cbd1f697,c6ce2e12-6e3b-4954-9a34-51a9a94ce89e,Ml Ai Engineer,TechCorp,2019-02-17,2021-11-03,0,Built ml ai solutions.
+152b9a8a-2c02-455a-be37-000338d6f063,ec64a2f8-ea32-47b5-9a01-68a55cff20b8,Senior Frontend Engineer,TechCorp,2025-02-15,,1,Built frontend solutions.
+34047a88-8ba4-4568-9563-1f85f2c4bd1f,ec64a2f8-ea32-47b5-9a01-68a55cff20b8,Frontend Engineer,Consultancy,2022-07-01,2024-12-17,0,Built frontend solutions.
+0a2fb6e0-8206-43e0-b200-a6f264cdae08,ec64a2f8-ea32-47b5-9a01-68a55cff20b8,Frontend Engineer,Digital Agency,2020-11-08,2022-05-02,0,Built frontend solutions.
+485cc2dd-7bbc-452a-81b0-075cafa7cd96,cd57c6ad-3fb2-483b-a1ce-cab710af138e,Senior Design Engineer,Digital Agency,2024-02-21,,1,Built design solutions.
+c1c31ea9-46e0-4eed-8e32-4ae131730182,cd57c6ad-3fb2-483b-a1ce-cab710af138e,Design Engineer,BigCo,2021-02-06,2023-12-23,0,Built design solutions.
+932f4b14-35d0-49d8-9f87-edc310ce0891,cd57c6ad-3fb2-483b-a1ce-cab710af138e,Design Engineer,Digital Agency,2019-02-17,2020-12-08,0,Built design solutions.
+f18db5a3-721c-4b2a-9796-c5b9cc51326b,cd57c6ad-3fb2-483b-a1ce-cab710af138e,Design Engineer,Fintech Co,2016-12-29,2018-12-19,0,Built design solutions.
+7bf6579a-aa2e-401f-aa3a-a0253dde20d4,b28ac1b9-75e4-476a-855d-3dfc0d403928,Senior Frontend Engineer,Fintech Co,2024-09-18,,1,Built frontend solutions.
+7ff21e56-cb9e-463a-a2fd-d8ba1789c12c,eccfeff5-9ae7-4c9b-86d9-37178f5fbb13,Senior Backend Engineer,TechCorp,2025-05-16,,1,Built backend solutions.
+a8546b82-8ee3-4ff9-8f0f-1fb2d3b32725,eccfeff5-9ae7-4c9b-86d9-37178f5fbb13,Backend Engineer,Digital Agency,2024-01-22,2025-03-17,0,Built backend solutions.
+327ab99c-cb98-49d4-87f0-b3fa7d5282df,eccfeff5-9ae7-4c9b-86d9-37178f5fbb13,Backend Engineer,Fintech Co,2022-07-01,2023-11-23,0,Built backend solutions.
+57b1ed25-3341-434c-8c16-2815a5dbfa94,a96dcaa5-d546-419e-968e-7ce6d1a416e8,Senior Backend Engineer,StartupXYZ,2024-09-18,,1,Built backend solutions.
+7999265b-38e1-4e25-aed0-57100b7327d2,2905c20c-f594-4fc7-90de-b96983bfe229,Senior Design Engineer,StartupXYZ,2025-01-16,,1,Built design solutions.
+7061e262-5ffb-48d8-a2df-19785b4a2c88,2905c20c-f594-4fc7-90de-b96983bfe229,Design Engineer,E-Commerce Ltd,2022-01-02,2024-11-17,0,Built design solutions.
+05bf4579-39eb-4220-9c6a-50bc2322716b,5e746d8f-ec1e-4508-8c2f-e9554fef99d6,Senior Backend Engineer,Fintech Co,2024-07-20,,1,Built backend solutions.
+5e5ed47f-a56f-48c4-8141-58ab6faa13c8,5e746d8f-ec1e-4508-8c2f-e9554fef99d6,Backend Engineer,Consultancy,2022-09-29,2024-05-21,0,Built backend solutions.
+f714da60-e5c8-4f47-90f1-c68010e75ea5,5e746d8f-ec1e-4508-8c2f-e9554fef99d6,Backend Engineer,StartupXYZ,2021-11-03,2022-07-31,0,Built backend solutions.
+20164764-7ac0-4358-bf5f-b324732f96c5,5e746d8f-ec1e-4508-8c2f-e9554fef99d6,Backend Engineer,TechCorp,2019-01-18,2021-09-04,0,Built backend solutions.
+ac53ef5e-fd24-4aef-81eb-d300ae58c143,b34fb2b2-e025-4443-bee8-66a832ed7323,Senior Blockchain Engineer,E-Commerce Ltd,2023-07-26,,1,Built blockchain solutions.
+3de733ad-d4d4-4625-a551-8104cbbf9233,b34fb2b2-e025-4443-bee8-66a832ed7323,Blockchain Engineer,TechCorp,2021-08-05,2023-05-27,0,Built blockchain solutions.
+cc2ef31b-b40d-4783-8f60-f1db01a3db3b,b34fb2b2-e025-4443-bee8-66a832ed7323,Blockchain Engineer,Consultancy,2019-11-14,2021-06-06,0,Built blockchain solutions.
+08760c6b-ac49-4ece-a688-1de3cc3ffdaa,b34fb2b2-e025-4443-bee8-66a832ed7323,Blockchain Engineer,E-Commerce Ltd,2018-05-23,2019-09-15,0,Built blockchain solutions.
+17d504e3-d235-4e8b-bfaa-a2115c6a3cc9,5863f588-5a7f-41b2-87c9-5560a1aa5c37,Senior Design Engineer,Fintech Co,2025-06-15,,1,Built design solutions.
+389a3264-0b22-445c-a259-b348c163622e,5863f588-5a7f-41b2-87c9-5560a1aa5c37,Design Engineer,BigCo,2023-09-24,2025-04-16,0,Built design solutions.
+c5d59f83-42ca-4866-a88b-1967d6e8b374,bfcd0767-0665-4764-a7c3-1b48e8c8d2ef,Senior Design Engineer,Fintech Co,2023-12-23,,1,Built design solutions.
+55f19008-61d6-4bd7-bdf2-982e690bc050,bfcd0767-0665-4764-a7c3-1b48e8c8d2ef,Design Engineer,TechCorp,2022-11-28,2023-10-24,0,Built design solutions.
+c534840a-2427-46e3-a64b-dd10cbade9ab,bfcd0767-0665-4764-a7c3-1b48e8c8d2ef,Design Engineer,Consultancy,2021-05-07,2022-09-29,0,Built design solutions.
+ac531317-0ec7-4be1-9d59-2aea0f442baf,7926fce2-0944-4f45-ac98-b6ab8c9af4b2,Senior Mobile Engineer,BigCo,2025-02-15,,1,Built mobile solutions.
+856c6e5c-5726-4394-84fa-7ead04ea2190,7926fce2-0944-4f45-ac98-b6ab8c9af4b2,Mobile Engineer,Fintech Co,2023-11-23,2024-12-17,0,Built mobile solutions.
+b4a5155a-852b-427d-85fd-7b8e2c6557bd,3a04fd30-be90-4d84-ae50-83de4fcf58d3,Senior Backend Engineer,Consultancy,2023-07-26,,1,Built backend solutions.
+f5879dcc-d226-4461-bd82-7257e7392198,3a04fd30-be90-4d84-ae50-83de4fcf58d3,Backend Engineer,Digital Agency,2021-02-06,2023-05-27,0,Built backend solutions.
+fa4827cb-9df9-4287-a892-25b66d8d0ea2,3a04fd30-be90-4d84-ae50-83de4fcf58d3,Backend Engineer,Consultancy,2018-06-22,2020-12-08,0,Built backend solutions.
+3163438a-1568-4ef7-a9a5-bb55824a05a5,a7b4f22f-496a-447f-b194-e5dfd14aedfa,Senior Mobile Engineer,Digital Agency,2024-04-21,,1,Built mobile solutions.
+58194f83-4d4a-43b8-9726-ddf59b4d1ca2,a7b4f22f-496a-447f-b194-e5dfd14aedfa,Mobile Engineer,Consultancy,2023-04-27,2024-02-21,0,Built mobile solutions.
+48ef5f58-5464-4f68-86f3-f568764ad0a3,82009ff7-342e-4a94-a5ba-d2f66ff088d0,Senior Mobile Engineer,Digital Agency,2023-12-23,,1,Built mobile solutions.
+bc6a485e-d138-4101-8015-93d5cdce031f,82009ff7-342e-4a94-a5ba-d2f66ff088d0,Mobile Engineer,TechCorp,2023-02-26,2023-10-24,0,Built mobile solutions.
+8a32c98d-ead4-4574-9085-a2f3366f0783,82009ff7-342e-4a94-a5ba-d2f66ff088d0,Mobile Engineer,TechCorp,2021-03-08,2022-12-28,0,Built mobile solutions.
+2ae73f7a-c02d-4a38-b054-1d88049cb69b,82009ff7-342e-4a94-a5ba-d2f66ff088d0,Mobile Engineer,BigCo,2018-06-22,2021-01-07,0,Built mobile solutions.
+abff3343-9586-421b-b3f7-e099c7c7dd61,69af508f-0bd9-48f8-8339-bd9e89c11ef7,Senior Frontend Engineer,Fintech Co,2023-08-25,,1,Built frontend solutions.
+ca197428-3cbd-4cd6-b7ed-cf7d0f6c909d,69af508f-0bd9-48f8-8339-bd9e89c11ef7,Frontend Engineer,TechCorp,2021-01-07,2023-06-26,0,Built frontend solutions.
+faac7428-196a-4628-a1d6-29b480284e6d,69af508f-0bd9-48f8-8339-bd9e89c11ef7,Frontend Engineer,TechCorp,2020-05-12,2020-11-08,0,Built frontend solutions.
+7cc3b8de-4ab8-42fe-ba52-554083866f38,d07d665b-1df8-468d-aee3-2e81709763ca,Senior Backend Engineer,E-Commerce Ltd,2023-12-23,,1,Built backend solutions.
+56257e7a-ba48-433a-9422-807bdf22f47e,ae43c8fb-8f8b-473e-b61a-b1260f9d677b,Senior Devops Engineer,TechCorp,2023-09-24,,1,Built devops solutions.
+4b0e604a-466f-46f6-a602-33ffa1aed643,ae43c8fb-8f8b-473e-b61a-b1260f9d677b,Devops Engineer,StartupXYZ,2021-11-03,2023-07-26,0,Built devops solutions.
+7b6d87df-d241-4453-92e8-55bbb9e97ab3,ae43c8fb-8f8b-473e-b61a-b1260f9d677b,Devops Engineer,Digital Agency,2019-11-14,2021-09-04,0,Built devops solutions.
+c0736db6-b557-4cb2-81d8-3b1f4182ec8e,ae43c8fb-8f8b-473e-b61a-b1260f9d677b,Devops Engineer,Consultancy,2017-11-24,2019-09-15,0,Built devops solutions.
+0a704362-4d2b-4f85-91d6-067c3d83610b,52f23038-b395-465c-a9d2-c479d8323911,Senior Mobile Engineer,E-Commerce Ltd,2024-05-21,,1,Built mobile solutions.
+3ed97571-797c-4306-8125-5da7135e8e56,5509e0ae-f5aa-4211-987d-73b14f514b24,Senior Design Engineer,TechCorp,2025-02-15,,1,Built design solutions.
+41ebefb6-bc31-4f87-8b89-1de13860c9c7,5509e0ae-f5aa-4211-987d-73b14f514b24,Design Engineer,Fintech Co,2022-12-28,2024-12-17,0,Built design solutions.
+80e00583-0969-42a4-942a-923fb9e6b07a,b2af5334-544a-4da5-9ecc-87ee1ba7156b,Senior Ml Ai Engineer,E-Commerce Ltd,2023-08-25,,1,Built ml ai solutions.
+28e2b68f-4f48-43a4-bd1e-8fc8c7d6f7ad,b2af5334-544a-4da5-9ecc-87ee1ba7156b,Ml Ai Engineer,BigCo,2022-12-28,2023-06-26,0,Built ml ai solutions.
+0a607911-798c-4027-87a1-bf29eee40dbe,b2af5334-544a-4da5-9ecc-87ee1ba7156b,Ml Ai Engineer,E-Commerce Ltd,2021-05-07,2022-10-29,0,Built ml ai solutions.
+edb1b5de-7a84-40a7-9f12-8b4048e8e33d,b2af5334-544a-4da5-9ecc-87ee1ba7156b,Ml Ai Engineer,StartupXYZ,2019-06-17,2021-03-08,0,Built ml ai solutions.
+1f76a095-205d-4389-893c-27179c7e8177,675cef77-15c7-4ac1-8930-9418b84267ec,Senior Backend Engineer,TechCorp,2025-10-13,,1,Built backend solutions.
+293d7bb8-7df0-4c92-bba5-78cf1bd4145c,675cef77-15c7-4ac1-8930-9418b84267ec,Backend Engineer,Digital Agency,2025-01-16,2025-08-14,0,Built backend solutions.
+342e653c-c3bf-4b3b-9068-a9fd1f0874b3,675cef77-15c7-4ac1-8930-9418b84267ec,Backend Engineer,Fintech Co,2023-02-26,2024-11-17,0,Built backend solutions.
+4d887118-968b-4a06-a9dd-4b56edc25b93,ae0e918c-30e2-44ac-9907-a87d6e07fffd,Senior Devops Engineer,Consultancy,2023-04-27,,1,Built devops solutions.
+60ed7f7c-7a7c-42c8-aaba-9632b4eb598e,ae0e918c-30e2-44ac-9907-a87d6e07fffd,Devops Engineer,Fintech Co,2021-02-06,2023-02-26,0,Built devops solutions.
+2e792b3f-a945-4eea-9aef-9aa92414f9e5,ae0e918c-30e2-44ac-9907-a87d6e07fffd,Devops Engineer,TechCorp,2018-07-22,2020-12-08,0,Built devops solutions.
+9900e9c9-a439-4f70-b52a-7bbf10c9be95,6d052a5f-2373-46a0-b737-33fe52b8df5c,Senior Devops Engineer,Fintech Co,2023-06-26,,1,Built devops solutions.
+47e7c509-28e2-44b6-b7cc-c781bee859e2,6d052a5f-2373-46a0-b737-33fe52b8df5c,Devops Engineer,Fintech Co,2020-10-09,2023-04-27,0,Built devops solutions.
+d79cd745-b106-43f0-ab56-93228e44c362,6d052a5f-2373-46a0-b737-33fe52b8df5c,Devops Engineer,Consultancy,2020-01-13,2020-08-10,0,Built devops solutions.
+ca6ba21a-ae04-4860-868c-e299d2928129,3d921c5b-9191-4a5b-b7cd-835ba52b265d,Senior Frontend Engineer,E-Commerce Ltd,2025-04-16,,1,Built frontend solutions.
+5db9a23e-d2f0-4516-8395-6be85ce965f7,0737f992-fbc6-47fb-8f30-771d476c2a44,Senior Mobile Engineer,E-Commerce Ltd,2024-10-18,,1,Built mobile solutions.
+3cdbad44-2c66-4c52-bcd8-74944c81c390,f934b6c7-7cd2-4948-98dc-8d52ed3b14a4,Senior Frontend Engineer,BigCo,2023-05-27,,1,Built frontend solutions.
+6149e48f-e602-4f65-bd98-5608cc5af0bf,f934b6c7-7cd2-4948-98dc-8d52ed3b14a4,Frontend Engineer,TechCorp,2021-01-07,2023-03-28,0,Built frontend solutions.
+ed3988b5-ea68-41a4-866a-5de19589c5e0,f934b6c7-7cd2-4948-98dc-8d52ed3b14a4,Frontend Engineer,BigCo,2019-06-17,2020-11-08,0,Built frontend solutions.
+294e3559-cd3e-4b9c-ac56-1b4ec03878f9,f934b6c7-7cd2-4948-98dc-8d52ed3b14a4,Frontend Engineer,Consultancy,2017-09-25,2019-04-18,0,Built frontend solutions.
+a51fe6b0-eb68-45da-b279-cbddddc44d3d,e67c4c8b-f41b-4e9d-9ade-5050b3fbbfba,Senior Blockchain Engineer,E-Commerce Ltd,2024-08-19,,1,Built blockchain solutions.
+a9e0e92c-7505-4765-b6fb-d40ccb0b2102,75e47e91-af90-4035-86b5-8691320ff522,Senior Backend Engineer,TechCorp,2023-07-26,,1,Built backend solutions.
+083bbc91-b4e5-43eb-820d-e0b941c34048,75e47e91-af90-4035-86b5-8691320ff522,Backend Engineer,StartupXYZ,2022-12-28,2023-05-27,0,Built backend solutions.
+dea9b4b2-c332-46fa-a78b-d7170c595b88,75e47e91-af90-4035-86b5-8691320ff522,Backend Engineer,Digital Agency,2020-03-13,2022-10-29,0,Built backend solutions.
+0d3c16eb-e43b-4778-b238-5ddcc11e7b21,cac1f5fc-f45d-4103-915f-c6e40b0627f6,Senior Devops Engineer,E-Commerce Ltd,2025-09-13,,1,Built devops solutions.
+d5b02c16-b1a8-41ec-8f5f-7e6d68c877b7,cac1f5fc-f45d-4103-915f-c6e40b0627f6,Devops Engineer,TechCorp,2023-11-23,2025-07-15,0,Built devops solutions.
+2dd71143-cc6b-421e-803f-323981b430a4,cac1f5fc-f45d-4103-915f-c6e40b0627f6,Devops Engineer,Digital Agency,2021-05-07,2023-09-24,0,Built devops solutions.
+2738a043-32a9-4c3f-8147-2d3fce232b5b,3cb042e5-73f2-4fc8-8648-d0bc212516f4,Senior Fullstack Engineer,TechCorp,2023-04-27,,1,Built fullstack solutions.
+b788e3e0-5c0b-4d16-962b-8aed8bb5ac0a,3cb042e5-73f2-4fc8-8648-d0bc212516f4,Fullstack Engineer,StartupXYZ,2020-06-11,2023-02-26,0,Built fullstack solutions.
+690eab08-a81f-4f87-83b6-9469899e6bae,e6c85949-44b4-4e43-87be-8929110f8aee,Senior Devops Engineer,Digital Agency,2023-04-27,,1,Built devops solutions.
+3be5c79b-d32c-4614-a373-cbc0b316086a,e6c85949-44b4-4e43-87be-8929110f8aee,Devops Engineer,Consultancy,2021-04-07,2023-02-26,0,Built devops solutions.
+350bb9a6-2acc-4f10-a608-863866450655,e6c85949-44b4-4e43-87be-8929110f8aee,Devops Engineer,Fintech Co,2020-09-09,2021-02-06,0,Built devops solutions.
+e10cc0da-7b48-4a4a-af87-3635c14a93fe,e6c85949-44b4-4e43-87be-8929110f8aee,Devops Engineer,Digital Agency,2020-02-12,2020-07-11,0,Built devops solutions.
+2e6c47f3-e3b4-480e-8688-bb64adf1155e,9b6487be-ffb3-4e0e-928c-3853f15dade2,Senior Devops Engineer,Digital Agency,2024-08-19,,1,Built devops solutions.
+073c361e-d32b-4707-bf91-1dd45afb064c,9b6487be-ffb3-4e0e-928c-3853f15dade2,Devops Engineer,E-Commerce Ltd,2022-02-01,2024-06-20,0,Built devops solutions.
+a33033be-73a1-40eb-85f3-32cac404f5ce,9b6487be-ffb3-4e0e-928c-3853f15dade2,Devops Engineer,StartupXYZ,2019-04-18,2021-12-03,0,Built devops solutions.
+a26bd52d-9662-40d4-9d71-2f7eebfc509e,9b6487be-ffb3-4e0e-928c-3853f15dade2,Devops Engineer,BigCo,2017-11-24,2019-02-17,0,Built devops solutions.
+69568403-2cd7-4863-a090-2d0ef066a56c,4dfd4026-4f34-4230-900d-7a170fca313d,Senior Backend Engineer,E-Commerce Ltd,2025-03-17,,1,Built backend solutions.
+01cf0fab-b4aa-471b-a8ff-ec20f07228a7,4dfd4026-4f34-4230-900d-7a170fca313d,Backend Engineer,BigCo,2024-01-22,2025-01-16,0,Built backend solutions.
+7cd90db7-2cdf-42be-bd2f-837e99c9c435,94a0c605-ca9d-4bee-8c7f-2f299aff1413,Senior Design Engineer,Fintech Co,2024-04-21,,1,Built design solutions.
+9494fabf-510e-40fd-be9a-49aaf99f67ac,94a0c605-ca9d-4bee-8c7f-2f299aff1413,Design Engineer,E-Commerce Ltd,2022-04-02,2024-02-21,0,Built design solutions.
+3747c1d9-ec7d-4b54-9b1e-42434b3ef32d,eafd1606-bb0c-44b9-9d98-e08d213b10e4,Senior Ml Ai Engineer,Fintech Co,2025-07-15,,1,Built ml ai solutions.
+2908187b-a442-4e4d-9a65-4fa3a716723a,eafd1606-bb0c-44b9-9d98-e08d213b10e4,Ml Ai Engineer,Consultancy,2022-11-28,2025-05-16,0,Built ml ai solutions.
+2660b61a-3415-4880-a0c7-86d2c52978cc,8526db93-6eee-466d-8e9e-052a815b76ea,Senior Fullstack Engineer,TechCorp,2023-12-23,,1,Built fullstack solutions.
+eba0b946-be5a-423e-bcb5-883534317e50,0df0cd1f-6fb6-43a1-ae0d-e6198086c914,Senior Backend Engineer,StartupXYZ,2024-06-20,,1,Built backend solutions.
+6796ab95-8f73-4a3f-8ae5-b2f3f3b60912,038afc38-419e-4523-8bf0-4db74187a20d,Senior Fullstack Engineer,TechCorp,2023-12-23,,1,Built fullstack solutions.
+6b8452f0-230f-4b7f-9dbf-3aabb31ed32d,038afc38-419e-4523-8bf0-4db74187a20d,Fullstack Engineer,StartupXYZ,2021-09-04,2023-10-24,0,Built fullstack solutions.
+8f189c95-3821-422e-b977-de15cca2d437,a48c70aa-99d2-4665-99ce-cab3bbfd79be,Senior Backend Engineer,TechCorp,2024-06-20,,1,Built backend solutions.
+70e0ab7d-c514-40d4-bdfc-914dd60706be,a48c70aa-99d2-4665-99ce-cab3bbfd79be,Backend Engineer,BigCo,2022-10-29,2024-04-21,0,Built backend solutions.
+09b2f406-30fc-48cc-8b33-b7f166095ce6,c40df368-2c79-4cc4-be2d-17fe007e7ec1,Senior Mobile Engineer,E-Commerce Ltd,2024-01-22,,1,Built mobile solutions.
+84f31ccc-452c-4aca-8edd-989584a4d6d7,c40df368-2c79-4cc4-be2d-17fe007e7ec1,Mobile Engineer,Fintech Co,2021-10-04,2023-11-23,0,Built mobile solutions.
+145987c7-67a5-43f1-994b-7b894e27511c,c40df368-2c79-4cc4-be2d-17fe007e7ec1,Mobile Engineer,Digital Agency,2021-01-07,2021-08-05,0,Built mobile solutions.
+f8e07da4-1f6f-4a60-8f48-c6b2922214b0,c40df368-2c79-4cc4-be2d-17fe007e7ec1,Mobile Engineer,Digital Agency,2019-09-15,2020-11-08,0,Built mobile solutions.
+419e4a1d-1098-42a6-8e3b-c710fe2b75ae,9c9eaefe-3dae-492a-a9cd-20201c31ced6,Senior Backend Engineer,StartupXYZ,2023-05-27,,1,Built backend solutions.
+d98f0afc-c062-4cf0-869a-8f584b7b1594,9c9eaefe-3dae-492a-a9cd-20201c31ced6,Backend Engineer,Consultancy,2022-08-30,2023-03-28,0,Built backend solutions.
+867528db-9a4c-48b2-b64e-dba8c9b68d2a,9c9eaefe-3dae-492a-a9cd-20201c31ced6,Backend Engineer,E-Commerce Ltd,2020-10-09,2022-07-01,0,Built backend solutions.
+7b3b5dc4-0756-47bc-800d-ec92c7e86393,9c9eaefe-3dae-492a-a9cd-20201c31ced6,Backend Engineer,BigCo,2019-03-19,2020-08-10,0,Built backend solutions.
+09ba71e1-46f8-4d5b-96fc-8d8136675dc7,bba4a9e8-a3dc-4e1a-97b9-f938cf6f7982,Senior Mobile Engineer,Digital Agency,2023-09-24,,1,Built mobile solutions.
+71aa3646-cf0e-48ed-8b9c-37d6997c5411,bba4a9e8-a3dc-4e1a-97b9-f938cf6f7982,Mobile Engineer,StartupXYZ,2021-06-06,2023-07-26,0,Built mobile solutions.
+928db867-ffcb-42a7-b978-645639549b9d,347da82d-665c-428d-b2d6-07d763d5d0ec,Senior Design Engineer,Consultancy,2024-11-17,,1,Built design solutions.
+0d5b8287-fb19-435f-8708-efe27e5298c1,dc071ffd-6f1b-4792-8dd7-144d23376e34,Senior Frontend Engineer,BigCo,2023-07-26,,1,Built frontend solutions.
+402b0a5a-125b-4779-b3fe-d95d5b2e596a,dc071ffd-6f1b-4792-8dd7-144d23376e34,Frontend Engineer,Digital Agency,2022-01-02,2023-05-27,0,Built frontend solutions.
+613de6dc-c817-4bf6-a617-914d4b400831,dc071ffd-6f1b-4792-8dd7-144d23376e34,Frontend Engineer,Fintech Co,2019-01-18,2021-11-03,0,Built frontend solutions.
+9698df43-f5af-4e12-83f3-5380fcc0548c,dc071ffd-6f1b-4792-8dd7-144d23376e34,Frontend Engineer,E-Commerce Ltd,2016-11-29,2018-11-19,0,Built frontend solutions.
+dfa0b306-6461-4ca6-942d-26b262100c3a,7f2dc283-e5c5-4430-9b42-a0bbfb8632e0,Senior Devops Engineer,Digital Agency,2024-04-21,,1,Built devops solutions.
+d5ad344f-6233-42fc-afcf-8b8ea0d1bd38,7f2dc283-e5c5-4430-9b42-a0bbfb8632e0,Devops Engineer,BigCo,2022-09-29,2024-02-21,0,Built devops solutions.
+7d0955f0-0f55-43e0-9037-b482400c494a,7f2dc283-e5c5-4430-9b42-a0bbfb8632e0,Devops Engineer,Digital Agency,2019-12-14,2022-07-31,0,Built devops solutions.
+f2e47a25-2917-48ab-bd4b-d4414887f93b,0301e851-75d5-422a-aaf9-1afb4a074e72,Senior Devops Engineer,E-Commerce Ltd,2025-01-16,,1,Built devops solutions.
+2bc86590-60c2-477a-9c18-be7cdc6041d6,2fc0f09d-466d-4e76-9d47-81370149ca9b,Senior Design Engineer,Consultancy,2023-11-23,,1,Built design solutions.
+6b94647b-ed77-4281-b494-8774964fe2bb,2fc0f09d-466d-4e76-9d47-81370149ca9b,Design Engineer,TechCorp,2022-03-03,2023-09-24,0,Built design solutions.
+5c1839d7-cedf-4f03-93be-b4137f752325,2fc0f09d-466d-4e76-9d47-81370149ca9b,Design Engineer,Consultancy,2019-03-19,2022-01-02,0,Built design solutions.
+09e3401a-d47e-471f-8b55-6618aa22f49c,44873e67-c80f-4755-a82f-698920d23bcf,Senior Ml Ai Engineer,StartupXYZ,2024-08-19,,1,Built ml ai solutions.
+4fa5cf75-2230-4f1d-8c34-11f55052ff81,44873e67-c80f-4755-a82f-698920d23bcf,Ml Ai Engineer,Digital Agency,2022-07-31,2024-06-20,0,Built ml ai solutions.
+6bf95891-17ea-4cd9-8889-01325eb456f0,44873e67-c80f-4755-a82f-698920d23bcf,Ml Ai Engineer,Fintech Co,2021-01-07,2022-06-01,0,Built ml ai solutions.
+13e4b97e-f912-46d9-bd40-5132ade54261,44873e67-c80f-4755-a82f-698920d23bcf,Ml Ai Engineer,Digital Agency,2019-08-16,2020-11-08,0,Built ml ai solutions.
+ad033d84-b373-410a-b087-7ccf247bcdd9,2ad24c8b-0eb1-4d5d-a5aa-0e405aedd634,Senior Backend Engineer,StartupXYZ,2023-10-24,,1,Built backend solutions.
+c0417e37-9a99-46f9-8f97-734c0e4192cd,8932a01b-7f2f-41a0-b257-f4b81caadff5,Senior Blockchain Engineer,StartupXYZ,2023-09-24,,1,Built blockchain solutions.
+2d0e78a8-130f-48f6-9ad1-29c4c2ee0d55,8932a01b-7f2f-41a0-b257-f4b81caadff5,Blockchain Engineer,StartupXYZ,2022-04-02,2023-07-26,0,Built blockchain solutions.
+4e6d4f5d-2511-47dc-9139-48b407ca0cbb,8932a01b-7f2f-41a0-b257-f4b81caadff5,Blockchain Engineer,BigCo,2019-10-15,2022-02-01,0,Built blockchain solutions.
+2a9194ec-d441-4ca3-bb90-8144400b326d,8932a01b-7f2f-41a0-b257-f4b81caadff5,Blockchain Engineer,Consultancy,2016-09-30,2019-08-16,0,Built blockchain solutions.
+a1fee72c-353d-460b-80b9-f642993bf7a7,6a92faec-3154-49c7-9888-3a3c82fb67f8,Senior Frontend Engineer,Digital Agency,2024-09-18,,1,Built frontend solutions.
+0199f6ea-6d34-4952-b3d2-1eb8cf578d85,6a92faec-3154-49c7-9888-3a3c82fb67f8,Frontend Engineer,Consultancy,2023-12-23,2024-07-20,0,Built frontend solutions.
+d265d1a2-a979-425b-b16a-417d32015c0e,04e36126-bc71-41b5-9fce-448120185d1b,Senior Ml Ai Engineer,E-Commerce Ltd,2024-05-21,,1,Built ml ai solutions.
+d1d8e532-512f-470a-9604-bba58ab827f8,04e36126-bc71-41b5-9fce-448120185d1b,Ml Ai Engineer,E-Commerce Ltd,2023-02-26,2024-03-22,0,Built ml ai solutions.
+27079416-2eb3-4e42-8e8a-ac135408cf7e,04e36126-bc71-41b5-9fce-448120185d1b,Ml Ai Engineer,Digital Agency,2021-08-05,2022-12-28,0,Built ml ai solutions.
+786002b2-4d26-487c-8528-49e95b7f87af,85af672c-5c1a-4e64-839f-ec117fdd22ec,Senior Backend Engineer,TechCorp,2024-10-18,,1,Built backend solutions.
+463eae44-7c09-48a3-ac96-178d39f4754d,85af672c-5c1a-4e64-839f-ec117fdd22ec,Backend Engineer,StartupXYZ,2023-03-28,2024-08-19,0,Built backend solutions.
+08d1eb03-c4a8-4041-a118-69c68d97005c,85af672c-5c1a-4e64-839f-ec117fdd22ec,Backend Engineer,Consultancy,2020-07-11,2023-01-27,0,Built backend solutions.
+c3186396-ea35-4e34-8c90-ce36fef3dbd8,f8e8f063-dd98-4fba-8ad9-ad1a852f34de,Senior Devops Engineer,Digital Agency,2023-10-24,,1,Built devops solutions.
+309f080f-8f55-4f84-bbc6-a5211bdd2574,f8e8f063-dd98-4fba-8ad9-ad1a852f34de,Devops Engineer,Digital Agency,2022-10-29,2023-08-25,0,Built devops solutions.
+c646050f-8113-4460-b0f8-e0e1da36bb0d,ba8430b7-1bcc-48dc-86df-962c265dbf99,Senior Mobile Engineer,Fintech Co,2024-04-21,,1,Built mobile solutions.
+615d9790-3ac9-4fb4-b460-5a35e6615d3d,c548ec61-18e5-400a-a6d2-c99c0c36350a,Senior Frontend Engineer,Fintech Co,2023-10-24,,1,Built frontend solutions.
+3d2fe999-a022-449b-8d29-8a82c23a17ce,c548ec61-18e5-400a-a6d2-c99c0c36350a,Frontend Engineer,Consultancy,2022-03-03,2023-08-25,0,Built frontend solutions.
+7850c926-c839-4e82-ac68-5b14f958f62b,77275936-3937-4c2e-99d1-9a7e893e4a30,Senior Frontend Engineer,TechCorp,2025-04-16,,1,Built frontend solutions.
+5fb5e4dc-1bdd-4a00-ae72-f71b89a0dbd1,77275936-3937-4c2e-99d1-9a7e893e4a30,Frontend Engineer,TechCorp,2023-02-26,2025-02-15,0,Built frontend solutions.
+89911776-c8f3-4764-994c-14cb2f43a2d9,77275936-3937-4c2e-99d1-9a7e893e4a30,Frontend Engineer,E-Commerce Ltd,2020-12-08,2022-12-28,0,Built frontend solutions.
+d359503e-6511-4ecc-8671-ad059e961046,b1507287-1213-4f2a-b433-f00c49cd3d1c,Senior Fullstack Engineer,BigCo,2024-10-18,,1,Built fullstack solutions.
+24e84d4c-3e6a-41ab-bb10-17e7e954ee83,b1507287-1213-4f2a-b433-f00c49cd3d1c,Fullstack Engineer,Consultancy,2023-06-26,2024-08-19,0,Built fullstack solutions.
+83d21ef7-7335-433d-b482-ba2d676c42a3,b1507287-1213-4f2a-b433-f00c49cd3d1c,Fullstack Engineer,E-Commerce Ltd,2021-03-08,2023-04-27,0,Built fullstack solutions.
+f1c20a86-4cbb-40f0-bdd3-f7c4e70f87c2,b1507287-1213-4f2a-b433-f00c49cd3d1c,Fullstack Engineer,Digital Agency,2019-07-17,2021-01-07,0,Built fullstack solutions.
+41b5e535-c919-4148-8c5d-01160099b451,a3a02a70-7ca5-4154-8d70-b2ba46a41306,Senior Mobile Engineer,Consultancy,2025-06-15,,1,Built mobile solutions.
+267994e0-76af-46be-b6aa-aa07d3ebf577,a3a02a70-7ca5-4154-8d70-b2ba46a41306,Mobile Engineer,Digital Agency,2023-01-27,2025-04-16,0,Built mobile solutions.
+83573e29-7241-4e45-bb2f-0e13fd15f156,a3a02a70-7ca5-4154-8d70-b2ba46a41306,Mobile Engineer,BigCo,2021-12-03,2022-11-28,0,Built mobile solutions.
+4d376db5-db5c-4ec1-b583-e7547b7219fc,7129a758-f3d2-4009-9a0a-ba36778d7521,Senior Ml Ai Engineer,StartupXYZ,2023-11-23,,1,Built ml ai solutions.
+4aab5b97-2d60-46ca-9bcb-f3fc6cd1e3b3,7129a758-f3d2-4009-9a0a-ba36778d7521,Ml Ai Engineer,Fintech Co,2022-07-31,2023-09-24,0,Built ml ai solutions.
+d7c9bf80-4d0b-483e-93d8-9c8f986fbec1,7129a758-f3d2-4009-9a0a-ba36778d7521,Ml Ai Engineer,E-Commerce Ltd,2021-05-07,2022-06-01,0,Built ml ai solutions.
+c6af16d9-08b2-44eb-b7b1-7ad51196b2ca,4276d42c-4c0b-4841-b221-632e6c48e0eb,Senior Blockchain Engineer,StartupXYZ,2023-11-23,,1,Built blockchain solutions.
+b12df0c5-4499-4bee-8a2b-4101c4512af5,4276d42c-4c0b-4841-b221-632e6c48e0eb,Blockchain Engineer,Fintech Co,2021-11-03,2023-09-24,0,Built blockchain solutions.
+fefb8258-6f91-4cfa-a0a3-3a12e6b5d9b9,4276d42c-4c0b-4841-b221-632e6c48e0eb,Blockchain Engineer,Consultancy,2019-02-17,2021-09-04,0,Built blockchain solutions.
+cb95dd9d-7e75-44d7-aa16-7d4c3c03015b,4276d42c-4c0b-4841-b221-632e6c48e0eb,Blockchain Engineer,E-Commerce Ltd,2016-11-29,2018-12-19,0,Built blockchain solutions.
+c40b1388-4ec1-4403-9cec-e16a7d27b6d2,f1e72511-2d5c-4962-9d7c-9319b3543ad7,Senior Blockchain Engineer,E-Commerce Ltd,2023-07-26,,1,Built blockchain solutions.
+aa82f98a-232c-4da3-a7bd-dc6d9c71a1d4,f1e72511-2d5c-4962-9d7c-9319b3543ad7,Blockchain Engineer,TechCorp,2022-08-30,2023-05-27,0,Built blockchain solutions.
+610e18fb-6a12-412d-91ac-9401b67d8e60,068143f0-0dc3-462b-8870-5422535ee345,Senior Frontend Engineer,TechCorp,2023-04-27,,1,Built frontend solutions.
+1f6502bd-3843-4153-9e8b-2d6ddce445cf,068143f0-0dc3-462b-8870-5422535ee345,Frontend Engineer,Fintech Co,2022-02-01,2023-02-26,0,Built frontend solutions.
+ffffc10e-f30a-4e06-b16b-589d64022394,ba249ab4-2a16-485f-b72b-02a95cc00040,Senior Ml Ai Engineer,BigCo,2025-10-13,,1,Built ml ai solutions.
+ecec4981-76c7-4ea9-893a-37527a457a2d,2dc32538-68fb-41b3-ba2f-e01b559266ff,Senior Design Engineer,E-Commerce Ltd,2024-05-21,,1,Built design solutions.
+73fbd2d4-3d43-4f22-8ff3-ecdfab340187,2dc32538-68fb-41b3-ba2f-e01b559266ff,Design Engineer,E-Commerce Ltd,2021-10-04,2024-03-22,0,Built design solutions.
+46b8f545-480b-4308-86b2-e1f7f217e4da,5f8fdd0c-bab0-4402-b5fa-8982adcdd4e3,Senior Ml Ai Engineer,StartupXYZ,2025-10-13,,1,Built ml ai solutions.
+cdfa5dc3-e13d-4698-a6e0-e96d72b3d20c,5f8fdd0c-bab0-4402-b5fa-8982adcdd4e3,Ml Ai Engineer,BigCo,2024-09-18,2025-08-14,0,Built ml ai solutions.
+237435e3-29c0-4894-8fe2-1e1cf745c240,6e98a464-3956-4715-996d-5a459828b532,Senior Design Engineer,TechCorp,2025-04-16,,1,Built design solutions.
+61036b03-ec53-4b92-9f61-485debce98ce,6e98a464-3956-4715-996d-5a459828b532,Design Engineer,StartupXYZ,2024-07-20,2025-02-15,0,Built design solutions.
+825db3ec-4bfc-43bf-8999-5c262e2882e6,6e98a464-3956-4715-996d-5a459828b532,Design Engineer,StartupXYZ,2021-08-05,2024-05-21,0,Built design solutions.
+d25e11ae-d34c-4840-87be-c64224fe2e0c,b3d7022f-b6dd-47c3-aa9a-76f096581948,Senior Devops Engineer,TechCorp,2025-01-16,,1,Built devops solutions.
+b038bf0f-bbae-46bb-8e48-126dee72b349,b3d7022f-b6dd-47c3-aa9a-76f096581948,Devops Engineer,BigCo,2022-03-03,2024-11-17,0,Built devops solutions.
+aff12abd-e6a4-4daa-9240-8fecf48ed3a8,6bf6d84c-31c4-42c9-a4ae-2df5ff051fa1,Senior Mobile Engineer,StartupXYZ,2024-02-21,,1,Built mobile solutions.
+503dc740-955f-49b2-9cea-f3d36a4acbd7,6bf6d84c-31c4-42c9-a4ae-2df5ff051fa1,Mobile Engineer,Consultancy,2022-09-29,2023-12-23,0,Built mobile solutions.
+8d79f441-0286-4137-8dab-1f2d9f3ddfc2,6bf6d84c-31c4-42c9-a4ae-2df5ff051fa1,Mobile Engineer,TechCorp,2019-12-14,2022-07-31,0,Built mobile solutions.
+583da9eb-f26d-4be2-a880-93326a2236b5,6bf6d84c-31c4-42c9-a4ae-2df5ff051fa1,Mobile Engineer,StartupXYZ,2018-12-19,2019-10-15,0,Built mobile solutions.
+1e608e9d-fee9-4b23-9027-fac4340636ad,e9134477-43d7-4bb6-a1e2-a4c7783ea732,Senior Fullstack Engineer,TechCorp,2024-01-22,,1,Built fullstack solutions.
+14b0161d-efa8-4c10-a61e-d79c5d386cfd,55cc362e-7371-49d1-9a85-13101f4daa78,Senior Fullstack Engineer,StartupXYZ,2024-10-18,,1,Built fullstack solutions.
+b52b8bc8-180d-4bbd-a5ee-c87e441e80a5,0a7a9ceb-fb96-4a60-a26c-28838058b697,Senior Fullstack Engineer,E-Commerce Ltd,2025-04-16,,1,Built fullstack solutions.
+fc16bf0e-9836-45d2-a503-3346373ca789,0a7a9ceb-fb96-4a60-a26c-28838058b697,Fullstack Engineer,Digital Agency,2022-12-28,2025-02-15,0,Built fullstack solutions.
+daea923e-16ef-4744-8ade-7b5b4f75d0da,0a7a9ceb-fb96-4a60-a26c-28838058b697,Fullstack Engineer,BigCo,2021-03-08,2022-10-29,0,Built fullstack solutions.
+89650cc1-1b0c-4ff8-8d9c-1b221c70c105,5b3a6a66-128a-42ec-8a90-16aaed671cf3,Senior Frontend Engineer,Fintech Co,2025-10-13,,1,Built frontend solutions.
+3f203aae-5049-461b-8151-c5822d70c159,5b3a6a66-128a-42ec-8a90-16aaed671cf3,Frontend Engineer,Consultancy,2024-04-21,2025-08-14,0,Built frontend solutions.
+c0aad103-eda2-4693-b704-f4a4d6a2d9c1,853d8d9e-e67a-4e35-a446-c197b5580e0c,Senior Blockchain Engineer,E-Commerce Ltd,2024-01-22,,1,Built blockchain solutions.
+6d8901f0-1ae6-4e27-890e-2fca191f93df,853d8d9e-e67a-4e35-a446-c197b5580e0c,Blockchain Engineer,StartupXYZ,2021-01-07,2023-11-23,0,Built blockchain solutions.
+4778e7ba-587c-4069-8517-6e1c75232132,853d8d9e-e67a-4e35-a446-c197b5580e0c,Blockchain Engineer,Digital Agency,2020-05-12,2020-11-08,0,Built blockchain solutions.
+4559f213-57b7-416e-b743-8eb08db4ddda,20ed26d7-1d24-4e82-a6ff-87cc13fa471a,Senior Devops Engineer,E-Commerce Ltd,2025-08-14,,1,Built devops solutions.
+cb815cf5-a380-484f-9287-224e96adff35,20ed26d7-1d24-4e82-a6ff-87cc13fa471a,Devops Engineer,TechCorp,2023-05-27,2025-06-15,0,Built devops solutions.
+30a1af86-18d9-4542-81fb-6ead62f7e374,8daa394b-6609-43a8-8da5-40a254ba2dcc,Senior Frontend Engineer,BigCo,2024-10-18,,1,Built frontend solutions.
+07bdb879-db65-4100-9449-93fb408b0bea,f3372b50-bfde-41da-8a77-d7d0373d86c2,Senior Design Engineer,Digital Agency,2023-12-23,,1,Built design solutions.
+961e6d11-6348-42be-9b72-40feff6c8edb,f3372b50-bfde-41da-8a77-d7d0373d86c2,Design Engineer,StartupXYZ,2021-05-07,2023-10-24,0,Built design solutions.
+a3479613-9310-4274-aa08-4a5119a29f8a,e1adc6b6-2182-4481-aa6e-723c5840de19,Senior Blockchain Engineer,Consultancy,2024-04-21,,1,Built blockchain solutions.
+2224176f-b399-411e-bace-8ee5770afc64,e1adc6b6-2182-4481-aa6e-723c5840de19,Blockchain Engineer,Consultancy,2022-03-03,2024-02-21,0,Built blockchain solutions.
+d715a05c-2ccb-4f8b-8ff8-4b03a6f05592,e1adc6b6-2182-4481-aa6e-723c5840de19,Blockchain Engineer,Consultancy,2020-12-08,2022-01-02,0,Built blockchain solutions.
+ae628ace-af18-48e8-8067-2e6959a23632,e1adc6b6-2182-4481-aa6e-723c5840de19,Blockchain Engineer,Consultancy,2018-07-22,2020-10-09,0,Built blockchain solutions.
+7a002e57-c39a-420e-8ea0-ab38ae6957d3,ca3838a9-5751-406b-a648-c67f59df8688,Senior Devops Engineer,Consultancy,2025-04-16,,1,Built devops solutions.
+26cbdcaf-1312-4b9d-85a3-65ed5379ffed,ca3838a9-5751-406b-a648-c67f59df8688,Devops Engineer,StartupXYZ,2023-09-24,2025-02-15,0,Built devops solutions.
+aa516e8f-0521-4d29-85f0-fa7ffeb1f8a7,ca3838a9-5751-406b-a648-c67f59df8688,Devops Engineer,TechCorp,2020-12-08,2023-07-26,0,Built devops solutions.
+fb21f54c-2831-45dc-8eab-5cb793fe1e2a,f0b41640-106a-4c44-8eaa-2ccb2ab56197,Senior Ml Ai Engineer,StartupXYZ,2023-05-27,,1,Built ml ai solutions.
+9fa5a486-c083-470e-8bac-ac0d4168c2df,f0b41640-106a-4c44-8eaa-2ccb2ab56197,Ml Ai Engineer,StartupXYZ,2020-08-10,2023-03-28,0,Built ml ai solutions.
+31716bc1-7746-474b-b846-aa6678783397,f0b41640-106a-4c44-8eaa-2ccb2ab56197,Ml Ai Engineer,E-Commerce Ltd,2019-08-16,2020-06-11,0,Built ml ai solutions.
+d5d5a13a-5f4a-4507-9f72-7891eb66e8a0,f0b41640-106a-4c44-8eaa-2ccb2ab56197,Ml Ai Engineer,StartupXYZ,2017-08-26,2019-06-17,0,Built ml ai solutions.
+80cad910-8f4f-4a7a-b4c4-a8c544dcf717,babf4f0d-1d8e-4cc0-a71c-5947b57cd2a2,Senior Ml Ai Engineer,StartupXYZ,2025-04-16,,1,Built ml ai solutions.
+8431bef5-58b3-4a6f-ae08-e3f823b7111c,babf4f0d-1d8e-4cc0-a71c-5947b57cd2a2,Ml Ai Engineer,Consultancy,2022-11-28,2025-02-15,0,Built ml ai solutions.
+7882b997-3abd-4b23-8590-7a693b798ccf,2a1468ed-9c21-49d3-8fd6-446283205791,Senior Blockchain Engineer,Consultancy,2024-08-19,,1,Built blockchain solutions.
+630ad8b1-9f34-4b38-b11a-f9986b36fed8,2a1468ed-9c21-49d3-8fd6-446283205791,Blockchain Engineer,Digital Agency,2022-11-28,2024-06-20,0,Built blockchain solutions.
+0254b210-f87b-4d2d-ad96-fed977d3e512,72d12888-eb3c-42c1-8baf-eade54440059,Senior Mobile Engineer,Consultancy,2024-03-22,,1,Built mobile solutions.
+f33f3b2b-d820-4239-906b-b6f7c8105e7f,72d12888-eb3c-42c1-8baf-eade54440059,Mobile Engineer,Consultancy,2022-03-03,2024-01-22,0,Built mobile solutions.
+db5b4d53-692d-493a-a3bf-5041bea86b15,72d12888-eb3c-42c1-8baf-eade54440059,Mobile Engineer,StartupXYZ,2019-04-18,2022-01-02,0,Built mobile solutions.
+22e111e4-f7f9-4fab-a5cc-b04dc806fa59,f9fef66c-c06e-429d-93f3-157660984f72,Senior Design Engineer,BigCo,2024-10-18,,1,Built design solutions.
+c14194ac-248f-4d5b-b0f3-b597aa7114fa,f9fef66c-c06e-429d-93f3-157660984f72,Design Engineer,Consultancy,2024-01-22,2024-08-19,0,Built design solutions.
+d3edbb03-b9fc-4886-a0bc-99ef875d2841,f9fef66c-c06e-429d-93f3-157660984f72,Design Engineer,E-Commerce Ltd,2022-12-28,2023-11-23,0,Built design solutions.
+180cba7d-89df-4cba-947b-6257092cebcc,9d6da1ac-c39a-41b5-964a-c4ae88c57c78,Senior Devops Engineer,BigCo,2025-01-16,,1,Built devops solutions.
+eb59870b-8c4b-40f8-9e88-32170c61cb6e,9d6da1ac-c39a-41b5-964a-c4ae88c57c78,Devops Engineer,E-Commerce Ltd,2024-06-20,2024-11-17,0,Built devops solutions.
+3001449c-9308-4aaa-bcfc-251f7a32ad64,9d6da1ac-c39a-41b5-964a-c4ae88c57c78,Devops Engineer,StartupXYZ,2022-05-02,2024-04-21,0,Built devops solutions.
+693668c0-c8e6-4d32-ba4d-e3ef567cc912,10740eb1-c3bb-48ce-8605-0a8bb1016356,Senior Mobile Engineer,StartupXYZ,2023-10-24,,1,Built mobile solutions.
+9fc04373-acc1-4154-a55b-8b382160b68b,4e60c551-eac9-435a-a1ca-4840baa55c2a,Senior Mobile Engineer,TechCorp,2025-01-16,,1,Built mobile solutions.
+d5157713-0b5f-480f-86d6-f70b3474a564,4e60c551-eac9-435a-a1ca-4840baa55c2a,Mobile Engineer,BigCo,2023-01-27,2024-11-17,0,Built mobile solutions.
+4e1ca951-0771-4b87-a95e-4054f9e1a1c4,4e60c551-eac9-435a-a1ca-4840baa55c2a,Mobile Engineer,Consultancy,2020-07-11,2022-11-28,0,Built mobile solutions.
+23e04137-37b1-4203-ac91-db9664ec838d,4e60c551-eac9-435a-a1ca-4840baa55c2a,Mobile Engineer,E-Commerce Ltd,2019-06-17,2020-05-12,0,Built mobile solutions.
+201265ef-28f3-45da-85c2-2b7541f01483,d3c6b065-bdf6-4ad1-877b-fafd3e243371,Senior Backend Engineer,BigCo,2025-03-17,,1,Built backend solutions.
+cc764bf3-adfb-458e-8aa4-35600cabfc7a,6a52700a-533e-42e6-a541-b0818baa0e99,Senior Blockchain Engineer,BigCo,2024-12-17,,1,Built blockchain solutions.
+eb13d9ed-a659-4c59-addd-1aa979409307,095c3dec-602f-4c4a-ac18-c49be86ef7d8,Senior Frontend Engineer,BigCo,2024-05-21,,1,Built frontend solutions.
+f85012a4-77bd-4411-bff7-0f0a38b36b9a,095c3dec-602f-4c4a-ac18-c49be86ef7d8,Frontend Engineer,E-Commerce Ltd,2022-02-01,2024-03-22,0,Built frontend solutions.
+41d56adf-d053-41fd-a154-9d86b7aaf035,095c3dec-602f-4c4a-ac18-c49be86ef7d8,Frontend Engineer,BigCo,2020-09-09,2021-12-03,0,Built frontend solutions.
+38793d1c-1f21-45c2-ae8e-0cd77e923180,cac04c1f-2b2f-474e-9ef7-72b2fc21af85,Senior Mobile Engineer,StartupXYZ,2024-10-18,,1,Built mobile solutions.
+d7379788-adae-4b55-90b8-8972e531ab14,cac04c1f-2b2f-474e-9ef7-72b2fc21af85,Mobile Engineer,StartupXYZ,2022-07-01,2024-08-19,0,Built mobile solutions.
+ff134d46-e7d1-44c3-9a78-fa683d084d0c,e83bf799-4415-45b5-a2fc-ae3147311369,Senior Backend Engineer,Consultancy,2025-05-16,,1,Built backend solutions.
+b7e52299-2095-4f4b-9004-c3cafed73d14,e83bf799-4415-45b5-a2fc-ae3147311369,Backend Engineer,BigCo,2023-01-27,2025-03-17,0,Built backend solutions.
+7125039d-5397-45a2-98c8-d6479859d6b6,e723dfe0-bffd-4949-8a96-11317c7cd38f,Senior Backend Engineer,StartupXYZ,2024-02-21,,1,Built backend solutions.
+17af74cc-b83d-4786-8b88-ad86ce8946dd,e723dfe0-bffd-4949-8a96-11317c7cd38f,Backend Engineer,E-Commerce Ltd,2022-08-30,2023-12-23,0,Built backend solutions.
+565c611e-9df3-4553-806a-46269e87c52a,e723dfe0-bffd-4949-8a96-11317c7cd38f,Backend Engineer,BigCo,2021-10-04,2022-07-01,0,Built backend solutions.
+00cc7f18-2de6-41ee-aa72-766eaaee9dd7,b995af9a-b304-4027-96bb-0b83c10aaec9,Senior Ml Ai Engineer,TechCorp,2024-09-18,,1,Built ml ai solutions.
+8350f00f-d403-4731-9ffe-2a842b1321fa,b995af9a-b304-4027-96bb-0b83c10aaec9,Ml Ai Engineer,E-Commerce Ltd,2021-12-03,2024-07-20,0,Built ml ai solutions.
+da3e01d9-4918-482b-b33c-1e341c4b3cb4,7a898e8b-590d-4c02-8d2e-79dfd759ddc1,Senior Devops Engineer,Fintech Co,2023-08-25,,1,Built devops solutions.
+47823fb6-a49e-40c5-a14c-e8466dc26330,7a898e8b-590d-4c02-8d2e-79dfd759ddc1,Devops Engineer,BigCo,2022-07-31,2023-06-26,0,Built devops solutions.
+521ae722-012f-4a91-af05-f7b03e49ee51,7a898e8b-590d-4c02-8d2e-79dfd759ddc1,Devops Engineer,StartupXYZ,2020-02-12,2022-06-01,0,Built devops solutions.
+b6287e59-ce29-49ae-85b3-de26e3e188b6,bb3418a8-f994-4d1c-a993-4625008c237f,Senior Design Engineer,TechCorp,2023-12-23,,1,Built design solutions.
+f105421c-dcdd-45db-be2c-7e94a9606df3,76aaa77a-0eae-4170-ab6a-4cf99db6877c,Senior Blockchain Engineer,E-Commerce Ltd,2024-03-22,,1,Built blockchain solutions.
+621518b7-388c-4e6b-8c78-e770f3890c67,76aaa77a-0eae-4170-ab6a-4cf99db6877c,Blockchain Engineer,E-Commerce Ltd,2021-03-08,2024-01-22,0,Built blockchain solutions.
+572af8f1-23ba-451e-a94b-1bcce9b1b62d,76aaa77a-0eae-4170-ab6a-4cf99db6877c,Blockchain Engineer,Consultancy,2018-11-19,2021-01-07,0,Built blockchain solutions.
+221001e9-36c7-4a46-a013-7836be0fa4dd,2c379236-cbf5-41a8-aec1-753bc8b6ffed,Senior Ml Ai Engineer,TechCorp,2023-06-26,,1,Built ml ai solutions.
+f531846b-3529-410a-b125-f87b726f2e7e,2c379236-cbf5-41a8-aec1-753bc8b6ffed,Ml Ai Engineer,TechCorp,2021-10-04,2023-04-27,0,Built ml ai solutions.
+eb43dfda-fd98-47f1-8c65-ce90ca048d32,2c379236-cbf5-41a8-aec1-753bc8b6ffed,Ml Ai Engineer,BigCo,2018-10-20,2021-08-05,0,Built ml ai solutions.
+6d0a8116-887d-45ef-a272-8d3df7a262e7,2c379236-cbf5-41a8-aec1-753bc8b6ffed,Ml Ai Engineer,Consultancy,2016-04-03,2018-08-21,0,Built ml ai solutions.
+33c2b74d-ae48-49fa-b64a-7e39220f1f92,1b39bae4-4fbf-412f-a96d-335383461e01,Senior Devops Engineer,E-Commerce Ltd,2023-11-23,,1,Built devops solutions.
+66c0f9f7-fca7-450b-9da4-d55aec1b9bbf,b671cb09-34b6-47a8-91de-5424d2431928,Senior Ml Ai Engineer,Fintech Co,2025-10-13,,1,Built ml ai solutions.
+4a5de972-3fa2-4cad-a49b-56f754f374c5,b671cb09-34b6-47a8-91de-5424d2431928,Ml Ai Engineer,TechCorp,2023-04-27,2025-08-14,0,Built ml ai solutions.
+c079bc4a-f23d-4769-a4bd-378ea17ac675,b671cb09-34b6-47a8-91de-5424d2431928,Ml Ai Engineer,Consultancy,2022-07-01,2023-02-26,0,Built ml ai solutions.
+ab63fb26-79c8-471b-beac-f2330ce4ed26,b671cb09-34b6-47a8-91de-5424d2431928,Ml Ai Engineer,E-Commerce Ltd,2021-05-07,2022-05-02,0,Built ml ai solutions.
+c0d1dbe8-b7d6-414e-ace3-f369e190a709,01320d19-8657-4645-ac5f-f5c0cc74425b,Senior Mobile Engineer,StartupXYZ,2025-09-13,,1,Built mobile solutions.
+ae651d52-617e-4aa7-abbf-88373b561a02,01320d19-8657-4645-ac5f-f5c0cc74425b,Mobile Engineer,StartupXYZ,2024-05-21,2025-07-15,0,Built mobile solutions.
+5fbfcf1c-ae69-47ab-a4cb-c612ebee8a92,01320d19-8657-4645-ac5f-f5c0cc74425b,Mobile Engineer,Digital Agency,2022-01-02,2024-03-22,0,Built mobile solutions.
+e3a854c0-e362-441c-9198-3160f7f5fd41,8a3edd80-2f90-408f-9a3e-2b43a485b782,Senior Design Engineer,Digital Agency,2023-07-26,,1,Built design solutions.
+23cd77db-1b66-4e61-8ddc-4bd4d33bd2ec,8a3edd80-2f90-408f-9a3e-2b43a485b782,Design Engineer,Digital Agency,2020-11-08,2023-05-27,0,Built design solutions.
+8df21d29-4f55-4f0a-9331-e34a34301387,8a3edd80-2f90-408f-9a3e-2b43a485b782,Design Engineer,Consultancy,2019-09-15,2020-09-09,0,Built design solutions.
+d85219eb-8470-49ef-a632-113c27ab6663,1cc84af0-8db0-487b-804a-c2c057c7c014,Senior Frontend Engineer,StartupXYZ,2023-05-27,,1,Built frontend solutions.
+968fef09-04be-45ab-a001-9998856821f1,1cc84af0-8db0-487b-804a-c2c057c7c014,Frontend Engineer,StartupXYZ,2022-02-01,2023-03-28,0,Built frontend solutions.
+3157fcee-7935-40cc-bcad-a24066432a27,1cc84af0-8db0-487b-804a-c2c057c7c014,Frontend Engineer,TechCorp,2020-03-13,2021-12-03,0,Built frontend solutions.
+32c4b374-8e5f-482a-803f-d8de55865460,0e1e20f7-46e3-4d71-9ef3-55be49d030ba,Senior Fullstack Engineer,StartupXYZ,2024-09-18,,1,Built fullstack solutions.
+e9468526-0dd9-4d9c-b1bc-195d8d0708ec,0e1e20f7-46e3-4d71-9ef3-55be49d030ba,Fullstack Engineer,E-Commerce Ltd,2021-10-04,2024-07-20,0,Built fullstack solutions.
+28331607-4f9c-4cb9-bf9a-63bd925ada68,428e2b84-8214-48a1-8eca-f8fff19f8877,Senior Ml Ai Engineer,E-Commerce Ltd,2023-08-25,,1,Built ml ai solutions.
+c1f4be86-229d-4f11-b1f9-4b6573bce370,428e2b84-8214-48a1-8eca-f8fff19f8877,Ml Ai Engineer,BigCo,2021-02-06,2023-06-26,0,Built ml ai solutions.
+00a01827-831b-40aa-846d-d666f34b5789,37582ce2-56c9-491e-a9e2-6b8cf47ddaa1,Senior Frontend Engineer,Consultancy,2024-04-21,,1,Built frontend solutions.
+85f28d37-6982-4275-a168-160f80d10bc9,37582ce2-56c9-491e-a9e2-6b8cf47ddaa1,Frontend Engineer,Consultancy,2021-10-04,2024-02-21,0,Built frontend solutions.
+b73b21c7-2f53-444e-82c0-8b22478ea8f3,0f308d83-87dd-43a9-96e1-a5d56ea59cd1,Senior Blockchain Engineer,BigCo,2025-09-13,,1,Built blockchain solutions.
+caea08db-d9da-4fda-9396-aea6da45796b,0f308d83-87dd-43a9-96e1-a5d56ea59cd1,Blockchain Engineer,Fintech Co,2024-12-17,2025-07-15,0,Built blockchain solutions.
+3ebcb998-219a-4d25-8aec-25ecc0962848,8ba2b41c-d283-4395-9919-a14e2e7ba9bf,Senior Ml Ai Engineer,StartupXYZ,2023-10-24,,1,Built ml ai solutions.
+405805c9-cff1-4257-8659-d8e463e0f714,8ba2b41c-d283-4395-9919-a14e2e7ba9bf,Ml Ai Engineer,Consultancy,2021-02-06,2023-08-25,0,Built ml ai solutions.
+a11844bb-2f84-4c2b-90cd-97a880675725,8ba2b41c-d283-4395-9919-a14e2e7ba9bf,Ml Ai Engineer,TechCorp,2018-11-19,2020-12-08,0,Built ml ai solutions.
+e5cd653c-7d49-4508-8764-5b8d2a0cb351,99b27421-efb4-4e02-ae22-aaef2e6cf69f,Senior Blockchain Engineer,E-Commerce Ltd,2024-07-20,,1,Built blockchain solutions.
+b0feb001-5351-435a-9e41-9f50ee73b96c,2e5f4ed5-079e-41f5-b626-098eb04ec0f4,Senior Fullstack Engineer,E-Commerce Ltd,2023-10-24,,1,Built fullstack solutions.
+4a80ae17-7f7d-46a5-86d1-05cecd9898d1,2e5f4ed5-079e-41f5-b626-098eb04ec0f4,Fullstack Engineer,Digital Agency,2022-08-30,2023-08-25,0,Built fullstack solutions.
+1fee4ed2-7bb2-4fcc-ba43-c4ea2c26e262,2e5f4ed5-079e-41f5-b626-098eb04ec0f4,Fullstack Engineer,E-Commerce Ltd,2019-10-15,2022-07-01,0,Built fullstack solutions.
+19663636-d532-4be3-a9fa-0a76058edc71,4685cec5-6e3f-446f-9ea4-0f8221a90fb5,Senior Fullstack Engineer,E-Commerce Ltd,2025-04-16,,1,Built fullstack solutions.
+7e9eb659-6602-4737-bc81-01cb412d423b,3ca06348-6e24-48f9-b3c2-fe82998bdec3,Senior Devops Engineer,E-Commerce Ltd,2024-05-21,,1,Built devops solutions.
+490c90a8-78a8-4259-a552-3378f6ba2505,3ca06348-6e24-48f9-b3c2-fe82998bdec3,Devops Engineer,TechCorp,2021-05-07,2024-03-22,0,Built devops solutions.
+7f8f08a4-654d-4090-9db6-b9844b30a932,7ed5bd02-7edf-44b1-a030-578e2ed86a95,Senior Design Engineer,E-Commerce Ltd,2023-09-24,,1,Built design solutions.
+7fb6f202-6477-456f-af8b-823d7490ce87,7ed5bd02-7edf-44b1-a030-578e2ed86a95,Design Engineer,StartupXYZ,2021-12-03,2023-07-26,0,Built design solutions.
+53ccc001-23b4-431f-a908-3f9341699e1a,7ed5bd02-7edf-44b1-a030-578e2ed86a95,Design Engineer,Consultancy,2020-05-12,2021-10-04,0,Built design solutions.
+d8ca157e-cada-4e5b-8330-3375d74d828a,7ed5bd02-7edf-44b1-a030-578e2ed86a95,Design Engineer,StartupXYZ,2019-10-15,2020-03-13,0,Built design solutions.
+1ce65916-ac45-4df4-8a7a-f982e619cf08,7147be97-e902-41ed-9398-eaec3611bd6b,Senior Mobile Engineer,Fintech Co,2024-04-21,,1,Built mobile solutions.
+ad61ed0b-49dd-4740-a3d3-9ad5dc8cc147,9b1ab468-996b-48f7-826f-7551a186d66b,Senior Ml Ai Engineer,Digital Agency,2025-08-14,,1,Built ml ai solutions.
+c27be1c8-f111-4edd-906d-becf39fb13df,9b1ab468-996b-48f7-826f-7551a186d66b,Ml Ai Engineer,TechCorp,2024-04-21,2025-06-15,0,Built ml ai solutions.
+2b36c7f7-9f82-4d72-bfa5-b20395ce005f,33f5743a-c341-4c03-9cc2-b08e2352e674,Senior Design Engineer,Fintech Co,2024-01-22,,1,Built design solutions.
+a5555e7a-fcf2-4297-8c13-484c06ddb5a9,33f5743a-c341-4c03-9cc2-b08e2352e674,Design Engineer,E-Commerce Ltd,2023-02-26,2023-11-23,0,Built design solutions.
+fefdddaa-b969-4f35-bc77-e4a352376e70,33f5743a-c341-4c03-9cc2-b08e2352e674,Design Engineer,BigCo,2022-07-31,2022-12-28,0,Built design solutions.
+374e0cad-6fcd-4caa-8ffd-dc889497f03a,33f5743a-c341-4c03-9cc2-b08e2352e674,Design Engineer,BigCo,2019-09-15,2022-06-01,0,Built design solutions.
+00684949-f5f8-44e9-8d34-e173b6eda2c9,54a28fe5-32c5-4cea-ae58-f312087cb7d2,Senior Mobile Engineer,E-Commerce Ltd,2024-04-21,,1,Built mobile solutions.
+02b2ffdf-3bfb-4a0a-bb35-0a1dd3edfda6,8c2a7ed0-3cb4-4040-8739-a8dd299bd9d7,Senior Mobile Engineer,Consultancy,2023-05-27,,1,Built mobile solutions.
+3c68bedf-7829-484b-9080-93124978b9e5,52c96214-eb4f-4879-94b8-b48c56b8a2aa,Senior Backend Engineer,E-Commerce Ltd,2023-09-24,,1,Built backend solutions.
+f8bd66a0-a103-40dc-8ef5-ad239db42c9b,52c96214-eb4f-4879-94b8-b48c56b8a2aa,Backend Engineer,TechCorp,2021-06-06,2023-07-26,0,Built backend solutions.
+2e6ae754-1cbc-4d76-b4a2-0d578ed8b4fb,52c96214-eb4f-4879-94b8-b48c56b8a2aa,Backend Engineer,BigCo,2020-09-09,2021-04-07,0,Built backend solutions.
+4ae54646-f361-48b4-8a5b-3d273f7a58bc,8e1202c7-da9f-42e1-a25b-3827466509ed,Senior Backend Engineer,Digital Agency,2024-06-20,,1,Built backend solutions.
+1cd43726-8217-4ba0-863e-789a89822f9e,8e1202c7-da9f-42e1-a25b-3827466509ed,Backend Engineer,E-Commerce Ltd,2022-05-02,2024-04-21,0,Built backend solutions.
+3f625309-17f0-4590-ba00-7a383ea09f2d,31491911-f9c9-4e21-999e-96fa0315fdc7,Senior Devops Engineer,Consultancy,2023-10-24,,1,Built devops solutions.
+46c4d7b1-b559-492e-907f-b6a25a84f67c,17154193-1071-49dc-829c-0038c9182c29,Senior Backend Engineer,TechCorp,2025-03-17,,1,Built backend solutions.
+ea92efcc-40ff-4161-96a2-afafe1942fcb,17154193-1071-49dc-829c-0038c9182c29,Backend Engineer,Digital Agency,2023-12-23,2025-01-16,0,Built backend solutions.
+65272f1f-7c75-44a9-9d2a-706fba5e8dab,cb69df38-87e6-4bf4-bcf7-e46c0b91d898,Senior Fullstack Engineer,E-Commerce Ltd,2025-03-17,,1,Built fullstack solutions.
+b1055deb-d829-4e13-8532-0d5c4931510b,cb69df38-87e6-4bf4-bcf7-e46c0b91d898,Fullstack Engineer,Fintech Co,2022-08-30,2025-01-16,0,Built fullstack solutions.
+52958bd8-a5ca-49d1-820b-11257ad39873,cb69df38-87e6-4bf4-bcf7-e46c0b91d898,Fullstack Engineer,E-Commerce Ltd,2019-09-15,2022-07-01,0,Built fullstack solutions.
+b31eb7a2-2b94-4d13-9461-0cd0a638dce2,f5385ab3-91e0-486f-b123-c81133e8c8fc,Senior Frontend Engineer,Digital Agency,2024-05-21,,1,Built frontend solutions.
+d4b4c3c4-af65-4174-a1bb-c999a18f6d8c,f5385ab3-91e0-486f-b123-c81133e8c8fc,Frontend Engineer,Digital Agency,2023-08-25,2024-03-22,0,Built frontend solutions.
+8ffb24bf-d794-444b-861a-887ed6ecc45c,f5385ab3-91e0-486f-b123-c81133e8c8fc,Frontend Engineer,Consultancy,2022-01-02,2023-06-26,0,Built frontend solutions.
+92567249-baa9-47dd-94c7-9cd9c7b2b784,83853f80-a853-4ef9-ad2e-2b816eae164b,Senior Mobile Engineer,Consultancy,2023-07-26,,1,Built mobile solutions.
+eca384e4-c5f7-4bbb-976d-7dd46da294b1,83853f80-a853-4ef9-ad2e-2b816eae164b,Mobile Engineer,Consultancy,2021-11-03,2023-05-27,0,Built mobile solutions.
+9820abeb-aae1-4c58-9084-ab2d7db92041,83853f80-a853-4ef9-ad2e-2b816eae164b,Mobile Engineer,E-Commerce Ltd,2019-01-18,2021-09-04,0,Built mobile solutions.
+c97ff066-97d3-4aa1-b093-052c8e4a3087,83853f80-a853-4ef9-ad2e-2b816eae164b,Mobile Engineer,E-Commerce Ltd,2017-10-25,2018-11-19,0,Built mobile solutions.
+4f7d9467-ae7d-4587-97ef-4d23d899a7be,fef17762-7aa2-4e2a-8a98-64cc81a576b1,Senior Mobile Engineer,E-Commerce Ltd,2024-12-17,,1,Built mobile solutions.
+2e55cc34-cbcc-4787-8d0a-48a9b3ad03a3,12e31f13-569a-47d6-b27e-2e820349e947,Senior Frontend Engineer,Fintech Co,2023-07-26,,1,Built frontend solutions.
+21545cdb-c4e4-4789-bf19-0c019e510f45,4ed5c776-e060-4252-b20d-65083f978cb5,Senior Frontend Engineer,BigCo,2025-09-13,,1,Built frontend solutions.
+f6f16fac-9994-4858-a50d-96fa1a31a915,4ed5c776-e060-4252-b20d-65083f978cb5,Frontend Engineer,Fintech Co,2023-07-26,2025-07-15,0,Built frontend solutions.
+7f798653-ee10-4715-863b-17b34891aa45,4ed5c776-e060-4252-b20d-65083f978cb5,Frontend Engineer,Consultancy,2020-07-11,2023-05-27,0,Built frontend solutions.
+243f2781-2bdd-4be2-9e99-901234692a46,4ed5c776-e060-4252-b20d-65083f978cb5,Frontend Engineer,TechCorp,2018-11-19,2020-05-12,0,Built frontend solutions.
+78c1cf5b-fc54-4e11-926c-55c474c16b4d,3b1d06df-02ff-4793-a6ea-8d90d4e3b7f2,Senior Ml Ai Engineer,TechCorp,2025-09-13,,1,Built ml ai solutions.
+f9fc645d-a775-402b-9d48-932bc3c24af9,3b1d06df-02ff-4793-a6ea-8d90d4e3b7f2,Ml Ai Engineer,BigCo,2024-08-19,2025-07-15,0,Built ml ai solutions.
+1cf33b65-ddb0-4087-bbca-9cbc20b7752a,3b1d06df-02ff-4793-a6ea-8d90d4e3b7f2,Ml Ai Engineer,Digital Agency,2021-09-04,2024-06-20,0,Built ml ai solutions.
+989b91cd-a0ec-4ab0-a9fe-10c8f78423f6,4877cf9a-8fb5-412c-85e6-79cfdee7cebf,Senior Ml Ai Engineer,TechCorp,2023-05-27,,1,Built ml ai solutions.
+c675396f-cc5f-48da-b4fd-3c025f319d63,4877cf9a-8fb5-412c-85e6-79cfdee7cebf,Ml Ai Engineer,TechCorp,2021-03-08,2023-03-28,0,Built ml ai solutions.
+9fd95d07-b8ae-4a8a-88a3-ba42566b1c69,4877cf9a-8fb5-412c-85e6-79cfdee7cebf,Ml Ai Engineer,StartupXYZ,2020-06-11,2021-01-07,0,Built ml ai solutions.
+5c81aee9-1092-4405-b2d2-d1d8c74c2cd3,9026a584-0b63-4c06-91cc-93397f295274,Senior Backend Engineer,Consultancy,2024-01-22,,1,Built backend solutions.
+fed7f442-379e-47ba-a7d4-6dd53754b422,9026a584-0b63-4c06-91cc-93397f295274,Backend Engineer,E-Commerce Ltd,2021-03-08,2023-11-23,0,Built backend solutions.
+48e8bdc2-d653-48c5-a182-313f5c5b3046,ee2e4f91-7dca-476f-a33d-3cd55b6c29a4,Senior Ml Ai Engineer,BigCo,2024-02-21,,1,Built ml ai solutions.
+aeaea7dd-e500-45ea-9db4-0c9bc6f20d1f,ee2e4f91-7dca-476f-a33d-3cd55b6c29a4,Ml Ai Engineer,E-Commerce Ltd,2021-11-03,2023-12-23,0,Built ml ai solutions.
+5f17424c-fee5-4c14-817e-1be5589cc302,6db8581b-b978-4b98-85b0-26612e44cdf9,Senior Blockchain Engineer,Fintech Co,2023-12-23,,1,Built blockchain solutions.
+f6033564-abeb-428e-b4bd-6bd799229960,6db8581b-b978-4b98-85b0-26612e44cdf9,Blockchain Engineer,StartupXYZ,2020-12-08,2023-10-24,0,Built blockchain solutions.
+70c28584-7dfd-47c8-aeea-0c3c21eefd5d,6db8581b-b978-4b98-85b0-26612e44cdf9,Blockchain Engineer,BigCo,2020-03-13,2020-10-09,0,Built blockchain solutions.
+58e2848f-e954-4a42-9ddf-438f27861e61,f52dcb9f-1f16-4570-9e64-c99a508541c9,Senior Frontend Engineer,TechCorp,2025-01-16,,1,Built frontend solutions.
+6f482881-2917-4ed4-9347-8770e2c8c183,7ab8a8f3-097c-4615-946c-a3844135ee4d,Senior Blockchain Engineer,BigCo,2025-03-17,,1,Built blockchain solutions.
+5f8b245b-f48e-49c4-8748-338c085a9195,7ab8a8f3-097c-4615-946c-a3844135ee4d,Blockchain Engineer,TechCorp,2023-03-28,2025-01-16,0,Built blockchain solutions.
+1032e871-ba9a-4916-a19b-8af3ce229d49,7ab8a8f3-097c-4615-946c-a3844135ee4d,Blockchain Engineer,TechCorp,2022-07-01,2023-01-27,0,Built blockchain solutions.
+76ec57d5-d96b-4af9-8ebe-02d7a7d0de31,bdeb78df-9f6f-4306-965e-014b3a153150,Senior Backend Engineer,BigCo,2024-04-21,,1,Built backend solutions.
+2e8f2a4b-4542-491d-a583-7c2ebf18ce3f,bdeb78df-9f6f-4306-965e-014b3a153150,Backend Engineer,Consultancy,2021-10-04,2024-02-21,0,Built backend solutions.
+1c17370c-9528-4cfe-a695-5e5965fff915,0ae55ff3-4c43-4eb2-ac34-061a69af7172,Senior Devops Engineer,Digital Agency,2025-10-13,,1,Built devops solutions.
+a2b44dfe-00a3-4a36-a385-f9fcfc4e3abc,58dccc6f-82bf-4420-9a58-f3a78c256825,Senior Mobile Engineer,BigCo,2024-12-17,,1,Built mobile solutions.
+84209e21-ada9-4c2c-81bc-d9088839cd13,58dccc6f-82bf-4420-9a58-f3a78c256825,Mobile Engineer,E-Commerce Ltd,2022-06-01,2024-10-18,0,Built mobile solutions.
+fa5ccd15-ae3c-4937-a344-67af41d9960b,20731ee2-b665-44fd-a85f-129028ddee73,Senior Devops Engineer,Consultancy,2025-04-16,,1,Built devops solutions.
+7b0d024b-ca8a-4def-be03-60e56a50a80b,20731ee2-b665-44fd-a85f-129028ddee73,Devops Engineer,Fintech Co,2023-08-25,2025-02-15,0,Built devops solutions.
+1205581e-da8b-44b9-bfbc-3635e1743996,7adde36e-23d0-4be9-9c77-c28683a75507,Senior Fullstack Engineer,TechCorp,2023-10-24,,1,Built fullstack solutions.
+c88062b7-d208-468c-88c3-65652fa2cdd5,7adde36e-23d0-4be9-9c77-c28683a75507,Fullstack Engineer,StartupXYZ,2022-06-01,2023-08-25,0,Built fullstack solutions.
+211cae64-309f-4655-80ad-0404168c4f7f,7adde36e-23d0-4be9-9c77-c28683a75507,Fullstack Engineer,Fintech Co,2020-02-12,2022-04-02,0,Built fullstack solutions.
+29c02d1a-8142-4b50-8e73-17b2d8fece3f,20fbd7be-f7a8-463b-91fc-fcd8472a665d,Senior Blockchain Engineer,Fintech Co,2025-05-16,,1,Built blockchain solutions.
+cdb39e8f-f0ca-4f78-9d50-f70c0532185c,20fbd7be-f7a8-463b-91fc-fcd8472a665d,Blockchain Engineer,Digital Agency,2024-06-20,2025-03-17,0,Built blockchain solutions.
+27cff6f9-08ba-41e9-a8f7-09c26bd6f3ee,25dc413f-d297-434a-848e-16a7e6663c5a,Senior Design Engineer,StartupXYZ,2023-06-26,,1,Built design solutions.
+dd8681ed-5fe7-48bb-8980-4ceeb920d64e,484c8be0-ef3c-4f24-a9be-475871feaa5c,Senior Mobile Engineer,TechCorp,2023-04-27,,1,Built mobile solutions.
+fa1a9d61-c732-4d67-bc8b-12855a8efa54,23c5df91-b045-43b8-93e2-e6a1839086b8,Senior Blockchain Engineer,Digital Agency,2023-11-23,,1,Built blockchain solutions.
+22f5bf8f-182c-4813-a5d5-84c831590884,41f1dd3a-b5cc-4421-aadf-c5fbe73fe22a,Senior Devops Engineer,E-Commerce Ltd,2025-01-16,,1,Built devops solutions.
+7029923a-b379-4ff8-8391-7f6953aa0fc9,498ebd1c-7c18-4e5b-9c6f-9f4dcf6345d9,Senior Ml Ai Engineer,Fintech Co,2024-01-22,,1,Built ml ai solutions.
+dfcdf834-f2c8-4374-bb2a-8f24590ee0b6,63e47411-143c-41aa-80d6-bf0f6cedb5e8,Senior Design Engineer,BigCo,2024-12-17,,1,Built design solutions.
+78c8b90c-5671-40c8-a120-dba5af7f4544,63e47411-143c-41aa-80d6-bf0f6cedb5e8,Design Engineer,E-Commerce Ltd,2023-07-26,2024-10-18,0,Built design solutions.
+da03c322-0158-4346-845b-bb8e0de0e93e,353aa968-1c4b-4d71-a011-3734cdb998a9,Senior Blockchain Engineer,Consultancy,2024-11-17,,1,Built blockchain solutions.
+1e9aca8e-36ee-41e3-a56f-1f640f9d2c5b,75a7194d-f21f-4200-8781-fb66f2415720,Senior Mobile Engineer,Digital Agency,2023-04-27,,1,Built mobile solutions.
+5824c57f-1ee0-487c-81dc-e9996a1ff3e0,75a7194d-f21f-4200-8781-fb66f2415720,Mobile Engineer,StartupXYZ,2021-10-04,2023-02-26,0,Built mobile solutions.
+a9f426fe-0719-4d2a-b350-5948e3e9e8cb,8d2229f4-4313-4b5d-b9eb-d84cfa2d4faf,Senior Design Engineer,BigCo,2023-07-26,,1,Built design solutions.
+f8a0f7b5-ead5-4cb8-a224-906205c76b2a,8d2229f4-4313-4b5d-b9eb-d84cfa2d4faf,Design Engineer,BigCo,2021-10-04,2023-05-27,0,Built design solutions.
+fbce7cbd-e142-45cf-b347-854c7839dfce,8d2229f4-4313-4b5d-b9eb-d84cfa2d4faf,Design Engineer,Fintech Co,2020-11-08,2021-08-05,0,Built design solutions.
+19a10a11-fe51-42ab-8a71-ea33cc423406,8d2229f4-4313-4b5d-b9eb-d84cfa2d4faf,Design Engineer,Consultancy,2018-01-23,2020-09-09,0,Built design solutions.
+d97f419e-32aa-45e0-8c32-316d088b5103,66f7dbaa-f1a9-4056-a6a2-b7165a7d5618,Senior Devops Engineer,BigCo,2025-08-14,,1,Built devops solutions.
+ab85f265-2a2f-4197-acbd-9e24c84f8b4b,d344c569-4e8e-4d62-9db8-a8094fc8e13a,Senior Devops Engineer,StartupXYZ,2023-07-26,,1,Built devops solutions.
+2b1f1195-5f48-4c63-9914-01e076871038,d344c569-4e8e-4d62-9db8-a8094fc8e13a,Devops Engineer,TechCorp,2022-08-30,2023-05-27,0,Built devops solutions.
+fc846626-8233-4041-91f8-cac3ce139d45,d344c569-4e8e-4d62-9db8-a8094fc8e13a,Devops Engineer,Consultancy,2020-10-09,2022-07-01,0,Built devops solutions.
+52552e9e-b557-4f6a-9a2a-060fbc543c03,d531a0a5-e6b7-409e-9b2f-1b0b2bfc03c6,Senior Backend Engineer,Digital Agency,2023-04-27,,1,Built backend solutions.
+cc030fff-479f-4a6d-9eb5-d79450ca2308,d531a0a5-e6b7-409e-9b2f-1b0b2bfc03c6,Backend Engineer,TechCorp,2022-02-01,2023-02-26,0,Built backend solutions.
+f28ac38c-516f-4550-afc8-b7169afcca3b,d531a0a5-e6b7-409e-9b2f-1b0b2bfc03c6,Backend Engineer,Consultancy,2019-03-19,2021-12-03,0,Built backend solutions.
+6e330846-6595-48c9-b879-82371ecb89e7,16d506cc-902d-47b5-9d29-5b08a65bdf84,Senior Fullstack Engineer,StartupXYZ,2025-05-16,,1,Built fullstack solutions.
+4d934306-220d-4b3e-8e48-c10fd751926d,16d506cc-902d-47b5-9d29-5b08a65bdf84,Fullstack Engineer,BigCo,2022-07-31,2025-03-17,0,Built fullstack solutions.
+6fa309a9-abca-486b-bcc6-0527f38ba588,0ed7d5e8-57ea-4048-aa80-8207f2f276d1,Senior Blockchain Engineer,StartupXYZ,2024-10-18,,1,Built blockchain solutions.
+100b5ebf-20ba-4eea-826d-01d5f89d0da6,0ed7d5e8-57ea-4048-aa80-8207f2f276d1,Blockchain Engineer,Fintech Co,2022-02-01,2024-08-19,0,Built blockchain solutions.
+858a888c-853f-4402-8f77-4c406bccfb0f,0ed7d5e8-57ea-4048-aa80-8207f2f276d1,Blockchain Engineer,TechCorp,2020-05-12,2021-12-03,0,Built blockchain solutions.
+54e48019-b5ba-4c1d-8b44-577c868b73fe,0ed7d5e8-57ea-4048-aa80-8207f2f276d1,Blockchain Engineer,Digital Agency,2019-06-17,2020-03-13,0,Built blockchain solutions.
+48875377-699c-4533-b67f-f5cdf3913748,d752f740-d00e-42e3-933c-b5c1a0398447,Senior Fullstack Engineer,StartupXYZ,2024-04-21,,1,Built fullstack solutions.
+d2e6fa5a-fef3-46fc-83b1-4080b43acc0a,b5f81280-7e57-4697-9313-18b7c9c06836,Senior Devops Engineer,TechCorp,2025-10-13,,1,Built devops solutions.
+a8e0c8a3-9cb2-40d9-85f6-90ae8b4666ed,b5f81280-7e57-4697-9313-18b7c9c06836,Devops Engineer,BigCo,2023-09-24,2025-08-14,0,Built devops solutions.
+4303c28a-ea01-44f3-9cc5-aa99f8e20e97,b5f81280-7e57-4697-9313-18b7c9c06836,Devops Engineer,Digital Agency,2022-07-31,2023-07-26,0,Built devops solutions.
+ec40f708-7fa4-4833-944e-5e4f22cbe95a,6d478e9a-3e47-4964-b44e-1a2afbc43037,Senior Ml Ai Engineer,Digital Agency,2024-07-20,,1,Built ml ai solutions.
+c285cf46-8a91-4fb6-a0af-4109271292b8,6d478e9a-3e47-4964-b44e-1a2afbc43037,Ml Ai Engineer,E-Commerce Ltd,2021-09-04,2024-05-21,0,Built ml ai solutions.
+063f716d-cc3b-44a1-9ae9-62e0845320fd,6d478e9a-3e47-4964-b44e-1a2afbc43037,Ml Ai Engineer,Digital Agency,2021-01-07,2021-07-06,0,Built ml ai solutions.
+105fecd0-2b46-4395-b367-87e141abb523,cb9bf1de-8305-43f0-a5cf-dc4bf0eb6bb5,Senior Ml Ai Engineer,Digital Agency,2023-10-24,,1,Built ml ai solutions.
+c837eebe-b58e-46bd-be81-8cfff9c910c0,dbfd251a-c3c8-49f8-bb9b-eba19b6456d3,Senior Mobile Engineer,BigCo,2024-02-21,,1,Built mobile solutions.
+9740228a-a5fd-4b53-8e1d-d7d27eba3f56,dbfd251a-c3c8-49f8-bb9b-eba19b6456d3,Mobile Engineer,Fintech Co,2022-05-02,2023-12-23,0,Built mobile solutions.
+e0233722-9fd5-4fc9-8bfb-9848d36db36d,dbfd251a-c3c8-49f8-bb9b-eba19b6456d3,Mobile Engineer,BigCo,2019-04-18,2022-03-03,0,Built mobile solutions.
+eced9e22-c521-40ac-b884-6578e4b38db5,c1068bcc-d315-43a9-ae19-c4a392a7bed8,Senior Fullstack Engineer,Digital Agency,2023-06-26,,1,Built fullstack solutions.
+df345f9c-4d6d-4bc7-bb4a-aaf84970d6fa,c1068bcc-d315-43a9-ae19-c4a392a7bed8,Fullstack Engineer,Digital Agency,2022-04-02,2023-04-27,0,Built fullstack solutions.
+72c9a5bc-2528-4a56-b851-316f1e77c538,c1068bcc-d315-43a9-ae19-c4a392a7bed8,Fullstack Engineer,Digital Agency,2019-06-17,2022-02-01,0,Built fullstack solutions.
+8412c709-af8d-43ef-8440-3e036db63e46,3d1a84f0-7d06-4aaa-ac26-5d3cdaa5c89c,Senior Frontend Engineer,BigCo,2025-03-17,,1,Built frontend solutions.
+5410649d-f9eb-4381-80c9-445c6ca989d1,3d1a84f0-7d06-4aaa-ac26-5d3cdaa5c89c,Frontend Engineer,E-Commerce Ltd,2023-07-26,2025-01-16,0,Built frontend solutions.
+9441619c-2cb2-4890-a9de-129bc7a2ec79,3d1a84f0-7d06-4aaa-ac26-5d3cdaa5c89c,Frontend Engineer,Digital Agency,2020-09-09,2023-05-27,0,Built frontend solutions.
+715273cc-a9bb-4fc7-bee8-1f48ff1fae16,df0172fc-e648-4c41-8ba3-82161f83f82d,Senior Devops Engineer,TechCorp,2023-10-24,,1,Built devops solutions.
+e1ababf0-979d-40db-96be-4c31bcfadafd,df0172fc-e648-4c41-8ba3-82161f83f82d,Devops Engineer,TechCorp,2021-09-04,2023-08-25,0,Built devops solutions.
+a5e5b2ca-36f8-4566-a378-c9bf7e9e6d1c,df0172fc-e648-4c41-8ba3-82161f83f82d,Devops Engineer,Consultancy,2019-02-17,2021-07-06,0,Built devops solutions.
+9c90edd8-1119-4588-89c9-72d79114d918,6260c277-62cd-41f0-adae-d409f4d59073,Senior Backend Engineer,Fintech Co,2025-02-15,,1,Built backend solutions.
+e8d2dad5-ac68-405a-a217-b0ba5857a217,00b61a80-507b-4636-a69f-7072024eaef8,Senior Fullstack Engineer,BigCo,2023-12-23,,1,Built fullstack solutions.
+abd36c4f-994a-4f06-8940-34a391a39ab8,00b61a80-507b-4636-a69f-7072024eaef8,Fullstack Engineer,E-Commerce Ltd,2020-12-08,2023-10-24,0,Built fullstack solutions.
+a9801850-41dc-44b2-808d-63da61b3cc53,00b61a80-507b-4636-a69f-7072024eaef8,Fullstack Engineer,E-Commerce Ltd,2019-11-14,2020-10-09,0,Built fullstack solutions.
+1c4e3fcf-0ff1-4eee-a140-45c5700103d6,00b61a80-507b-4636-a69f-7072024eaef8,Fullstack Engineer,StartupXYZ,2017-03-29,2019-09-15,0,Built fullstack solutions.
+2d13c9e1-e436-4b3c-abf4-cdcc6445017d,f18ae44d-1636-4432-b923-4f5b277bfacb,Senior Ml Ai Engineer,Consultancy,2025-08-14,,1,Built ml ai solutions.
+4eb246bf-b823-49f1-a71e-df01d3e673b5,f18ae44d-1636-4432-b923-4f5b277bfacb,Ml Ai Engineer,E-Commerce Ltd,2024-03-22,2025-06-15,0,Built ml ai solutions.
+58f17929-822c-48f8-b11e-5194edfd4a76,cce1fbbb-2bd5-4c5a-99f9-386b03799b06,Senior Mobile Engineer,Fintech Co,2024-12-17,,1,Built mobile solutions.
+5721d22c-27c4-4614-90ae-b6f179feff15,ff82d958-7ffc-4e3a-a5a0-cac0ef18034b,Senior Ml Ai Engineer,StartupXYZ,2024-06-20,,1,Built ml ai solutions.
+6978737b-41fb-4100-914c-6e9460019113,ff82d958-7ffc-4e3a-a5a0-cac0ef18034b,Ml Ai Engineer,Digital Agency,2022-05-02,2024-04-21,0,Built ml ai solutions.
+f7a20c56-99c2-47a8-830b-0bebb39b570d,b422aa20-6ad6-495d-84ea-6319d4a97539,Senior Design Engineer,StartupXYZ,2024-06-20,,1,Built design solutions.
+57700ad8-8729-408c-9c43-55ec919ea1f1,ce71adfc-de90-4849-9da5-e0c992556bf5,Senior Blockchain Engineer,Fintech Co,2023-09-24,,1,Built blockchain solutions.
+2b274878-cbfb-4b1a-96ff-91e69938a94d,ce71adfc-de90-4849-9da5-e0c992556bf5,Blockchain Engineer,Fintech Co,2020-10-09,2023-07-26,0,Built blockchain solutions.
+1d842d23-9d3e-4b10-aeac-432a60d06812,ce71adfc-de90-4849-9da5-e0c992556bf5,Blockchain Engineer,BigCo,2019-11-14,2020-08-10,0,Built blockchain solutions.
+4e3800fc-0063-4cd7-aaf6-de033e6e5809,02123b02-eddb-410b-8000-8320c6ad1a11,Senior Mobile Engineer,E-Commerce Ltd,2023-07-26,,1,Built mobile solutions.
+a659f189-3a3e-42e5-9be0-e788c034381d,02123b02-eddb-410b-8000-8320c6ad1a11,Mobile Engineer,Fintech Co,2020-09-09,2023-05-27,0,Built mobile solutions.
+b283f09d-fdc4-4d07-b56e-c57fa6f277b4,d80c9f2e-ec46-4052-84cd-b8aa0781b9b4,Senior Fullstack Engineer,StartupXYZ,2023-04-27,,1,Built fullstack solutions.
+8ad91404-f72c-40f4-a5e5-ae4ba1619218,d80c9f2e-ec46-4052-84cd-b8aa0781b9b4,Fullstack Engineer,Digital Agency,2022-03-03,2023-02-26,0,Built fullstack solutions.
+fda1acf4-4e4e-4820-9723-febfc7d27386,3ce3f5fa-219e-44e8-befc-ade5befb04af,Senior Ml Ai Engineer,TechCorp,2024-10-18,,1,Built ml ai solutions.
+058a2717-5990-4bf8-bf8c-6e9dbd930a2d,3ce3f5fa-219e-44e8-befc-ade5befb04af,Ml Ai Engineer,Digital Agency,2021-10-04,2024-08-19,0,Built ml ai solutions.
+f746c985-a4c9-49f8-9f52-9e53b1881ac5,3ce3f5fa-219e-44e8-befc-ade5befb04af,Ml Ai Engineer,Consultancy,2018-09-20,2021-08-05,0,Built ml ai solutions.
+2e2cea46-c3ae-4fb6-9c16-ad7300bbf97b,3ce3f5fa-219e-44e8-befc-ade5befb04af,Ml Ai Engineer,Digital Agency,2016-08-31,2018-07-22,0,Built ml ai solutions.
+02580e54-fa8b-4fac-9b35-e5a33423e712,9692e062-44fb-47df-affc-0d9c14541151,Senior Fullstack Engineer,Consultancy,2023-10-24,,1,Built fullstack solutions.
+72ed099e-1345-4185-8d6b-c31ec23b5155,9692e062-44fb-47df-affc-0d9c14541151,Fullstack Engineer,StartupXYZ,2023-01-27,2023-08-25,0,Built fullstack solutions.
+d3074254-2699-4f94-9a1d-1ee12e481bb7,baa3f9c4-a49d-4cc8-8abc-7db3860616ca,Senior Ml Ai Engineer,BigCo,2025-04-16,,1,Built ml ai solutions.
+51ab3108-5135-491c-84b0-a52eb0642f97,34e449af-25d3-495d-bd87-eb18fa75be14,Senior Mobile Engineer,E-Commerce Ltd,2024-02-21,,1,Built mobile solutions.
+00f5d67d-1325-4159-8e0f-8b5c793ab0f9,84ee8db6-0376-492f-a520-323107b5e244,Senior Devops Engineer,BigCo,2023-09-24,,1,Built devops solutions.
+02d275fe-b75c-4983-92f0-f6717522db22,84ee8db6-0376-492f-a520-323107b5e244,Devops Engineer,BigCo,2021-12-03,2023-07-26,0,Built devops solutions.
+e6ec438f-65d9-4998-8da0-67b550e851b3,18e6bb96-2561-45ef-9548-6f9938c5040f,Senior Ml Ai Engineer,StartupXYZ,2025-09-13,,1,Built ml ai solutions.
+fd2228d7-86bc-4bcb-b0b5-e76911decfe6,18e6bb96-2561-45ef-9548-6f9938c5040f,Ml Ai Engineer,Fintech Co,2024-05-21,2025-07-15,0,Built ml ai solutions.
+0ab6a581-c76f-4596-9cff-5a3e964762ef,18e6bb96-2561-45ef-9548-6f9938c5040f,Ml Ai Engineer,E-Commerce Ltd,2023-05-27,2024-03-22,0,Built ml ai solutions.
+eb853430-c8b2-4391-b7a0-4d6652c64f84,18e6bb96-2561-45ef-9548-6f9938c5040f,Ml Ai Engineer,E-Commerce Ltd,2022-02-01,2023-03-28,0,Built ml ai solutions.
+386128f1-2f8c-41d8-b90e-7e2f3217c9da,42e14f92-430f-403b-8ff9-6434425076df,Senior Backend Engineer,Digital Agency,2023-09-24,,1,Built backend solutions.
+da42c675-6e99-46af-b9b2-17036bc0ca56,2cb0abfc-77c6-4389-a263-5e1e98aa467e,Senior Mobile Engineer,BigCo,2024-01-22,,1,Built mobile solutions.
+c64d7343-8495-4bf1-a292-9e984dba27ab,2cb0abfc-77c6-4389-a263-5e1e98aa467e,Mobile Engineer,Consultancy,2022-11-28,2023-11-23,0,Built mobile solutions.
+2868022c-33c6-424c-8465-87e5e3923f2c,2cb0abfc-77c6-4389-a263-5e1e98aa467e,Mobile Engineer,TechCorp,2020-08-10,2022-09-29,0,Built mobile solutions.
+fbea13aa-2db5-44f3-b1a5-d96ae22748c6,2cb0abfc-77c6-4389-a263-5e1e98aa467e,Mobile Engineer,Digital Agency,2017-08-26,2020-06-11,0,Built mobile solutions.
+2d9f6a6f-1931-46d3-af4f-a93a06912179,e3b83294-0110-4cc3-bc96-c67aab36e922,Senior Devops Engineer,StartupXYZ,2024-01-22,,1,Built devops solutions.
+4d2056d2-7478-46a2-baf5-b316b1b9e523,f50bad1d-c2eb-48bb-a4fa-115c6e86cbed,Senior Design Engineer,StartupXYZ,2025-06-15,,1,Built design solutions.
+a3d2c529-f115-4aa7-ae6f-d928f34c0aca,f50bad1d-c2eb-48bb-a4fa-115c6e86cbed,Design Engineer,StartupXYZ,2024-10-18,2025-04-16,0,Built design solutions.
+e8617596-35e4-44ff-9377-bc85ec63967f,f50bad1d-c2eb-48bb-a4fa-115c6e86cbed,Design Engineer,Digital Agency,2022-08-30,2024-08-19,0,Built design solutions.
+77b14b8b-68ee-4573-863a-b292c39c08dc,f50bad1d-c2eb-48bb-a4fa-115c6e86cbed,Design Engineer,BigCo,2021-05-07,2022-07-01,0,Built design solutions.
+ee45b11a-2ed4-4c2c-aa2a-4befaa945938,1040914d-05bc-4ed0-a968-cc12d45fb5c5,Senior Mobile Engineer,Digital Agency,2023-09-24,,1,Built mobile solutions.
+4998bb3c-2494-4259-8c01-4de29d37c985,1040914d-05bc-4ed0-a968-cc12d45fb5c5,Mobile Engineer,TechCorp,2022-03-03,2023-07-26,0,Built mobile solutions.
+1832645d-c7a9-4bfa-b6fd-7fcfed67c606,76d4e157-b8e3-4deb-b504-a2f1fa11843c,Senior Backend Engineer,Fintech Co,2023-11-23,,1,Built backend solutions.
+1b74d1d3-0167-48b5-8612-cfcbfbc7f093,76d4e157-b8e3-4deb-b504-a2f1fa11843c,Backend Engineer,E-Commerce Ltd,2020-11-08,2023-09-24,0,Built backend solutions.
+fc458a2b-c423-42ce-bc8f-dafd3266d3f3,76d4e157-b8e3-4deb-b504-a2f1fa11843c,Backend Engineer,E-Commerce Ltd,2020-03-13,2020-09-09,0,Built backend solutions.
+cb13d40e-a664-411f-aed9-132af2404eb3,76d4e157-b8e3-4deb-b504-a2f1fa11843c,Backend Engineer,Fintech Co,2018-03-24,2020-01-13,0,Built backend solutions.
+19eda9e4-77a8-4270-aeb9-bcf435d1c96b,fe8e59c2-3c6c-482f-b2fc-839208ac5883,Senior Devops Engineer,Fintech Co,2025-08-14,,1,Built devops solutions.
+5ee0e323-54f8-49fd-9190-dd01042f61ad,fe8e59c2-3c6c-482f-b2fc-839208ac5883,Devops Engineer,BigCo,2023-08-25,2025-06-15,0,Built devops solutions.
+22799a12-df61-4ef3-92da-0e2a74b72d1f,fe8e59c2-3c6c-482f-b2fc-839208ac5883,Devops Engineer,StartupXYZ,2023-01-27,2023-06-26,0,Built devops solutions.
+809dddf0-119c-415c-85ab-652aad98cd72,fe8e59c2-3c6c-482f-b2fc-839208ac5883,Devops Engineer,Digital Agency,2021-08-05,2022-11-28,0,Built devops solutions.
+59d7f27e-1552-44c6-84f0-6e4c0df0191b,84a752ed-2a2f-4e6c-8232-3b82f9b527fe,Senior Devops Engineer,Fintech Co,2024-02-21,,1,Built devops solutions.
+b194ccc0-a2ea-43fd-bbd4-da5f899db4b6,ad0170e5-2ee1-4bc6-ba1a-fd7dd1330887,Senior Frontend Engineer,TechCorp,2024-10-18,,1,Built frontend solutions.
+d3e714d0-1f53-4ad7-b164-3522dd943f2c,ad0170e5-2ee1-4bc6-ba1a-fd7dd1330887,Frontend Engineer,Consultancy,2024-02-21,2024-08-19,0,Built frontend solutions.
+008372b5-d5fb-438e-b23d-bc3cb24eb83e,97c171ac-0584-4469-94d8-63c79e79e470,Senior Mobile Engineer,E-Commerce Ltd,2025-05-16,,1,Built mobile solutions.
+ec45b2b4-e499-4939-be2c-d906e50df83a,97c171ac-0584-4469-94d8-63c79e79e470,Mobile Engineer,Consultancy,2024-05-21,2025-03-17,0,Built mobile solutions.
+96662527-6d0d-455f-9b7c-3829bd3d1bca,97c171ac-0584-4469-94d8-63c79e79e470,Mobile Engineer,Fintech Co,2021-10-04,2024-03-22,0,Built mobile solutions.
+e6132077-06f6-4523-aa01-6050df1bde05,97c171ac-0584-4469-94d8-63c79e79e470,Mobile Engineer,StartupXYZ,2020-04-12,2021-08-05,0,Built mobile solutions.
+3e407a84-7382-4085-9fad-9dc17835434b,8fa92f8d-05a5-451b-a57c-83aa3e9ef531,Senior Design Engineer,TechCorp,2025-10-13,,1,Built design solutions.
+9877f88a-cce7-4c0b-a6af-b518e99e6c7d,8fa92f8d-05a5-451b-a57c-83aa3e9ef531,Design Engineer,StartupXYZ,2024-04-21,2025-08-14,0,Built design solutions.
+a296588e-49fd-420c-b5ef-6ac34bd0736e,8fa92f8d-05a5-451b-a57c-83aa3e9ef531,Design Engineer,TechCorp,2022-01-02,2024-02-21,0,Built design solutions.
+1629d6f5-d3fa-47fb-89a5-4259b60d1b31,bff08a43-8f7a-4acf-9346-480449c403d0,Senior Frontend Engineer,E-Commerce Ltd,2024-01-22,,1,Built frontend solutions.
+6f6b982c-9b5a-4e70-a2d0-35b2aaf61b46,2084f732-d5ee-43e4-baac-465d4319df4c,Senior Frontend Engineer,Consultancy,2024-10-18,,1,Built frontend solutions.
+359b8b12-1fa3-420a-8d7c-80d5a016247c,2084f732-d5ee-43e4-baac-465d4319df4c,Frontend Engineer,TechCorp,2021-10-04,2024-08-19,0,Built frontend solutions.
+0cbbc96f-9cdb-4bbe-b155-31aa22a0090a,2084f732-d5ee-43e4-baac-465d4319df4c,Frontend Engineer,Fintech Co,2020-04-12,2021-08-05,0,Built frontend solutions.
+551fb9ab-9e8f-4758-932f-4c8d6f9fb305,2084f732-d5ee-43e4-baac-465d4319df4c,Frontend Engineer,TechCorp,2018-07-22,2020-02-12,0,Built frontend solutions.
+2d3c5aa5-f1f4-4acc-905a-716fb4e62aa6,1c37f3d2-6101-4f7c-b43d-26abd640c04e,Senior Blockchain Engineer,StartupXYZ,2025-09-13,,1,Built blockchain solutions.
+8e651016-fb1e-4500-8b91-6322ced50522,1c37f3d2-6101-4f7c-b43d-26abd640c04e,Blockchain Engineer,Consultancy,2022-11-28,2025-07-15,0,Built blockchain solutions.
+3b8f645d-dae9-4c04-9567-3b0e39688104,1c37f3d2-6101-4f7c-b43d-26abd640c04e,Blockchain Engineer,StartupXYZ,2019-12-14,2022-09-29,0,Built blockchain solutions.
+629d17cc-b68c-40fb-b66c-1c3f2c47413f,1fa52f1a-a9c8-4c50-9cbe-c25d41362d8d,Senior Devops Engineer,Digital Agency,2025-08-14,,1,Built devops solutions.
+f3377bf1-b78b-4613-954b-e43bc8d200eb,2cfe2be0-5d2a-47ba-9c54-b50ec28e7949,Senior Design Engineer,Consultancy,2025-04-16,,1,Built design solutions.
+c22affce-a26b-405e-84a1-02110c679af1,8246a4c1-fa84-47b8-9bac-504610c84411,Senior Devops Engineer,Consultancy,2025-04-16,,1,Built devops solutions.

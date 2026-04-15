@@ -1,0 +1,701 @@
+freelancer_id,user_id,full_name,bio,estimated_rate,rate_time,rate_currency,total_projects,domain,is_cold_start,inferred_exp
+84b32a31-67c4-4aa0-8506-87934d985170,f683a6ee-862c-4259-9203-461b9491cd01,Bob Nakamura,0-year frontend specialist.,30.13,hourly,USD,0,frontend,1,entry
+9ec0ef9e-e68c-45c4-bfa5-3ebb9dc16d95,793852ff-3ff1-41c4-9f6b-a510723a5019,Indah Williams,0-year frontend specialist.,47.48,hourly,USD,0,frontend,1,entry
+1ab1872f-f8ef-47d2-94f9-efdcc33019b4,634f2402-8f26-4b38-9970-b6413205b2a2,Nina Davis,0-year frontend specialist.,42.79,hourly,USD,0,frontend,1,entry
+acf1c7d4-ab2c-4b53-9518-593cc820f7f2,6bd8bbae-5c28-48a4-bfe0-f7a7d543c262,Indah Pratama,0-year mobile specialist.,32.12,hourly,USD,0,mobile,1,entry
+215113e7-9bd3-49be-837e-260347d5b450,e7327e93-002f-4d35-84be-7627697723d3,Kevin Ahmed,0-year backend specialist.,45.36,hourly,USD,0,backend,1,entry
+17b1e005-b888-4e7d-913a-399021d7e140,bf7d979e-9b11-49a0-9098-be45161756d0,Victoria Brown,0-year mobile specialist.,25.1,hourly,USD,0,mobile,1,entry
+aa015888-e227-4bdf-9766-d3d037695834,90a91237-c1a6-4781-8c2b-46657feeea2f,Maya Santoso,0-year design specialist.,51.32,hourly,USD,0,design,1,entry
+1ee46043-a9f8-486e-91c1-9f517cc0bf77,4f7ea553-fea2-481f-80bd-6d3cd734a615,Yusuf Williams,0-year frontend specialist.,45.36,hourly,USD,0,frontend,1,entry
+a1951aba-7f60-4396-a5f3-4b0c06d1632d,28eb1918-ce6d-49e9-8fc9-4046358abaca,Kartika Miller,0-year design specialist.,46.71,hourly,USD,0,design,1,entry
+2373ce40-e2b8-4fd0-bd66-087b9f415e12,dea314c9-9cef-4bf8-b3c2-6a3a419c05f5,Samuel Williams,0-year mobile specialist.,67.04,hourly,USD,0,mobile,1,entry
+91e87f3d-0bf0-4bdd-9480-0c12acbf8679,01135950-ff46-4502-86ad-fded3cd132e5,Rachel Utomo,0-year devops specialist.,74.5,hourly,USD,0,devops,1,entry
+cb745f04-bebf-4ed0-a3ef-02e3b14414ce,6ab4f22e-8799-4017-827d-c49367d668bf,William Miller,0-year design specialist.,45.16,hourly,USD,0,design,1,entry
+fdb7f753-ea18-4014-9a7e-cebb4cfe8adc,04719c93-3ca9-4637-aef9-79dfb2c23fc6,Maya Patel,0-year frontend specialist.,24.41,hourly,USD,0,frontend,1,entry
+97e19c3d-6390-4bb0-abde-43102c67c09f,02474f40-7237-4f96-949f-36a5eb1f7c81,Dewi Sari,0-year fullstack specialist.,42.55,hourly,IDR,0,fullstack,1,entry
+91be0e1c-846c-4e56-b278-613ef7bcf2b0,09b0f9ad-2278-44f0-8435-dd24d68ea968,Umar Johnson,0-year mobile specialist.,32.6,hourly,USD,0,mobile,1,entry
+057b68c4-9981-4115-b399-3a650cd5f515,beb0dd5d-32fd-4be8-8d13-487a8925c181,Zara Santoso,0-year design specialist.,17.98,hourly,IDR,0,design,1,entry
+c2a1910e-a56e-4495-b976-35ff94cd4ac5,d652624b-fe91-4755-87c4-91a77f6424a3,Nina Patel,0-year design specialist.,37.47,hourly,USD,0,design,1,entry
+6c627361-f1ad-4d48-94ca-e92b65e39076,5347c4cb-cf41-4af1-8342-a2e43537f921,Julia Santoso,0-year blockchain specialist.,55.36,hourly,USD,0,blockchain,1,entry
+3c8f17f9-6eda-4185-8c38-10c875619eed,37a5bc83-80e8-4b35-a22a-45457880a0de,Luthfi Pratama,0-year ml ai specialist.,111.31,hourly,USD,0,ml_ai,1,entry
+6b1e4485-ebc3-41d5-90e7-95b1cbd43939,789ff3da-1383-4ec1-b7ec-4aad912bc77a,Ivan Kim,0-year mobile specialist.,47.14,hourly,USD,0,mobile,1,entry
+de4bee2a-83de-4a82-845e-06d542c8a33c,1b5d8ebb-d1e0-4688-bc14-ecf74e6cd393,Julia Patel,0-year frontend specialist.,23.8,hourly,USD,0,frontend,1,entry
+ea2f2bf0-5123-4daf-8d63-f7d257c2fcf4,153c9c56-c790-42ac-9c24-1c0dab900fbd,Yusuf Sari,0-year frontend specialist.,47.77,hourly,USD,0,frontend,1,entry
+3d1afa94-6a5a-4c36-adea-21ff8d07176d,14d2ce83-bc00-45e7-a6f9-3b8cba04a0ad,Joko Smith,0-year ml ai specialist.,92.82,hourly,USD,0,ml_ai,1,entry
+2c38a7e8-19c5-4825-a74c-726922ae63c1,7560ae04-f413-41b0-8552-643151a2699c,Victoria Brown,0-year ml ai specialist.,59.95,hourly,USD,0,ml_ai,1,entry
+7d8d222f-7d8d-404e-911a-701013fcc319,7b6daa25-12fb-48a1-a6a8-ba029ddbad79,Quinn Kim,0-year backend specialist.,65.72,hourly,USD,0,backend,1,entry
+c8a4688d-91d4-4a81-9c77-2951a987a190,875ff5db-84bd-45aa-9e64-b5ee89c3dfde,Putri Wijaya,0-year frontend specialist.,61.29,hourly,USD,0,frontend,1,entry
+af538fdd-1dd8-460a-9b73-41286995bae0,bbebe0a2-4018-4546-a069-b8996d247051,Julia Kusuma,0-year mobile specialist.,61.94,hourly,USD,0,mobile,1,entry
+2b162861-f23c-44e3-a593-b620c2861aa7,234cc286-63d5-4000-bea8-8566fae34b6d,Maya Hidayat,0-year backend specialist.,49.32,hourly,USD,0,backend,1,entry
+24082077-ba69-461b-8c97-de2f1315c071,5b3245cf-7b6c-4505-ac98-3ed9bcb1cc5a,Tanya Davis,0-year design specialist.,17.61,hourly,USD,0,design,1,entry
+dd6df5ae-5061-439f-b843-0f433b64bbb7,979a55cb-3d99-462e-b10e-f2af117ff6a2,Fatima Nakamura,0-year frontend specialist.,41.73,hourly,USD,0,frontend,1,entry
+b094f006-49b6-48b5-b3db-59678e33719c,0111db3a-5e2f-4600-b2cf-6247283d10d2,Ivan Singh,0-year fullstack specialist.,55.89,hourly,USD,0,fullstack,1,entry
+44250764-0b66-4078-a5fb-916993bd5ad6,9d89689f-12ca-40cf-877f-b2b1aea1c91d,Hendra Kumar,0-year ml ai specialist.,70.97,hourly,USD,0,ml_ai,1,entry
+52de5c01-c7fa-4a6e-b5dd-45a8e2e15508,9ce0b896-dfaa-4e40-870c-4bb3b5670047,Tanya Sari,0-year mobile specialist.,74.73,hourly,USD,0,mobile,1,entry
+4d35a3bd-e6a9-47ab-99fd-ae34dbeb1c78,2dbeeddd-f08a-4e00-8a9e-2bb8633dc03b,Hendra Utomo,0-year blockchain specialist.,53.31,hourly,USD,0,blockchain,1,entry
+87e7e08e-c4fa-4c48-9d9c-9112491ef741,5c5773e0-f95b-4633-a8f1-7c8238c061bb,Bob Wang,0-year design specialist.,39.93,hourly,USD,0,design,1,entry
+48893bf6-480c-4589-97a6-eed2ddb279d0,3fb2aaab-5f4f-4530-8215-cb8d0f9e55dc,Edward Ahmed,0-year backend specialist.,57.87,hourly,USD,0,backend,1,entry
+5e006690-101d-47d3-9750-b00cf7dbff82,b20b5ee1-a4c5-452d-b04e-858e6f65ecf1,Victoria Williams,0-year backend specialist.,50.85,hourly,USD,0,backend,1,entry
+a29c1752-c86f-4479-ab01-7340286de804,0bd3aef7-466c-4764-8897-38b5c3d14b4f,Nina Chen,0-year blockchain specialist.,54.55,hourly,IDR,0,blockchain,1,entry
+8101b4d9-08e7-4c21-9a05-28ae639dd49e,a4cd8023-4928-4bdc-bcf8-530f5f26a566,Priya Lee,0-year blockchain specialist.,128.82,hourly,USD,0,blockchain,1,entry
+aae4a770-868b-4dda-9177-5f5b2039cf6c,afb5dbee-6736-4de6-bbae-240e5fcec7c8,Budi Kusuma,0-year frontend specialist.,38.3,hourly,USD,0,frontend,1,entry
+98574a98-9f35-4df6-9bc5-6829a75fcdea,84d56287-3040-4f36-973e-93e9b95dcd52,George Johnson,0-year backend specialist.,44.16,hourly,USD,0,backend,1,entry
+99caf7c2-f071-4427-9bd4-c0bb0f9d848d,3d1cfd6b-0982-4093-9bd2-0e7854a507c1,Priya Miller,0-year frontend specialist.,25.46,hourly,USD,0,frontend,1,entry
+0623b7f3-eab3-4eb6-9d6a-440df2dd1a10,5d01897b-68e7-4b84-9a9f-a3d5ed51ab64,Lily Santoso,0-year devops specialist.,62.38,hourly,USD,0,devops,1,entry
+1bbef5aa-8b67-4e5d-aa78-c79b3fec9f0a,69c347e2-30b5-4bc8-a57e-a02bfcbebed7,Citra Chen,0-year frontend specialist.,20.38,hourly,USD,0,frontend,1,entry
+f8e7ce59-b2b6-4875-8d4e-b57bf1fc8b1f,a10f68ef-16f6-4a2b-ac3c-60e6b0b4159b,Fatima Davis,0-year backend specialist.,29.98,hourly,USD,0,backend,1,entry
+528f8242-1c5d-491f-a1a9-43d060c1214d,82ff2cfd-aeb3-4ad1-9b59-b8b834ad637e,Zara Johnson,0-year mobile specialist.,29.06,hourly,USD,0,mobile,1,entry
+5be6a69a-9649-4557-b452-27d529cf77ca,0b8b9c59-2e4d-4f96-9c4c-d66d1b1162bb,Quinn Utomo,0-year devops specialist.,49.97,hourly,USD,0,devops,1,entry
+1d090acd-bd37-4aa4-80e0-7d017e145e83,95e321bc-a0ae-4a3a-864f-9787790b77b2,Julia Miller,0-year blockchain specialist.,72.64,hourly,EUR,0,blockchain,1,entry
+915ea437-8957-4fee-b31e-eb14b0e3a05c,a6e5fcfc-8c7b-4218-a6ce-7b901871f475,Umar Johnson,0-year backend specialist.,23.01,hourly,USD,0,backend,1,entry
+d0687762-137e-4c6a-bf02-5227451c0a54,3715cba2-f987-4ac7-bb12-3c10f0b157cd,Diana Kim,0-year fullstack specialist.,30.21,hourly,USD,0,fullstack,1,entry
+588a2b8a-5654-40ed-9e05-d555c8247279,5f0adb1f-a43b-463d-825e-1f933b6fd9b3,Priya Sari,0-year frontend specialist.,21.59,hourly,USD,0,frontend,1,entry
+622d522a-6a7d-4347-ab7c-5481696ec633,13795c01-1497-4d2e-a8f8-9f4f5c0034c3,Luthfi Kumar,0-year mobile specialist.,22.19,hourly,USD,0,mobile,1,entry
+872110ec-ec4e-4bbb-957d-65eabfc7f9a5,0e7a7af5-602b-45b4-918f-bd69c776ec99,Quinn Miller,0-year design specialist.,45.14,hourly,USD,0,design,1,entry
+f12331ac-dbed-4a32-80b7-e3eeacbbd5fc,144644d2-0cc0-4028-8728-c9ee3adda952,Zara Jones,0-year ml ai specialist.,92.09,hourly,USD,0,ml_ai,1,entry
+fb7be512-ef36-481a-bbe7-82232c0831a2,2dca4d55-b721-444e-93d5-6339ad103036,Edward Smith,0-year design specialist.,35.62,hourly,EUR,0,design,1,entry
+1079381b-c934-4c17-abb0-608006056242,aae35b43-bee0-4496-a543-18de8184056c,Edward Chen,0-year frontend specialist.,26.72,hourly,USD,0,frontend,1,entry
+77323f6e-3461-4ddb-a914-fbe26bf54348,66ecae79-dd1a-48af-bcf6-078464b5c8eb,Edward Davis,0-year design specialist.,31.63,hourly,USD,0,design,1,entry
+a22ac52b-39d5-4b95-a577-1eeb575efb04,14daa98d-d6ec-40de-a329-9d2c7a5198a9,Naufal Patel,0-year ml ai specialist.,79.96,hourly,USD,0,ml_ai,1,entry
+e301f77c-50a1-4bd1-97c1-c9ff456ee200,7f498952-87fa-460a-b49f-23fe67f4b0e6,George Jones,0-year ml ai specialist.,57.48,hourly,USD,0,ml_ai,1,entry
+6770c5c5-b6a2-445a-b264-256a504640c0,31c7f8a2-cb06-41f3-bcae-8abdafdce8bf,Rachel Wijaya,0-year fullstack specialist.,64.31,hourly,USD,0,fullstack,1,entry
+be75ab67-49db-4068-bf53-71b064b03180,ae6578fb-9e55-4c8a-9e79-90e979017e9e,Putri Santoso,0-year mobile specialist.,47.8,hourly,USD,0,mobile,1,entry
+971a6c0e-c71f-4062-823e-3ad80fdb96f9,63f5121b-ae1d-497c-9d76-e3ec3d7df8b7,Fatima Patel,0-year backend specialist.,45.41,hourly,USD,0,backend,1,entry
+c6bc2f39-31c9-4911-8fb0-cb4eacb35030,9acda11b-a90f-4cfb-8c39-9a2b4f8d00d8,Victoria Jones,0-year backend specialist.,58.23,hourly,USD,0,backend,1,entry
+1c29e46f-c89a-4ba9-ad8b-d432b4fde919,864a55bf-f61b-4910-adf1-c66c2917d87d,Joko Ahmed,0-year blockchain specialist.,87.05,hourly,USD,0,blockchain,1,entry
+f09824c7-ebc2-472c-a15c-2f3d2be74a19,342827d9-9733-444f-b2d0-f5b7b7d5465a,Julia Chen,0-year frontend specialist.,16.98,hourly,USD,0,frontend,1,entry
+510706ba-dc31-49f2-a15c-eeb986fd8936,bbb1c7f1-e240-4b44-9b58-46726abc207a,Budi Jones,0-year fullstack specialist.,27.72,hourly,USD,0,fullstack,1,entry
+7e7b794c-abd3-4539-999c-2ed07a42bbec,f09cceb5-d1c0-4003-96f0-c36c6f38d6e5,William Miller,0-year backend specialist.,60.92,hourly,USD,0,backend,1,entry
+7c44a67a-a063-4ccc-a70c-4c8c4b7cbdbe,6465756b-0d34-4bf6-b32d-72ad2b69146b,Joko Pratama,0-year design specialist.,58.82,hourly,USD,0,design,1,entry
+6fcdfcd0-2401-4e0a-82b3-fa0799d0aa75,b6198ad5-2fd2-40ae-8f4e-4bd06a457c8f,Kevin Garcia,0-year mobile specialist.,68.48,hourly,USD,0,mobile,1,entry
+50a26ec3-276a-4131-ba25-b57c253c38ed,9b49014c-a186-4300-bfe2-d7a89566b256,Ahmad Singh,0-year design specialist.,53.88,hourly,USD,0,design,1,entry
+5eeb626e-b1e8-4da9-976c-7e5edb3f30b0,af055768-5565-40aa-b00a-3b4563544d11,Kevin Ahmed,0-year ml ai specialist.,44.19,hourly,USD,0,ml_ai,1,entry
+9bdcc379-6ca0-4a7e-965b-6f45f069d736,3e5cf2d9-f858-433b-8f0e-044118b245e8,Oscar Miller,0-year blockchain specialist.,129.82,hourly,USD,0,blockchain,1,entry
+86ed43bf-9408-40ae-90b8-2e777d3fd9a6,b0ea0611-1a59-4a77-adbe-b4fa46f6952f,Oscar Davis,0-year ml ai specialist.,37.01,hourly,USD,0,ml_ai,1,entry
+ee6296fd-ee47-4aa3-98cb-0f2d4de44a4b,950f2e08-0bd4-4e3e-b220-37edae1ad1a8,Rachel Williams,0-year design specialist.,58.51,hourly,USD,0,design,1,entry
+9e8d95f9-395a-4a3d-9a38-ccc00f19f927,e7493d80-28b7-46c7-aba9-4eebd2979b08,Indah Hidayat,0-year devops specialist.,95.75,hourly,USD,0,devops,1,entry
+43c83305-b2ea-4637-a434-7a3779214deb,6c2fbd94-0207-474e-83c3-ca7646c08609,Lily Wang,0-year ml ai specialist.,116.82,hourly,USD,0,ml_ai,1,entry
+8387832b-782c-496f-af24-3653f1c77229,30b4115b-eb04-411a-a661-2eb429a2b402,Maya Pratama,0-year frontend specialist.,34.01,hourly,USD,0,frontend,1,entry
+3f68b24b-438c-4fe5-8f1f-a9c600031f95,e307b916-37e4-487d-a5d9-16f68b8de85d,Maya Kim,0-year devops specialist.,38.1,hourly,USD,0,devops,1,entry
+02ca5a57-680b-4fa9-86a2-c9c0f5d89136,d583876e-017a-46af-992c-fd8129eb0e73,Quinn Johnson,0-year mobile specialist.,58.98,hourly,USD,0,mobile,1,entry
+e34c01a5-a33f-4960-98c6-4b3bff2d9266,a60d2e32-2b86-4f74-8922-6638ec489527,Xena Pratama,0-year mobile specialist.,23.85,hourly,USD,0,mobile,1,entry
+4ef3894b-ee9d-4a33-ac34-1e3ef7f98dcb,fd4adc17-4e5b-47fb-a4a3-903163b22e6e,Naufal Hidayat,0-year design specialist.,44.85,hourly,USD,0,design,1,entry
+03af6514-905b-496f-96c9-e0fadcfe7f7c,cc5566a7-0926-4461-b81c-7351fc07442b,Gita Wijaya,0-year ml ai specialist.,91.69,hourly,USD,0,ml_ai,1,entry
+5ab551dc-90c4-4023-bd67-8300deaa66db,cb46e91b-eb53-4386-bad0-80ed22a1976a,Joko Jones,0-year ml ai specialist.,51.31,hourly,USD,0,ml_ai,1,entry
+706bc8ae-2e46-48fa-ae33-39326459a02f,3d8967b0-5b8a-4628-8248-9ce3a63fdd60,Lily Kumar,0-year devops specialist.,69.84,hourly,USD,0,devops,1,entry
+599c1f49-389c-410a-8a6f-f776782b637b,0385ce2e-33d6-4c84-9f00-1cf4db891735,Tanya Wijaya,0-year backend specialist.,32.61,hourly,USD,0,backend,1,entry
+0086f5e1-bc0d-4c63-ac1e-c27a78bb4165,283013c7-2c10-4155-a378-751452df6a3a,Dewi Utomo,0-year design specialist.,34.9,hourly,USD,0,design,1,entry
+ec3d5fea-d180-4709-9d13-e2f52db8450f,b5cf5771-78a0-46e9-b8c1-b0207bc57535,Kevin Singh,0-year blockchain specialist.,49.33,hourly,USD,0,blockchain,1,entry
+6cddae0f-a876-46a3-aecb-d0b03ddccad2,79b23dc7-3dc3-4ea6-b53f-3362dbaaeea6,Fatima Davis,0-year design specialist.,45.28,hourly,USD,0,design,1,entry
+94b4b487-6adf-4d28-bc67-5238e83b476c,23780f63-13d4-414b-8940-5f613991c29a,Julia Smith,0-year mobile specialist.,22.54,hourly,EUR,0,mobile,1,entry
+ca8b7b20-cb1b-4507-a4f5-573bbb1c8505,bfaab7d9-24ac-4e63-a886-0ad2e52b8a08,Dewi Pratama,0-year frontend specialist.,63.74,hourly,USD,0,frontend,1,entry
+320c2c1d-5e8d-4012-a43d-79887f017e70,018545ba-fdc7-4ed0-b311-ec4b56dfc785,Faisal Sari,0-year devops specialist.,47.08,hourly,USD,0,devops,1,entry
+8c5291ad-93e6-4e5f-94f5-399cb09c0a94,7e6dbbe4-5a2b-4d9b-bf7c-47b2053089c8,George Pratama,0-year backend specialist.,33.13,hourly,USD,0,backend,1,entry
+aa1a2be7-4537-4555-bd20-43689d8f92c7,27180917-513f-4e5a-8125-cb5a1b46b168,Diana Chen,0-year blockchain specialist.,67.41,hourly,USD,0,blockchain,1,entry
+db9573eb-1076-48a5-afa9-44e4a1e744d9,d8ed6ed6-4e28-4eef-8323-40d92219375c,Ivan Utomo,0-year blockchain specialist.,113.43,hourly,EUR,0,blockchain,1,entry
+4b0d8441-9479-4779-9791-e419593b7728,df9f08dd-6308-4e6d-8e5c-71a840e1511d,Citra Kumar,0-year design specialist.,51.68,hourly,USD,0,design,1,entry
+a24f7900-ef44-4a4c-95ae-802d8202ff69,ebfd009e-d944-4834-a8e3-fb8fcceaf5da,Joko Utomo,0-year devops specialist.,92.8,hourly,USD,0,devops,1,entry
+3ced7f07-c41d-440e-b1cb-71244e74be73,a744bf46-f47e-4512-a4e2-7b5fe46c9255,Citra Santoso,0-year blockchain specialist.,122.7,hourly,USD,0,blockchain,1,entry
+52b749cc-026e-4225-aa32-5a181f0c06f9,6b7fc1da-99bb-47ec-a313-c87bbbe30245,Hendra Lee,0-year ml ai specialist.,88.27,hourly,USD,0,ml_ai,1,entry
+18dbf9c7-d7d8-4dfb-bfb7-a10650e1d03f,3b13ceee-e67b-43e5-96ae-d6b478b4ab5f,Samuel Davis,0-year frontend specialist.,29.94,hourly,USD,0,frontend,1,entry
+6be5c26c-7c2d-4259-b3a2-e88bf9d6a5be,9ca6277c-d596-46e1-849e-e4b1e4abe891,Ivan Jones,0-year frontend specialist.,27.72,hourly,USD,0,frontend,1,entry
+e0662b66-15c9-421a-8ca9-52da0d813436,b2fcb6cb-2c2f-4ec9-92d0-5d1dd7436396,Edward Pratama,0-year mobile specialist.,42.42,hourly,USD,0,mobile,1,entry
+20cc9fbc-bbd5-451c-b108-5e4d3e1d343a,7532a99b-1252-46c1-a99b-76164d162fd5,Diana Miller,0-year devops specialist.,88.3,hourly,USD,0,devops,1,entry
+6986d167-1898-476f-83fa-5df4b6b349e9,e77a6ba5-278a-4798-89ce-8ef9f597e0a0,Kartika Sari,0-year backend specialist.,48.62,hourly,IDR,0,backend,1,entry
+dc52d8c0-7a67-4600-aae5-6180bfdd7dbb,43463ec1-8c28-483d-a837-e17f2de95227,Yusuf Pratama,0-year ml ai specialist.,80.75,hourly,USD,0,ml_ai,1,entry
+011a7db6-ef2e-40ba-aef5-b32531705d9a,aa0f66d7-cc47-41e5-a5ff-86b1b2f1b063,Faisal Davis,0-year mobile specialist.,35.01,hourly,USD,0,mobile,1,entry
+b84495ba-fa21-48d8-94a8-31e5c51fbeda,612e0dca-bfaa-48a8-9ac6-5df979737f6d,Victoria Singh,0-year devops specialist.,77.54,hourly,USD,0,devops,1,entry
+7a8f8567-ca44-4262-929a-620bd25b2668,cea5cbc7-5552-4f64-b9a4-af6b68b0dd79,Dewi Jones,0-year fullstack specialist.,88.75,hourly,USD,0,fullstack,1,entry
+678affa7-87f4-404d-90d4-03f73c40e6d3,437a3da2-728b-49d7-aa11-b0f2ba69c89f,Luthfi Wang,0-year devops specialist.,76.41,hourly,USD,0,devops,1,entry
+1ff01457-dd73-4aee-b15f-2865897acc83,a80aa1e8-4078-46ca-9ff8-60ab95a1b855,Ivan Utomo,0-year devops specialist.,42.72,hourly,USD,0,devops,1,entry
+9b7d68a3-cd4e-4679-ae50-492786ee109d,f62b0a25-c4ac-4802-b291-7b4b353ad682,Nina Utomo,0-year design specialist.,29.71,hourly,USD,0,design,1,entry
+37bc99da-0630-42f7-8d62-f04bc541a187,1e8b81c2-8370-47aa-b3ca-df062136078e,Rachel Pratama,0-year devops specialist.,47.66,hourly,USD,0,devops,1,entry
+3c8fe189-0346-47dd-b3e7-27b1d6e5ab70,0e944e7c-e147-4358-998c-ea6b59827594,Indah Johnson,0-year backend specialist.,79.99,hourly,USD,0,backend,1,entry
+e6314ac9-9c9a-4580-beae-cfe38ff7d924,5d8b53e5-bc58-4db2-a1ac-002ed5aff71b,Charlie Smith,0-year frontend specialist.,67.23,hourly,USD,0,frontend,1,entry
+da9992ce-721d-4c0b-9403-5389867d92f6,3b33352e-2d2a-4fb9-9e66-e15f75843a00,Naufal Jones,0-year backend specialist.,34.31,hourly,USD,0,backend,1,entry
+ba53e8ac-5a01-4cb8-a23d-dcd32a1ad78f,3de4b0e3-fee2-4efc-8992-f92d801785ed,Kartika Miller,0-year frontend specialist.,40.58,hourly,USD,0,frontend,1,entry
+a3c5cd1c-312c-407e-b252-9833010c7c38,63a2c567-c248-4364-b0bb-0802e6fcc3ce,Kevin Kumar,0-year design specialist.,42.33,hourly,USD,0,design,1,entry
+3766177f-a91c-42a7-9ebe-66a7ce1bb439,11aa1af2-b4dd-4de8-b9a5-9d3153699fc0,Kevin Wijaya,0-year frontend specialist.,20.95,hourly,USD,0,frontend,1,entry
+924b9ca3-f754-4631-a6d7-711adf1b00dd,91ad319c-921f-4c9c-b66d-eb1eaa4dc8f6,Kartika Singh,0-year ml ai specialist.,112.18,hourly,USD,0,ml_ai,1,entry
+9898560a-9bed-47ce-8ac2-3d7388365ba3,9a167442-c6c4-482a-80ed-76280fb16f08,Edward Wang,0-year mobile specialist.,57.98,hourly,USD,0,mobile,1,entry
+21bb941a-3e41-41f3-895c-57efdad80409,848cb74b-3b32-4a10-9e39-0155f6621e59,Tanya Singh,0-year frontend specialist.,48.02,hourly,USD,0,frontend,1,entry
+f98a306f-e0d6-4338-a4bd-de7e2a84f10f,39e1438c-d56f-4fa8-9239-10d659462c57,William Chen,0-year backend specialist.,45.7,hourly,USD,0,backend,1,entry
+050d3de2-e7cc-4398-9d08-1d728c94cf4e,fa789f8f-b9e1-4bd2-a15e-9496c66cbc2f,Alice Pratama,0-year design specialist.,52.0,hourly,USD,0,design,1,entry
+f3e68e72-4f5f-4077-b436-f937c3ca005a,0d6a7480-6201-4ca4-8679-a5bf42aa94aa,Putri Utomo,0-year design specialist.,46.83,hourly,USD,0,design,1,entry
+9d86bd82-655d-4cb0-ace8-eec44666a302,5277f1da-d46a-44d7-9fcb-5d2c868da878,Naufal Chen,0-year ml ai specialist.,100.84,hourly,USD,0,ml_ai,1,entry
+a5750713-8082-4a6e-ad11-dba3dd54a895,ac49dacf-5ed9-4ad1-8ed0-faa40bf4f92e,Umar Davis,0-year ml ai specialist.,105.61,hourly,USD,0,ml_ai,1,entry
+9809c8e8-69dc-47a4-a9e5-2ae865f57132,b8fb680e-2c53-492e-9d06-55f997403cd9,Priya Utomo,0-year blockchain specialist.,102.68,hourly,USD,0,blockchain,1,entry
+dd7898c0-16b6-4914-b0bd-670035be9272,6345502b-cede-420f-9ffb-1bb549506ccc,Bob Lee,0-year design specialist.,53.29,hourly,USD,0,design,1,entry
+24a2e867-8124-49cb-967a-e748d1bf9523,f14bb372-7aef-40ef-95a0-f28b94315a42,William Santoso,0-year mobile specialist.,38.72,hourly,USD,0,mobile,1,entry
+e05f6c5f-fe41-4b36-8f8a-0c78a220abf8,1363b299-3d5f-4dbb-b98f-31b1b89cf3c7,Joko Smith,0-year ml ai specialist.,78.91,hourly,USD,0,ml_ai,1,entry
+8b57aba6-1e94-406b-9d72-8165957f5d98,42bfce2c-537b-40ea-a56a-72a2728d554b,Ahmad Lee,0-year mobile specialist.,50.53,hourly,USD,0,mobile,1,entry
+2fc89b73-15ca-4553-8ef0-9e04be067a48,814d5ccc-24a8-4759-8b59-1a7dfccbc844,Faisal Utomo,0-year blockchain specialist.,127.22,hourly,USD,0,blockchain,1,entry
+1884c874-7fcc-4298-9424-7d6936a96641,867c8065-e18e-4ef9-abec-71e6246afdaf,Zara Ahmed,0-year mobile specialist.,33.38,hourly,USD,0,mobile,1,entry
+1760ef96-dc2c-45dd-b4c1-9c05bde1d374,16380a47-0688-41a2-a000-e1eb14c8230b,Eko Chen,0-year design specialist.,38.89,hourly,USD,0,design,1,entry
+f9d0a181-cc50-48c6-91c0-16d48941667c,aadb03d0-dc36-465d-a8c0-3c033299be01,William Ahmed,0-year design specialist.,35.42,hourly,USD,0,design,1,entry
+8e9994a0-d37d-4fcb-8a51-dec9985abc6c,c6f26be5-de61-40f6-9e37-5d070a9b18d0,Hannah Nakamura,0-year mobile specialist.,30.59,hourly,USD,0,mobile,1,entry
+902a5edc-8eed-498c-bae3-2bf1c04da7cd,07a39a67-06c5-4764-b6a7-98fca23ad3b8,Marco Miller,0-year fullstack specialist.,73.01,hourly,USD,0,fullstack,1,entry
+caa23596-60d6-41bb-92af-7275666b0c70,8633766c-9722-4f14-89cd-5b53c3fad340,George Miller,0-year ml ai specialist.,60.18,hourly,USD,0,ml_ai,1,entry
+bea1d4bb-3f58-4142-b993-0a34ebce0cee,1e84a1bd-5216-474c-972c-b2a63d064b61,Alice Ahmed,0-year ml ai specialist.,80.4,hourly,USD,0,ml_ai,1,entry
+64623063-8a19-4c74-b10c-aba2e5cd0996,9a1138f7-73c4-4ce0-a562-fb85df8038f8,Joko Wijaya,0-year backend specialist.,61.85,hourly,USD,0,backend,1,entry
+4ae9b15f-86bb-4e6e-9cdd-4b9c7cccea0d,b1547665-71cf-4196-8c3a-7acff491e2af,George Smith,0-year blockchain specialist.,103.15,hourly,USD,0,blockchain,1,entry
+335e5345-de43-4572-a9a8-0e4f49c0ad0b,eb404f31-8975-4984-b6b4-f85fa55f9f6f,Victoria Garcia,0-year blockchain specialist.,146.2,hourly,USD,0,blockchain,1,entry
+f81597fd-d2a3-4eae-aba1-f690e00c5689,9c6612fc-789a-4cad-89da-3120d42b9a44,Hannah Williams,0-year blockchain specialist.,84.08,hourly,USD,0,blockchain,1,entry
+d8ac939a-6431-4a1b-a0d7-77c33472e681,ee125fce-c524-4509-b53c-8a12ccfcfe9f,Julia Jones,0-year backend specialist.,68.67,hourly,IDR,0,backend,1,entry
+b54b0bee-b488-4982-b373-2a3c580d1f32,b19ae39c-c1a4-44a4-99be-4eb5c6400145,Priya Brown,0-year frontend specialist.,45.69,hourly,USD,0,frontend,1,entry
+5743dd1a-2cce-44de-a28f-ff0324fe8194,77e8f9d9-75c1-476a-9c13-f732936679a7,Hendra Sari,0-year mobile specialist.,44.78,hourly,USD,0,mobile,1,entry
+b906d416-efca-4934-a54f-193909f9d239,2d4eb280-0093-494d-a8d9-3549717c13f7,Tanya Wang,0-year devops specialist.,73.47,hourly,USD,0,devops,1,entry
+101f9e28-c090-4d6b-877d-17a9fe04d437,ab03f218-5bec-4eb2-a416-0a50bc5b3451,Nina Patel,0-year frontend specialist.,26.61,hourly,USD,0,frontend,1,entry
+1fadb259-8ebf-4495-951f-a719cb2a5020,680bd56c-73d5-45e2-9a17-2edbffed340a,Priya Garcia,0-year fullstack specialist.,60.88,hourly,USD,0,fullstack,1,entry
+5b93e317-0d75-4eba-bdf5-88bdf464e7dc,90c2505c-d2b1-4783-9f1f-136d528a7492,Citra Ahmed,0-year devops specialist.,71.57,hourly,USD,0,devops,1,entry
+51b0bad8-0b65-49b6-809c-56f41e5407b5,6e3ee01e-a65b-4e7a-b09f-619f57b3a01d,Samuel Ahmed,0-year mobile specialist.,35.55,hourly,USD,0,mobile,1,entry
+e6e65731-5466-4996-b185-dbb10641fdfe,e2806ec0-2200-4812-9edd-3cdc587e79c6,Oscar Santoso,0-year frontend specialist.,58.33,hourly,USD,0,frontend,1,entry
+ebb94eff-84a5-4d0a-b45c-e04d59f8696e,5f583375-0452-43cd-9531-ee9ad7c273b2,Budi Brown,0-year mobile specialist.,49.95,hourly,USD,0,mobile,1,entry
+f69b476a-4be8-42bd-ba4c-1a34738f0a25,d6962d24-5533-4ccf-96c9-aa9186ae003e,Julia Williams,0-year ml ai specialist.,40.07,hourly,USD,0,ml_ai,1,entry
+7bcfbbeb-8ad4-4559-9342-984a6389c37a,61a604f2-17ba-4821-a864-55f71b9ed898,Citra Brown,0-year ml ai specialist.,74.84,hourly,USD,0,ml_ai,1,entry
+256577fa-20bf-4fef-8a7d-b9497ab41e01,d5e18cee-7fe4-4c9e-951c-3e7dfc301552,Rachel Kim,0-year devops specialist.,67.8,hourly,USD,0,devops,1,entry
+202b3666-e8e5-4c77-9118-1cfee89fd708,b77a77bc-6ab8-4d1d-b783-d7d031ff6435,Budi Nakamura,0-year backend specialist.,39.34,hourly,USD,0,backend,1,entry
+a8ce84a3-f3d5-472a-8ee1-72246b54363b,4611cb08-7bec-42fb-b6ba-ee5c11befff4,Oscar Singh,0-year frontend specialist.,60.98,hourly,USD,0,frontend,1,entry
+d810089b-e1c0-462a-ab37-e24edd8c5a04,b8c1bc94-6d8c-489b-b698-c688028129fd,Rachel Wang,0-year backend specialist.,22.41,hourly,USD,0,backend,1,entry
+74fa8bb7-ad38-4d08-bf02-4e5ce12a037b,f1eb7c93-7e78-42f7-b266-c18ccfefe733,Hendra Patel,0-year blockchain specialist.,88.65,hourly,USD,0,blockchain,1,entry
+b62c25ef-f27b-4507-bf2c-fd59ca0d2989,a9e51fb8-89f9-4fab-8563-77c9bd64dc10,Putri Lee,0-year devops specialist.,97.83,hourly,USD,0,devops,1,entry
+84e4c30b-03e8-4a53-b7b4-999e0e3bcadc,d94ee9e4-95a4-49c3-8a77-4830b0e66541,Victoria Hidayat,0-year devops specialist.,76.91,hourly,USD,0,devops,1,entry
+34d3af4f-d472-4c34-8f24-e498671d3151,b5405fcc-5c4c-4860-b14d-27c566962a4a,Ahmad Ahmed,0-year design specialist.,37.3,hourly,USD,0,design,1,entry
+3829983f-1008-49b3-97dd-399ffea22f42,00e0e18b-db90-4ea5-8dd1-6ed0e03ce079,Joko Johnson,0-year devops specialist.,61.84,hourly,USD,0,devops,1,entry
+78db5df6-7e58-4214-a12f-da3b7daef59c,bd8f5933-3e04-4659-8ae7-4878c0499adb,Hannah Sari,0-year design specialist.,53.92,hourly,USD,0,design,1,entry
+bc1f6009-5cfc-4126-afa5-33e9ba8448a8,e6308811-03c0-4e41-8a89-e1cc4876d798,Indah Utomo,0-year backend specialist.,44.79,hourly,USD,0,backend,1,entry
+0f83209f-82fa-450f-8347-b73a50c3cce8,a0e8895c-3558-483d-99dd-05dea27413cc,Naufal Lee,0-year design specialist.,43.14,hourly,USD,0,design,1,entry
+9128b7d3-bf47-4a4a-83b4-6c6a93cb09ab,fdccad31-0050-46fc-9ea3-dfcef285f587,Rachel Chen,0-year mobile specialist.,27.21,hourly,USD,0,mobile,1,entry
+11d2fb72-7bec-4fac-a653-a2806fe0ab4d,302b6ae0-fa79-4f62-9290-712b771a6754,Hannah Smith,0-year blockchain specialist.,147.05,hourly,USD,0,blockchain,1,entry
+61078ee0-91a1-476e-aa00-7d05bcc008b4,ef126942-cca7-4d8f-9260-c8629face9b2,Kevin Wijaya,0-year mobile specialist.,50.3,hourly,USD,0,mobile,1,entry
+75036469-1e69-4b96-b2b6-08f74f4e5da9,eac01a76-6df8-4ffd-8f91-c17196e91c22,Oscar Brown,0-year frontend specialist.,40.38,hourly,USD,0,frontend,1,entry
+f732997e-f96f-479c-9238-c93a316ab1f7,d93b01fa-6860-4b1a-bbbb-1186f99144d8,Faisal Ahmed,0-year fullstack specialist.,43.97,hourly,USD,0,fullstack,1,entry
+8ba3fd7d-e046-4d03-be82-c59c46f46047,aec8be4a-10e5-4dd8-a7f5-117ca44e2a4c,Eko Lee,0-year devops specialist.,47.06,hourly,USD,0,devops,1,entry
+2cfbc6d2-49ee-466e-9b10-c89cdc5e0b53,706cc9d7-0302-43df-b010-038c99490d60,Marco Kumar,0-year devops specialist.,65.58,hourly,USD,0,devops,1,entry
+cba64cac-5e5d-4be6-ae2c-08888a056e19,47ab08d8-6363-4b87-a377-685915c547a5,Rachel Pratama,0-year frontend specialist.,33.69,hourly,USD,0,frontend,1,entry
+02ab8a5c-d0ba-412b-8751-100de8eb1228,d6c38d99-752f-40b9-a624-0907b2de35c0,Alice Wijaya,0-year ml ai specialist.,96.71,hourly,USD,0,ml_ai,1,entry
+068c9af0-7a1b-4ec8-adcf-965e7b3216c9,8cf24297-6740-4e0d-821c-5a3605602a00,Citra Chen,14-year blockchain specialist.,93.28,hourly,USD,9,blockchain,0,intermediate
+207507dc-c332-48de-b09c-d04c03e98c48,2ed40bbc-d628-47fd-b5d4-7bb2236e9d14,Marco Ahmed,8-year devops specialist.,46.72,hourly,USD,20,devops,0,expert
+af1825e2-3879-450c-b717-2abe807aae56,0adf2e7e-5b55-421f-b8d1-dfe0c7388823,Eko Ahmed,1-year devops specialist.,93.94,hourly,USD,20,devops,0,expert
+eeb04b28-edcb-4969-946e-cc0e70aff232,d039a430-c0cc-4b40-b807-2893341a1882,Ivan Kim,8-year fullstack specialist.,87.75,hourly,USD,2,fullstack,0,intermediate
+80a3149f-42c0-4608-b1d8-b79bb4e62dce,e5976195-c5f2-449d-bf1d-998fac489bba,George Kim,14-year frontend specialist.,65.07,hourly,USD,28,frontend,0,expert
+3e51ac71-eb1d-4ae7-8b6f-c68b2bd85db5,5f7a441a-2287-425e-b144-0c9e5e1af0fa,Julia Williams,7-year fullstack specialist.,55.52,hourly,EUR,41,fullstack,0,expert
+7dc7ed8c-a942-4e49-b3d5-b95fdac243fb,4176eb88-af72-4e02-93ee-d4f1864d7bee,Zara Patel,10-year design specialist.,18.61,hourly,USD,44,design,0,expert
+913c8f2d-383f-4887-a7a4-7f3927b68815,3803b820-e0bd-4c36-a9ad-db7fb54f5303,Faisal Chen,6-year devops specialist.,32.51,hourly,USD,40,devops,0,expert
+aa69163e-15af-4b6d-b4d4-7263cf34398d,610589ed-c9c1-4e40-bab5-4562d8c904fb,Budi Brown,4-year ml ai specialist.,99.63,hourly,USD,5,ml_ai,0,intermediate
+1c437d95-87e9-458a-8bd8-4e07934bccd4,765adc63-f5c0-4c29-bfe5-429bf759bc5b,Tanya Smith,8-year frontend specialist.,17.53,hourly,USD,10,frontend,0,expert
+1e62ee30-e14b-489a-a43b-dd3784412cca,642ebdff-de5c-4d32-b5eb-9ecbe857860a,Budi Jones,6-year ml ai specialist.,55.76,hourly,USD,23,ml_ai,0,expert
+c5ea944d-ab0b-4a71-9c7d-8b72234dcf32,42f75f1e-efd4-453f-8e5f-dceb4c59c14f,Fatima Kumar,3-year fullstack specialist.,81.6,hourly,USD,11,fullstack,0,expert
+774c22ad-7af3-4a43-875d-3226e1e3cdf1,deec763d-048c-4013-a82f-0e782562182f,Julia Davis,8-year mobile specialist.,45.36,hourly,USD,37,mobile,0,expert
+dd667acc-1d35-4b7b-a695-df60e1e37409,f0ff1ad0-8247-4be5-b5ea-8057cd3c5d95,Dewi Wijaya,11-year ml ai specialist.,92.6,hourly,USD,0,ml_ai,0,entry
+eee57cc8-0424-4692-847a-e2fbbeb128eb,f3ec2082-5898-404f-83d1-b4d781c31330,Tanya Patel,6-year blockchain specialist.,145.82,hourly,USD,37,blockchain,0,expert
+99246378-1f5b-4ff7-ab44-7eed87a515bb,7be02be9-6367-4bbf-b1b4-6ad77eb1836b,Marco Sari,14-year blockchain specialist.,133.87,hourly,USD,19,blockchain,0,expert
+91ddfa64-1d6e-48de-91f5-03352f4c6dd6,4403086c-b9d4-4a3d-8f4e-ea9b93e0761c,Kartika Wijaya,10-year devops specialist.,99.49,hourly,USD,22,devops,0,expert
+a0599347-2da1-4a36-aa85-e9dbbb1e36e3,61a01d41-25ee-42ee-9a53-468d5101884e,Kartika Singh,5-year devops specialist.,84.48,hourly,EUR,0,devops,0,entry
+094c4567-6032-499a-8a48-40d73e4c3aba,32794201-d822-494a-93c5-60b025d7622b,Oscar Kumar,14-year blockchain specialist.,128.21,hourly,USD,18,blockchain,0,expert
+ac995400-992b-423f-8c79-c1850e4a2798,12aa0c22-d82d-4f0a-b3d0-4c1e73a496ce,Ivan Patel,10-year mobile specialist.,25.34,hourly,USD,16,mobile,0,expert
+cc69d3c2-f38b-47a6-bce7-df9d084b05ea,6cb17632-3cec-4534-b6ee-4fc14fe0328a,Charlie Wang,5-year backend specialist.,41.89,hourly,USD,28,backend,0,expert
+10e727f9-945f-4416-9152-43643f546c24,e6d57c8f-25f6-40c4-83ad-19df1382854d,Lily Miller,6-year ml ai specialist.,46.23,hourly,USD,26,ml_ai,0,expert
+375a8c44-f210-4e1e-82ff-1198081195b5,c5767f4f-588e-44be-8294-da0af30cea81,Rachel Garcia,9-year design specialist.,26.56,hourly,USD,32,design,0,expert
+e719dcf7-507b-4930-b2db-0377d20d9308,2765c7dd-6a3d-4589-a338-d495406fd818,Victoria Brown,13-year blockchain specialist.,91.52,hourly,USD,18,blockchain,0,expert
+fd50fbe5-2f59-4bf2-a609-71ab37b0e157,17b53b2c-97c3-42a9-9531-e3b6e7564b62,Zara Chen,14-year mobile specialist.,40.12,hourly,USD,43,mobile,0,expert
+b56d4e13-af27-44f7-ac0d-ff9d2799bc7b,2cbdaed0-d961-4c32-9038-9e43fdd3c69c,Hannah Utomo,5-year backend specialist.,42.12,hourly,USD,34,backend,0,expert
+bbb94bde-c4c6-4bd8-8839-4e3e8600c4cf,3886ef43-0b28-440f-bb6c-516325f34fe6,Putri Kusuma,10-year ml ai specialist.,44.21,hourly,USD,24,ml_ai,0,expert
+59cdcd10-4b4c-4391-8eb2-fcb03d53f6d6,2227e25b-3730-41f3-8aef-ac4d2b77af89,Umar Kumar,10-year backend specialist.,33.28,hourly,USD,35,backend,0,expert
+071afcbc-7917-4ec2-a456-c39c9a762665,4f54eeee-aaf5-45d0-836c-58e359672053,Tanya Patel,15-year blockchain specialist.,84.91,hourly,USD,44,blockchain,0,expert
+f22d3ba3-2410-4485-9ed4-2be207d07327,33a42122-2334-4a33-83dc-60de9256b2fd,Hannah Brown,5-year backend specialist.,34.09,hourly,USD,31,backend,0,expert
+867e0ec8-4f04-4586-bcf3-ab5cfb04af37,42ec24dd-8a86-492d-8bfb-d0c4e03a239c,Indah Pratama,8-year devops specialist.,71.11,hourly,USD,23,devops,0,expert
+d3f9dc98-6426-4413-839a-181958cb3e54,66673348-8488-43e2-bf8b-6c8cbac65fc6,Faisal Kumar,11-year devops specialist.,58.57,hourly,EUR,6,devops,0,intermediate
+d1ae4f3c-9966-48f5-bdda-6fe4aa04fdb6,4370a5c7-2c1b-435d-a24e-88e88a55c63b,Nina Utomo,12-year backend specialist.,46.68,hourly,USD,23,backend,0,expert
+fd55d99e-5984-4514-8245-03c38032bdb5,53134ea2-db15-4bdd-91f6-b7ca6fb8b7e9,Xena Chen,2-year design specialist.,55.58,hourly,USD,43,design,0,expert
+e6948fb8-ee92-44fb-860e-3d249749b833,62662d0b-1ec2-4cab-a36d-66332fed6fc0,Marco Brown,7-year backend specialist.,76.94,hourly,USD,17,backend,0,expert
+fae635b0-e19d-4c34-be0b-97b5716d0fbd,5a2108ce-4f69-4f53-a0a3-28570eda33fa,Putri Kumar,11-year frontend specialist.,68.41,hourly,USD,13,frontend,0,expert
+b0e6b519-90eb-4bc3-8d5c-934d18a15189,b826d208-a2da-4fb3-a661-b7b6936f904e,Kartika Miller,4-year design specialist.,18.09,hourly,USD,8,design,0,intermediate
+79000fd1-cc2b-42f3-9b76-d52ebee1e884,f798f0ca-47b8-4c2d-882e-e876c4c89d14,Oscar Hidayat,10-year mobile specialist.,62.59,hourly,USD,13,mobile,0,expert
+e940aee5-f9e0-4436-bf8d-2cf77e03c612,376e8126-39d5-4eb5-9441-85b7f63dca62,Ivan Chen,5-year backend specialist.,35.04,hourly,USD,9,backend,0,intermediate
+7e96e480-4394-4a69-ab9d-21fcb78f648f,f9acfc3b-122f-4a01-bc12-d73b8a5925a2,William Davis,3-year backend specialist.,55.33,hourly,USD,0,backend,0,entry
+b6dc3a58-1e53-4f2d-8b88-f858490e3c70,0a5f7059-c228-403d-8fb2-db20b77f93a7,Ahmad Kim,1-year ml ai specialist.,44.66,hourly,USD,8,ml_ai,0,intermediate
+bfea403c-e134-4f40-b43d-ecd0620c9612,6b13eef7-1ee1-4529-a293-a0bca07d13e0,Gita Wang,13-year blockchain specialist.,52.0,hourly,USD,23,blockchain,0,expert
+92c088f2-9685-4abe-9bf9-e85a09387489,9658d1f8-5931-45c9-a7a0-02c7b49521d0,Hendra Wijaya,12-year backend specialist.,47.48,hourly,EUR,42,backend,0,expert
+ff01beae-c458-49db-9bb1-1069004e42c5,0321eeea-98b5-44a7-afc6-224205f78827,Budi Singh,8-year backend specialist.,26.48,hourly,USD,25,backend,0,expert
+87d38227-d692-4576-b420-fe1cdafa91c4,fa465d23-be08-475b-8dd0-b99698f86544,Umar Kumar,2-year blockchain specialist.,56.32,hourly,USD,5,blockchain,0,intermediate
+2c283439-b2bc-4ff6-96bc-3dbe27467169,8314e123-98e1-44d7-8187-51e249cabc2e,Hendra Wijaya,7-year design specialist.,35.42,hourly,USD,38,design,0,expert
+11bf9149-0185-415d-aa3c-e8526c5d958a,d6aa2e74-f76e-4c27-a381-be15ab0eea75,Hannah Patel,13-year frontend specialist.,50.8,hourly,USD,44,frontend,0,expert
+a08cf8b4-7fbe-4b25-b00f-671fc4f4f860,38934ccd-f38a-4f74-b91d-baf349d908d0,Oscar Pratama,7-year mobile specialist.,38.64,hourly,USD,28,mobile,0,expert
+91360cab-dc93-4741-9eb8-192cebbae384,503a6b9f-8e1d-475a-966c-4f11b2aa6c24,Umar Pratama,12-year devops specialist.,51.88,hourly,USD,6,devops,0,intermediate
+d703f3ab-5f66-4ea2-902b-bc78eeb359cc,2208d4f6-f941-4e7c-92fa-c36307a52e73,Edward Williams,11-year fullstack specialist.,79.07,hourly,USD,30,fullstack,0,expert
+6690e3f4-ad55-4114-8274-1e0a48c9abb1,007f4168-f6b3-482f-8a48-bca2dc197a99,Ivan Chen,12-year frontend specialist.,18.3,hourly,EUR,23,frontend,0,expert
+e44791c2-e8c5-4d6c-8e32-c8c3f8fd8bd2,c5487cda-e342-4bc0-a9f1-b7489bc291fb,Ahmad Kusuma,11-year design specialist.,54.31,hourly,IDR,7,design,0,intermediate
+a32e9d43-1a56-47b8-9785-a5e54e97449f,1207bc3c-c143-4df2-8bb4-522819911a8c,Samuel Kumar,14-year devops specialist.,51.87,hourly,USD,3,devops,0,intermediate
+4255cd43-96f4-4500-af3c-f2df564ee895,50eadadb-7879-46e9-8aff-27822e5dc85e,Eko Davis,3-year mobile specialist.,66.6,hourly,USD,42,mobile,0,expert
+926b7980-3d50-4b0a-b8b2-1b0c4d198cbf,774e6105-0255-41dd-b613-4daf122e339f,Kartika Davis,2-year design specialist.,51.32,hourly,USD,17,design,0,expert
+1d7ac49a-11b9-4f44-b735-34db75465b0e,e9c19e28-483a-46dc-a1b2-e11226401ed0,Rachel Smith,10-year backend specialist.,30.82,hourly,USD,42,backend,0,expert
+f8068338-51b8-4b45-b9f6-68252e42c66a,8b9c46f8-dc44-4c86-855c-5179f59fd30a,William Smith,15-year ml ai specialist.,50.42,hourly,USD,21,ml_ai,0,expert
+93988d10-5b34-4767-bb9a-07ae5da04772,407908e5-39d4-446f-a3e2-fa44376f2585,Putri Smith,2-year devops specialist.,36.42,hourly,USD,9,devops,0,intermediate
+97de8924-cba5-4084-ac0e-43009ed706d2,2dd9203a-0f19-4a05-8da1-5205db59fc8f,Victoria Garcia,7-year devops specialist.,55.9,hourly,USD,29,devops,0,expert
+038950f3-ce15-421c-b40b-2200c4266552,c36b550f-9444-4f1f-99fa-42b50d7f65cc,Julia Garcia,15-year frontend specialist.,56.49,hourly,USD,3,frontend,0,intermediate
+1ac35812-bd37-44d1-baeb-56f5f65ef98f,e816e313-a7c9-4891-846e-bde8f8329f74,Budi Lee,5-year frontend specialist.,48.39,hourly,USD,28,frontend,0,expert
+3fb997f5-9ee6-4ac1-8fe2-002efa6e2339,d4ea2390-4b82-4444-ba1f-6962a870263d,Hannah Kusuma,13-year mobile specialist.,43.65,hourly,USD,32,mobile,0,expert
+e1db353f-5caf-40e8-99bd-fc495d0a145f,5105fa49-a546-4022-ab4a-483cf93b5d04,Tanya Johnson,9-year blockchain specialist.,64.26,hourly,EUR,42,blockchain,0,expert
+eb26f0e1-6929-4040-94e2-cba39ba229ca,0d103234-b39d-4152-9486-38c9cd92d0ac,Tanya Miller,1-year backend specialist.,66.04,hourly,USD,13,backend,0,expert
+92a2e8a4-d134-4c19-bc9d-871d5f8d2d35,889c81f1-a64a-4c53-9c32-468197fb7ff6,Alice Lee,6-year ml ai specialist.,98.5,hourly,USD,7,ml_ai,0,intermediate
+55248b11-bfe4-4dae-b492-55e2e39c0631,755b33b7-148e-4234-88f8-0f045f7324b6,Oscar Kim,9-year devops specialist.,69.11,hourly,USD,45,devops,0,expert
+a74a98e1-7096-4eca-a1de-f5e3bc42bdbd,d53ea5f4-77fb-4772-bef4-379d78c95a8e,Charlie Pratama,2-year design specialist.,15.84,hourly,IDR,25,design,0,expert
+699df42f-be28-4e64-89a3-3dfaca83a061,a056412c-b140-4ec3-abf4-b0485eca2d6c,Kartika Sari,10-year design specialist.,46.93,hourly,USD,27,design,0,expert
+3819f15a-b821-468f-a5a0-407474c39d0e,2a16a6f0-6377-4c94-977e-427e2d56f897,Umar Garcia,7-year frontend specialist.,59.07,hourly,USD,1,frontend,0,intermediate
+e3b17692-97f4-49e4-a5d7-0ce17077ab29,0cfee206-29b7-4196-be6a-854abc29f29e,George Davis,2-year design specialist.,34.61,hourly,USD,27,design,0,expert
+e92b9d02-e2b9-43e7-a0df-3786314d9288,7db9c281-59c5-4db1-b892-e66579d693f1,Victoria Davis,7-year frontend specialist.,33.32,hourly,USD,19,frontend,0,expert
+2fd03137-89be-4a49-a938-e4574bdcd230,6b883f70-8926-40e8-bba7-43de8546bbed,Marco Kusuma,9-year frontend specialist.,34.31,hourly,EUR,32,frontend,0,expert
+0734073e-2287-4457-98c9-3ede81ac86be,83c8c758-5e9f-475d-abf6-2d7ee3f0997f,Julia Santoso,4-year fullstack specialist.,37.82,hourly,USD,6,fullstack,0,intermediate
+975399f9-6178-4ce7-ac0e-f9bcacba0b88,01d83829-5bee-4288-9590-932a6ce784c7,Faisal Utomo,3-year frontend specialist.,56.49,hourly,USD,40,frontend,0,expert
+0533f501-935d-41de-bf78-94fd12957899,a9d19389-ac9c-412f-87c6-df7219ab4b23,Putri Kumar,11-year blockchain specialist.,75.55,hourly,EUR,36,blockchain,0,expert
+5d9dc26c-62f4-4762-9bfd-3e84952706b4,9af9722a-3e36-426f-9324-62bdd95c23b9,Edward Lee,3-year design specialist.,34.9,hourly,USD,28,design,0,expert
+f32c705e-762f-455d-988b-e1ad38836a50,727cada9-3c94-4030-8866-ed786d477544,William Kim,10-year ml ai specialist.,41.31,hourly,USD,3,ml_ai,0,intermediate
+e10e9472-c359-4264-b999-4c6e4add93dc,87738392-1c40-465c-93e8-e17a83749842,Samuel Williams,1-year backend specialist.,58.68,hourly,EUR,23,backend,0,expert
+32e8e806-0a90-4e6d-907a-cffd6b8c7230,6000553a-fed9-474d-b1fe-8982462cf580,Gita Sari,10-year frontend specialist.,40.45,hourly,USD,38,frontend,0,expert
+2baca5e4-3e03-4780-bad4-adad4287b8dd,d1c55de8-6a5b-4c99-9745-500348cf80ef,Marco Hidayat,8-year backend specialist.,56.3,hourly,USD,36,backend,0,expert
+a881af57-1296-461b-8434-bbe3827a4663,c5f73909-a48a-45d6-b064-93b64b5ce1fc,Victoria Ahmed,8-year backend specialist.,25.06,hourly,USD,6,backend,0,intermediate
+caf062e4-3047-453b-8705-445743fd527f,32a8bfa3-2e33-4f7d-a8c3-a90ebf1b51da,Citra Utomo,4-year backend specialist.,51.44,hourly,USD,45,backend,0,expert
+98b3a976-0162-4f22-8ff4-ed7ce49e3e24,d29b5406-a03a-4c88-8522-727f93f8498b,Yusuf Pratama,6-year design specialist.,49.85,hourly,USD,18,design,0,expert
+ec0ec497-4470-4e7e-a63b-979a164e6e1f,4a47017c-e43d-43f9-b636-b213866f0793,Victoria Williams,13-year backend specialist.,39.78,hourly,USD,40,backend,0,expert
+b3c63d5f-7c2c-4eb4-bd60-cd4592439232,21950834-f275-43f1-9704-35ef6c3d5b06,Maya Jones,5-year devops specialist.,53.34,hourly,USD,16,devops,0,expert
+08fb8e99-f773-4c38-9c51-ecd2192b3d31,1caf9512-ca63-4278-a12c-736b8a3abfb7,Tanya Patel,15-year fullstack specialist.,70.4,hourly,USD,22,fullstack,0,expert
+d313124d-e496-4f61-92ef-c29519c127a3,9794ad23-4eb1-4258-a1ef-4b87b7078462,Yusuf Patel,5-year frontend specialist.,58.54,hourly,USD,35,frontend,0,expert
+63edce65-02a8-4746-afc1-4ed2980c281c,e7e3b0e1-76cb-430b-a8cf-361669366c3f,Budi Kim,11-year frontend specialist.,34.9,hourly,USD,42,frontend,0,expert
+766733a8-7d73-4755-96b6-bd23402a83ae,2c26f79e-c74d-4f55-b627-bb78854ac09c,Faisal Miller,4-year fullstack specialist.,39.73,hourly,USD,21,fullstack,0,expert
+e6159f16-f197-424d-b5d1-804090e8f6c2,1b8920ae-edd4-44ca-b06a-f1945320e7cf,Gita Chen,5-year frontend specialist.,60.93,hourly,USD,6,frontend,0,intermediate
+ec07b1a9-e0c4-4617-bef7-fc59a5796ed9,08354684-e217-4f96-9bcb-a784ec8554f6,Naufal Jones,11-year backend specialist.,55.83,hourly,USD,21,backend,0,expert
+8d792edb-8378-43b7-9d11-b075bac5b476,3a7050a0-5459-4ddc-a9d5-b3d5f05fd2c8,Naufal Garcia,14-year fullstack specialist.,71.88,hourly,USD,44,fullstack,0,expert
+aa80ca15-f237-498c-b68e-8ba77ab8fc86,33fe7505-bcae-4306-8a42-97000280f7c7,Citra Kumar,11-year design specialist.,27.82,hourly,USD,15,design,0,expert
+31dcef2c-4cf8-4fcd-84bd-722dcaafd8d4,3133e356-3868-4b09-8d2e-7e50e7c91c2d,Priya Wijaya,4-year blockchain specialist.,146.22,hourly,USD,34,blockchain,0,expert
+39d6ea95-5a73-45c1-86c5-8b893ff8b7f6,b79f70ed-3ff2-4703-8469-d18840d8548b,Kartika Utomo,6-year mobile specialist.,45.39,hourly,USD,43,mobile,0,expert
+1c4f7e28-29da-4ed9-a48d-3d16efa86e76,409b64a1-cf41-43aa-a205-e73ef1f806e9,Ahmad Garcia,9-year devops specialist.,87.18,hourly,USD,33,devops,0,expert
+2b089709-85e3-4cd5-8de1-d532b05c05be,e48e595a-a30c-458c-b61f-2682ba2a0a90,Diana Patel,14-year fullstack specialist.,56.24,hourly,USD,16,fullstack,0,expert
+6e8e7094-3033-443b-9f1e-f3f28815bd1f,6a9a7590-d182-4228-86f0-7b514ea576ec,Hannah Wijaya,12-year frontend specialist.,19.61,hourly,USD,33,frontend,0,expert
+befc5408-562e-4154-97af-0ebdd7ed66a1,b16216c5-159d-4c1f-be3e-d5182c2b6201,Julia Pratama,15-year blockchain specialist.,50.09,hourly,IDR,32,blockchain,0,expert
+4b15af35-0787-49b8-984d-a7e223ac1b86,10d8b5c9-214d-4a42-8117-5d33c69b470a,Bob Pratama,15-year blockchain specialist.,45.86,hourly,USD,22,blockchain,0,expert
+6fccf19a-2864-4f1a-aaf0-cfee6adedcd3,cca60db4-ef0b-4828-8c3a-bbd2ca6ee031,Xena Davis,7-year mobile specialist.,21.55,hourly,IDR,5,mobile,0,intermediate
+820485ed-9d3b-4ae9-bbb4-980c5802991d,90b086b6-3361-4e3e-bea6-679e9c8a9643,Ivan Johnson,13-year design specialist.,27.91,hourly,USD,9,design,0,intermediate
+aeaecf4a-5e75-4cfc-93e7-4cb590c4942d,52657d0f-821c-47e1-8127-cea34cb97f39,Eko Utomo,13-year fullstack specialist.,65.0,hourly,IDR,45,fullstack,0,expert
+4b3843a0-c075-40d7-b65e-57675d038954,0cdb7d04-c26e-4e77-98bb-b11df41eddc4,Julia Chen,5-year backend specialist.,76.41,hourly,USD,13,backend,0,expert
+1bb94398-22aa-4f79-8794-48fd89600861,6b4f2bc3-48f3-4570-ab4f-190f960c4583,Priya Wijaya,2-year devops specialist.,38.53,hourly,USD,18,devops,0,expert
+704beaca-2481-466d-8413-131c65698249,51182bba-0ca1-4e22-b70d-45f4932941db,Faisal Kumar,2-year blockchain specialist.,98.97,hourly,USD,7,blockchain,0,intermediate
+2705a8a0-7303-490c-b2f1-850aaf3b1e36,53c2a93b-ba9d-4ae1-9969-6087ec39c9bd,Samuel Pratama,12-year mobile specialist.,20.09,hourly,USD,9,mobile,0,intermediate
+e2e109e0-f8ba-49d7-91b2-fad16910b567,8a4c8480-ba3b-4a25-a8bb-0a196d74d015,Fatima Kim,3-year devops specialist.,98.23,hourly,USD,42,devops,0,expert
+988cfd00-1ced-49be-b647-54b28e70c684,1dcc1939-4150-4561-81c8-4cd3490075df,Charlie Patel,7-year backend specialist.,43.21,hourly,USD,30,backend,0,expert
+0e5b32c8-9409-4833-8241-df0ba1ca51a7,c3ae8e3f-e69e-45de-89f2-89d2ebc47019,William Davis,6-year backend specialist.,63.98,hourly,USD,4,backend,0,intermediate
+156d11f2-e08f-4df0-886a-8dd4451f0ff7,7c10f205-f965-493a-8c73-c4457120bfcf,William Chen,3-year design specialist.,30.23,hourly,USD,2,design,0,intermediate
+57e83efd-a33a-4825-a1be-d809a6df9910,90ee56f9-0b98-4b47-ab3f-c35ef9f64107,Putri Garcia,12-year blockchain specialist.,129.26,hourly,USD,30,blockchain,0,expert
+880d2ddd-51ed-4e22-8781-58a73568f7d6,80650a15-4abf-4b4c-acd9-696f6f357584,Marco Johnson,1-year blockchain specialist.,127.02,hourly,USD,18,blockchain,0,expert
+bfb5160f-a041-47af-aee4-fb126db81a5f,d437a1a4-5cab-4441-938e-7c62a87b2da0,Gita Sari,15-year design specialist.,59.51,hourly,USD,19,design,0,expert
+fd1f2712-4120-4de7-8124-74a57b5dcc86,bc7c6260-a3de-4692-8e35-098b4cfa89ed,Marco Wijaya,1-year ml ai specialist.,65.34,hourly,USD,41,ml_ai,0,expert
+1d613e01-8628-4ce1-bc72-ab9a80940961,89a848eb-d8df-470d-8218-2da0ed66e29e,Xena Pratama,5-year design specialist.,55.03,hourly,USD,7,design,0,intermediate
+989640f4-d60b-480a-ae5d-7a329c6a14a6,0737073f-404d-45b0-af07-2dc0311f8b57,Faisal Ahmed,6-year devops specialist.,64.83,hourly,IDR,11,devops,0,expert
+c6dec8f5-d49e-4a34-9cc0-b92944a5b189,b69e3ae0-6836-468e-bdd7-28b2dfd71132,Budi Williams,13-year ml ai specialist.,71.6,hourly,EUR,5,ml_ai,0,intermediate
+9f4c6b6d-dd15-49a0-a9e3-12e901eabd71,6112e78f-2950-4626-aa38-c9596ad4a583,Umar Brown,9-year fullstack specialist.,30.2,hourly,USD,18,fullstack,0,expert
+9901b214-4d48-4b9f-b7d2-c45ab9c3feb4,149e40c9-6c2f-4dfa-8b60-76fa6b00d734,Budi Garcia,8-year ml ai specialist.,93.63,hourly,USD,38,ml_ai,0,expert
+928043e7-2964-4181-9f36-e4a323997cf2,d2a2d19d-5a03-45a7-a960-51bfd46482cf,Naufal Pratama,12-year backend specialist.,36.47,hourly,EUR,22,backend,0,expert
+54dcaea0-79c8-497c-8b77-b72f49a6b277,5ee10e78-be5a-474c-8986-345c0ce44eb7,Putri Sari,2-year backend specialist.,41.8,hourly,USD,42,backend,0,expert
+89fabd8a-56c8-430d-b828-2136980461ff,abd74794-3a0f-421e-805d-62b60bfb43e7,Maya Singh,1-year fullstack specialist.,75.79,hourly,USD,9,fullstack,0,intermediate
+66650e3a-bb7e-46f0-b6ad-d261360a6ea4,b94d597b-945c-4e41-a339-4ec67427fa94,Xena Kusuma,4-year frontend specialist.,36.06,hourly,USD,41,frontend,0,expert
+a965d137-241e-4067-9076-61d407fc64cc,225b9ea3-1345-4fcc-811a-98a3a3ede76a,Xena Kusuma,11-year fullstack specialist.,53.86,hourly,USD,28,fullstack,0,expert
+628ea516-c208-4d47-b5e3-1f58a97d86a0,f972422a-1268-4b38-8348-789399248073,Zara Hidayat,9-year fullstack specialist.,67.22,hourly,USD,23,fullstack,0,expert
+b02897a9-722a-4822-a25e-245388e39599,f4afdb5d-9f29-49d1-b195-ffb8e2ff6ff0,Faisal Kim,1-year frontend specialist.,36.28,hourly,USD,11,frontend,0,expert
+7822a4ee-7a27-423b-8f5e-f3938551c871,3814ec0d-7301-470b-88ad-1afd8d6bf058,Citra Miller,13-year ml ai specialist.,119.69,hourly,USD,16,ml_ai,0,expert
+833467db-a92d-499c-b6cf-eb1d9a0d61c2,87d70802-17f6-4118-b29c-1e2035b401df,Ivan Williams,4-year blockchain specialist.,89.72,hourly,USD,7,blockchain,0,intermediate
+c0d7ea5a-b0fd-451b-9435-1a4d7c23c720,0a2bf769-7bdf-497f-ab19-375a314d4298,Umar Singh,2-year blockchain specialist.,78.22,hourly,USD,43,blockchain,0,expert
+75e75db4-32b0-42d9-9392-fb1507544e19,e1be2f8c-b7bc-4455-943c-2e8f18393fdc,Kevin Ahmed,15-year ml ai specialist.,95.31,hourly,USD,19,ml_ai,0,expert
+01cd646b-142d-4494-a47a-fa6dee4161f5,83e667c5-63ce-43c3-b70e-1ea633e8a437,Gita Davis,13-year fullstack specialist.,32.89,hourly,USD,23,fullstack,0,expert
+386e2ef5-b2c8-4152-a4f0-7e7f84e023ca,66394476-0712-4928-a29b-299fc94a5476,Bob Kusuma,4-year fullstack specialist.,61.01,hourly,USD,31,fullstack,0,expert
+24320130-2d24-467f-aa62-4c3f59e856c3,85f7000e-464f-44b9-854b-d4e4fd6ae464,Edward Wijaya,10-year fullstack specialist.,50.88,hourly,USD,5,fullstack,0,intermediate
+eba225ef-b696-4c16-8df2-8a740ca463d8,56750f66-8f05-4f6d-8f47-ce6ed61a8fd2,Ahmad Wang,9-year blockchain specialist.,48.11,hourly,EUR,26,blockchain,0,expert
+3868b6fe-6abc-4745-a739-c89222570257,bf092553-15f2-4ed4-a8fe-cb55c9c214ca,Hendra Kusuma,8-year frontend specialist.,22.06,hourly,USD,29,frontend,0,expert
+e7c8e4fc-1b0d-4104-95d7-3a5b3440b219,cde8cb16-ac99-4417-a48e-e404657deb85,Budi Kim,13-year fullstack specialist.,84.2,hourly,USD,8,fullstack,0,intermediate
+9e6eb5f7-7084-4d1d-aab1-fa50e26b74d5,2a83f9db-7252-4258-8323-a7e5ed66edfb,Tanya Garcia,9-year frontend specialist.,23.91,hourly,IDR,9,frontend,0,intermediate
+1a682f3a-c413-4e30-9696-5e35baa64b00,a2aa32a9-2497-44bc-9676-b120fc241699,Samuel Williams,6-year mobile specialist.,33.78,hourly,USD,33,mobile,0,expert
+2806eb9c-d07a-48c5-9faa-f16345cde764,27c47dec-c6d0-472a-9fbb-f7d70c1d9199,Tanya Kumar,3-year ml ai specialist.,80.35,hourly,USD,40,ml_ai,0,expert
+a0308658-dce8-4634-a43d-5b806ff429eb,db24a374-1490-472b-beb5-6c00649f38fa,Julia Garcia,10-year fullstack specialist.,67.82,hourly,USD,37,fullstack,0,expert
+2a451c18-78f7-4579-81fd-a0d2d3361308,eeff8e57-2597-4046-b7fb-f9a925fa67d3,Charlie Smith,14-year design specialist.,18.66,hourly,IDR,36,design,0,expert
+9d56982f-d60c-4f17-beb8-abfd11310cad,63afd9e6-0361-4eb0-993a-07361f709955,Kartika Pratama,11-year ml ai specialist.,87.54,hourly,USD,13,ml_ai,0,expert
+365e066e-fb94-43c7-a64a-a3693d594476,43d44559-3fbc-4e02-a64e-5c1cf03f29b2,Eko Davis,11-year ml ai specialist.,103.4,hourly,USD,19,ml_ai,0,expert
+016b144d-e0c4-4e33-9028-bf24e0a38939,af2eb96d-1fcb-4730-a394-05366f0dfcfb,Diana Garcia,8-year ml ai specialist.,72.37,hourly,USD,4,ml_ai,0,intermediate
+93592920-cdee-4919-a89f-5f1ebb5cdd80,d74e806e-66f8-48ac-956f-155303f2f040,Julia Hidayat,6-year mobile specialist.,67.38,hourly,USD,38,mobile,0,expert
+852e872e-5cf8-47fc-8062-45b4d3a0d080,b7dc0628-3472-43e1-9b60-2cb4e5759926,Xena Kim,7-year design specialist.,40.27,hourly,USD,8,design,0,intermediate
+4f25603c-7002-4125-bf3f-bd16f37e17f7,9a6efbf0-efab-4de1-a72c-c0bf4836534b,Citra Davis,2-year blockchain specialist.,55.5,hourly,USD,17,blockchain,0,expert
+e9f7bed0-fc4c-438e-8ffc-afe88c5e26a1,baced38e-713b-4758-8996-bdae39b7c9b1,Ahmad Davis,14-year devops specialist.,97.39,hourly,IDR,39,devops,0,expert
+42f0cea8-c564-4173-bc1c-53465daf38f8,3e5cabaf-f293-46a8-a06e-08fd1392ae4c,Umar Miller,15-year design specialist.,49.34,hourly,USD,36,design,0,expert
+eb56464c-1ae7-4a4e-975c-c717db7fbd37,08a70b72-28b3-44ca-b298-682c81a639ad,Faisal Smith,8-year blockchain specialist.,49.91,hourly,USD,19,blockchain,0,expert
+f38e839a-7faa-40fe-b9d9-aba8da64c71b,89e58aa4-b6ef-4f63-be8f-4bdd5bcb682d,Luthfi Kusuma,4-year blockchain specialist.,45.35,hourly,USD,13,blockchain,0,expert
+f0e88f66-53c8-4785-87ff-2693701f06ca,c2275a30-7750-4923-840b-c228be02a4ef,Alice Brown,5-year blockchain specialist.,87.4,hourly,USD,34,blockchain,0,expert
+e0a40368-9362-4f7b-a09a-e5bcda6ac9b2,fbd099e0-e91a-4b5e-affd-eae4ecfbe47e,Xena Johnson,13-year design specialist.,33.03,hourly,USD,25,design,0,expert
+ab061312-8142-41d7-9e37-6cbc61ae6018,9c7c976e-969c-4468-bd37-65c3e16f3eba,Samuel Williams,6-year mobile specialist.,41.25,hourly,USD,35,mobile,0,expert
+9b8a764f-4913-4b4b-8f38-02c95127317f,5cf8a99e-dbeb-4c62-bb3a-7cfe3e32806c,Naufal Brown,14-year ml ai specialist.,45.94,hourly,USD,39,ml_ai,0,expert
+00d86d71-1502-4122-8504-ae758555005a,56b56cf3-842a-4813-a3a8-81bdd89b323e,Joko Kusuma,13-year design specialist.,48.97,hourly,USD,21,design,0,expert
+5b8ed391-0df5-455c-bf72-7b383a8531a0,fe9f530e-6cd1-447a-a98c-cb0af5cbe4cb,Charlie Johnson,9-year devops specialist.,39.59,hourly,USD,2,devops,0,intermediate
+a5936989-eac8-441b-9ec7-b945ed35e5c0,599fdece-b5db-4289-be49-6925bbce8dd8,Julia Kumar,9-year blockchain specialist.,138.24,hourly,USD,29,blockchain,0,expert
+f3fb8d20-95ae-4dfa-82a0-9c1fc2213232,c8acaf5f-bd84-4d1d-9ba5-c39046a49767,Naufal Nakamura,3-year design specialist.,52.92,hourly,USD,25,design,0,expert
+0b15194d-8af2-43f4-b657-46f4483332e5,beb9840f-8b99-414f-b5c4-72deb9e56206,Tanya Lee,12-year blockchain specialist.,129.73,hourly,USD,36,blockchain,0,expert
+8f3e8f91-384c-424a-9cdc-c8748f7df413,46f4d573-e8c3-45e1-a9bb-281f3e3b0be0,Tanya Nakamura,7-year frontend specialist.,62.97,hourly,USD,37,frontend,0,expert
+c1d503f0-3549-4fa4-b5fd-00eeed6e03eb,367cc042-ebfa-4d0b-aa6e-fff239121afd,Luthfi Wang,5-year blockchain specialist.,65.03,hourly,USD,41,blockchain,0,expert
+67ab65a5-1a95-4077-b64d-d479515f81a1,a0aacb5d-d4c2-494c-81db-d0702997c094,Putri Nakamura,3-year blockchain specialist.,108.17,hourly,USD,33,blockchain,0,expert
+2e32a344-d4dd-4185-946e-378e775a8ba2,367d8533-9956-4c54-a4e4-f6b4e747b1b3,Priya Johnson,14-year fullstack specialist.,62.22,hourly,USD,43,fullstack,0,expert
+e7c9e82d-39f4-48a6-9500-e6bb9426c951,6e5cdd42-fcbf-442d-b10e-6c8b08f72a7e,Umar Pratama,1-year mobile specialist.,28.33,hourly,USD,28,mobile,0,expert
+c7fd8a00-ec6a-4f8e-8139-52538b5d6d16,1b559f97-129a-4436-9962-8a738be755e1,Eko Nakamura,9-year devops specialist.,80.92,hourly,USD,39,devops,0,expert
+742a919a-c20c-443b-912f-a872f928c979,7aecea7f-5423-4d73-96de-826acc5b317d,Eko Kim,9-year mobile specialist.,40.73,hourly,EUR,20,mobile,0,expert
+635d010e-b74b-4de6-9d44-37cb533c2de1,23857487-7f08-4ae8-adc3-cfde0f7e9017,Victoria Chen,15-year blockchain specialist.,78.97,hourly,USD,34,blockchain,0,expert
+1726d17b-fbbe-4b65-85a3-d4f6a969f612,eb0fc11f-739e-4bc5-8c6c-3e6564757834,Marco Davis,10-year ml ai specialist.,58.72,hourly,USD,30,ml_ai,0,expert
+184439d5-b58e-4a43-b104-fec393322905,28664851-cc42-4b00-acc4-d9264a129c10,Nina Ahmed,13-year ml ai specialist.,94.92,hourly,USD,18,ml_ai,0,expert
+a29203c7-c725-4a53-bb22-90a76ce2570e,30bf9bad-8446-4102-b76d-fb1f3b1c0db1,Samuel Brown,9-year design specialist.,40.81,hourly,USD,17,design,0,expert
+b69b2bd3-b383-4348-9614-c2e311a88bc6,3ddfa9de-ae38-42d5-9400-88d70d50ff76,Julia Wijaya,14-year devops specialist.,32.94,hourly,EUR,22,devops,0,expert
+84550548-a4ea-416f-9d17-7b3d1a2743eb,d0f3f70a-7e78-4a24-a87b-7b951ceaab51,Quinn Nakamura,6-year frontend specialist.,41.35,hourly,USD,28,frontend,0,expert
+a4506eb1-884f-4a17-b6fb-9b15a046f24a,315958db-650e-4119-9dc1-2d06c43e6b11,Rachel Jones,15-year ml ai specialist.,44.28,hourly,USD,35,ml_ai,0,expert
+b5467c3e-0131-460a-b327-363021787774,3ca9212e-efc2-47a4-a85c-7041a52c51a9,Hendra Davis,4-year mobile specialist.,55.09,hourly,USD,3,mobile,0,intermediate
+960d389c-eac3-4c35-bead-53f2b151899c,1c2bbc70-5213-4742-91d9-3529bfe3e3ea,Eko Brown,6-year devops specialist.,77.68,hourly,USD,45,devops,0,expert
+88efd37a-39f3-4e5c-a045-2b701347de5d,e89392b7-342c-4304-982b-eca317b22bc5,Eko Lee,7-year fullstack specialist.,67.29,hourly,USD,41,fullstack,0,expert
+a7ef6fa6-7b74-456c-8c61-4533a10235b8,4dae2ef9-8f0f-4706-a409-5a92757034c2,Diana Williams,6-year ml ai specialist.,90.45,hourly,USD,18,ml_ai,0,expert
+7169ca6a-2ee1-42e3-8c71-6d2bacd163fd,9c79c903-122d-48a2-be0f-7ce1b42b5554,Ahmad Garcia,15-year backend specialist.,76.04,hourly,USD,11,backend,0,expert
+157add59-3a41-47ac-9067-619e938d62c7,54e19b43-3ff9-456c-ad22-bad50ee04600,Lily Nakamura,13-year devops specialist.,97.35,hourly,IDR,31,devops,0,expert
+3934a43d-8531-47dd-9a9e-83e55ee7ba4c,4a572feb-4c16-4527-abf6-12f51abbba78,Kartika Kumar,1-year backend specialist.,26.44,hourly,EUR,19,backend,0,expert
+daa14e05-008c-4921-ae1f-99f8482fe141,4fa7c6fc-e86a-4b6b-97d2-5b68c7fa1d4e,Indah Kim,8-year ml ai specialist.,76.98,hourly,IDR,41,ml_ai,0,expert
+d32a16c2-3289-4735-8e6c-bc7d7cbef6ff,dcdaa038-c6d3-4461-b3f4-9d47cdefc77f,Hannah Hidayat,5-year blockchain specialist.,57.87,hourly,USD,12,blockchain,0,expert
+bc8e3326-8c94-40a2-9a37-17ba927a2a11,12e4b53e-0d0d-4e2d-99ad-9f629977f6b3,Alice Nakamura,12-year ml ai specialist.,63.65,hourly,USD,11,ml_ai,0,expert
+877167d0-a7da-4734-98fa-edcb7ffc248f,2982ac00-3d13-4621-bfef-4d99804b3add,Putri Sari,3-year mobile specialist.,65.48,hourly,USD,39,mobile,0,expert
+9b2d4c71-3754-4b6e-a4d2-01e8a8c5b578,68760adf-9e3f-437a-b7b2-c38277dcf602,George Garcia,7-year frontend specialist.,68.99,hourly,USD,42,frontend,0,expert
+5d553306-c2e9-48cc-96e5-6c1ec2505e19,c8ff169a-846b-45ae-8cfe-33e9d6ee080c,Yusuf Davis,1-year mobile specialist.,44.57,hourly,USD,16,mobile,0,expert
+53be0c68-8058-485d-aa9b-739feb3aef26,a0be66fd-537b-4937-b022-c98736de6425,Kartika Smith,5-year design specialist.,26.77,hourly,USD,37,design,0,expert
+f2b89d44-7185-4876-8293-c85372a2c8e5,06500cf8-b2ad-4ab9-b30d-601c87b4f4be,Hannah Utomo,1-year mobile specialist.,36.87,hourly,USD,42,mobile,0,expert
+0f146989-d97a-4e45-8a22-7fdc477abf13,4fa1f0a0-5f03-4c8a-aeaa-b569969fabf8,Putri Wijaya,12-year ml ai specialist.,66.24,hourly,USD,7,ml_ai,0,intermediate
+de9fc804-2189-4750-8b3d-ea2a54941e92,45f47bec-1696-40a2-a168-3b3e14b88ca3,Dewi Nakamura,8-year fullstack specialist.,89.27,hourly,USD,9,fullstack,0,intermediate
+21b3a9f9-0ab8-47f6-9f04-0f4f3c45fe56,84c1bc4b-6c5e-4080-9aec-fcd35681e817,Nina Davis,13-year blockchain specialist.,114.84,hourly,USD,34,blockchain,0,expert
+808ba693-15bf-490e-9324-b399cef9cfe3,fd275281-432b-410b-b5da-67982438e991,Hendra Ahmed,9-year frontend specialist.,34.9,hourly,IDR,28,frontend,0,expert
+96f00f2f-167c-4224-82b4-ea4d52f7ac21,42967d27-d790-4ec0-a8a5-2c4eb25c04c5,Gita Miller,1-year frontend specialist.,46.5,hourly,USD,35,frontend,0,expert
+d69e237b-8448-4d58-8d60-79346f259b40,39f84d26-8bd9-4b86-b309-b8087574861d,Citra Brown,14-year design specialist.,45.61,hourly,USD,33,design,0,expert
+3805d976-9cee-4d19-b7e7-6b20773bca1b,9d216903-ad6a-428e-a13f-a485dccc11b0,Citra Johnson,2-year blockchain specialist.,89.88,hourly,USD,32,blockchain,0,expert
+9ce84eb4-67b1-4f1c-bf32-7d492a6d606b,addaa0e9-bbd5-43b2-829d-25f2a72ccfbb,Joko Utomo,10-year blockchain specialist.,114.0,hourly,USD,3,blockchain,0,intermediate
+7845fc22-aadc-4cb9-bd06-2bab99b7b0c9,fd97838a-8c76-42f2-9978-624482b2cd65,Alice Nakamura,7-year backend specialist.,33.07,hourly,USD,16,backend,0,expert
+f9c430d8-e534-4cfc-ad82-452fc6e6c97b,b76733ab-bd76-4bae-adbf-94baf670bc23,Edward Chen,6-year devops specialist.,99.59,hourly,IDR,44,devops,0,expert
+0ef34b16-a1cd-4f79-946b-c39ac864f647,0d155ac3-630e-4d93-b941-189e4d790e25,Charlie Wijaya,15-year frontend specialist.,37.49,hourly,USD,30,frontend,0,expert
+e7756af7-b2a1-46d3-9717-acddda1baa6a,db941d5a-1d4b-412f-a2d1-cd63f6bcc1fc,Citra Sari,6-year devops specialist.,56.3,hourly,USD,24,devops,0,expert
+fa454d36-8430-4afa-a5bf-c1cd01eced4f,dfba7289-61b5-4767-baeb-2b869c72c634,Hannah Garcia,11-year fullstack specialist.,89.54,hourly,USD,22,fullstack,0,expert
+c624296d-6b31-4e7b-be36-00a6bfa13e40,1921c69e-e9ef-4d9c-8252-861997a20bd3,Alice Smith,12-year fullstack specialist.,88.6,hourly,USD,14,fullstack,0,expert
+c53fa105-be54-478f-9e5c-3a330ce61061,4249e735-cc1b-443a-a3e9-5f971327dd4c,Oscar Davis,9-year devops specialist.,62.24,hourly,USD,24,devops,0,expert
+7ca663fb-8d49-45d5-ac9f-8a57abf16fdd,afbfc976-8ee4-434c-8a89-f91d3d1929f0,Charlie Singh,15-year mobile specialist.,43.06,hourly,USD,7,mobile,0,intermediate
+e3fb9177-229d-422d-94e3-4e2f79f0914b,a407d551-6369-4e7e-88b2-1e02da077a95,Edward Brown,4-year backend specialist.,55.64,hourly,USD,13,backend,0,expert
+c5493162-e026-4a4c-8bb9-5bda22829298,84f903cf-ba3d-4ad0-9aaa-d52116252a6b,Zara Utomo,4-year backend specialist.,34.06,hourly,USD,2,backend,0,intermediate
+1fc061ed-1ba1-4251-ad0e-09a21c062637,4dd7acd7-24a7-4b9e-a314-431e18eb551f,Samuel Davis,3-year backend specialist.,68.95,hourly,USD,32,backend,0,expert
+046de70f-b12d-4a30-815e-64f34a985cf3,fbe6e0f8-846e-4089-b628-ff66384415a7,Umar Davis,10-year design specialist.,28.58,hourly,USD,38,design,0,expert
+2b8f52e1-f52a-4d4a-8a34-6e17a709a220,11db2d08-5b72-4836-8522-76143281ef4d,Rachel Johnson,7-year mobile specialist.,50.62,hourly,USD,19,mobile,0,expert
+0d91c474-ed1c-431a-830e-fbe6c1eb87c2,2d9212d2-62d9-44eb-9053-158705ddb51e,Budi Chen,11-year fullstack specialist.,57.22,hourly,EUR,43,fullstack,0,expert
+76acca45-16bc-4bf6-ac8f-a3316758efd4,abf14123-144b-48d0-a747-9e597ca530ee,Umar Ahmed,13-year devops specialist.,59.14,hourly,USD,33,devops,0,expert
+84cba348-d8f6-40da-9052-6c4f0cb07433,85a47575-bf98-40c7-9dc0-8a85976e0e64,Eko Davis,3-year devops specialist.,89.45,hourly,USD,34,devops,0,expert
+c3416234-0bbe-4745-a4bf-3edf1d9f64ad,91ace947-c918-4be2-99fd-a9e7de4f4943,Diana Chen,13-year fullstack specialist.,51.82,hourly,USD,29,fullstack,0,expert
+7c27ab2c-e9eb-470d-85eb-733e6d3089c8,ed53ec1f-0ee8-4108-b8ef-880717e59881,Quinn Miller,7-year fullstack specialist.,46.47,hourly,USD,15,fullstack,0,expert
+aa0e64a0-afd9-4420-a682-affb828260a4,b68d45e4-1399-49f3-83eb-281170980b1d,Fatima Chen,14-year blockchain specialist.,119.7,hourly,USD,23,blockchain,0,expert
+442147a7-5b03-4209-af9b-3468dc92eae3,1d89a589-5d48-4211-846b-b15c30258d16,Maya Kumar,7-year ml ai specialist.,38.36,hourly,USD,43,ml_ai,0,expert
+5bf071ec-a1e3-4dd0-b4d8-173f196bcea7,64b15cff-0931-414a-a712-408e0bca7f96,Victoria Wijaya,8-year mobile specialist.,72.64,hourly,USD,13,mobile,0,expert
+11a6722d-b1d7-40ee-9d86-c21ffd4f5345,8888256e-600c-40da-a078-a8ca3a41466d,Eko Davis,12-year mobile specialist.,58.26,hourly,USD,7,mobile,0,intermediate
+1ec83937-0601-4f48-984d-4e815a2a8f18,7645a1c7-f643-46dd-9d64-481d30eb460f,Joko Hidayat,15-year devops specialist.,84.29,hourly,USD,15,devops,0,expert
+62986a5c-f67a-4b10-9998-57fb06bb5158,fcdff19e-ef53-48e5-ace7-36e1ee0b9282,Xena Kim,5-year design specialist.,54.73,hourly,USD,16,design,0,expert
+06e0c157-0978-492a-897c-f79296b8c37d,7560886e-61f7-4a32-9dcf-cfadf9fbb51c,Nina Kusuma,13-year blockchain specialist.,74.42,hourly,USD,20,blockchain,0,expert
+102d0916-71ad-4f6f-8f8a-4054b92f57a8,7ca0951c-d19e-4e51-825d-2f4a3730d1c5,Bob Santoso,12-year mobile specialist.,50.43,hourly,USD,9,mobile,0,intermediate
+f605004b-b7db-4a0d-9e75-757847d22a7a,ae7dac25-db53-4a93-a9e0-a50eef062bce,Marco Hidayat,5-year devops specialist.,46.1,hourly,USD,9,devops,0,intermediate
+b169dcfe-0176-4e96-aca2-e4d3fb71bd6e,d1c3c9a4-7f83-4ee2-ad3d-df28036fc6da,Victoria Santoso,8-year mobile specialist.,61.98,hourly,USD,35,mobile,0,expert
+21367f7e-90e1-4f9c-b31e-4008b44dae75,2c621b2b-6675-4ee6-86dd-60b5edf23615,William Garcia,8-year blockchain specialist.,55.4,hourly,USD,10,blockchain,0,expert
+3e3d3a8f-983a-4102-885b-94a6cd4b07ac,d01e1ece-7aab-4e22-ba1a-5141165db09a,Diana Kim,15-year fullstack specialist.,27.2,hourly,USD,34,fullstack,0,expert
+357120e9-ef37-4910-ab77-9187ae1b52ca,ea831adb-82d9-44cd-884e-ccf991fea7df,Ahmad Jones,13-year backend specialist.,70.55,hourly,USD,0,backend,0,entry
+689ac0c5-4f1c-43a3-b7f6-d89ef6de625e,b209bb28-e7b0-44bf-a772-4d6a986d6378,Gita Utomo,1-year fullstack specialist.,49.26,hourly,USD,13,fullstack,0,expert
+ecf88ead-6776-4f6e-bb19-a03bfd0b01d1,dbb99634-bc33-4586-991a-ab6310382024,Bob Smith,11-year blockchain specialist.,98.54,hourly,USD,31,blockchain,0,expert
+b90ab983-8167-4785-8259-66c3c9bcf31d,ce1d883e-ba72-45c7-b3cc-2777b715d01f,Indah Wijaya,9-year backend specialist.,21.03,hourly,USD,17,backend,0,expert
+d24fa4c5-3d8c-4a22-afd3-87ec96b251b1,b0e6bf8f-cd94-4510-8afb-cdce197a170f,George Brown,13-year devops specialist.,66.71,hourly,USD,11,devops,0,expert
+6ceca3b0-1ed3-4fab-a30e-d0fc77441f16,7b1a5b60-1bb4-4070-9930-69029f27bcd2,Rachel Sari,14-year ml ai specialist.,41.72,hourly,EUR,22,ml_ai,0,expert
+3e10de60-f09e-4edb-a1e2-42b033aca1eb,5e339955-19e9-4c95-b769-e085359d504f,Oscar Wijaya,10-year blockchain specialist.,115.24,hourly,USD,15,blockchain,0,expert
+b3c35c0a-8371-4246-95e0-b189272942bb,609ba70d-df06-4fad-b581-7c96af6d2399,Yusuf Sari,2-year backend specialist.,53.16,hourly,USD,25,backend,0,expert
+372fc4fd-3269-4d1c-bb21-6f3b381cf56e,a44a4ad3-6d1e-49f4-900a-0ceed9c04d17,Fatima Lee,12-year backend specialist.,70.72,hourly,USD,10,backend,0,expert
+19a96817-9f36-4e19-b811-ec94e32770c8,05663786-5b87-4749-91a7-2d3fd41b0ba8,Hendra Johnson,10-year design specialist.,25.34,hourly,IDR,6,design,0,intermediate
+b44f658d-75f1-4215-8d0d-f12e6f07ca74,db545121-963b-47c8-8069-71d63f4c5623,Edward Singh,5-year blockchain specialist.,141.81,hourly,USD,2,blockchain,0,intermediate
+48817884-badd-437a-b977-62b3b8080c33,3ca6ee62-55c7-4865-b37a-50909a58c505,Bob Miller,3-year backend specialist.,55.22,hourly,USD,20,backend,0,expert
+e7906ea7-c951-42d9-9fcb-335538ee18b4,609582f7-0855-4fa1-98e6-f1ef50f1b4d8,Tanya Garcia,15-year devops specialist.,69.48,hourly,USD,4,devops,0,intermediate
+ba34cf08-d7e0-4c8d-b63b-7bb74daaf74d,efbcd873-bf93-4ba3-a4cc-b7e6bb7737d1,Victoria Sari,11-year devops specialist.,82.89,hourly,USD,34,devops,0,expert
+7eed0f3c-f392-4491-bb2e-e66b107fd34e,c06293a1-9c39-4ffe-a48d-d5b3e9477187,Diana Brown,9-year frontend specialist.,39.04,hourly,USD,22,frontend,0,expert
+c8747447-e953-4b58-9784-fb6be0c9f6b8,fc6d1e3d-b363-4890-ad6a-038f1dfa630d,Maya Sari,10-year design specialist.,58.6,hourly,USD,39,design,0,expert
+d67daa87-1e68-4b34-b8af-9c596393ba7d,a0390d29-897b-4321-bdb1-595a86d9a3de,Faisal Davis,13-year ml ai specialist.,65.24,hourly,IDR,28,ml_ai,0,expert
+1a8ec5bd-47b4-49ac-8123-c1f917540f47,d92c11b4-7398-4d7b-ae72-bbe23f3c76b3,Luthfi Singh,3-year devops specialist.,56.61,hourly,USD,43,devops,0,expert
+256e68c6-76cd-4a5d-b398-e2abfe398eff,c147a81c-8cc1-4189-8054-0fe33d8b4fd7,Edward Williams,13-year ml ai specialist.,57.78,hourly,USD,15,ml_ai,0,expert
+a731792d-2bf0-492f-90b6-452a5326ae1f,960b7770-e70c-41cb-8051-773c5ba3c2e7,Umar Kusuma,12-year fullstack specialist.,31.93,hourly,USD,24,fullstack,0,expert
+c21884fa-0f19-479e-b844-25c19d962939,9384288f-4454-4df2-84ec-99df04af7356,Rachel Brown,8-year ml ai specialist.,46.26,hourly,USD,23,ml_ai,0,expert
+9189876b-0325-461f-aa8c-3374485151cf,87ccb449-12c0-47da-b6c7-bbbc4c350638,Gita Pratama,9-year blockchain specialist.,51.36,hourly,USD,35,blockchain,0,expert
+2e7f43c7-b7c5-4351-9adb-2f4d171b3cd3,ad2fbc59-e99b-43e9-acc8-88dcc7e1c7e0,Umar Sari,10-year frontend specialist.,15.68,hourly,USD,38,frontend,0,expert
+abf88349-d860-4c15-b2c0-36646cba770e,f42fc36c-dae2-4da6-b6b2-44217bcfaf13,Priya Wang,12-year frontend specialist.,43.66,hourly,USD,35,frontend,0,expert
+827b2960-f199-4992-b40e-d7c77b03500f,4c4273ac-eeec-4ccb-a4d4-35476c37f043,Tanya Santoso,3-year fullstack specialist.,57.05,hourly,USD,17,fullstack,0,expert
+530c1c7f-effe-4cae-b7be-4f1e6bc897c7,28efd3d0-8d07-4d0c-a54c-f4625410f991,Tanya Lee,5-year devops specialist.,84.79,hourly,USD,26,devops,0,expert
+e33ffc3d-5782-4dc1-a1a9-04e5a6c19530,df1f13bb-8159-4cc1-83d7-1e71223981e3,Faisal Kumar,12-year mobile specialist.,53.92,hourly,USD,40,mobile,0,expert
+879aa9f5-1f97-4d22-aa80-01f5c2dd3b6c,55a05aae-25b7-4d6d-9b8e-ba9750d91eb0,Zara Hidayat,5-year fullstack specialist.,79.7,hourly,USD,0,fullstack,0,entry
+6f7e9eb4-9fb4-4e1a-807b-c553b9cc8fee,2b42447a-7014-41c6-a476-583513f50d55,Budi Patel,8-year design specialist.,58.84,hourly,USD,21,design,0,expert
+b7c9d289-1244-4328-8029-5c9a09b88196,0f731ebe-9c7c-4809-82d8-51a6ec618245,Marco Lee,10-year design specialist.,29.14,hourly,EUR,44,design,0,expert
+a14ef145-9d9e-4eac-8a90-c6daa18649f2,7c70e5a6-debe-42f2-991c-c1d2f0606e54,Putri Lee,5-year design specialist.,58.55,hourly,USD,44,design,0,expert
+7301526c-dd77-46b3-9b3d-1a2e3bc6caeb,4b223d73-d375-4865-b423-57a9d7bb6263,Zara Kusuma,7-year design specialist.,20.12,hourly,USD,17,design,0,expert
+20ce76bd-37d7-4d2c-9f27-cd4917d3f92c,c35c9de6-3083-4054-a438-022d02e294b5,Bob Nakamura,11-year fullstack specialist.,55.01,hourly,USD,35,fullstack,0,expert
+98fcd1f0-d578-47ef-9c6e-85a5bb19f067,5ab0888b-cb3a-4d97-9703-189a7d4022db,Edward Pratama,13-year blockchain specialist.,114.03,hourly,USD,18,blockchain,0,expert
+bab0783f-f1ba-401e-bf6f-2ed67bf4ab0b,48f35d84-5916-4a69-a860-ab2973484e83,Julia Ahmed,4-year ml ai specialist.,70.97,hourly,USD,16,ml_ai,0,expert
+9f4fb724-866b-4754-b650-18435b691d80,1965fb03-f6cc-46cb-862c-f382c76c8631,Luthfi Sari,10-year blockchain specialist.,98.78,hourly,IDR,30,blockchain,0,expert
+5709918f-22fd-47d9-8cd1-f751c2e75945,dd5a4235-bffc-4aeb-bf89-25c318dfa1b7,Xena Ahmed,9-year devops specialist.,92.69,hourly,USD,2,devops,0,intermediate
+bde0b58d-07e4-4fce-b4cb-0efe7b786edd,5edb9496-708f-4bc1-a83b-d4876652e46f,William Garcia,2-year frontend specialist.,50.58,hourly,USD,15,frontend,0,expert
+073d21c7-ae33-4132-a1d1-1e8a6dc83f1b,3fad7651-3deb-4015-a501-1a9315f76f5a,Budi Brown,13-year devops specialist.,30.74,hourly,USD,21,devops,0,expert
+50a65e51-7284-4cbc-a172-28f79f72bf96,1aefb2cb-9602-4e03-98fb-14ef32dc4681,Zara Utomo,8-year mobile specialist.,62.48,hourly,USD,23,mobile,0,expert
+5fcf67b9-e2db-4300-b69e-6fdca021cc27,7732f9e1-d531-479d-9b4e-e8703d135ab5,Eko Brown,6-year fullstack specialist.,44.2,hourly,IDR,1,fullstack,0,intermediate
+03b45056-ac20-4d47-bf3f-689a8bd1dfa2,80f3c0c5-da8e-4501-94dd-0963e2e20b8e,William Wijaya,2-year frontend specialist.,33.87,hourly,USD,9,frontend,0,intermediate
+1a4ff3e1-93f7-413f-bab4-36ccf9f65606,4aca3335-ef04-4889-a8a1-dfafc987bbda,George Utomo,6-year blockchain specialist.,119.42,hourly,USD,30,blockchain,0,expert
+f161b450-608f-46f7-8aa5-620a9a1bf07e,e3e1a75e-1fa6-4f44-abbe-1e35cb490560,Hannah Smith,5-year frontend specialist.,61.7,hourly,USD,2,frontend,0,intermediate
+4b07b91d-3f39-4307-b60f-82cccb6f5be2,7c00b06b-49e9-45c6-89ce-4c11b2bbed10,Hendra Garcia,15-year fullstack specialist.,60.87,hourly,USD,15,fullstack,0,expert
+413c3380-abe5-4409-a4ba-47d3db02e453,4c6676f6-c0dd-48f0-9c22-5b256e2f5a64,Zara Patel,8-year devops specialist.,42.91,hourly,USD,14,devops,0,expert
+74bf7f0c-5f84-48c5-bc06-22d8fee830b0,60a70449-a859-4c23-8059-4f776a16e426,Naufal Miller,7-year devops specialist.,61.47,hourly,USD,1,devops,0,intermediate
+884cb898-3f8a-4e21-814c-5140c498b164,9e92efb4-8e0c-4ad0-bd6c-d1e8c84c3ae5,Nina Santoso,12-year backend specialist.,65.14,hourly,USD,13,backend,0,expert
+b097361d-f7c7-47e0-94ef-22036de6360c,6a78cc20-bc3d-4238-8063-997a6e9e2c9f,Indah Garcia,10-year frontend specialist.,35.12,hourly,USD,6,frontend,0,intermediate
+1dde8597-b06e-4f54-ae19-c9b63920b2d8,1ff58c10-da9a-4f86-8909-37ad3f86f213,Faisal Kim,5-year frontend specialist.,68.13,hourly,USD,42,frontend,0,expert
+c53e88f5-11e2-4bb5-ac05-94d3f6ee9a71,c3d3a8d8-64d4-4c92-a452-2be6e9483b4a,Luthfi Brown,10-year devops specialist.,54.35,hourly,USD,25,devops,0,expert
+2d36949e-edf8-4b5b-91a7-5f8bfce72db9,510ad90d-c2b1-4907-b07d-175579e7acd9,Tanya Kumar,14-year fullstack specialist.,63.36,hourly,USD,43,fullstack,0,expert
+cb6c94d0-80d3-4cf6-86c4-76b72f101fbb,81f61e88-ce61-489a-a09f-286655a9cfc5,Tanya Brown,2-year design specialist.,23.24,hourly,USD,15,design,0,expert
+84b9b6c3-dda5-4692-b3de-ccc5263a8152,f4c75915-2868-45f2-a5f9-4ac50187ce39,Ivan Wang,7-year devops specialist.,56.86,hourly,USD,38,devops,0,expert
+9a36c538-4f36-4a1d-96a0-c646192ba745,a218a60f-9b06-4486-9e57-77db5e9d1201,Faisal Wijaya,9-year fullstack specialist.,34.12,hourly,USD,10,fullstack,0,expert
+7fea8264-0280-47b9-8096-91315ae90638,76841f8d-efdc-47af-a8ff-2cb944efa20d,William Smith,10-year blockchain specialist.,93.31,hourly,USD,3,blockchain,0,intermediate
+6db0e38e-58ed-4e77-8234-94d63b94a70b,38e6f181-8f95-4f2b-a275-f6a72c1bd2e3,Faisal Pratama,9-year devops specialist.,77.93,hourly,USD,32,devops,0,expert
+ea8dc35f-a34e-43df-b6ca-251332ffaef6,8e2d8264-84db-49f1-8826-5ac3547353df,Fatima Wang,8-year blockchain specialist.,43.39,hourly,USD,10,blockchain,0,expert
+496ef1d3-e82e-4ba0-9f41-fbfce5fdb2eb,8c4df800-7d41-40d2-af8a-25ab54da8913,Oscar Chen,1-year ml ai specialist.,59.54,hourly,USD,17,ml_ai,0,expert
+3706de12-2b06-461e-a1d9-e8737e771907,5c316f7d-a310-4c4c-9a39-cda5f1ca1d95,Hannah Wang,9-year blockchain specialist.,52.56,hourly,USD,32,blockchain,0,expert
+cf690255-e50b-4124-a75d-4f5b824c5df2,821050a3-b067-44a4-a38e-8aa32de18f8a,Citra Chen,9-year design specialist.,24.83,hourly,USD,2,design,0,intermediate
+9fc87c2b-20d2-4dc1-86e5-cb1cf4bf0088,bc1e710c-cb72-4ca3-8d91-e0ac3149f11f,Citra Santoso,5-year mobile specialist.,39.17,hourly,USD,2,mobile,0,intermediate
+3bbff999-1e17-4c3d-b165-6e650c4b10a2,fd8c6618-59c3-44e4-9158-1116a573f2f5,Priya Miller,14-year blockchain specialist.,129.18,hourly,USD,7,blockchain,0,intermediate
+792984a3-84a9-4213-93c8-2bae8d94468c,c5f94051-2a21-4d43-817e-36a1e563d839,Naufal Patel,14-year design specialist.,34.27,hourly,USD,45,design,0,expert
+57a236c2-47c1-434c-a14f-eaa2806aab47,a795e2e5-0252-4082-8ce1-777941298c16,Diana Wang,14-year mobile specialist.,39.29,hourly,USD,13,mobile,0,expert
+1d4ade34-5bb4-4ab0-91b5-dc4b46a15550,38e3937a-ec17-47be-a6fa-8e62f8e519c1,Samuel Wijaya,6-year fullstack specialist.,62.23,hourly,EUR,45,fullstack,0,expert
+2ca9ea39-5732-43cb-8636-0dfd3d8449d2,7170e18f-4b7b-4462-a072-b6b8483a902d,Diana Santoso,3-year frontend specialist.,62.69,hourly,USD,26,frontend,0,expert
+a05e15db-b3a5-4c9b-a500-602f46a51dcb,c3338e3b-4cc0-451e-8901-33312c1008a0,Umar Davis,4-year fullstack specialist.,74.5,hourly,USD,9,fullstack,0,intermediate
+d2a2fa17-f4f9-4158-b6e2-d047bd4684a2,60962136-6380-44b2-b5d4-a03471e4d866,Putri Santoso,3-year blockchain specialist.,109.06,hourly,USD,36,blockchain,0,expert
+179836bf-c221-42cc-8afe-804c402e18a2,e1334561-7c19-4587-9684-c89105737594,Zara Kim,11-year frontend specialist.,56.24,hourly,USD,5,frontend,0,intermediate
+a5b09069-4037-4bb7-bc4c-d27c5ca2b8ca,4015d688-c9cc-489d-b27f-12c294662c6d,Umar Wang,8-year design specialist.,15.11,hourly,USD,31,design,0,expert
+2d5d30bf-8098-4f0e-93c9-633eb1adb4db,c6dbcee4-1e39-4544-9c4c-583e4658d979,Putri Singh,12-year frontend specialist.,53.35,hourly,USD,29,frontend,0,expert
+683e99c1-87f4-41a6-aad3-119ec3a87594,df4b024a-e2dd-4e68-b956-377746e07c56,Nina Lee,4-year devops specialist.,48.8,hourly,USD,27,devops,0,expert
+d383baef-32e9-41e8-baa5-42a8ac98bb25,9bd04edb-3d85-4ebf-8528-0975c644f442,Ivan Wang,9-year design specialist.,53.36,hourly,USD,36,design,0,expert
+478bd79d-cd70-4af4-99d7-671fac4c5ec3,c27f439b-aeef-43cd-9699-7db6ac9d2a74,Putri Utomo,1-year backend specialist.,20.98,hourly,IDR,6,backend,0,intermediate
+c571b8d1-7bdd-46c7-88e1-14453915bc99,287b8562-37bc-4c99-9718-a488e87ec399,Alice Pratama,8-year fullstack specialist.,38.15,hourly,USD,29,fullstack,0,expert
+ed5babef-5330-4d8f-865c-3f06f479ffaf,d49efe8e-c30b-4f93-8319-d5a9c23e59b6,Tanya Garcia,15-year fullstack specialist.,81.84,hourly,USD,41,fullstack,0,expert
+37adba77-acbf-4bd9-a4a3-d459c83109e6,1a1efe72-aa6a-4589-9537-cdc7ac22a479,Quinn Williams,11-year frontend specialist.,35.45,hourly,IDR,23,frontend,0,expert
+68e40bbc-de8e-4ead-9a8e-fc83a8008ebe,83bdc9f5-95e4-4981-8559-20f457f4f66e,Putri Wijaya,1-year fullstack specialist.,72.19,hourly,USD,25,fullstack,0,expert
+623670f5-c6ee-4f98-acdc-075d54947a29,491cd8d3-e2ad-43bd-a646-8234114552f1,George Smith,11-year devops specialist.,44.94,hourly,USD,5,devops,0,intermediate
+dcfe345a-c673-41d0-93fd-db7f4ab5394a,0b74def7-dca4-4eae-95ab-f9726d6f2f65,Citra Smith,9-year mobile specialist.,20.44,hourly,USD,43,mobile,0,expert
+480a4079-8c69-4146-a93b-8634bcb1d2cb,8490cf43-0a22-4ded-97ba-81e10fdaa893,Ivan Lee,14-year frontend specialist.,18.9,hourly,USD,27,frontend,0,expert
+9f62b2fc-12bd-495c-be56-6101db9c899b,79452ac3-f854-440f-9282-37b506c992d5,Xena Wijaya,2-year frontend specialist.,22.54,hourly,USD,20,frontend,0,expert
+e7229f45-3f03-4693-aab8-08cc7f9ffea1,ef0684c9-5c00-4b84-8827-5f970525d80f,Julia Williams,11-year fullstack specialist.,59.48,hourly,USD,43,fullstack,0,expert
+c3bf409d-1ed1-4c59-9aae-4248918bb07b,52826a8f-faa9-45e8-8f4d-5d6ee71a4cc6,Nina Patel,8-year fullstack specialist.,73.64,hourly,IDR,22,fullstack,0,expert
+9c27f58d-099e-47c3-9fc1-b17eba2628da,66068238-ad1d-4f98-a20c-5759db243455,Fatima Brown,14-year blockchain specialist.,55.4,hourly,USD,13,blockchain,0,expert
+33645144-8da1-47b9-9e73-16d8922a2d17,887c791b-119c-4597-b7f1-58f1ebe76a64,Umar Jones,6-year devops specialist.,47.35,hourly,USD,27,devops,0,expert
+0fc873c3-9f77-4bdf-be4f-1b8d831b6394,289d070b-1dc5-4d75-b520-d35cbd4afe96,Maya Nakamura,9-year mobile specialist.,53.42,hourly,USD,38,mobile,0,expert
+dcc32055-5d59-43c2-bd2f-bc07b62dccdc,03f2cb4a-cb11-4b99-959e-2b0b3ada6edf,Tanya Miller,14-year backend specialist.,51.06,hourly,USD,42,backend,0,expert
+fbcdffd7-18fe-47bc-bf1c-a8d4323c084b,d28c5a9f-5ae1-4494-bbf5-e7d4007c7e0d,Diana Davis,5-year devops specialist.,64.64,hourly,USD,41,devops,0,expert
+0f20c4e9-9692-49c0-aaf1-3374f908ee1c,57c82d1a-9211-4a45-a5a3-437b40e8b59f,Edward Kim,11-year blockchain specialist.,137.76,hourly,USD,38,blockchain,0,expert
+37b9f781-7979-418b-a3a1-7cc1635543eb,fa0d4c40-3eac-4d72-8078-78d4bf51dd54,Ivan Sari,15-year design specialist.,53.74,hourly,USD,20,design,0,expert
+9c952905-2797-4cf9-84c9-5b666fff4f4a,9eca00a7-5366-4a7e-a2d8-3ac9518e581f,Lily Lee,9-year design specialist.,57.95,hourly,USD,43,design,0,expert
+7e1e43ef-97df-4945-acfd-2097842baa5f,d09872e2-d7e4-4958-b3aa-729e3ee53915,Alice Santoso,10-year backend specialist.,32.94,hourly,IDR,4,backend,0,intermediate
+c0edad50-035a-43a9-99a0-1dc761308149,c3fc1878-4f8a-49ed-a9c0-1177ab8e61a9,Putri Ahmed,9-year devops specialist.,65.07,hourly,USD,18,devops,0,expert
+12adda37-2abf-4625-8903-d2efe01b8fca,9da44ead-4e81-4a41-9647-36eb3c158c77,Indah Chen,2-year devops specialist.,73.12,hourly,USD,40,devops,0,expert
+7a59c9dc-7df3-41a2-92c2-d11dc4053579,78e15ec5-2a66-4fb7-bef5-f786c7176709,Nina Jones,2-year ml ai specialist.,80.59,hourly,USD,32,ml_ai,0,expert
+9408453e-4d9b-4548-9572-8a6d496bb1ee,54f802ca-079d-48cc-aae6-8ab08143e543,Budi Nakamura,5-year frontend specialist.,67.44,hourly,USD,44,frontend,0,expert
+4e06dd10-470a-4f16-bbc6-06142c4f6e3b,2f590fac-46f9-4792-9fc7-4c200fbd341e,Hannah Utomo,2-year mobile specialist.,53.68,hourly,USD,27,mobile,0,expert
+19f653d0-70b1-4e0b-89d2-8e98202f16e9,2ae6efca-e72e-4cbb-8a84-032bf2d57734,Ivan Ahmed,2-year fullstack specialist.,25.74,hourly,USD,0,fullstack,0,entry
+9b16bce1-839e-41a7-b13d-58f23e9e3f47,79acb7b2-a582-48a6-b448-afa0f3fd87d2,Quinn Garcia,9-year design specialist.,31.73,hourly,USD,33,design,0,expert
+c6ce2e12-6e3b-4954-9a34-51a9a94ce89e,c791152c-7b35-40b0-aa7f-9d6d466aac86,Bob Hidayat,12-year ml ai specialist.,103.6,hourly,USD,7,ml_ai,0,intermediate
+ec64a2f8-ea32-47b5-9a01-68a55cff20b8,5b001c0d-498f-45e7-a80e-7df0a2c859c8,Kartika Patel,5-year frontend specialist.,19.24,hourly,USD,45,frontend,0,expert
+cd57c6ad-3fb2-483b-a1ce-cab710af138e,4d3b7814-1f6a-421d-bb23-e9cbf75f0c0c,Kartika Garcia,1-year design specialist.,31.55,hourly,USD,31,design,0,expert
+b28ac1b9-75e4-476a-855d-3dfc0d403928,db4dfac8-0bc6-4c3c-83fa-deac179eceef,Hannah Davis,15-year frontend specialist.,55.74,hourly,USD,36,frontend,0,expert
+eccfeff5-9ae7-4c9b-86d9-37178f5fbb13,bdac0d5f-d653-43ec-b7db-69f777c2a1b0,Eko Kusuma,4-year backend specialist.,42.98,hourly,USD,2,backend,0,intermediate
+a96dcaa5-d546-419e-968e-7ce6d1a416e8,8d9b2379-5533-4ff3-abf4-200cd00832cb,Ahmad Davis,9-year backend specialist.,39.31,hourly,USD,45,backend,0,expert
+2905c20c-f594-4fc7-90de-b96983bfe229,9456d39a-3e7c-42f2-9d04-0815dd20b7b9,Kartika Kusuma,5-year design specialist.,20.37,hourly,USD,4,design,0,intermediate
+5e746d8f-ec1e-4508-8c2f-e9554fef99d6,5d8831dc-a6f9-4a8e-be32-d9655f210d93,Hendra Johnson,3-year backend specialist.,77.24,hourly,USD,14,backend,0,expert
+b34fb2b2-e025-4443-bee8-66a832ed7323,78ba6eb3-235d-4142-a9b9-03a217e73a78,Tanya Hidayat,14-year blockchain specialist.,49.5,hourly,USD,18,blockchain,0,expert
+5863f588-5a7f-41b2-87c9-5560a1aa5c37,c6b3c9d8-c5d7-4860-816d-07e54f2b642a,Kartika Wijaya,4-year design specialist.,48.28,hourly,USD,18,design,0,expert
+bfcd0767-0665-4764-a7c3-1b48e8c8d2ef,72da0d57-2b70-4819-bfb3-876f7198169e,Marco Nakamura,10-year design specialist.,55.52,hourly,USD,31,design,0,expert
+7926fce2-0944-4f45-ac98-b6ab8c9af4b2,87104446-ac3d-410f-a984-31c9e19a7aee,Ahmad Smith,3-year mobile specialist.,32.81,hourly,USD,0,mobile,0,entry
+3a04fd30-be90-4d84-ae50-83de4fcf58d3,76c28bf4-7bec-45f8-8f0d-7454a05edece,Yusuf Nakamura,6-year backend specialist.,63.63,hourly,USD,0,backend,0,entry
+a7b4f22f-496a-447f-b194-e5dfd14aedfa,a34778db-0f54-4360-9f02-7c0ae0793e73,Diana Jones,7-year mobile specialist.,59.14,hourly,USD,31,mobile,0,expert
+82009ff7-342e-4a94-a5ba-d2f66ff088d0,bd3a5d11-eae5-4850-93af-7d84c036d299,Ahmad Ahmed,15-year mobile specialist.,69.26,hourly,USD,33,mobile,0,expert
+69af508f-0bd9-48f8-8339-bd9e89c11ef7,0e86b3e5-2590-4596-88bb-1a5e08965486,Gita Jones,10-year frontend specialist.,50.05,hourly,USD,6,frontend,0,intermediate
+d07d665b-1df8-468d-aee3-2e81709763ca,2f20c0ef-2194-4ca1-aa50-b30a5a32d199,Ivan Davis,7-year backend specialist.,37.5,hourly,USD,42,backend,0,expert
+ae43c8fb-8f8b-473e-b61a-b1260f9d677b,4e5c66cc-61cc-473c-8524-4c39e019b70d,Umar Utomo,12-year devops specialist.,49.04,hourly,USD,20,devops,0,expert
+52f23038-b395-465c-a9d2-c479d8323911,14c4317d-2f2c-4bea-9f7e-9c8c61a021b0,George Jones,3-year mobile specialist.,25.81,hourly,USD,37,mobile,0,expert
+5509e0ae-f5aa-4211-987d-73b14f514b24,62f07948-a29b-4de8-be03-f16bc388bfa3,Indah Kusuma,7-year design specialist.,58.41,hourly,USD,7,design,0,intermediate
+b2af5334-544a-4da5-9ecc-87ee1ba7156b,87d7fb81-a6bc-4f96-a619-71bd0f25ae5a,Hannah Williams,8-year ml ai specialist.,48.4,hourly,USD,16,ml_ai,0,expert
+675cef77-15c7-4ac1-8930-9418b84267ec,179cd0ee-ee73-4e4f-aed1-e319725e5ff8,Julia Williams,4-year backend specialist.,62.67,hourly,EUR,20,backend,0,expert
+ae0e918c-30e2-44ac-9907-a87d6e07fffd,f9721ae5-429b-4d77-a39a-10d2e2a364dd,Tanya Santoso,9-year devops specialist.,87.41,hourly,USD,3,devops,0,intermediate
+6d052a5f-2373-46a0-b737-33fe52b8df5c,afa421b3-fd5c-44ac-a88c-a723ba67662b,Joko Nakamura,14-year devops specialist.,68.51,hourly,USD,28,devops,0,expert
+3d921c5b-9191-4a5b-b7cd-835ba52b265d,e2239137-9dad-4eb6-87c8-94f971658a97,Hannah Smith,13-year frontend specialist.,18.39,hourly,USD,8,frontend,0,intermediate
+0737f992-fbc6-47fb-8f30-771d476c2a44,4acfd288-a3b1-42d6-b33f-22c3faeb160e,Zara Kusuma,3-year mobile specialist.,57.75,hourly,IDR,12,mobile,0,expert
+f934b6c7-7cd2-4948-98dc-8d52ed3b14a4,b42673f1-d957-405f-9589-194e7e3f1029,Quinn Williams,10-year frontend specialist.,16.2,hourly,USD,37,frontend,0,expert
+e67c4c8b-f41b-4e9d-9ade-5050b3fbbfba,69085e81-e8b9-4831-a75b-d23531062021,Fatima Hidayat,13-year blockchain specialist.,53.48,hourly,IDR,8,blockchain,0,intermediate
+75e47e91-af90-4035-86b5-8691320ff522,5360fdfe-2a04-48b7-91b9-d75c1cba0070,Budi Nakamura,3-year backend specialist.,43.7,hourly,USD,36,backend,0,expert
+cac1f5fc-f45d-4103-915f-c6e40b0627f6,ccb005d7-30be-4cc2-bb5c-06601c7cf366,Nina Garcia,3-year devops specialist.,49.25,hourly,USD,22,devops,0,expert
+3cb042e5-73f2-4fc8-8648-d0bc212516f4,15a5705f-df7b-458e-a608-a473b841ad43,Naufal Kumar,1-year fullstack specialist.,40.98,hourly,USD,39,fullstack,0,expert
+e6c85949-44b4-4e43-87be-8929110f8aee,bc13d8f5-4553-4427-8d81-d75eafc876f4,Eko Johnson,15-year devops specialist.,36.14,hourly,USD,35,devops,0,expert
+9b6487be-ffb3-4e0e-928c-3853f15dade2,ba3bcff7-1382-4802-93c8-8bd722e6e1a2,Hendra Davis,4-year devops specialist.,74.15,hourly,USD,41,devops,0,expert
+4dfd4026-4f34-4230-900d-7a170fca313d,1ca37c61-fe52-43ea-855d-47e889cc6ca3,William Lee,7-year backend specialist.,52.67,hourly,USD,45,backend,0,expert
+94a0c605-ca9d-4bee-8c7f-2f299aff1413,15fe765c-2a0f-4174-b9b3-6c6effa967e5,Lily Smith,7-year design specialist.,29.35,hourly,USD,17,design,0,expert
+eafd1606-bb0c-44b9-9d98-e08d213b10e4,6fd6e7d3-225a-497a-b3aa-2d3d1156cc04,Hendra Kusuma,1-year ml ai specialist.,100.18,hourly,EUR,30,ml_ai,0,expert
+8526db93-6eee-466d-8e9e-052a815b76ea,4a4bf055-f2ad-4f9b-93bf-d212981dc1dd,Priya Santoso,2-year fullstack specialist.,59.69,hourly,USD,15,fullstack,0,expert
+0df0cd1f-6fb6-43a1-ae0d-e6198086c914,1b03905a-3c72-402c-bf18-cdaf30e8d22e,Kartika Sari,13-year backend specialist.,41.29,hourly,USD,14,backend,0,expert
+038afc38-419e-4523-8bf0-4db74187a20d,b9e9eb65-91b0-4fae-b9c6-553101f984fe,Luthfi Hidayat,3-year fullstack specialist.,77.4,hourly,USD,15,fullstack,0,expert
+a48c70aa-99d2-4665-99ce-cab3bbfd79be,2c32da3e-9818-427e-a89b-00855858a981,William Wang,12-year backend specialist.,53.82,hourly,USD,44,backend,0,expert
+c40df368-2c79-4cc4-be2d-17fe007e7ec1,6304266c-ce56-4159-91c3-ce9dcefad471,Indah Wijaya,14-year mobile specialist.,29.66,hourly,USD,31,mobile,0,expert
+9c9eaefe-3dae-492a-a9cd-20201c31ced6,80fafb24-09b8-44d3-a01b-6a7e958efafe,Oscar Smith,4-year backend specialist.,51.59,hourly,USD,38,backend,0,expert
+bba4a9e8-a3dc-4e1a-97b9-f938cf6f7982,754d3f8b-cc24-4c39-bcfe-2b7ad300def7,Victoria Ahmed,13-year mobile specialist.,29.76,hourly,USD,8,mobile,0,intermediate
+347da82d-665c-428d-b2d6-07d763d5d0ec,8a1967b9-b368-484a-9111-1ef71e845e7a,Julia Wang,1-year design specialist.,46.71,hourly,USD,1,design,0,intermediate
+dc071ffd-6f1b-4792-8dd7-144d23376e34,38773986-1a3b-4097-8892-59b2e1acd5ba,Xena Williams,14-year frontend specialist.,35.55,hourly,IDR,33,frontend,0,expert
+7f2dc283-e5c5-4430-9b42-a0bbfb8632e0,10433b3e-da86-4da7-9bca-642f3853cdd9,Victoria Wijaya,10-year devops specialist.,52.58,hourly,EUR,6,devops,0,intermediate
+0301e851-75d5-422a-aaf9-1afb4a074e72,ac306a26-fc4e-48f6-b68f-85a943ec7df4,Faisal Patel,13-year devops specialist.,52.21,hourly,USD,40,devops,0,expert
+2fc0f09d-466d-4e76-9d47-81370149ca9b,e006cf76-45a3-45de-a3f3-cf9a2d91cb68,Luthfi Garcia,4-year design specialist.,32.03,hourly,USD,42,design,0,expert
+44873e67-c80f-4755-a82f-698920d23bcf,3cd0e367-123f-4582-a4df-5bc603d26b79,Alice Ahmed,3-year ml ai specialist.,115.64,hourly,USD,11,ml_ai,0,expert
+2ad24c8b-0eb1-4d5d-a5aa-0e405aedd634,bf814d98-1126-4b37-b9f6-572d1d3d0d90,Umar Kumar,3-year backend specialist.,33.25,hourly,USD,38,backend,0,expert
+8932a01b-7f2f-41a0-b257-f4b81caadff5,c80aedbb-2b2e-4a95-bd11-510421054741,Edward Davis,3-year blockchain specialist.,78.15,hourly,USD,21,blockchain,0,expert
+6a92faec-3154-49c7-9888-3a3c82fb67f8,d12657fc-8614-46a8-bb49-e49158b7fb42,Putri Nakamura,14-year frontend specialist.,63.77,hourly,USD,45,frontend,0,expert
+04e36126-bc71-41b5-9fce-448120185d1b,942f0f2c-91ee-479b-9ce1-fa67cce5613c,Edward Kusuma,4-year ml ai specialist.,56.82,hourly,USD,15,ml_ai,0,expert
+85af672c-5c1a-4e64-839f-ec117fdd22ec,46129e73-183d-4f0a-bb0a-a98a552c2b6a,Citra Nakamura,1-year backend specialist.,45.18,hourly,USD,24,backend,0,expert
+f8e8f063-dd98-4fba-8ad9-ad1a852f34de,2cd45660-2fa3-483a-a8ae-d4f18225486f,William Chen,8-year devops specialist.,56.27,hourly,USD,24,devops,0,expert
+ba8430b7-1bcc-48dc-86df-962c265dbf99,dd65564e-9c03-4b2a-80ac-8ee1fa462463,Edward Johnson,3-year mobile specialist.,36.22,hourly,USD,28,mobile,0,expert
+c548ec61-18e5-400a-a6d2-c99c0c36350a,69c467df-ee14-4f30-8531-af60e8402163,Kevin Sari,2-year frontend specialist.,23.85,hourly,USD,21,frontend,0,expert
+77275936-3937-4c2e-99d1-9a7e893e4a30,18b2aff7-12ef-430f-ae51-893c93e678d6,Naufal Lee,6-year frontend specialist.,53.75,hourly,USD,38,frontend,0,expert
+b1507287-1213-4f2a-b433-f00c49cd3d1c,3fedae8c-ecad-4b6c-b3c3-6616a8e4cf4a,Kevin Johnson,10-year fullstack specialist.,31.58,hourly,USD,27,fullstack,0,expert
+a3a02a70-7ca5-4154-8d70-b2ba46a41306,dbeffdbf-634b-4dfe-9528-e1d06927e73d,Joko Nakamura,7-year mobile specialist.,70.91,hourly,USD,44,mobile,0,expert
+7129a758-f3d2-4009-9a0a-ba36778d7521,3c896c5a-8999-4970-b1e9-c304beb998b5,George Johnson,5-year ml ai specialist.,68.4,hourly,USD,15,ml_ai,0,expert
+4276d42c-4c0b-4841-b221-632e6c48e0eb,ef4aec78-4bc5-4f58-89a5-71ac9b9f65d3,Xena Smith,3-year blockchain specialist.,87.04,hourly,USD,3,blockchain,0,intermediate
+f1e72511-2d5c-4962-9d7c-9319b3543ad7,6b1d2001-6ffa-4873-a287-f5ddd9be06dc,Bob Miller,4-year blockchain specialist.,58.79,hourly,USD,6,blockchain,0,intermediate
+068143f0-0dc3-462b-8870-5422535ee345,4627c122-3996-429b-82a0-cbc610c4b8c6,Tanya Sari,8-year frontend specialist.,40.9,hourly,USD,7,frontend,0,intermediate
+ba249ab4-2a16-485f-b72b-02a95cc00040,dce74006-a2c0-41b7-8edc-d3455f15d3cb,Indah Sari,2-year ml ai specialist.,50.71,hourly,USD,41,ml_ai,0,expert
+2dc32538-68fb-41b3-ba2f-e01b559266ff,71ec86af-181a-43e3-98e0-49a6d4f4c76f,Charlie Santoso,3-year design specialist.,34.79,hourly,USD,28,design,0,expert
+5f8fdd0c-bab0-4402-b5fa-8982adcdd4e3,1660f27d-4cf6-494a-a74f-24ecbac93bb5,Julia Ahmed,10-year ml ai specialist.,91.73,hourly,USD,3,ml_ai,0,intermediate
+6e98a464-3956-4715-996d-5a459828b532,f64f3ae3-ad46-403a-8806-8014d3d83a63,Ahmad Wang,13-year design specialist.,25.24,hourly,USD,34,design,0,expert
+b3d7022f-b6dd-47c3-aa9a-76f096581948,ff550dad-7d04-4425-b77a-c06332f10304,Ahmad Chen,14-year devops specialist.,78.09,hourly,IDR,33,devops,0,expert
+6bf6d84c-31c4-42c9-a4ae-2df5ff051fa1,1a883042-9782-4d81-bffc-c1591d1cb3d0,Fatima Sari,8-year mobile specialist.,69.65,hourly,USD,19,mobile,0,expert
+e9134477-43d7-4bb6-a1e2-a4c7783ea732,2e88b4da-8b4b-4fce-8b65-3aafc47cf5df,Lily Garcia,2-year fullstack specialist.,88.19,hourly,USD,28,fullstack,0,expert
+55cc362e-7371-49d1-9a85-13101f4daa78,1e0fd437-2b7c-4647-9c9b-df32a8dd11f9,Fatima Singh,1-year fullstack specialist.,53.3,hourly,EUR,27,fullstack,0,expert
+0a7a9ceb-fb96-4a60-a26c-28838058b697,7b06d882-cb85-4014-bac2-c064a25d09e6,Quinn Hidayat,14-year fullstack specialist.,84.2,hourly,IDR,38,fullstack,0,expert
+5b3a6a66-128a-42ec-8a90-16aaed671cf3,1c37144f-e58b-41cb-b4cf-09867ecdfaa7,Joko Sari,2-year frontend specialist.,45.36,hourly,USD,24,frontend,0,expert
+853d8d9e-e67a-4e35-a446-c197b5580e0c,63da25d9-d562-41ce-bb5f-4092f59db7ad,Naufal Wang,15-year blockchain specialist.,97.48,hourly,USD,0,blockchain,0,entry
+20ed26d7-1d24-4e82-a6ff-87cc13fa471a,7cce9766-9f16-4138-a696-7240d3d32cb7,Kartika Wang,3-year devops specialist.,70.79,hourly,EUR,9,devops,0,intermediate
+8daa394b-6609-43a8-8da5-40a254ba2dcc,996d1cc2-ec4f-44e4-8c7d-0ed72779ddb6,Kartika Brown,15-year frontend specialist.,58.22,hourly,USD,6,frontend,0,intermediate
+f3372b50-bfde-41da-8a77-d7d0373d86c2,6ccc2f5a-885b-40d3-b820-945a0223c5aa,Quinn Sari,15-year design specialist.,44.47,hourly,USD,26,design,0,expert
+e1adc6b6-2182-4481-aa6e-723c5840de19,231b90e0-10b0-428a-9ffc-dfc275a5e182,Rachel Sari,1-year blockchain specialist.,55.82,hourly,USD,11,blockchain,0,expert
+ca3838a9-5751-406b-a648-c67f59df8688,77eb7549-5114-419c-8b70-61773d337901,Victoria Ahmed,1-year devops specialist.,46.63,hourly,USD,25,devops,0,expert
+f0b41640-106a-4c44-8eaa-2ccb2ab56197,fee2a915-0d5c-486b-9941-af0d823b681c,Bob Hidayat,15-year ml ai specialist.,104.48,hourly,USD,23,ml_ai,0,expert
+babf4f0d-1d8e-4cc0-a71c-5947b57cd2a2,64427c15-7fdc-46d8-87b5-8abb6dfafa03,George Davis,14-year ml ai specialist.,46.42,hourly,EUR,31,ml_ai,0,expert
+2a1468ed-9c21-49d3-8fd6-446283205791,ca8d8aac-3e91-4a88-9515-edcefabcab7b,Rachel Nakamura,13-year blockchain specialist.,85.85,hourly,USD,20,blockchain,0,expert
+72d12888-eb3c-42c1-8baf-eade54440059,09790e24-ebb6-4397-875e-c439f15c4b0f,Ahmad Nakamura,8-year mobile specialist.,46.65,hourly,USD,13,mobile,0,expert
+f9fef66c-c06e-429d-93f3-157660984f72,1aa96468-a884-4c7f-9311-b3f2820376e1,Gita Garcia,14-year design specialist.,17.95,hourly,USD,3,design,0,intermediate
+9d6da1ac-c39a-41b5-964a-c4ae88c57c78,723c2d67-5f8d-4c81-890d-9654f085d283,Kartika Smith,3-year devops specialist.,42.16,hourly,USD,33,devops,0,expert
+10740eb1-c3bb-48ce-8605-0a8bb1016356,149a07a1-8e7c-4ca0-abe6-29fb3e7b251f,Priya Johnson,14-year mobile specialist.,45.1,hourly,IDR,3,mobile,0,intermediate
+4e60c551-eac9-435a-a1ca-4840baa55c2a,275d3223-b211-4527-bd17-f57a2722e57d,Dewi Kim,5-year mobile specialist.,41.83,hourly,IDR,23,mobile,0,expert
+d3c6b065-bdf6-4ad1-877b-fafd3e243371,3435a21b-78b8-42fa-ab2f-cfefc0c22697,Faisal Kumar,4-year backend specialist.,46.77,hourly,EUR,23,backend,0,expert
+6a52700a-533e-42e6-a541-b0818baa0e99,b2830cb3-ea2f-4fc4-beb1-3c1c6cfaf2b2,William Kusuma,10-year blockchain specialist.,57.99,hourly,USD,35,blockchain,0,expert
+095c3dec-602f-4c4a-ac18-c49be86ef7d8,59a120a4-0114-4d4b-8e5c-b5cd6d26169c,Yusuf Johnson,5-year frontend specialist.,23.96,hourly,USD,1,frontend,0,intermediate
+cac04c1f-2b2f-474e-9ef7-72b2fc21af85,e7204edd-8de5-4e3e-8780-68967b5b7453,Oscar Singh,14-year mobile specialist.,31.37,hourly,USD,14,mobile,0,expert
+e83bf799-4415-45b5-a2fc-ae3147311369,61bbe6f8-4d17-4889-98cc-af7596f06540,Alice Lee,14-year backend specialist.,74.69,hourly,USD,43,backend,0,expert
+e723dfe0-bffd-4949-8a96-11317c7cd38f,feff93bd-3d37-4c3a-9ac3-0915148abef9,Maya Wijaya,4-year backend specialist.,62.76,hourly,USD,16,backend,0,expert
+b995af9a-b304-4027-96bb-0b83c10aaec9,ee468954-ebb7-4932-990b-2cd733a968eb,William Utomo,7-year ml ai specialist.,56.42,hourly,USD,24,ml_ai,0,expert
+7a898e8b-590d-4c02-8d2e-79dfd759ddc1,aea3d0d6-1ed2-4f34-a696-1c7d6a5a720c,Alice Kim,10-year devops specialist.,99.96,hourly,EUR,6,devops,0,intermediate
+bb3418a8-f994-4d1c-a993-4625008c237f,218b2013-b366-48dc-8d50-8d120d09f4df,Maya Kumar,9-year design specialist.,27.72,hourly,USD,41,design,0,expert
+76aaa77a-0eae-4170-ab6a-4cf99db6877c,7967f343-03c5-4046-8ee1-97c66b1250b4,Rachel Patel,2-year blockchain specialist.,75.77,hourly,USD,21,blockchain,0,expert
+2c379236-cbf5-41a8-aec1-753bc8b6ffed,22ab1937-2d29-4562-a0d3-c27fcf801bd3,Hendra Davis,4-year ml ai specialist.,111.47,hourly,USD,9,ml_ai,0,intermediate
+1b39bae4-4fbf-412f-a96d-335383461e01,06e52ea2-09c1-4a42-8835-13e3f69192a0,Ivan Nakamura,11-year devops specialist.,31.78,hourly,USD,20,devops,0,expert
+b671cb09-34b6-47a8-91de-5424d2431928,53bf3feb-eae2-4210-8496-24ef9f818908,Zara Sari,5-year ml ai specialist.,97.62,hourly,USD,26,ml_ai,0,expert
+01320d19-8657-4645-ac5f-f5c0cc74425b,45d8d1db-b60a-4afe-bba8-7f8c463bdb7b,Oscar Singh,6-year mobile specialist.,49.4,hourly,USD,45,mobile,0,expert
+8a3edd80-2f90-408f-9a3e-2b43a485b782,2a626a7c-017c-4ecb-8ad5-a6e68b9d9226,Kevin Singh,9-year design specialist.,54.44,hourly,USD,19,design,0,expert
+1cc84af0-8db0-487b-804a-c2c057c7c014,e0549e59-ff6f-4a71-8ead-55677344d2f5,Quinn Nakamura,8-year frontend specialist.,59.46,hourly,USD,8,frontend,0,intermediate
+0e1e20f7-46e3-4d71-9ef3-55be49d030ba,a21fef3e-c938-4abf-a000-28f2531fc787,Fatima Davis,11-year fullstack specialist.,48.09,hourly,USD,21,fullstack,0,expert
+428e2b84-8214-48a1-8eca-f8fff19f8877,e9779f91-9cd3-46b3-9eef-c6aadb3be783,Xena Santoso,7-year ml ai specialist.,84.77,hourly,USD,21,ml_ai,0,expert
+37582ce2-56c9-491e-a9e2-6b8cf47ddaa1,5ee1398d-a6b7-422d-a4f5-486168cc7829,Putri Wang,8-year frontend specialist.,46.92,hourly,USD,3,frontend,0,intermediate
+0f308d83-87dd-43a9-96e1-a5d56ea59cd1,100d79de-589b-4c7f-846a-f1b7c2ce3f3c,Gita Brown,15-year blockchain specialist.,135.42,hourly,USD,12,blockchain,0,expert
+8ba2b41c-d283-4395-9919-a14e2e7ba9bf,59d3df9d-e40f-4b63-97c2-59e4c8ccce94,Julia Jones,7-year ml ai specialist.,119.35,hourly,USD,3,ml_ai,0,intermediate
+99b27421-efb4-4e02-ae22-aaef2e6cf69f,0777d5c8-8caf-434b-910d-4adb53f4dc17,Lily Williams,3-year blockchain specialist.,93.63,hourly,USD,20,blockchain,0,expert
+2e5f4ed5-079e-41f5-b626-098eb04ec0f4,2d5122a5-bfb0-407a-a1ad-4869e551a01e,Diana Smith,6-year fullstack specialist.,54.38,hourly,USD,40,fullstack,0,expert
+4685cec5-6e3f-446f-9ea4-0f8221a90fb5,b47eae31-f38c-44c3-a1ce-8da1f7c452c6,Faisal Williams,10-year fullstack specialist.,33.41,hourly,USD,10,fullstack,0,expert
+3ca06348-6e24-48f9-b3c2-fe82998bdec3,9c8317c7-bdd8-4095-b164-4a148e221dd1,Eko Sari,7-year devops specialist.,30.33,hourly,USD,27,devops,0,expert
+7ed5bd02-7edf-44b1-a030-578e2ed86a95,a8b99888-33ec-4728-b364-f083c0b32691,Hendra Miller,1-year design specialist.,15.81,hourly,USD,20,design,0,expert
+7147be97-e902-41ed-9398-eaec3611bd6b,31d650cd-8a97-461e-877a-9228aa1a6757,William Wijaya,4-year mobile specialist.,27.09,hourly,USD,44,mobile,0,expert
+9b1ab468-996b-48f7-826f-7551a186d66b,7817ffae-f678-4f8d-8146-f4974417540d,Charlie Wijaya,3-year ml ai specialist.,115.62,hourly,USD,4,ml_ai,0,intermediate
+33f5743a-c341-4c03-9cc2-b08e2352e674,c534cec9-7821-49d3-89e2-7cf7f724cf37,Ivan Hidayat,7-year design specialist.,59.83,hourly,USD,43,design,0,expert
+54a28fe5-32c5-4cea-ae58-f312087cb7d2,2d5e114c-02da-49fd-95e8-80158337a6fa,Bob Davis,3-year mobile specialist.,32.34,hourly,EUR,25,mobile,0,expert
+8c2a7ed0-3cb4-4040-8739-a8dd299bd9d7,10c8b408-2b39-4dfa-8aee-754d41384036,Luthfi Kim,12-year mobile specialist.,29.29,hourly,USD,1,mobile,0,intermediate
+52c96214-eb4f-4879-94b8-b48c56b8a2aa,3774757d-fb4f-49c9-93bc-35a435c32f18,Quinn Chen,7-year backend specialist.,57.39,hourly,USD,40,backend,0,expert
+8e1202c7-da9f-42e1-a25b-3827466509ed,d109d81a-835c-4d6d-a446-adbfd6e2a33b,Bob Johnson,11-year backend specialist.,61.38,hourly,USD,6,backend,0,intermediate
+31491911-f9c9-4e21-999e-96fa0315fdc7,cea9ab8c-a753-48f0-aad7-24e9f6405d9d,Quinn Lee,2-year devops specialist.,79.13,hourly,USD,35,devops,0,expert
+17154193-1071-49dc-829c-0038c9182c29,2bd9acd4-8de1-480f-b636-0ea2cb0de89f,George Singh,5-year backend specialist.,51.22,hourly,USD,26,backend,0,expert
+cb69df38-87e6-4bf4-bcf7-e46c0b91d898,773db491-5c42-4851-84e5-3800a11b6760,Gita Nakamura,7-year fullstack specialist.,65.15,hourly,USD,6,fullstack,0,intermediate
+f5385ab3-91e0-486f-b123-c81133e8c8fc,e5a0e530-dcc7-471c-b374-db607c248826,Maya Miller,8-year frontend specialist.,57.79,hourly,USD,12,frontend,0,expert
+83853f80-a853-4ef9-ad2e-2b816eae164b,ba74df27-b0e9-45a8-ad2d-d11cc86ddd81,Ahmad Wijaya,6-year mobile specialist.,28.82,hourly,USD,45,mobile,0,expert
+fef17762-7aa2-4e2a-8a98-64cc81a576b1,fc55ac17-8938-475c-b3e8-993547a9f88d,Victoria Davis,12-year mobile specialist.,20.15,hourly,USD,30,mobile,0,expert
+12e31f13-569a-47d6-b27e-2e820349e947,7c5d21c5-d8d4-458b-b3b0-20ea03697bfb,Faisal Jones,14-year frontend specialist.,67.22,hourly,USD,36,frontend,0,expert
+4ed5c776-e060-4252-b20d-65083f978cb5,d36a0c90-8bce-4194-8ea4-3e29d4a4b639,Quinn Patel,12-year frontend specialist.,27.71,hourly,EUR,6,frontend,0,intermediate
+3b1d06df-02ff-4793-a6ea-8d90d4e3b7f2,f81e9c37-c22e-4292-b06e-0a180f31f933,Diana Brown,5-year ml ai specialist.,104.12,hourly,USD,29,ml_ai,0,expert
+4877cf9a-8fb5-412c-85e6-79cfdee7cebf,2c0789a3-2422-46f5-81e3-1fd24a5f47af,Umar Pratama,6-year ml ai specialist.,97.78,hourly,USD,43,ml_ai,0,expert
+9026a584-0b63-4c06-91cc-93397f295274,8d5a8e4e-ce85-4b9a-bf31-3f903d8fdbea,Kevin Hidayat,1-year backend specialist.,41.45,hourly,USD,8,backend,0,intermediate
+ee2e4f91-7dca-476f-a33d-3cd55b6c29a4,1373fbc1-c178-4dda-a2c2-8e7a5b0c5038,Xena Hidayat,15-year ml ai specialist.,50.54,hourly,USD,5,ml_ai,0,intermediate
+6db8581b-b978-4b98-85b0-26612e44cdf9,9b989dfe-adbc-45f7-95cf-0d0d1036dd36,Eko Pratama,5-year blockchain specialist.,111.37,hourly,USD,24,blockchain,0,expert
+f52dcb9f-1f16-4570-9e64-c99a508541c9,447b3c93-ff68-4bed-825f-2ddc4707bd69,Diana Garcia,3-year frontend specialist.,20.7,hourly,IDR,44,frontend,0,expert
+7ab8a8f3-097c-4615-946c-a3844135ee4d,af44b59c-e15a-48f7-a57d-3955ffe719a3,Citra Garcia,13-year blockchain specialist.,107.25,hourly,USD,36,blockchain,0,expert
+bdeb78df-9f6f-4306-965e-014b3a153150,2df3f39e-7cf7-4f43-b2a8-06f91ed31b48,Ivan Lee,14-year backend specialist.,75.22,hourly,USD,43,backend,0,expert
+0ae55ff3-4c43-4eb2-ac34-061a69af7172,9745a8af-c045-4e29-80a7-53ba0efea40a,Edward Santoso,8-year devops specialist.,75.85,hourly,USD,2,devops,0,intermediate
+58dccc6f-82bf-4420-9a58-f3a78c256825,32e6f010-e0ed-4474-8b71-7a7bf53e0c08,Hendra Kim,11-year mobile specialist.,57.85,hourly,USD,21,mobile,0,expert
+20731ee2-b665-44fd-a85f-129028ddee73,1b9c7e5e-e16c-42a4-b57a-20c6400c8062,Eko Kusuma,11-year devops specialist.,76.46,hourly,USD,15,devops,0,expert
+7adde36e-23d0-4be9-9c77-c28683a75507,7e50d799-0d17-4d7a-a61d-1719007bec60,Naufal Johnson,14-year fullstack specialist.,25.76,hourly,IDR,35,fullstack,0,expert
+20fbd7be-f7a8-463b-91fc-fcd8472a665d,bc0cef3f-74da-4d5d-a614-d1852034c2a0,Kevin Williams,14-year blockchain specialist.,122.66,hourly,USD,31,blockchain,0,expert
+25dc413f-d297-434a-848e-16a7e6663c5a,df1a9939-0614-4da2-805e-ff32f17f9fb9,Gita Davis,5-year design specialist.,39.77,hourly,USD,3,design,0,intermediate
+484c8be0-ef3c-4f24-a9be-475871feaa5c,27e62ef6-3d55-4354-8195-9a1b7179831a,Citra Wang,2-year mobile specialist.,44.65,hourly,USD,29,mobile,0,expert
+23c5df91-b045-43b8-93e2-e6a1839086b8,752eed66-08f3-461d-99f2-52e56dae4cae,Faisal Nakamura,6-year blockchain specialist.,111.87,hourly,USD,7,blockchain,0,intermediate
+41f1dd3a-b5cc-4421-aadf-c5fbe73fe22a,e6392efb-d6a8-4755-a70c-0635f3ae9d58,Joko Smith,1-year devops specialist.,87.81,hourly,USD,35,devops,0,expert
+498ebd1c-7c18-4e5b-9c6f-9f4dcf6345d9,69e51fba-fdda-48a9-987c-1cf0e6527e40,Joko Miller,15-year ml ai specialist.,90.64,hourly,USD,32,ml_ai,0,expert
+63e47411-143c-41aa-80d6-bf0f6cedb5e8,6b2a800a-8bc5-47aa-9389-beb7a5b5237b,Oscar Utomo,6-year design specialist.,29.94,hourly,USD,3,design,0,intermediate
+353aa968-1c4b-4d71-a011-3734cdb998a9,d685250b-2e81-40c6-bc15-213f135438c9,Xena Ahmed,12-year blockchain specialist.,89.78,hourly,USD,42,blockchain,0,expert
+75a7194d-f21f-4200-8781-fb66f2415720,27a2d217-f479-499f-a961-3ec2a72c8bd1,William Patel,1-year mobile specialist.,73.04,hourly,USD,21,mobile,0,expert
+8d2229f4-4313-4b5d-b9eb-d84cfa2d4faf,4b9c7807-2ccf-474d-8ffc-f829a9b7bc28,Charlie Garcia,12-year design specialist.,37.16,hourly,USD,6,design,0,intermediate
+66f7dbaa-f1a9-4056-a6a2-b7165a7d5618,ef24649d-905d-4a1e-93a8-bdf46fff33c1,Naufal Miller,2-year devops specialist.,43.13,hourly,IDR,16,devops,0,expert
+d344c569-4e8e-4d62-9db8-a8094fc8e13a,baa7186b-336e-48f6-82f2-fb7df22f18b9,Marco Ahmed,4-year devops specialist.,53.66,hourly,USD,29,devops,0,expert
+d531a0a5-e6b7-409e-9b2f-1b0b2bfc03c6,5a229586-353b-43cc-82f9-f8d8909021ad,Luthfi Brown,15-year backend specialist.,66.33,hourly,USD,40,backend,0,expert
+16d506cc-902d-47b5-9d29-5b08a65bdf84,9f95a0ca-5bb2-4aea-9c88-72b276c486ce,Hendra Nakamura,8-year fullstack specialist.,28.16,hourly,IDR,0,fullstack,0,entry
+0ed7d5e8-57ea-4048-aa80-8207f2f276d1,de43d345-561d-491f-be62-894c99210bac,Lily Ahmed,15-year blockchain specialist.,103.64,hourly,USD,32,blockchain,0,expert
+d752f740-d00e-42e3-933c-b5c1a0398447,0ac6a220-e56c-4a62-b808-8133ed729258,Maya Kumar,2-year fullstack specialist.,82.38,hourly,USD,24,fullstack,0,expert
+b5f81280-7e57-4697-9313-18b7c9c06836,250570f6-179a-4780-b6ca-17aac6f8f3af,Priya Santoso,7-year devops specialist.,57.85,hourly,USD,38,devops,0,expert
+6d478e9a-3e47-4964-b44e-1a2afbc43037,d28b049a-d0c8-462f-bc92-d5b3644f4b60,Ivan Pratama,8-year ml ai specialist.,86.21,hourly,USD,8,ml_ai,0,intermediate
+cb9bf1de-8305-43f0-a5cf-dc4bf0eb6bb5,10f76481-b614-4bd8-b003-1d90560e95b9,Joko Hidayat,14-year ml ai specialist.,95.51,hourly,IDR,44,ml_ai,0,expert
+dbfd251a-c3c8-49f8-bb9b-eba19b6456d3,a8eca991-13c5-4750-a914-ca9e7ef02bae,Naufal Ahmed,4-year mobile specialist.,35.98,hourly,USD,13,mobile,0,expert
+c1068bcc-d315-43a9-ae19-c4a392a7bed8,b4cdb4e1-74d9-4f9d-bde7-46ca4f497e24,Lily Kim,12-year fullstack specialist.,60.26,hourly,USD,41,fullstack,0,expert
+3d1a84f0-7d06-4aaa-ac26-5d3cdaa5c89c,555ea13a-db75-4341-8933-fe1ec26f5ff8,Joko Lee,13-year frontend specialist.,47.05,hourly,IDR,22,frontend,0,expert
+df0172fc-e648-4c41-8ba3-82161f83f82d,1999048f-5465-4119-ad93-b82769435863,Samuel Pratama,11-year devops specialist.,86.58,hourly,USD,34,devops,0,expert
+6260c277-62cd-41f0-adae-d409f4d59073,d26bbc85-8e9c-42e8-8730-bfa1c9aa2122,Diana Singh,7-year backend specialist.,23.4,hourly,USD,9,backend,0,intermediate
+00b61a80-507b-4636-a69f-7072024eaef8,2069e3d4-b4ec-4b06-90c0-08af0af81a42,Quinn Jones,5-year fullstack specialist.,79.56,hourly,USD,43,fullstack,0,expert
+f18ae44d-1636-4432-b923-4f5b277bfacb,94eda93e-82f9-4d18-8e9e-321309b41895,Charlie Kusuma,4-year ml ai specialist.,104.19,hourly,USD,34,ml_ai,0,expert
+cce1fbbb-2bd5-4c5a-99f9-386b03799b06,901776c2-4d59-4958-b357-17a7061521b8,Joko Sari,12-year mobile specialist.,33.07,hourly,USD,41,mobile,0,expert
+ff82d958-7ffc-4e3a-a5a0-cac0ef18034b,f0d77eed-aa11-4894-93ba-3e703d347c0f,Diana Sari,12-year ml ai specialist.,67.94,hourly,EUR,42,ml_ai,0,expert
+b422aa20-6ad6-495d-84ea-6319d4a97539,33f66089-4919-45e5-925b-543cc7f18630,Alice Nakamura,9-year design specialist.,26.31,hourly,USD,3,design,0,intermediate
+ce71adfc-de90-4849-9da5-e0c992556bf5,f3045673-b6a7-4a62-8e20-4905924220f4,Putri Ahmed,14-year blockchain specialist.,118.05,hourly,USD,14,blockchain,0,expert
+02123b02-eddb-410b-8000-8320c6ad1a11,39e25415-fff7-4415-8098-6613a51f803d,Samuel Utomo,13-year mobile specialist.,29.76,hourly,USD,12,mobile,0,expert
+d80c9f2e-ec46-4052-84cd-b8aa0781b9b4,e3a36a4d-e243-4b57-b66d-3a87c665922c,Hannah Sari,3-year fullstack specialist.,27.64,hourly,USD,32,fullstack,0,expert
+3ce3f5fa-219e-44e8-befc-ade5befb04af,dca03831-abff-40b8-8f3d-50c4f7cdab02,Luthfi Santoso,3-year ml ai specialist.,35.48,hourly,USD,10,ml_ai,0,expert
+9692e062-44fb-47df-affc-0d9c14541151,87e71257-80f5-4712-a2f0-aaca5cef5f72,Umar Kumar,1-year fullstack specialist.,28.31,hourly,IDR,9,fullstack,0,intermediate
+baa3f9c4-a49d-4cc8-8abc-7db3860616ca,9c74e0bd-d723-44ac-bdeb-c055877ffe0f,Joko Kusuma,8-year ml ai specialist.,41.19,hourly,USD,36,ml_ai,0,expert
+34e449af-25d3-495d-bd87-eb18fa75be14,04175265-a4fe-4add-9b8f-360965f49c70,Edward Kim,3-year mobile specialist.,28.77,hourly,USD,33,mobile,0,expert
+84ee8db6-0376-492f-a520-323107b5e244,57080711-9feb-420e-b739-1fbae8855b1a,Oscar Miller,2-year devops specialist.,76.43,hourly,USD,22,devops,0,expert
+18e6bb96-2561-45ef-9548-6f9938c5040f,ec7204c0-6c58-42e8-b7dd-c74b594ead37,Hendra Lee,4-year ml ai specialist.,119.71,hourly,USD,39,ml_ai,0,expert
+42e14f92-430f-403b-8ff9-6434425076df,a870b6af-4737-4020-9855-4f7ade964f2a,William Utomo,2-year backend specialist.,34.42,hourly,USD,42,backend,0,expert
+2cb0abfc-77c6-4389-a263-5e1e98aa467e,1a412c2f-89df-4a80-9b13-c691cdeae17e,Umar Sari,1-year mobile specialist.,70.38,hourly,IDR,43,mobile,0,expert
+e3b83294-0110-4cc3-bc96-c67aab36e922,7a765b49-f4e4-47d6-86c1-731b2a57841a,Samuel Smith,5-year devops specialist.,93.79,hourly,USD,34,devops,0,expert
+f50bad1d-c2eb-48bb-a4fa-115c6e86cbed,2174b9ba-78b1-427a-a7dd-6f4ae2de73fa,Citra Lee,9-year design specialist.,16.97,hourly,USD,32,design,0,expert
+1040914d-05bc-4ed0-a968-cc12d45fb5c5,0690eb7e-8dda-493f-966c-99ed90367071,Fatima Brown,6-year mobile specialist.,29.21,hourly,EUR,32,mobile,0,expert
+76d4e157-b8e3-4deb-b504-a2f1fa11843c,d9b7e577-42de-482d-b44c-d91d812bdb30,Nina Singh,11-year backend specialist.,57.77,hourly,USD,4,backend,0,intermediate
+fe8e59c2-3c6c-482f-b2fc-839208ac5883,48c2815d-aea0-4f8d-b6ab-58ab9486ef7b,Nina Chen,14-year devops specialist.,88.01,hourly,USD,6,devops,0,intermediate
+84a752ed-2a2f-4e6c-8232-3b82f9b527fe,856fdc86-c4f8-4571-8549-7b15b854ec77,Julia Smith,11-year devops specialist.,62.15,hourly,USD,4,devops,0,intermediate
+ad0170e5-2ee1-4bc6-ba1a-fd7dd1330887,5ac048e7-b4f3-4a0f-b13a-4e958eeab52f,Lily Santoso,2-year frontend specialist.,45.69,hourly,USD,3,frontend,0,intermediate
+97c171ac-0584-4469-94d8-63c79e79e470,625ec1ab-8ae6-41d3-b98e-4eda860d6f38,Ahmad Sari,15-year mobile specialist.,44.81,hourly,USD,16,mobile,0,expert
+8fa92f8d-05a5-451b-a57c-83aa3e9ef531,340316cb-0e8b-4e5a-ad9a-4df48a757847,Hannah Chen,1-year design specialist.,15.27,hourly,USD,24,design,0,expert
+bff08a43-8f7a-4acf-9346-480449c403d0,d78961a7-5059-4008-a927-ebc178eaf744,Charlie Ahmed,13-year frontend specialist.,61.65,hourly,USD,37,frontend,0,expert
+2084f732-d5ee-43e4-baac-465d4319df4c,22af6a00-3ea1-416c-b08f-59a35368a278,Tanya Kumar,5-year frontend specialist.,19.76,hourly,USD,43,frontend,0,expert
+1c37f3d2-6101-4f7c-b43d-26abd640c04e,cba3d11c-6350-4fc5-8b55-8f8137f54c14,Bob Lee,7-year blockchain specialist.,57.2,hourly,USD,25,blockchain,0,expert
+1fa52f1a-a9c8-4c50-9cbe-c25d41362d8d,897f08ee-3081-4c9a-b3ac-b8796fda6663,Samuel Patel,13-year devops specialist.,40.09,hourly,USD,34,devops,0,expert
+2cfe2be0-5d2a-47ba-9c54-b50ec28e7949,e374c986-1b40-41a7-96a5-f01a958817fc,Joko Jones,1-year design specialist.,20.55,hourly,USD,35,design,0,expert
+8246a4c1-fa84-47b8-9bac-504610c84411,9ff7437c-87cd-46b4-8b64-30b1f087aeac,Fatima Wijaya,9-year devops specialist.,44.7,hourly,USD,35,devops,0,expert

@@ -4,3 +4,9 @@ ARCHITECTURE_DIAGRAM.md
 AUTH_SETUP_GUIDE.md
 AUTHENTICATION_IMPLEMENTATION.md
 test_auth.sh
+__pycache__/
+*.pyc
+*.pyo
+*.log
+notes.txt
+*.json

@@ -1,0 +1,1205 @@
+job_role_id,job_post_id,role_title,role_budget,budget_type,display_order
+5fec3a79-a935-42c5-b587-043818c859d8,ff372779-c496-4800-950b-e91caf25b261,Design Designer,665.23,negotiable,0
+a9c0e009-0a5a-4a3a-b6eb-3867d3c82ad9,ff372779-c496-4800-950b-e91caf25b261,Design Designer,1029.67,negotiable,1
+1afaca1a-23d0-45b7-a2ca-e9be08bf481e,28318acc-4036-4f35-a97d-e35b82e1ced9,Backend Engineer,1603.0,negotiable,0
+f4b033f8-f508-423d-beea-8dc4583fda58,db148ac3-b062-464e-b878-a77bf997b915,Devops Engineer,5084.09,fixed,0
+1fcaaa6a-81e5-4119-829d-01acda021485,db148ac3-b062-464e-b878-a77bf997b915,Devops Engineer,2655.35,negotiable,1
+e25a6041-f33e-4962-81be-ae3ce776629a,cf225b47-aa3e-477f-9348-24c51767e758,Ml Ai Engineer,3669.39,fixed,0
+8fbbd700-a636-4491-bf71-b9a7342f7b59,cf225b47-aa3e-477f-9348-24c51767e758,Ml Ai Engineer,1907.6,fixed,1
+b3e67a9b-173b-4415-8650-e01d62474a4e,7273755d-7ce6-4984-b232-24e678f98c3b,Mobile Engineer,3032.32,fixed,0
+7fe6efb9-17df-42db-9b0c-f8be3d69d23e,7273755d-7ce6-4984-b232-24e678f98c3b,Mobile Engineer,2441.44,negotiable,1
+acd0728f-634d-4517-a52a-b716c6578ffc,7273755d-7ce6-4984-b232-24e678f98c3b,Mobile Engineer,4149.23,negotiable,2
+4f17ad8a-11de-4e02-96f0-26b3ed8d48ba,d0cd8c6a-a2f9-4c9d-ba7d-960125995906,Ml Ai Engineer,9815.88,negotiable,0
+17558abf-a19b-48e1-8e1a-e44571b6dc69,d0cd8c6a-a2f9-4c9d-ba7d-960125995906,Ml Ai Engineer,2735.18,fixed,1
+a4fa8f8a-b7da-45f5-88fc-79791dd4e437,d0cd8c6a-a2f9-4c9d-ba7d-960125995906,Ml Ai Engineer,2811.98,fixed,2
+1b327243-c6ee-4b02-9ee3-5d73328dbb11,7ca40853-2dab-4253-9622-86b3df29e496,Devops Engineer,7286.25,negotiable,0
+20ad4aa3-3f4a-45ea-9d19-b97df6342f6e,7ca40853-2dab-4253-9622-86b3df29e496,Devops Engineer,7196.97,negotiable,1
+c89a52b8-2332-4e0d-824d-3bcd55b08c7f,aad817ef-1ee4-402d-86bd-61127a166ee3,Backend Engineer,4041.03,negotiable,0
+7722c0fd-ce0f-49bb-8ca9-4e51f0cd9566,aad817ef-1ee4-402d-86bd-61127a166ee3,Backend Engineer,2221.77,negotiable,1
+4ab7b156-a436-4061-a249-5abf69d0e506,aad817ef-1ee4-402d-86bd-61127a166ee3,Backend Engineer,3964.28,negotiable,2
+97c2470f-9bc3-4651-9868-5c8b9e77168f,d378a672-fef6-47f8-8cc6-e4494db82cee,Mobile Engineer,707.35,fixed,0
+498901e5-a584-4cfd-9355-e13f424a11aa,d378a672-fef6-47f8-8cc6-e4494db82cee,Mobile Engineer,5548.06,negotiable,1
+4d189f2d-81c0-4c31-a890-8b38d9ed277d,524b9d7a-59aa-4fe4-bb8d-8356125cca9b,Ml Ai Engineer,6254.94,negotiable,0
+2228d576-ff07-4958-b085-dd3ad70b21b1,3c8b0bc2-56fc-4195-addf-2e391d578b92,Ml Ai Engineer,4263.21,negotiable,0
+320b28f6-6c99-4a09-8a4d-5d1c0de57eea,3fb21dcb-1e0d-4163-8cdc-15ef257db445,Blockchain Engineer,14631.56,fixed,0
+ef7b0c8c-d6bc-4ccc-b43d-d1cbdcc4d5b8,3fb21dcb-1e0d-4163-8cdc-15ef257db445,Blockchain Engineer,10210.06,negotiable,1
+3b497003-cb37-4ca0-98ba-319601e5fe05,3fb21dcb-1e0d-4163-8cdc-15ef257db445,Blockchain Engineer,12220.03,fixed,2
+736e4acf-cdea-47dd-bba0-80f770a52643,727086a6-8da3-4984-ac43-b8eaed09993e,Ml Ai Engineer,6984.89,negotiable,0
+aac24d33-2193-40e6-a89b-1017a937ff02,727086a6-8da3-4984-ac43-b8eaed09993e,Ml Ai Engineer,5621.37,negotiable,1
+dca91d27-b1d5-46eb-8042-ed621bc54f51,40e28774-c742-4508-bfca-ba3acd508cac,Fullstack Engineer,5813.59,negotiable,0
+22d2445d-bf5d-4f6c-bcc3-f8532a8a230c,40e28774-c742-4508-bfca-ba3acd508cac,Fullstack Engineer,2561.79,fixed,1
+5e185587-a5fe-4fa9-8921-5cca47ba9ef3,2c7acc70-2e4c-4674-b71a-462a9b8163a1,Blockchain Engineer,2381.2,negotiable,0
+6f466876-347e-4559-8605-24b5df7b3ad3,10eae21a-dcc9-4487-82e4-853cc467be03,Frontend Engineer,1391.13,fixed,0
+4d1b1f79-741a-4779-b1ca-e7ed3d4c149e,44ef0d6b-55bf-4f47-8e09-a317366d07f4,Fullstack Engineer,4042.23,fixed,0
+3f983d19-e30d-4a6c-a8d3-d1a5f97c140d,d64f9836-776f-4cbe-905f-493d2f1d1399,Ml Ai Engineer,3525.11,negotiable,0
+a961f29c-354b-4fb0-97b6-32bb37a2cefc,d64f9836-776f-4cbe-905f-493d2f1d1399,Ml Ai Engineer,3825.64,fixed,1
+cc58df89-d3b2-4d4a-a1e1-fa4e754d1d0d,d64f9836-776f-4cbe-905f-493d2f1d1399,Ml Ai Engineer,5627.7,negotiable,2
+6fbb93d2-97ad-48d3-86b0-b71accae609e,30bca8c0-3638-4b46-85af-355ec6a859f7,Devops Engineer,3991.72,fixed,0
+6a5b9a37-4988-48ab-8802-8345626ef549,30bca8c0-3638-4b46-85af-355ec6a859f7,Devops Engineer,2512.13,negotiable,1
+dec392e3-4a29-407a-bccc-6a08a4fdf400,30bca8c0-3638-4b46-85af-355ec6a859f7,Devops Engineer,1913.74,negotiable,2
+e6621f41-4dd7-490d-80b2-2e88b38e363b,ba9e125d-1b07-47ee-8bad-dc0c20cee8c4,Blockchain Engineer,1513.07,fixed,0
+08c17203-c3f0-443c-806a-f68755748afe,ba9e125d-1b07-47ee-8bad-dc0c20cee8c4,Blockchain Engineer,4072.24,fixed,1
+aca8aa25-7586-4cfd-bfcc-3043efd5291a,ba9e125d-1b07-47ee-8bad-dc0c20cee8c4,Blockchain Engineer,4134.65,negotiable,2
+23b55b32-39b2-45b1-a380-df80717e4bc6,a4f8ee1c-a9a5-4273-a260-73660556d1d6,Design Designer,2990.67,fixed,0
+8279901e-439a-4ed5-b3fb-e36d04038cfe,1a542cbe-dcd7-4885-9961-d661fbed11ed,Frontend Engineer,2638.86,negotiable,0
+ccbf4869-4f91-4199-93c3-dca81df95496,1a542cbe-dcd7-4885-9961-d661fbed11ed,Frontend Engineer,1274.61,negotiable,1
+6af4192b-b233-42c2-b556-bf0a685689c0,55275d70-2279-4e45-b5f0-d7744079c043,Ml Ai Engineer,1921.62,fixed,0
+0296c2a4-8dc2-4ffe-b38f-dfbcdd9051f5,55275d70-2279-4e45-b5f0-d7744079c043,Ml Ai Engineer,4605.37,negotiable,1
+d44fe094-7ab7-4479-a4cd-56126ced9a86,55275d70-2279-4e45-b5f0-d7744079c043,Ml Ai Engineer,6561.19,fixed,2
+24423b52-279a-4476-a2f0-52f331907e3d,a3c71200-0caa-4591-a8af-02efe3d6a1f5,Ml Ai Engineer,9234.81,fixed,0
+7336f26f-a436-40b8-8586-6391a16357ba,468899ee-5a79-464c-becc-60f4abfaa472,Fullstack Engineer,5565.72,fixed,0
+03f7696f-de6c-475c-a4ad-6168dde276b6,468899ee-5a79-464c-becc-60f4abfaa472,Fullstack Engineer,1552.12,negotiable,1
+34a2c95e-fb97-49bf-8627-455d11eb1af1,468899ee-5a79-464c-becc-60f4abfaa472,Fullstack Engineer,5426.24,fixed,2
+f51e2204-8d9d-4c88-9e29-1f2ba71bf07a,f4d8ddc9-e857-4c8a-9c22-8a3561a8855e,Design Designer,2452.16,fixed,0
+f9619727-aecc-4d46-84ac-df60299c8534,f4d8ddc9-e857-4c8a-9c22-8a3561a8855e,Design Designer,777.05,fixed,1
+e648e128-e303-4ab6-8127-89f39a99bdca,21c592c0-05e2-4d39-bc17-4598b5026987,Blockchain Engineer,5713.38,fixed,0
+7f4805bb-bccb-41d7-bf90-e9c91ec32075,f12ef756-9e4a-4d29-ba14-bc035511b4ad,Ml Ai Engineer,8539.99,negotiable,0
+96893710-2e50-49fb-bfa2-4392c07edf36,f12ef756-9e4a-4d29-ba14-bc035511b4ad,Ml Ai Engineer,1232.47,fixed,1
+abf9f3cf-9f9e-4706-bdb2-d35f7f0530cc,2ab7e520-8c6b-45ca-8355-d66ab57a3627,Devops Engineer,5449.83,negotiable,0
+79d82048-c8e6-408b-87db-285a60e74c2e,2ab7e520-8c6b-45ca-8355-d66ab57a3627,Devops Engineer,4109.69,negotiable,1
+0490c346-b370-4e8d-afdf-28a4ce9f0886,2ab7e520-8c6b-45ca-8355-d66ab57a3627,Devops Engineer,2800.77,fixed,2
+c338f62d-a6de-4676-9702-56ee3f0ddf38,3c2d2c05-80d5-4125-8025-49d7b9c53ded,Frontend Engineer,2348.79,negotiable,0
+d942b31f-a4ab-42b2-9ba2-e2c8e9e31f96,3c2d2c05-80d5-4125-8025-49d7b9c53ded,Frontend Engineer,853.96,negotiable,1
+8392720f-77ee-4817-9726-75f6db928ac4,a4e3feb3-ccb6-4244-b5ec-1afdcba9eab8,Fullstack Engineer,7337.35,negotiable,0
+2fcd9a04-b048-4873-8368-3473acd06666,a4e3feb3-ccb6-4244-b5ec-1afdcba9eab8,Fullstack Engineer,3533.19,fixed,1
+36d2f783-c2dd-4ee7-aef5-846b1b698465,678aab56-5fdc-4d9b-84b3-883a68a71022,Blockchain Engineer,9509.98,fixed,0
+cb982762-f992-4f65-9daf-fba4c4e2d993,678aab56-5fdc-4d9b-84b3-883a68a71022,Blockchain Engineer,14619.24,negotiable,1
+31beb49a-1ef9-49fe-abc0-55e236ad05e1,661ec12e-ecdf-4f08-8148-8e8354d2ad6b,Blockchain Engineer,11570.4,fixed,0
+af1a7306-b8dd-4870-b88e-9a1d74200f08,661ec12e-ecdf-4f08-8148-8e8354d2ad6b,Blockchain Engineer,6233.08,negotiable,1
+10934a3b-c8e1-41f3-9bcd-3045bc1d4e5d,6c692a52-ff29-4a61-ba4e-09ae4066e7d3,Frontend Engineer,3348.43,fixed,0
+912c4c92-00d3-470d-8786-d5a71a65e4f8,6c692a52-ff29-4a61-ba4e-09ae4066e7d3,Frontend Engineer,1356.04,negotiable,1
+e23d3021-1290-4dd5-81bd-a5412557f9f8,6c692a52-ff29-4a61-ba4e-09ae4066e7d3,Frontend Engineer,2883.95,negotiable,2
+8108f05e-ae40-4fd7-b293-1ffef934a332,f5dee908-37bf-46b1-b022-ba2e512b216b,Ml Ai Engineer,3251.54,negotiable,0
+e731d1df-e6ea-4366-b88b-8178ac82604a,f25f0a04-49de-432a-b65b-7e5c541f4169,Blockchain Engineer,9611.95,negotiable,0
+6a64cf41-0d4d-496c-a971-7649f6cbc5d0,ba8c4c4b-c44d-4ca4-9a52-2c3252b83a41,Backend Engineer,4660.24,fixed,0
+67f4fb9f-42ce-44c4-9a7f-152f7261ac7c,f957e60e-d33c-4dd7-99e5-ed884f15b9f9,Devops Engineer,3908.51,negotiable,0
+e029ce08-f47f-4f13-a629-514238cd18d8,f957e60e-d33c-4dd7-99e5-ed884f15b9f9,Devops Engineer,2875.81,fixed,1
+213f1d0a-b349-4e43-b103-fa96ae25fe66,f957e60e-d33c-4dd7-99e5-ed884f15b9f9,Devops Engineer,3706.75,negotiable,2
+19cbb078-fa2a-4982-b0be-b4459bed4dfc,17cac43d-99ce-4148-a6c1-dfae694e0949,Ml Ai Engineer,4819.73,fixed,0
+a3b6105e-0b40-46dd-ad7a-08a746a7f406,17cac43d-99ce-4148-a6c1-dfae694e0949,Ml Ai Engineer,8675.93,negotiable,1
+a5ec1f88-8a3b-4dff-9b2a-f94dc659cac5,45145f99-a1df-4245-9f85-d8eb6a6db67a,Fullstack Engineer,5516.11,fixed,0
+68bcc401-34f3-4fd9-982d-1672bc5b6aef,081df4a7-e77d-4bd9-8487-cd1713ff4d6b,Ml Ai Engineer,3050.42,fixed,0
+d81269e4-1312-4f4c-89c1-18d1d4808639,e4a3179d-9049-41b8-ae6d-411b96faf1d3,Fullstack Engineer,5690.78,negotiable,0
+c454f17b-fcdd-44f7-9aab-a11a73c88200,e4a3179d-9049-41b8-ae6d-411b96faf1d3,Fullstack Engineer,3883.02,fixed,1
+768744d1-f9f2-43ba-a2f3-2a7f57a2c2c6,5f532d79-6b7a-4021-b42b-4cfdecce443b,Ml Ai Engineer,3227.65,negotiable,0
+c8b7d00d-c018-489c-b4ef-e6e6d43f607b,5f532d79-6b7a-4021-b42b-4cfdecce443b,Ml Ai Engineer,8513.55,fixed,1
+24d41918-c751-4252-9fd1-7ab73460f4ee,552e821a-077f-4cc2-ab96-df6541fb6c4c,Ml Ai Engineer,8851.04,fixed,0
+b183bdde-9dfb-4e56-adf4-3f4312c0d679,38e2eeb1-7c7c-44cd-ad8e-d8be901bc2af,Devops Engineer,6397.67,negotiable,0
+f4c20d94-805f-4bda-acd4-dde88ad5a33d,38e2eeb1-7c7c-44cd-ad8e-d8be901bc2af,Devops Engineer,1909.49,fixed,1
+e3284546-bef4-4dde-a19b-670eb638e314,707c5fa9-b247-480d-8ee0-9378a021517c,Fullstack Engineer,7504.79,negotiable,0
+7e1212ca-cfea-436b-b3bb-3b66944a56c7,707c5fa9-b247-480d-8ee0-9378a021517c,Fullstack Engineer,5615.04,fixed,1
+273ad413-81d6-4342-8b94-7350b63da789,707c5fa9-b247-480d-8ee0-9378a021517c,Fullstack Engineer,1492.51,fixed,2
+07257357-2676-4566-9f23-f0cabe0b6c0e,47f5f36a-4b54-4f2b-8c90-a1a590832226,Mobile Engineer,3146.26,fixed,0
+1638628c-c355-4084-acd4-37beaf9d5fee,d5fec0e2-ff90-472f-b4ae-4ebd6f182582,Devops Engineer,7849.13,negotiable,0
+218c18a1-b139-4123-a533-fe9598d7478a,05b20be4-e84d-4e46-b53d-a5502ca774a6,Ml Ai Engineer,4100.25,negotiable,0
+391ea5f5-ac40-4b98-a0d2-a69e4464d801,05b20be4-e84d-4e46-b53d-a5502ca774a6,Ml Ai Engineer,1102.13,negotiable,1
+c6e03f99-cbb3-4780-af99-00c669e690c2,d35a4cda-73f0-411d-a508-54c7017f0e71,Frontend Engineer,3589.33,fixed,0
+02f8c099-34e1-4c3b-9468-7dc4c53dd13a,d35a4cda-73f0-411d-a508-54c7017f0e71,Frontend Engineer,421.59,negotiable,1
+409a02ed-c4ea-4fc4-8e4e-4a7f3ea1a381,d35a4cda-73f0-411d-a508-54c7017f0e71,Frontend Engineer,2400.44,negotiable,2
+e23ba08d-a10c-4aa3-9a4a-5e0ef588ecc9,5ea19d03-bbd1-4fc1-947d-fad1a3e45982,Mobile Engineer,2864.02,negotiable,0
+63fe6a9d-e71f-4949-a79c-73d69ecb815f,5ea19d03-bbd1-4fc1-947d-fad1a3e45982,Mobile Engineer,5057.83,negotiable,1
+4b10930b-2d3f-47ba-990d-bdefb63370f4,5ea19d03-bbd1-4fc1-947d-fad1a3e45982,Mobile Engineer,803.57,negotiable,2
+2e4ce41f-b277-49ca-a565-62be5e3873c2,3516818b-b9de-4c94-859f-5d430b9596f4,Ml Ai Engineer,6905.41,fixed,0
+86545dc8-3a86-4b98-a8e8-bddf28d15d3b,3516818b-b9de-4c94-859f-5d430b9596f4,Ml Ai Engineer,7731.91,fixed,1
+6ec736a2-e4ca-443e-96e5-fc6a61625012,f012d8fd-a7cd-48e7-875f-9c0823e34b13,Frontend Engineer,3757.78,negotiable,0
+835a887d-e69e-4031-be0f-96278117caea,f012d8fd-a7cd-48e7-875f-9c0823e34b13,Frontend Engineer,576.34,fixed,1
+f53fb21f-93e6-4a4a-9583-cb29429747a5,f012d8fd-a7cd-48e7-875f-9c0823e34b13,Frontend Engineer,3706.89,negotiable,2
+2a6dd83d-47f3-4717-bdf2-2333354e866c,e017cccd-cab1-44ae-890e-9444fb3db9d6,Blockchain Engineer,5332.12,fixed,0
+58c05eca-1092-4eea-97f1-af9f4bb998da,e017cccd-cab1-44ae-890e-9444fb3db9d6,Blockchain Engineer,14589.09,fixed,1
+705f0d4b-98fe-408f-895f-11d6422f0c2f,e017cccd-cab1-44ae-890e-9444fb3db9d6,Blockchain Engineer,14074.41,fixed,2
+869c309f-5ffe-4614-92f4-d4b07ca19823,04e13602-f288-4fd6-8bd1-92b22762678c,Ml Ai Engineer,8097.56,fixed,0
+9ccb9a15-cec1-4e48-a305-98ab73490d11,04e13602-f288-4fd6-8bd1-92b22762678c,Ml Ai Engineer,2099.03,negotiable,1
+b990f692-a0f1-4196-bd19-2bcf47147e35,04e13602-f288-4fd6-8bd1-92b22762678c,Ml Ai Engineer,1685.22,fixed,2
+59d4cb75-e9d3-403d-827a-682afa1e85d0,e796d51f-3ea8-487e-a0e3-41b75300c5cd,Devops Engineer,2623.55,negotiable,0
+d0df529f-a061-43f5-b16e-9acb9c642f5f,e796d51f-3ea8-487e-a0e3-41b75300c5cd,Devops Engineer,5357.58,negotiable,1
+433fbbc4-c21c-4db4-80e8-03d21847031e,e796d51f-3ea8-487e-a0e3-41b75300c5cd,Devops Engineer,5152.47,fixed,2
+5fc6fa8e-e173-4d4d-80e3-0e152607709b,82a4fae8-4525-493f-ad49-47a36f7dcc3b,Design Designer,1287.17,negotiable,0
+1e5c0f17-c3d5-4a64-88ed-e4cac53c0b3c,fde41545-cf15-44c2-b198-a65e7a2c780e,Devops Engineer,3556.03,fixed,0
+535bd7aa-5703-4d27-9b93-010e370d4d5e,fde41545-cf15-44c2-b198-a65e7a2c780e,Devops Engineer,7905.17,negotiable,1
+dc240b2b-de06-43cc-b151-f53073a00e1e,3d8a9df8-5f33-405e-ae53-adfd69656f42,Backend Engineer,3525.42,fixed,0
+c012d66e-3be2-408a-b209-424d16f0ee5f,7aa0a720-4acc-426d-a22b-88f4e282d869,Frontend Engineer,847.91,fixed,0
+fe1b9b58-6e5b-468c-9df3-c1996c8da269,7aa0a720-4acc-426d-a22b-88f4e282d869,Frontend Engineer,3505.41,fixed,1
+2624f342-357b-407d-a8c2-33c457f20989,7aa0a720-4acc-426d-a22b-88f4e282d869,Frontend Engineer,304.77,fixed,2
+6520ea26-ac7a-45ff-a1f5-757455441ec5,821098b0-fafe-41ff-9d22-31281f84a035,Mobile Engineer,2473.96,fixed,0
+1a3b9c4d-e1ab-45c4-b116-43516155c6ca,0c8ed749-8f2f-46ac-8ea4-b8c7dbcce668,Fullstack Engineer,2882.73,negotiable,0
+133a4d07-675a-4ca2-8add-a63e0c8434bb,0c8ed749-8f2f-46ac-8ea4-b8c7dbcce668,Fullstack Engineer,1718.91,fixed,1
+0bbbc56d-7c39-4b19-8bc2-d851fc77fbc5,6fedb04f-c92c-48b4-92d5-ba2a5367ed0f,Ml Ai Engineer,3996.25,fixed,0
+f121a8b3-375c-4946-b925-e206496697ce,6fedb04f-c92c-48b4-92d5-ba2a5367ed0f,Ml Ai Engineer,8198.81,negotiable,1
+53d20958-6f4b-47ee-b60a-26c20f36057f,6fedb04f-c92c-48b4-92d5-ba2a5367ed0f,Ml Ai Engineer,6774.03,fixed,2
+8521dac9-c605-46bc-86b6-628772066780,9e80b246-f6dc-44a5-b5f7-8c5201e7495b,Mobile Engineer,5049.1,negotiable,0
+87dae0c2-1d3f-4111-a341-35c997001833,b7e684ef-1f37-4c45-b4fb-de54718b2cc0,Design Designer,1899.36,negotiable,0
+2efb1dba-f6d4-4d0b-ac79-f82324d012f2,b7e684ef-1f37-4c45-b4fb-de54718b2cc0,Design Designer,1854.96,fixed,1
+f5172458-9a77-4344-afe0-c42be5625d98,0dbfb8b1-11de-43d4-aa8a-a4bd0dafdf3e,Backend Engineer,1582.67,negotiable,0
+7563008f-3822-456a-b89a-ed2d8fb6aa0a,0dbfb8b1-11de-43d4-aa8a-a4bd0dafdf3e,Backend Engineer,2498.72,fixed,1
+acd52752-321f-435c-9583-68a192ac9ad1,f1437dea-c0b3-4b08-a0d8-110f3dd6a9bd,Ml Ai Engineer,1184.46,negotiable,0
+0ac7627c-9da8-412a-9022-a53a0c03da6b,f1437dea-c0b3-4b08-a0d8-110f3dd6a9bd,Ml Ai Engineer,5138.49,negotiable,1
+d6d84613-1c1b-4d33-9ffc-1bc20952af35,f1437dea-c0b3-4b08-a0d8-110f3dd6a9bd,Ml Ai Engineer,7695.52,negotiable,2
+23893cb5-c1d5-4376-804a-e7c17ed2532a,4d96aac8-eedf-4807-876c-7cc82e52eb85,Backend Engineer,3740.66,negotiable,0
+31c0237d-5a94-4784-9850-ca0313c69fc0,f2f6e2df-80b2-4503-b2b3-e7c8b427dfef,Design Designer,2806.05,negotiable,0
+83ed80f0-c4bc-4db2-8c04-8b07517c20b1,f2f6e2df-80b2-4503-b2b3-e7c8b427dfef,Design Designer,1049.39,negotiable,1
+5ae1cadb-63cf-4bcf-8524-58eaec27b259,f2f6e2df-80b2-4503-b2b3-e7c8b427dfef,Design Designer,1975.57,negotiable,2
+816381f9-4d58-42b5-bf36-68190bf05671,276949e0-9128-41a0-bc48-f0250bd3894d,Design Designer,1054.74,fixed,0
+dab274b9-6cc9-4bf9-9bdf-75b3d4286597,21005616-4a82-4d74-afaf-1c5960407215,Blockchain Engineer,1370.2,fixed,0
+b650b234-3fff-44d3-9b72-6e6e6db53d00,5180f6af-2f36-4945-bbbd-3f2ad920cc20,Devops Engineer,6699.73,fixed,0
+978f717a-5574-4849-ae82-31ed7bf159d3,265089a4-92f2-4ed3-ad6a-a2cb440b7440,Backend Engineer,2380.94,fixed,0
+53ff4926-5a0f-4def-bab6-71a4272e2778,48fd11e9-ce56-4b94-ae74-1c1d0edcee6f,Blockchain Engineer,10045.79,fixed,0
+0bddee38-6821-4a24-8cc3-b67f46679c7f,d419ede4-dcdb-4b4a-892d-29eafb2a9016,Design Designer,2297.9,negotiable,0
+3c275fd4-2983-4dad-9442-2ef16e7da7e2,d419ede4-dcdb-4b4a-892d-29eafb2a9016,Design Designer,1071.27,negotiable,1
+350aaaa6-811b-441e-804a-40a6bab66fce,d419ede4-dcdb-4b4a-892d-29eafb2a9016,Design Designer,2773.33,fixed,2
+b4c33721-917d-4f82-bf87-e8f4ad675eb8,19b0b03a-5bbf-48aa-975a-1b68f03e1e68,Frontend Engineer,3676.02,fixed,0
+57a7714c-49e4-4b37-ab84-e645e5340c26,19b0b03a-5bbf-48aa-975a-1b68f03e1e68,Frontend Engineer,1575.02,negotiable,1
+57e54365-7a78-4eb4-a902-2d54f5df242b,19b0b03a-5bbf-48aa-975a-1b68f03e1e68,Frontend Engineer,2750.07,fixed,2
+0262d874-64b0-49f4-a71c-c05a266cf0d1,bc0aea30-12e8-4efe-ac51-048b5ed7ebd2,Backend Engineer,1607.33,fixed,0
+19f22731-b803-4b45-a743-cfe27691f4f3,bc0aea30-12e8-4efe-ac51-048b5ed7ebd2,Backend Engineer,2203.48,negotiable,1
+33c7a9e1-7217-4f48-ad48-303178d6c1fc,669deb46-9daf-48cf-a0ae-41de7db8cb19,Ml Ai Engineer,9450.64,fixed,0
+fece0670-b441-494d-bf12-ca8f2cff8d8b,f8a785c4-e725-49a9-8687-c55b60ddd4e9,Frontend Engineer,2617.57,negotiable,0
+3e06a24e-cfe8-4502-98a3-3c76742b9de7,f8a785c4-e725-49a9-8687-c55b60ddd4e9,Frontend Engineer,2116.29,fixed,1
+6a807151-8e8e-4219-b69d-259796ef01de,f8a785c4-e725-49a9-8687-c55b60ddd4e9,Frontend Engineer,3701.59,fixed,2
+53984035-8f6f-4af9-aae5-db79e70c5ad2,1ce2a135-908b-4a3b-94ff-7a4234151c3d,Design Designer,1501.81,fixed,0
+9e756c61-27ce-491b-9de2-e805107dda67,1ce2a135-908b-4a3b-94ff-7a4234151c3d,Design Designer,895.64,fixed,1
+fcd81d79-5e24-46d3-9436-1d87c48de6e3,314ad61d-3264-4bc3-9c08-06114b74f264,Ml Ai Engineer,3591.81,negotiable,0
+6a0fcf68-9799-4431-8832-170125c7b454,314ad61d-3264-4bc3-9c08-06114b74f264,Ml Ai Engineer,1052.32,negotiable,1
+bfa40f16-ebb8-4927-8417-3900e28326eb,314ad61d-3264-4bc3-9c08-06114b74f264,Ml Ai Engineer,8728.73,fixed,2
+5b1ba1e8-1b15-4cdd-bb70-42a605898527,eb5ee3ff-66b0-433c-95c6-7705ed9d9df6,Fullstack Engineer,5220.0,fixed,0
+02bde314-7d5e-4977-8cd6-0236e46c61b0,ffd2c63f-7bf4-4ecf-8df4-16e4156a3ffe,Frontend Engineer,1383.02,negotiable,0
+4119cbb2-3461-4ab3-8d3d-4f04b61bf2d5,9bcc3ac3-e954-4639-bdd1-abdd54e4f1b1,Design Designer,365.41,fixed,0
+059bb2b7-1649-488a-a213-c38a6b4658e5,9bcc3ac3-e954-4639-bdd1-abdd54e4f1b1,Design Designer,2041.79,fixed,1
+874fb4d5-471e-4902-9ce7-4344de459942,825bd924-d78a-4907-b6b8-6dd0bc7628e3,Blockchain Engineer,9821.96,fixed,0
+37b69254-c636-4e54-9aaf-f805d3d4b016,825bd924-d78a-4907-b6b8-6dd0bc7628e3,Blockchain Engineer,1378.93,fixed,1
+60f58c96-3c66-4021-b84e-a20dd4df90a0,63a2fe99-088e-4dbc-81bd-2720219b5b31,Mobile Engineer,3711.79,fixed,0
+41447b75-bb17-4af2-91fc-8cc5852e9761,63a2fe99-088e-4dbc-81bd-2720219b5b31,Mobile Engineer,5199.84,negotiable,1
+ccfee29c-bdb2-47f7-bb28-208ddefbdf72,63a2fe99-088e-4dbc-81bd-2720219b5b31,Mobile Engineer,3668.6,fixed,2
+8352e955-86d8-4f4c-b7cd-a1b66d02ee8b,d61ef5c8-d6c6-4c14-ab8f-921d2c3ed02f,Mobile Engineer,2175.58,fixed,0
+5e3817ee-370f-44c9-81a5-9250108ec1a8,d61ef5c8-d6c6-4c14-ab8f-921d2c3ed02f,Mobile Engineer,1978.52,fixed,1
+02bf71a1-d03f-45df-afa7-b8edf3b347c7,1ec1f911-921a-4952-99b3-23a66f527421,Design Designer,815.52,fixed,0
+d5e920e7-0e31-4ac6-9098-3aa09ea8d2b0,1ec1f911-921a-4952-99b3-23a66f527421,Design Designer,1665.35,fixed,1
+caa47cd5-b21b-4a9c-a7ab-1cf5dee5ad85,fd0881e8-0756-4bc2-b27c-fd710bc8b475,Devops Engineer,4306.82,negotiable,0
+4f248540-1497-4b3b-8ca2-8feab06c2e57,bcb5fb65-8b4c-4a11-bfde-6dffe1c6fff8,Blockchain Engineer,10714.81,fixed,0
+9132a229-1ff6-4684-bd01-236d45fdfa7c,bcb5fb65-8b4c-4a11-bfde-6dffe1c6fff8,Blockchain Engineer,6940.11,negotiable,1
+77acfa6e-798c-493e-b59c-925f793c46d0,bcb5fb65-8b4c-4a11-bfde-6dffe1c6fff8,Blockchain Engineer,9107.99,fixed,2
+4d3a01fe-8a19-4fc5-a107-54bf28f36ecb,d9d36271-fc65-4de8-8fca-ea05bd747fa4,Backend Engineer,3396.31,fixed,0
+b89b1233-9732-4df1-9176-65a646f735ee,d9d36271-fc65-4de8-8fca-ea05bd747fa4,Backend Engineer,4943.25,fixed,1
+b4fe1ced-49c0-4136-a7e9-dd502bf47c1b,2cfdf935-8f2c-40e7-94c6-fb659ded2623,Frontend Engineer,2820.88,negotiable,0
+ebf2306f-148a-4326-bbb3-a7e2eb24be78,cd9ff220-ae7e-45e1-95e6-7225aeba3e75,Backend Engineer,1304.46,negotiable,0
+ad0e98bb-ec41-43d9-9e54-d97f1b4d3cb1,cd9ff220-ae7e-45e1-95e6-7225aeba3e75,Backend Engineer,4149.53,fixed,1
+105f86e2-58a0-4c25-a048-f1fb0629df99,4677429b-0ec3-4aaf-a249-05384d7988b3,Frontend Engineer,3783.09,fixed,0
+8ac2bcfb-15ba-452c-91ba-1336ba6599a1,4be2186e-46e0-44c3-9afe-ef3415397d91,Blockchain Engineer,5094.85,negotiable,0
+86abe2dd-a424-4812-b5e2-606333263356,4be2186e-46e0-44c3-9afe-ef3415397d91,Blockchain Engineer,11923.26,fixed,1
+9b3775e8-05a5-47af-9eab-17da51454b17,4be2186e-46e0-44c3-9afe-ef3415397d91,Blockchain Engineer,2024.57,fixed,2
+c345a612-45bc-4310-8da5-ded7434498ce,1264b2e8-7a9b-4926-9055-335df9648bfe,Design Designer,553.63,negotiable,0
+49e79081-3df1-4fe7-b715-052c15c12eb8,1264b2e8-7a9b-4926-9055-335df9648bfe,Design Designer,1315.74,negotiable,1
+672e5001-9210-443d-95f6-b2ba9e3d1ba9,f05e61e5-8897-4637-a2be-d8c5ee1e6820,Mobile Engineer,2579.89,fixed,0
+42ea7494-9ef6-4f98-8d4c-2bfbdfee2dcf,f05e61e5-8897-4637-a2be-d8c5ee1e6820,Mobile Engineer,3970.37,fixed,1
+65f26c77-33e1-4c68-b36f-f9c402b13ce4,f05e61e5-8897-4637-a2be-d8c5ee1e6820,Mobile Engineer,3076.74,negotiable,2
+a119beaf-7b44-4f0a-87b4-d759bb84b549,6623dbd7-31e3-4ba4-9f70-1ba9132730a6,Design Designer,400.28,fixed,0
+f57de4a4-fb18-454b-805d-03ed22e2165b,6623dbd7-31e3-4ba4-9f70-1ba9132730a6,Design Designer,1660.58,fixed,1
+fa2add8a-89ff-49de-b368-ba539649d3be,a9b267e6-0b16-4101-a3e2-2a99323c3dc4,Mobile Engineer,2534.05,fixed,0
+79d0ed54-3436-4b13-bf07-57b451e0fdc1,99094b43-0a47-4984-8712-2c83850c061e,Ml Ai Engineer,7109.01,fixed,0
+36ffacce-4ceb-4489-a0ec-1d4c968ca010,99094b43-0a47-4984-8712-2c83850c061e,Ml Ai Engineer,4809.54,fixed,1
+5910dbe7-5b1c-46e5-9f3e-2a3e51edf7d0,f11e5b3d-a17e-4d1e-97af-5264ef057aad,Blockchain Engineer,10648.89,fixed,0
+0b1eaee8-5d1c-4b1c-873f-11e766e35ea5,78106c0d-9ba5-4ab9-b64e-aa08199e0452,Backend Engineer,1438.12,fixed,0
+865c563e-d8e0-47d9-b73d-37a37763ac93,78106c0d-9ba5-4ab9-b64e-aa08199e0452,Backend Engineer,4302.57,fixed,1
+31311d17-769b-46b7-9f7a-12557d32a826,f9e43793-cf8d-46b4-a7f2-e3b9e84dd3b4,Backend Engineer,1556.58,negotiable,0
+2fa36a98-8421-4e89-b085-6fa5548dabbc,f9e43793-cf8d-46b4-a7f2-e3b9e84dd3b4,Backend Engineer,1280.71,fixed,1
+4de66aa3-5e79-4cd0-874a-2d4814432d50,f9e43793-cf8d-46b4-a7f2-e3b9e84dd3b4,Backend Engineer,4655.58,fixed,2
+321bac08-3544-4094-b650-e3203546b689,7003c110-0d61-491d-8bc1-b9ca02857123,Frontend Engineer,547.09,negotiable,0
+e5680211-fa67-4d37-a203-94d1e9b05363,7003c110-0d61-491d-8bc1-b9ca02857123,Frontend Engineer,3924.07,fixed,1
+f3a9b389-4a5c-477b-acbe-da639a57a07d,7003c110-0d61-491d-8bc1-b9ca02857123,Frontend Engineer,2589.32,negotiable,2
+bbda1657-2219-4794-bbe7-b2c602ffc2b4,a94e114e-ad84-4c5a-b09c-13028ed0e32a,Ml Ai Engineer,7601.02,negotiable,0
+6afa2fee-ea17-4a85-b15c-e4e1445af859,a94e114e-ad84-4c5a-b09c-13028ed0e32a,Ml Ai Engineer,7210.71,fixed,1
+9ccda712-cbce-4bfe-a9d4-e6bc0436b98e,030a909e-df8f-49b4-a99e-bbceccd7b46a,Devops Engineer,3654.89,fixed,0
+96961e45-ee73-483e-8d44-4105dd26b7ea,030a909e-df8f-49b4-a99e-bbceccd7b46a,Devops Engineer,3995.74,fixed,1
+4fdc51bf-01e5-4e71-9362-19d3ef8a26fd,030a909e-df8f-49b4-a99e-bbceccd7b46a,Devops Engineer,7637.14,negotiable,2
+a8cb4097-257a-4f95-9144-d8b2d47285cd,823345c4-78cf-4b43-8bf3-cbde6da2afba,Mobile Engineer,3173.75,negotiable,0
+97978703-110a-411a-85be-ceb9f87b5d2e,823345c4-78cf-4b43-8bf3-cbde6da2afba,Mobile Engineer,734.66,fixed,1
+79548930-8352-4279-b863-b74c45234ff6,823345c4-78cf-4b43-8bf3-cbde6da2afba,Mobile Engineer,5559.66,negotiable,2
+d56d168f-71d6-46b9-a0b9-bc90cfa047d2,aa4c996e-9e9d-48d0-b7dc-f8c4889d454e,Mobile Engineer,5283.97,negotiable,0
+5fde841d-ab2d-4bee-aa1e-d84d912242ca,aa4c996e-9e9d-48d0-b7dc-f8c4889d454e,Mobile Engineer,4100.75,negotiable,1
+2389f4bd-bc72-45d2-a17f-01443065ca12,b852cc12-faf0-452f-a1d3-7ff0e2f00f96,Backend Engineer,3373.69,negotiable,0
+85390788-c2d0-40c6-8a48-96d994c45bce,b852cc12-faf0-452f-a1d3-7ff0e2f00f96,Backend Engineer,1055.71,fixed,1
+fac3f4c5-6610-4050-bd78-49ca7493c428,b852cc12-faf0-452f-a1d3-7ff0e2f00f96,Backend Engineer,1269.12,fixed,2
+516bd1ba-5471-4842-8b51-611b0c83437d,972a2143-16b3-4da6-a954-8b21f9aa4f99,Fullstack Engineer,5364.71,fixed,0
+03fd0494-c706-47c8-aaf0-dff2f8b98d60,ea0f9f7f-9dcf-4f55-98db-eb6a19a5c7d0,Fullstack Engineer,1800.03,negotiable,0
+1dda8b74-b7e7-47e2-b22e-261aa0f8c911,ea0f9f7f-9dcf-4f55-98db-eb6a19a5c7d0,Fullstack Engineer,2996.54,negotiable,1
+45fb8926-e44c-44bd-a7d9-9c0ffb02c220,62814375-0c60-46b1-8ab3-bf2e6e5456d8,Ml Ai Engineer,3526.19,negotiable,0
+4b39a581-c773-450a-9d55-1d033302b64a,632ca9fd-14e6-486f-a4d9-b8eff3fa17bb,Ml Ai Engineer,6894.23,negotiable,0
+f8ceb17e-ce21-4660-9f54-cd791031fb9c,632ca9fd-14e6-486f-a4d9-b8eff3fa17bb,Ml Ai Engineer,5658.27,fixed,1
+daf51df7-5f44-4ced-956a-ef560481af99,04a8232b-94cd-41f1-b1fb-aa6157986d40,Backend Engineer,2338.31,fixed,0
+ec814f71-085c-4b35-9778-5edd65a81274,04a8232b-94cd-41f1-b1fb-aa6157986d40,Backend Engineer,607.01,negotiable,1
+227f4f2a-554a-4f83-b5a4-69acbab602d9,04a8232b-94cd-41f1-b1fb-aa6157986d40,Backend Engineer,2585.66,fixed,2
+a80c89de-aa8b-44be-a44e-bba09fa0a5ac,2b6f7336-4b2d-482c-911b-292598dc5f71,Backend Engineer,4581.43,negotiable,0
+0fee74da-bc0e-44c2-bbdc-e7892929591d,2b6f7336-4b2d-482c-911b-292598dc5f71,Backend Engineer,2397.7,negotiable,1
+901c6a18-c9fa-414b-84d5-3b21dcb4c594,16f9b532-3df4-4469-9fab-ed88b48e2215,Backend Engineer,923.96,fixed,0
+8e37d0c6-4145-4b8a-9d5e-04aa74b0b653,16f9b532-3df4-4469-9fab-ed88b48e2215,Backend Engineer,3291.98,negotiable,1
+b6600470-7eb3-4d48-ae6b-0101cb64fbcd,16f9b532-3df4-4469-9fab-ed88b48e2215,Backend Engineer,3455.69,fixed,2
+28c179b3-2dee-4310-a96a-4a33068f8d87,24c2ee63-c367-4c3a-9cf3-9a7a39aa1459,Blockchain Engineer,6324.26,fixed,0
+0795e726-9e66-4617-bc28-2764ab4a02df,24c2ee63-c367-4c3a-9cf3-9a7a39aa1459,Blockchain Engineer,8756.1,negotiable,1
+01fa217c-36e8-42cc-8f78-8be72e7b7544,24c2ee63-c367-4c3a-9cf3-9a7a39aa1459,Blockchain Engineer,5538.51,fixed,2
+2694b0e4-719f-4b5b-ae1e-43a6e435c828,d563438f-f37d-4527-a052-46b21415b1d0,Fullstack Engineer,3984.29,negotiable,0
+4b24227c-d389-4c65-b76a-9532c2814bd4,490915ef-2118-47b7-ba01-df13116b1b2f,Fullstack Engineer,1006.98,negotiable,0
+0ba316c5-75b7-49c4-9d82-bd3308cb7eb8,490915ef-2118-47b7-ba01-df13116b1b2f,Fullstack Engineer,901.63,fixed,1
+be4d5dfb-436d-443a-bdf2-15d8e3b8ee5a,97060418-824c-47fc-8abf-88e1cc8149a8,Mobile Engineer,5681.53,negotiable,0
+fb2e45a4-98ef-496c-90f8-809369ac9526,97060418-824c-47fc-8abf-88e1cc8149a8,Mobile Engineer,2979.85,fixed,1
+5ddd10cd-38b9-43bb-bec0-2066be341a66,179be58c-d706-491d-ab19-36289ddcf339,Backend Engineer,1185.14,fixed,0
+d9bd206b-90af-4935-ace4-5a6bedfb7258,179be58c-d706-491d-ab19-36289ddcf339,Backend Engineer,2988.4,fixed,1
+09b5f5f3-0e8a-40b7-8ff9-e6a88041a24e,179be58c-d706-491d-ab19-36289ddcf339,Backend Engineer,2621.21,negotiable,2
+2b8747f3-b580-4911-99cc-0cc52659b504,3daca9bb-b3b7-489d-8637-75b608ada1a0,Frontend Engineer,2626.23,fixed,0
+491cbefe-54b2-4fd0-b97b-f9b08837daa5,3daca9bb-b3b7-489d-8637-75b608ada1a0,Frontend Engineer,1132.59,fixed,1
+f5844fc7-46b0-4a73-b7d2-03c169117783,4090f3ab-8b98-4818-83e9-ff4ff2c9222e,Blockchain Engineer,10566.48,fixed,0
+0846a75d-76a8-4ba1-a7d2-4be2610b32a0,8bd6c41e-5d3f-4e18-83a5-3091ca5cdbe0,Frontend Engineer,498.23,negotiable,0
+3daa1f58-d7ff-462d-8218-ee411896deae,8bd6c41e-5d3f-4e18-83a5-3091ca5cdbe0,Frontend Engineer,2496.7,fixed,1
+875a377f-8f52-4412-a282-48e4eaecefdf,8bd6c41e-5d3f-4e18-83a5-3091ca5cdbe0,Frontend Engineer,3159.64,negotiable,2
+2dcccff6-8645-4402-a818-4450cd5a7cc2,df315fec-8a84-4824-97e6-2a9af48b84f7,Ml Ai Engineer,3288.66,negotiable,0
+2acd1aca-4101-4741-b5f7-65913f859006,1ec1d892-9557-4be3-a672-ed81edc48a42,Fullstack Engineer,4835.32,fixed,0
+d689a64d-2609-4543-b146-002d0da3646e,c890a379-bce8-4685-9642-a2c0391a6c5b,Fullstack Engineer,2511.73,fixed,0
+7be2a743-0250-408e-9fa2-4295971b6296,e5ad33fc-a33c-4f41-8567-52aefc41afc9,Ml Ai Engineer,5544.9,fixed,0
+10e901ff-25c2-4baa-a461-b3657616c750,e5ad33fc-a33c-4f41-8567-52aefc41afc9,Ml Ai Engineer,1436.21,negotiable,1
+0c900138-bb4c-4797-ae01-e8fca0383727,e5ad33fc-a33c-4f41-8567-52aefc41afc9,Ml Ai Engineer,1904.95,negotiable,2
+01c76d4d-a19a-40b5-95a1-fb062f4756e4,4e7aac13-4e87-465a-ac96-d6301cdbe98d,Fullstack Engineer,6129.67,fixed,0
+b6b6bdbc-b733-433b-8c34-2ddf24937f27,4e7aac13-4e87-465a-ac96-d6301cdbe98d,Fullstack Engineer,2510.42,fixed,1
+5288ce01-7201-431b-9af4-fc6ef261f26a,4e7aac13-4e87-465a-ac96-d6301cdbe98d,Fullstack Engineer,4271.43,fixed,2
+5be916d1-82d2-4891-88ca-c3c0afb45f16,41976c2b-0849-4982-863c-efb9a485872b,Frontend Engineer,1989.98,negotiable,0
+797b907e-c071-4c18-8b9e-dc59af903017,5bade825-395e-43dd-b061-65ccda5b32f5,Design Designer,518.5,fixed,0
+8ba864d2-0eaf-42b8-b07f-6f2f707035c2,5bade825-395e-43dd-b061-65ccda5b32f5,Design Designer,1434.85,negotiable,1
+c90db42e-5d1e-4b64-a62d-adb98be5f8ef,bc18c12c-5101-48e7-b540-e9170f127e7a,Fullstack Engineer,6087.4,fixed,0
+ef3e3dbb-a26c-429f-accf-06ea44d4ba3c,bc18c12c-5101-48e7-b540-e9170f127e7a,Fullstack Engineer,1768.2,negotiable,1
+95ca3b8a-08f5-4352-8abb-650fc3799e9e,a9126449-22a6-4e0e-a598-3af7b4243f65,Blockchain Engineer,3322.23,fixed,0
+5cb14e0d-3935-450d-a00b-6dfd964aa544,955608d5-a7c8-428f-bdad-5791492392b0,Devops Engineer,2372.57,negotiable,0
+cc9bf47e-c742-4f18-9fb1-67a33733fcc0,955608d5-a7c8-428f-bdad-5791492392b0,Devops Engineer,2053.63,fixed,1
+82c6b849-e7e9-4380-b5c8-7c7c7289a348,955608d5-a7c8-428f-bdad-5791492392b0,Devops Engineer,5126.95,negotiable,2
+f393f7b5-3793-4029-9fb9-8d5d0c35340d,43941ef5-a7f4-4f52-87bc-d94d8228956a,Ml Ai Engineer,6338.4,negotiable,0
+6c4e2105-0b1a-44f0-baae-2ecc745f0f48,43941ef5-a7f4-4f52-87bc-d94d8228956a,Ml Ai Engineer,3504.74,fixed,1
+0639a416-7f1c-4c27-aafe-144808fc80bc,adfeb070-4794-4936-9aea-991e7a0cf7ff,Frontend Engineer,3954.98,fixed,0
+b98cadab-71a4-408b-a18b-6175439c7648,adfeb070-4794-4936-9aea-991e7a0cf7ff,Frontend Engineer,538.33,negotiable,1
+1d07af4a-a0e3-4ddf-837c-68ef6a71fb7f,adfeb070-4794-4936-9aea-991e7a0cf7ff,Frontend Engineer,2442.33,fixed,2
+163ab28d-8b2b-4391-a6e3-ac8f7ca9866c,0deb1274-6fb8-42af-b57a-4eb994e45544,Backend Engineer,3434.02,negotiable,0
+98558786-c440-4c1c-a664-c04dac90ec7f,0deb1274-6fb8-42af-b57a-4eb994e45544,Backend Engineer,3309.27,fixed,1
+1bee6879-8817-49fc-a0e2-7ffc1372527f,7690dbac-50b5-4c96-b842-86991563bffe,Frontend Engineer,2212.1,fixed,0
+025860de-2d44-4a98-b338-e40f30509fa7,7690dbac-50b5-4c96-b842-86991563bffe,Frontend Engineer,2122.31,negotiable,1
+65fb24ed-45de-4a36-93e9-43d98de7867b,b2932cf3-fb7f-48bb-b7da-444c644cc788,Blockchain Engineer,11427.85,negotiable,0
+fcb99443-c173-41b9-a901-d23696923369,2306e64d-5824-49ae-b33c-7372ada50e93,Mobile Engineer,3438.0,fixed,0
+f66239cf-969d-4c00-8d44-ca7b791d7ea1,9b9bb74c-b12c-43b5-9dc1-8970321807e1,Backend Engineer,3630.23,fixed,0
+4fbb5012-c5ee-471b-b8dd-f58b1fb96888,9b9bb74c-b12c-43b5-9dc1-8970321807e1,Backend Engineer,4110.49,fixed,1
+05502160-7891-4289-8db0-65e4447224a2,9b9bb74c-b12c-43b5-9dc1-8970321807e1,Backend Engineer,1897.13,fixed,2
+fe6699f0-ed10-4d5e-9900-a425358b74e8,f4dd3a5f-0619-4123-bf94-bb4584c2b7ae,Mobile Engineer,3560.06,fixed,0
+fc44a7ff-da60-42e9-b536-b5239f040ee5,f4dd3a5f-0619-4123-bf94-bb4584c2b7ae,Mobile Engineer,3860.29,fixed,1
+667a7600-b137-40c3-a57b-deefac48a27d,f4dd3a5f-0619-4123-bf94-bb4584c2b7ae,Mobile Engineer,5101.59,fixed,2
+3730d186-84b8-453d-a578-789157b9bfd0,071aa06d-e2de-4ee6-b8fa-99e3b9333c83,Fullstack Engineer,2152.66,fixed,0
+a78a3a50-b378-442b-8a57-44577670e558,071aa06d-e2de-4ee6-b8fa-99e3b9333c83,Fullstack Engineer,3377.65,fixed,1
+50959c82-4547-44ad-828c-c103a7a33102,071aa06d-e2de-4ee6-b8fa-99e3b9333c83,Fullstack Engineer,3060.45,fixed,2
+47393bf3-8ecc-4729-8a65-302285980e58,32e2eff5-793f-433b-917b-ab04ee3d22d5,Blockchain Engineer,7001.09,negotiable,0
+0125fad8-47ce-431e-848d-4f75a4444b0e,32e2eff5-793f-433b-917b-ab04ee3d22d5,Blockchain Engineer,9814.93,fixed,1
+af56ff8b-0baf-472b-86ca-aeb2d3bd0b34,32e2eff5-793f-433b-917b-ab04ee3d22d5,Blockchain Engineer,10111.91,fixed,2
+57e8e0b2-f700-4fba-9561-4c2a9f58a879,e2a51bff-c126-44c3-9eb1-0ed0123d74c2,Blockchain Engineer,2905.2,negotiable,0
+cf029ff1-89a6-46e5-8fcc-167e545d9e32,e2a51bff-c126-44c3-9eb1-0ed0123d74c2,Blockchain Engineer,10048.75,negotiable,1
+c446d446-095a-459f-8226-be6e0822e0af,e2a51bff-c126-44c3-9eb1-0ed0123d74c2,Blockchain Engineer,3587.58,fixed,2
+5b9d5d7c-966f-4785-bd82-2733eda2ec78,a6ac028d-e6d6-41da-a066-dbb2972bd4f9,Ml Ai Engineer,8853.54,negotiable,0
+bbe01ff9-f9af-4f62-bcaa-9306b1159203,a6ac028d-e6d6-41da-a066-dbb2972bd4f9,Ml Ai Engineer,7279.36,negotiable,1
+8f67556f-5e26-4162-b661-f4e201271aeb,a6ac028d-e6d6-41da-a066-dbb2972bd4f9,Ml Ai Engineer,4748.76,negotiable,2
+7018ae01-d01d-4ef7-9b99-6ff01dba7df9,dde5a79f-b860-420b-bb6c-587ea2140fc9,Blockchain Engineer,5354.64,fixed,0
+9b92d01d-2a96-4edc-865a-e3065bf9bb04,dde5a79f-b860-420b-bb6c-587ea2140fc9,Blockchain Engineer,1380.26,fixed,1
+16cd346c-643a-4c46-afad-2bfa691bd0b6,edf7d725-872f-4c18-8ea7-b4d821c08e81,Fullstack Engineer,3547.55,negotiable,0
+2278a69e-cc48-4432-84a9-f77a42f3530a,edf7d725-872f-4c18-8ea7-b4d821c08e81,Fullstack Engineer,2468.33,negotiable,1
+840b0a74-a3da-4232-b86d-25e4fa09b9e0,edf7d725-872f-4c18-8ea7-b4d821c08e81,Fullstack Engineer,6810.3,fixed,2
+d912b933-486e-4cd9-8739-f83aafed5254,86af392c-3267-41f7-b499-376af102fbaf,Fullstack Engineer,6161.69,negotiable,0
+68623766-1d37-4c6c-a236-042aab7af2fb,86af392c-3267-41f7-b499-376af102fbaf,Fullstack Engineer,2652.95,negotiable,1
+5c74e7c8-f771-47ba-861b-083322c14cb5,86af392c-3267-41f7-b499-376af102fbaf,Fullstack Engineer,6645.93,fixed,2
+98395e3b-d2cd-4ee6-9652-0a6ba17cb972,c2da8240-3ff9-487e-b24e-4b1d1a72c182,Blockchain Engineer,3283.25,negotiable,0
+6263b76b-3620-4b0c-b7fa-c0eccd98834e,c2da8240-3ff9-487e-b24e-4b1d1a72c182,Blockchain Engineer,5574.63,negotiable,1
+55de272f-0ea3-4c61-85c1-b862659f2875,19295b19-1c86-4236-a521-0c57653d1b33,Ml Ai Engineer,8183.53,negotiable,0
+9bd8c866-3f18-4f82-a58a-128a7e9e3cbb,19295b19-1c86-4236-a521-0c57653d1b33,Ml Ai Engineer,9411.05,negotiable,1
+02c51a16-62dc-48fc-8779-5960dc6e08f5,19295b19-1c86-4236-a521-0c57653d1b33,Ml Ai Engineer,5112.87,negotiable,2
+e7b7f098-c2e3-4ee0-aed1-96a5a33a7a8c,2ea1a783-75dc-4fcf-9f1a-830ed4de5128,Ml Ai Engineer,8185.79,negotiable,0
+62db5b0d-14f5-4d30-88e9-a01fb205a037,4782456d-f840-4d08-8ebe-f15c756ce884,Design Designer,1440.42,fixed,0
+8519f108-e6bc-48c5-878e-90b532f817fa,4782456d-f840-4d08-8ebe-f15c756ce884,Design Designer,1067.03,fixed,1
+bd239434-4b37-4a3e-b9f3-7e8c3757f7c1,4782456d-f840-4d08-8ebe-f15c756ce884,Design Designer,2043.43,negotiable,2
+771870f5-38cc-4659-8d5f-56cad2672b9c,ad2460b2-a1af-48f2-b4e1-0f288cd1fecb,Fullstack Engineer,1319.13,fixed,0
+2625b561-4b90-42d0-8b70-548cbc03a792,ad2460b2-a1af-48f2-b4e1-0f288cd1fecb,Fullstack Engineer,3179.16,fixed,1
+a9004f65-bf61-4a81-8e62-63bd8e6adbbd,a05cafa1-ce9e-4d6a-bc87-95cc820fffd9,Devops Engineer,2560.36,negotiable,0
+41e1db70-4c2f-4909-aeee-e38a628f5945,a05cafa1-ce9e-4d6a-bc87-95cc820fffd9,Devops Engineer,3126.15,negotiable,1
+fe2cd82f-d39a-4175-86ff-877f5327bc14,a05cafa1-ce9e-4d6a-bc87-95cc820fffd9,Devops Engineer,6921.11,fixed,2
+8d21e789-364e-4884-8b39-d7bb099adae7,b087178c-efeb-48bf-8954-0bef66bfa9f9,Fullstack Engineer,6264.7,fixed,0
+663969d8-afc5-4eed-b414-1cd7b5bce728,b087178c-efeb-48bf-8954-0bef66bfa9f9,Fullstack Engineer,1171.56,fixed,1
+893c5fcc-3e28-4a78-8f65-c29a80cc4e0b,0b6cf69a-9304-46c2-889f-de091dab5761,Mobile Engineer,1800.69,negotiable,0
+9a776f18-cba5-4d99-8da2-e63a6837b627,359d81ec-ee60-452c-b749-3e9d6d5fea04,Blockchain Engineer,3422.83,negotiable,0
+9cdbd6d8-600b-4f34-a3d4-bc2fe882adad,359d81ec-ee60-452c-b749-3e9d6d5fea04,Blockchain Engineer,10752.69,negotiable,1
+72d60df2-75b0-430b-b6ac-18e1dd2b996e,0ff92202-e1cf-4436-81a1-e38be3876979,Design Designer,2425.47,fixed,0
+bdf72ea1-96bc-4488-a64e-c0243dfd1c0b,0ff92202-e1cf-4436-81a1-e38be3876979,Design Designer,1059.76,negotiable,1
+0373a9a8-5a14-49e2-8345-4487f2ed312b,d00c1cfc-b9e8-415f-93cd-1cafdbe374c5,Ml Ai Engineer,3853.81,negotiable,0
+e087e408-c35c-4078-bae8-0864e4a365b0,3cc4b1e5-a153-4913-9e48-7371de2f4724,Backend Engineer,1175.07,negotiable,0
+8d9839e9-c9cd-4494-8306-0cf35b2c4564,3cc4b1e5-a153-4913-9e48-7371de2f4724,Backend Engineer,4792.24,fixed,1
+d8eb5297-0c7b-4136-80e5-bcf3ca725b50,3cc4b1e5-a153-4913-9e48-7371de2f4724,Backend Engineer,630.06,fixed,2
+cbc97258-44af-439d-b9d0-5072ff0478d7,d97eed46-5072-41b4-b4c4-8f3f77e1a4b6,Ml Ai Engineer,7204.91,negotiable,0
+b64c75d2-738e-4fa1-bbbe-4eb9a41b32e2,d97eed46-5072-41b4-b4c4-8f3f77e1a4b6,Ml Ai Engineer,8088.0,negotiable,1
+810a22ef-d733-43eb-b039-721543bf4c79,d97eed46-5072-41b4-b4c4-8f3f77e1a4b6,Ml Ai Engineer,5596.54,negotiable,2
+50dec8cb-6c7d-42c2-850a-a59de8b374d8,eb5139b8-bf42-45ea-9228-f9af8c595ebe,Backend Engineer,3137.75,fixed,0
+67a576a6-d35b-49b1-9d13-649604b3ad35,eb5139b8-bf42-45ea-9228-f9af8c595ebe,Backend Engineer,3656.23,fixed,1
+c1cc36a6-3907-44b3-a200-1f66279fc40a,eb5139b8-bf42-45ea-9228-f9af8c595ebe,Backend Engineer,4349.14,negotiable,2
+5356c04f-6659-4422-95cb-be3fe827d733,9f1958b0-1fda-4a66-8999-6e9d9d6e4e71,Frontend Engineer,2268.16,negotiable,0
+296258dc-ef68-4528-8336-833c97ef920b,4a5eb0e7-295c-49bd-98b0-73496d84af21,Mobile Engineer,3301.85,fixed,0
+ac53f48f-e675-4d19-ab00-52c0af94f2eb,4a5eb0e7-295c-49bd-98b0-73496d84af21,Mobile Engineer,614.38,negotiable,1
+c227bc78-8151-4e53-bc45-8e053c5d7e3b,4a5eb0e7-295c-49bd-98b0-73496d84af21,Mobile Engineer,5126.83,fixed,2
+37f26090-59cf-4835-94ed-bcfc497f00e4,877fbaca-0cba-499d-9755-787a8036d908,Frontend Engineer,332.05,negotiable,0
+90f42f7f-cd3b-42f4-b1ee-aef8981427f5,d1176ec3-5859-4ff8-bcab-116137394ba9,Fullstack Engineer,7113.14,fixed,0
+76a076b2-7b2b-49df-a055-ceea85d8f134,d1176ec3-5859-4ff8-bcab-116137394ba9,Fullstack Engineer,3512.89,negotiable,1
+d16dac79-7fdc-4269-b04e-e947fd785d15,48b58e9f-8649-458d-90da-26458eaf41e9,Mobile Engineer,4554.63,fixed,0
+273c16db-e929-4de5-9e5b-44061411c87d,7df698f9-18bd-424f-8139-c6b83d7d1a22,Ml Ai Engineer,7202.24,negotiable,0
+c518409d-f3f8-4569-896e-66f71c73a791,26d5e542-5121-449f-937d-fea385b7ded2,Ml Ai Engineer,2769.78,fixed,0
+c986f283-52a8-4e51-ade5-f5f75c5ae3ea,798582b0-d0d2-4111-95cd-5efb52b0c2f5,Frontend Engineer,1398.28,negotiable,0
+416eca69-1f76-4b9f-8091-9198d08c4baf,798582b0-d0d2-4111-95cd-5efb52b0c2f5,Frontend Engineer,2755.48,negotiable,1
+92347648-4409-4dc1-b364-518e7bd5a27d,27350e31-b747-4ec0-9831-69031d9ac181,Fullstack Engineer,6975.35,negotiable,0
+5c35e203-955b-4bdf-a013-64187abf1546,27350e31-b747-4ec0-9831-69031d9ac181,Fullstack Engineer,7796.23,negotiable,1
+6255417a-7adb-475c-bde5-e4371181a326,27350e31-b747-4ec0-9831-69031d9ac181,Fullstack Engineer,1764.78,fixed,2
+7be6f8b9-e0c1-45f9-ac1d-752b4ac3aaf9,6fbb90ee-11a7-47e8-ab96-e89d2c3b2406,Frontend Engineer,930.85,negotiable,0
+8c1e0886-98e1-4070-9e39-c589983c0eb9,6fbb90ee-11a7-47e8-ab96-e89d2c3b2406,Frontend Engineer,341.15,fixed,1
+c499e6ff-f56a-48cb-9cdd-d86e57fb3c5d,e8a7d4f5-aa72-4c37-be65-004fc423ab5f,Blockchain Engineer,14442.28,negotiable,0
+2414fe1b-dae5-4ccb-9975-9b0cfab2a602,18d87c37-03f8-416f-9baa-eeb4124899e1,Frontend Engineer,3633.58,fixed,0
+a7201b70-3a40-4b5e-a274-60d86156578f,04dd630a-15a8-44d6-a51e-3bce3031730a,Backend Engineer,1679.66,negotiable,0
+7ab42eb3-c4b2-4f98-aa25-a51f91b2e4f1,857b252c-8be5-4257-b199-ab81fad789cf,Backend Engineer,2762.04,negotiable,0
+c6a8527a-c044-41ee-b5ec-0fd317120801,857b252c-8be5-4257-b199-ab81fad789cf,Backend Engineer,4552.61,negotiable,1
+943b0bb6-cc24-4a7b-8bf0-240dc88bb94f,857b252c-8be5-4257-b199-ab81fad789cf,Backend Engineer,2064.18,fixed,2
+5c774a6f-d1a0-437a-9ee5-2a5e08b0198e,39eb67db-baa7-4c45-a0e9-40810ede486e,Backend Engineer,2219.86,negotiable,0
+cd3da045-49af-4d95-b4eb-b666f66a0584,39eb67db-baa7-4c45-a0e9-40810ede486e,Backend Engineer,3891.49,fixed,1
+e3036157-f79f-4e35-84b4-2860851b6d93,39eb67db-baa7-4c45-a0e9-40810ede486e,Backend Engineer,4355.77,negotiable,2
+ab0ad0a6-c97b-4f17-9f06-2ed91257605d,d086136d-13c0-404a-a1a4-cebde178ed4b,Ml Ai Engineer,2153.31,fixed,0
+4de4cd32-871e-4878-96d1-1734543f9cc9,d086136d-13c0-404a-a1a4-cebde178ed4b,Ml Ai Engineer,2134.85,negotiable,1
+99d19a0f-0503-4f12-b570-e9527b7a3227,1862e961-21ee-4fc2-9edd-d024d2005366,Fullstack Engineer,4650.53,fixed,0
+0f6b7939-a88e-4af4-9771-f3384c4a33a3,1862e961-21ee-4fc2-9edd-d024d2005366,Fullstack Engineer,6272.98,fixed,1
+7613cf12-038c-432a-83d6-0d10b2ff7701,1862e961-21ee-4fc2-9edd-d024d2005366,Fullstack Engineer,1100.49,negotiable,2
+0e5ebcf7-ce1c-41da-b03a-dfe51186d575,bdfc76d7-41d2-42d2-9d99-5a1f55663c86,Ml Ai Engineer,3526.54,negotiable,0
+353c69bf-696a-481e-8bbc-f096546cdd93,bdfc76d7-41d2-42d2-9d99-5a1f55663c86,Ml Ai Engineer,9075.01,negotiable,1
+6699ec7d-45e1-4dd6-a8ff-2a8f349739e8,bdfc76d7-41d2-42d2-9d99-5a1f55663c86,Ml Ai Engineer,9688.31,fixed,2
+31bc215b-6fbc-40f8-99b1-bc55099ee862,3cb86d41-e82a-45e0-84ff-e945f3be5e43,Design Designer,994.36,fixed,0
+27028160-391e-47d7-a1ff-7b7f1dd701b4,3cb86d41-e82a-45e0-84ff-e945f3be5e43,Design Designer,2402.35,negotiable,1
+e146e2b2-0c02-4a59-9418-9e2827e13f35,7e2e73e8-1674-453a-9703-681cb5a01e3b,Mobile Engineer,4835.13,fixed,0
+6583861c-56a8-48bc-9d81-e2036da0b41c,7e2e73e8-1674-453a-9703-681cb5a01e3b,Mobile Engineer,1281.76,negotiable,1
+c63ff574-d0cd-4020-83cb-ceba264d540b,7005fe11-9484-4e64-a536-ba6604bcbea3,Ml Ai Engineer,9737.45,negotiable,0
+7a102903-736b-4052-be7d-7abe41cc3b5c,7005fe11-9484-4e64-a536-ba6604bcbea3,Ml Ai Engineer,1647.91,negotiable,1
+ab50d6a7-d3ff-449c-b229-2de7e33a6d79,7005fe11-9484-4e64-a536-ba6604bcbea3,Ml Ai Engineer,3936.66,negotiable,2
+7a8a07ee-43fa-4333-b6f1-017ad2dbe155,cbcdca22-3419-45d1-81eb-75da95bb2bd3,Devops Engineer,5357.54,fixed,0
+2d605884-c22e-4b57-891b-20ea848e6295,cbcdca22-3419-45d1-81eb-75da95bb2bd3,Devops Engineer,5916.3,negotiable,1
+545f5119-96c9-41d5-8803-953835c27d33,27b98306-9321-43cc-9f26-a8f520143d34,Design Designer,2118.66,negotiable,0
+989775ac-4f3c-4227-a199-9c291446a6bb,f2c1a769-0c9c-4e33-8089-6ded613c8f92,Devops Engineer,3663.19,negotiable,0
+f9ae18a7-2b64-4fbc-84d0-8687bfab917d,f2c1a769-0c9c-4e33-8089-6ded613c8f92,Devops Engineer,5597.39,fixed,1
+5ed8e6e7-a313-441d-bd41-c508943b7a86,9cfc5ade-5ef8-43d6-88aa-2cb2ce766fda,Fullstack Engineer,5148.91,fixed,0
+0edcbb06-8356-45ad-8a93-59c497a72617,9cfc5ade-5ef8-43d6-88aa-2cb2ce766fda,Fullstack Engineer,4544.1,fixed,1
+a038af34-f1e9-411b-9089-9f099e8429b6,1704c9ce-9148-4d47-8b42-4426674c2504,Design Designer,350.6,negotiable,0
+b7f81e94-98c5-4aa6-8c34-fd8b407462ff,1704c9ce-9148-4d47-8b42-4426674c2504,Design Designer,1750.02,negotiable,1
+6ceb120a-1498-456f-b9e3-b8f2e72d8015,221a865f-10e3-49f1-b80f-10fc44761151,Backend Engineer,1447.29,negotiable,0
+42b5e605-3764-4dd6-ba8f-aba82ae6edbf,221a865f-10e3-49f1-b80f-10fc44761151,Backend Engineer,4773.86,negotiable,1
+e36f6ab3-4e75-44da-a993-8200d5410df0,45a484e3-06ab-4a72-9b69-ce61381c4d45,Frontend Engineer,939.91,negotiable,0
+fd7e81e5-552c-46f9-9b65-e869307c6265,6e23d3f2-88cb-45ff-9d44-9d7abb79f17b,Design Designer,1187.76,negotiable,0
+0cb42bc0-f6fc-4a5b-a949-852898112452,6e23d3f2-88cb-45ff-9d44-9d7abb79f17b,Design Designer,2551.77,negotiable,1
+2bc7fed8-b35e-425c-bb4f-7f7b33d6ffd0,6e23d3f2-88cb-45ff-9d44-9d7abb79f17b,Design Designer,2064.78,negotiable,2
+dd44c442-98d1-4311-8336-c77c98e8af5f,93fcd129-59d3-474b-a975-7832fc5c794d,Devops Engineer,2974.05,fixed,0
+788f33c1-ec9a-45c1-b04b-5565d904b16f,93fcd129-59d3-474b-a975-7832fc5c794d,Devops Engineer,2632.3,negotiable,1
+c3efb561-a005-4784-a1cc-b90888a902ea,93fcd129-59d3-474b-a975-7832fc5c794d,Devops Engineer,4395.06,negotiable,2
+2b589e5b-61e0-4c41-9508-70efc1066589,dc67b3f3-4536-4c2a-9afc-efe8476ab195,Devops Engineer,1024.93,fixed,0
+7bfcee13-d6de-41f3-b6e1-32fffe40a22a,dc67b3f3-4536-4c2a-9afc-efe8476ab195,Devops Engineer,4937.29,negotiable,1
+24a670a9-d8b4-432d-bbef-061eaa2c6926,dc67b3f3-4536-4c2a-9afc-efe8476ab195,Devops Engineer,7307.83,fixed,2
+a75ba051-d689-4e58-8859-be69aa421b9c,a2338a18-9f54-4a66-ae15-de38f1a5b89b,Devops Engineer,7998.97,negotiable,0
+6ea08194-2b93-4d87-b4bc-94c38a695d82,a2338a18-9f54-4a66-ae15-de38f1a5b89b,Devops Engineer,4321.16,negotiable,1
+7ae66058-6e7c-4032-bbc4-2423ad4712e2,f305fdeb-3fbe-4a52-840d-12754deb4589,Ml Ai Engineer,7779.53,fixed,0
+2939f076-8ff0-4936-b086-81aabe75d771,1af14168-4684-4cc8-b772-3ccb4d514d9c,Blockchain Engineer,14658.13,fixed,0
+c28de5ce-3fcb-45cd-bffa-0e2dcd3a0c20,1af14168-4684-4cc8-b772-3ccb4d514d9c,Blockchain Engineer,14309.72,negotiable,1
+e195c33e-b507-435c-9983-473a92793b27,579cbaa0-5746-4bfb-9f04-bc13b0c866a8,Design Designer,1352.55,fixed,0
+384c5b49-c5ea-4e43-8156-7c274caf9888,90aa10bd-7aaf-44ab-8d68-57e6df0c16f1,Blockchain Engineer,2980.87,negotiable,0
+0f0f1d25-8c00-4481-8c7f-e8c649366557,78470937-55e0-439e-a41a-d9d3cd90236a,Mobile Engineer,1498.51,fixed,0
+984b0163-8a8b-49f3-b62f-abb55f313acd,78470937-55e0-439e-a41a-d9d3cd90236a,Mobile Engineer,5874.43,negotiable,1
+e0e98e63-d2d7-40d5-a12b-d6a6abb6770c,78470937-55e0-439e-a41a-d9d3cd90236a,Mobile Engineer,2623.84,negotiable,2
+a9e9cd2b-1412-443f-acb8-9fa5858c4210,fd65b80b-b85f-47ed-8245-b0304649cd00,Design Designer,2155.3,fixed,0
+bc2601b3-4199-48cb-97af-fd304d15800f,9d73b09a-8b7d-47c2-911d-a93b8ad61c5a,Devops Engineer,7006.08,fixed,0
+3743f946-5e3d-41e9-b760-8876ef69a352,9d73b09a-8b7d-47c2-911d-a93b8ad61c5a,Devops Engineer,7612.05,negotiable,1
+ccfc45ba-4bf8-455e-85d9-ea43d6d80bfd,438b7854-eafc-447a-9c73-29eb68039fc8,Frontend Engineer,342.25,fixed,0
+07be1e1b-ee37-4aae-8db1-39954cd11fa6,438b7854-eafc-447a-9c73-29eb68039fc8,Frontend Engineer,701.11,fixed,1
+2547d15d-1bde-4c9c-9c52-5c2ae59da0dd,f166bd29-8630-4b43-bfbc-53f1f6bddd20,Frontend Engineer,1343.17,negotiable,0
+500693d3-6b27-4488-a648-ed8cbdd762fe,0d1347ee-19e1-4cb3-8ebd-c446f7bc4407,Devops Engineer,1965.21,negotiable,0
+74d77354-5ef9-4328-8b7c-6436fe52f621,0d1347ee-19e1-4cb3-8ebd-c446f7bc4407,Devops Engineer,5039.52,fixed,1
+5de96c70-aa0a-42e6-ae3f-c6b48523e3b4,0d1347ee-19e1-4cb3-8ebd-c446f7bc4407,Devops Engineer,5445.25,fixed,2
+5052aecd-c5e7-4c56-b73a-a53990e631ba,608c81c5-005e-4544-af9f-39d925912cd4,Frontend Engineer,2010.77,fixed,0
+770bd4e8-150d-4576-a092-e4e0c8c99666,e4aa402c-eccf-421c-8610-db97d2c9adb2,Mobile Engineer,5744.04,negotiable,0
+5ed155a6-ec3f-4fd3-9c88-ccb54660a077,e4aa402c-eccf-421c-8610-db97d2c9adb2,Mobile Engineer,2886.6,fixed,1
+abe67437-4eca-4024-a141-6b9bf36ed8a2,e888071c-5407-4b45-8dff-708373c0f858,Ml Ai Engineer,3153.82,negotiable,0
+7d41edbf-73cf-48a3-bd36-326e3b43289a,e888071c-5407-4b45-8dff-708373c0f858,Ml Ai Engineer,6165.19,negotiable,1
+235cc369-0176-425c-9a2c-da2507de6634,cf705db4-61f8-4918-a847-f4c143e2cbe1,Fullstack Engineer,3447.03,negotiable,0
+75d4d89b-1fbb-4f40-9b10-f2dff3ee3524,cf705db4-61f8-4918-a847-f4c143e2cbe1,Fullstack Engineer,1386.41,negotiable,1
+402838b3-96ef-416e-83fd-cf8792fb51fe,bc61f20e-7216-4312-ba42-06a229846918,Backend Engineer,2218.94,negotiable,0
+edff72f0-e818-4721-8b71-3dd734573a27,bc61f20e-7216-4312-ba42-06a229846918,Backend Engineer,2516.98,negotiable,1
+8095739c-b4ea-40b1-b65f-0d95e9cc35b2,bc61f20e-7216-4312-ba42-06a229846918,Backend Engineer,2591.55,negotiable,2
+ae481b7f-8eac-4928-a813-f5323655d6ec,9f55fb8d-8bd9-4e02-bdb8-50fe837aab5f,Design Designer,2575.45,negotiable,0
+b80d3bfb-f2d6-4e80-84fd-5c566a16e532,299f2809-dddd-4250-b478-c7749faa3570,Ml Ai Engineer,5060.7,negotiable,0
+f2f9b1eb-9ed3-47f6-a43f-cc56c4b23019,299f2809-dddd-4250-b478-c7749faa3570,Ml Ai Engineer,7308.19,negotiable,1
+812a4591-eadd-433c-ac5b-3580f51a0e43,299f2809-dddd-4250-b478-c7749faa3570,Ml Ai Engineer,8708.01,negotiable,2
+955fc65e-77c2-47cc-b519-42cabab6aaa7,524c4939-c37a-48b0-b20a-cf8e21d28133,Frontend Engineer,2048.83,negotiable,0
+d8916711-ccda-4e8a-891a-170e0c9feac6,524c4939-c37a-48b0-b20a-cf8e21d28133,Frontend Engineer,861.29,negotiable,1
+6d355593-32c8-4ef8-b5f9-e56ae59841e2,524c4939-c37a-48b0-b20a-cf8e21d28133,Frontend Engineer,2445.89,negotiable,2
+70930f3a-7074-4655-8328-2410ca8efd52,d5e0220c-5491-4356-8ce3-93108fab0ff0,Frontend Engineer,424.95,negotiable,0
+9f980033-199e-47bd-84bc-ae6393038216,d5e0220c-5491-4356-8ce3-93108fab0ff0,Frontend Engineer,3100.41,fixed,1
+c1e1eacd-56cc-4b16-94a2-748161c6cac9,8051b8fa-a226-4d12-aa15-44c149acaa2a,Backend Engineer,3186.83,fixed,0
+9092d20e-1f21-4c12-ac85-a7a57038af69,8051b8fa-a226-4d12-aa15-44c149acaa2a,Backend Engineer,1407.72,fixed,1
+616d3432-acab-41df-b147-16de974dcec1,8051b8fa-a226-4d12-aa15-44c149acaa2a,Backend Engineer,4045.07,fixed,2
+38053d8d-9229-45b8-8abe-799bd237f643,0f22380c-7cae-4b4a-8ec9-33ec40c8f1fd,Devops Engineer,5895.57,fixed,0
+22ce6639-f3d7-42be-bb1f-84956fc644fc,0f22380c-7cae-4b4a-8ec9-33ec40c8f1fd,Devops Engineer,3126.45,fixed,1
+b964706d-9c73-40f5-98b3-a3f417e6656f,aa286a34-454b-4734-8f22-6fd24f11b859,Blockchain Engineer,4553.32,negotiable,0
+1cc844d8-e1cb-4125-a642-bc9d5f9f479c,aa286a34-454b-4734-8f22-6fd24f11b859,Blockchain Engineer,2630.27,fixed,1
+a395fa31-bcb0-47ac-aba9-bba50e1f55bd,25416e31-9da2-4095-9009-d59b4503102b,Backend Engineer,4867.8,negotiable,0
+1454defa-6897-4095-8449-f12bf8847ac6,25416e31-9da2-4095-9009-d59b4503102b,Backend Engineer,623.36,fixed,1
+e8ccd159-b182-4cfe-bff7-a9ff08cebfde,2bf68dc0-98fc-4636-b042-eb57ada31a51,Frontend Engineer,3643.2,negotiable,0
+b9911f44-65c2-4168-bce9-ee7f653901c2,2bf68dc0-98fc-4636-b042-eb57ada31a51,Frontend Engineer,1051.04,fixed,1
+7d20b849-a7ca-43c0-829a-9465e6bc5742,2bf68dc0-98fc-4636-b042-eb57ada31a51,Frontend Engineer,2053.39,negotiable,2
+6ac4ca7f-93f5-4808-83ca-b6d34cf39c0e,35e0eb05-4a88-4798-8659-e37a5b9a4e73,Mobile Engineer,1024.34,fixed,0
+47c34f34-c853-4139-bafc-9d7524ef898f,35e0eb05-4a88-4798-8659-e37a5b9a4e73,Mobile Engineer,5670.58,fixed,1
+a3ecfd7f-b9d1-43d2-9701-3ac228ee16b5,77448f50-97f5-455b-a191-d6a6fd01e8cc,Design Designer,1972.69,fixed,0
+a3499c4a-ac0d-4e08-a23d-c53ec573e0bb,77448f50-97f5-455b-a191-d6a6fd01e8cc,Design Designer,1162.75,fixed,1
+2bdcd8b9-4547-44ed-a5c4-e17d9eb329ed,ca1d4170-6b85-4488-b976-ab575e008ad3,Ml Ai Engineer,1498.62,negotiable,0
+bea0b8c0-0e51-40a1-aaae-4f7d28ce001c,ca1d4170-6b85-4488-b976-ab575e008ad3,Ml Ai Engineer,9118.78,fixed,1
+1e133d14-6b28-41c9-a089-34bd2caccb48,cf820bd6-a70b-42c5-bbda-3f07dfacfad9,Ml Ai Engineer,1679.3,negotiable,0
+ade5bf57-5ccf-44c4-aeb2-8ea68fadae5e,cf820bd6-a70b-42c5-bbda-3f07dfacfad9,Ml Ai Engineer,1860.88,fixed,1
+fd0080d3-f2c9-4b20-a4dc-fd6ff5de50ce,9b6ff42e-4778-4b92-854b-51dd4189414f,Backend Engineer,1036.21,fixed,0
+d94c7063-84db-4289-86fa-4d1fdd462855,85b2d976-c41a-4303-bce0-994eed96308a,Blockchain Engineer,8497.37,negotiable,0
+d8ed2044-5eae-48a7-aad1-486cc7298075,85b2d976-c41a-4303-bce0-994eed96308a,Blockchain Engineer,12229.01,negotiable,1
+0545e869-9aef-4ccf-990f-249c2c123a93,fba12526-ab1e-4765-800b-815aa8bba6e0,Backend Engineer,1862.17,fixed,0
+78bef67e-1a38-405e-82ab-efc6991bfb9d,fba12526-ab1e-4765-800b-815aa8bba6e0,Backend Engineer,3122.71,fixed,1
+53a00880-3f06-4407-bc52-fb2b328adbaf,e0fc7bd7-ea02-46b2-aaec-20ee7085ea31,Blockchain Engineer,7720.23,negotiable,0
+eabab0b8-74cf-4325-86f8-f3f0d8a7b48f,e0fc7bd7-ea02-46b2-aaec-20ee7085ea31,Blockchain Engineer,3307.07,negotiable,1
+437fb3ca-bee9-4109-9f6a-9fa59ccfdb48,2d2f4776-4e14-4965-bd40-ea71bf97d824,Backend Engineer,584.43,negotiable,0
+fe218b2c-02e6-4df4-8bf6-5b3e840bde38,2d2f4776-4e14-4965-bd40-ea71bf97d824,Backend Engineer,3744.48,negotiable,1
+407d4dd5-2324-423b-ad8e-9a9e506fcf60,2d2f4776-4e14-4965-bd40-ea71bf97d824,Backend Engineer,1526.25,negotiable,2
+50c279ef-7d57-463d-831e-403a224eecb6,415bc8cf-1b85-428d-9468-c0fa4a755504,Design Designer,923.51,fixed,0
+28e7c8dc-a5bf-45e5-bff0-dc56e1df7476,415bc8cf-1b85-428d-9468-c0fa4a755504,Design Designer,2849.4,fixed,1
+06358142-333e-40fb-9aa6-fe39c2b12bdc,415bc8cf-1b85-428d-9468-c0fa4a755504,Design Designer,1436.98,fixed,2
+8e8eff32-ac29-478a-8c89-a24145d8f04b,da28195e-4002-417a-a43f-44335d387f42,Mobile Engineer,1452.74,fixed,0
+ba20fa38-e7be-4128-8870-224ee97bfe02,1d2e094b-c180-412f-8ae9-003ce9e5edf8,Mobile Engineer,4605.47,negotiable,0
+810c3f92-d9b8-46bc-8dd1-a2c375a3955b,605afe8b-1251-4e59-83ae-29883c460681,Mobile Engineer,900.25,negotiable,0
+3ea66005-893f-44df-bdd6-0da84bfa3653,605afe8b-1251-4e59-83ae-29883c460681,Mobile Engineer,3317.49,fixed,1
+958d0401-7b27-4cce-a667-3ba29a859d35,605afe8b-1251-4e59-83ae-29883c460681,Mobile Engineer,2762.98,negotiable,2
+b9b9bbf0-1362-4ac1-adf2-e050e415c520,ceff0b90-dd2e-4fda-b930-410a4e317537,Mobile Engineer,703.81,negotiable,0
+1d64077e-0d26-4212-a1a2-c214a2152656,ceff0b90-dd2e-4fda-b930-410a4e317537,Mobile Engineer,3066.04,fixed,1
+3e62f9be-b046-4ce6-9190-783923a15839,ceff0b90-dd2e-4fda-b930-410a4e317537,Mobile Engineer,5644.97,fixed,2
+1dfbdb27-9a19-4529-aaab-d7fa311b5fb9,cabeff25-a2dd-411e-90c5-a43043279231,Backend Engineer,1186.37,negotiable,0
+4e6657e2-b806-42ee-b4f2-f60e1ff5abb9,2d609776-af4d-4753-8d5e-f37d6e39edf1,Fullstack Engineer,3678.28,fixed,0
+5430ce4b-8746-4568-bd13-ba82d3de5edd,6599ca27-af9d-4cf9-a244-d05f7d0dbac4,Blockchain Engineer,1757.95,negotiable,0
+07078a4b-ed5c-4883-8e66-5d889a558ab4,6599ca27-af9d-4cf9-a244-d05f7d0dbac4,Blockchain Engineer,13535.05,negotiable,1
+317bfcf0-6f02-4a11-858d-0ca841b20fa2,1af423b9-9a51-49b6-a398-35434dd31934,Fullstack Engineer,5021.95,fixed,0
+c1655c63-11d7-4fb0-b1de-2be61237724a,62db5fae-34ed-4556-9251-7004d04afc73,Design Designer,2714.17,negotiable,0
+d7a7d1c1-7a77-456d-894c-95c160bd43a7,1f918da2-81ce-4cdb-9ac1-f926f3870375,Backend Engineer,4304.19,fixed,0
+509a282c-42a5-430b-8d38-50ac5b29f361,af01ba71-2861-49fc-96d2-4b8dd2daa3b1,Backend Engineer,1906.97,negotiable,0
+7bd31c23-18e2-464e-a064-6f2c325cca61,78eafcf9-f3a2-4161-af44-1bffd36e4fa7,Blockchain Engineer,10698.23,negotiable,0
+2583a33d-aa1f-4b6c-8a4f-1f79633e6665,54204e55-5459-49b3-9a5f-38fc46780add,Frontend Engineer,3010.91,fixed,0
+749f93b2-2d00-449d-a7c6-c3ca0eac1953,c264e262-8199-4bf4-ba82-77c395232d40,Frontend Engineer,3877.48,negotiable,0
+88d536c1-42f6-4c10-863d-640a2637b677,c264e262-8199-4bf4-ba82-77c395232d40,Frontend Engineer,1536.06,negotiable,1
+a92f58e1-8836-44e0-8708-ae973279c8bd,d4e5643a-1e1a-4005-a19f-925e0b0c8118,Blockchain Engineer,2571.64,negotiable,0
+759bc59a-bef8-419e-bd12-467adf7e862a,d4e5643a-1e1a-4005-a19f-925e0b0c8118,Blockchain Engineer,1248.4,fixed,1
+a8d4deb8-6a3d-439b-b74e-6a7fe1d7b707,d4e5643a-1e1a-4005-a19f-925e0b0c8118,Blockchain Engineer,11761.05,negotiable,2
+72ba5208-f5c5-43eb-a0a2-e74f647a6950,bf777d61-b2c3-4a16-974f-77ad8a1aa9d2,Devops Engineer,4862.95,negotiable,0
+b382ffe4-5d0a-4ff8-87b4-1ca0cd4e29da,bf777d61-b2c3-4a16-974f-77ad8a1aa9d2,Devops Engineer,7052.46,negotiable,1
+fd68c79b-1206-4616-9a2a-f687af9a224f,bd13bffd-86ad-4531-bc07-b387f2bc5284,Design Designer,1660.21,negotiable,0
+a79bb055-e96b-4c5b-b24d-1abd63017d6a,385f1193-f97d-40b1-a2dc-bd289761058b,Devops Engineer,4233.09,fixed,0
+3cb0fe41-cbaf-4559-8d89-e31465acb21c,385f1193-f97d-40b1-a2dc-bd289761058b,Devops Engineer,3525.4,negotiable,1
+4a67ce24-e746-4f36-9e52-2710a0bd6d84,385f1193-f97d-40b1-a2dc-bd289761058b,Devops Engineer,2838.83,negotiable,2
+26cc3269-b79b-4f80-a924-c7431d700664,2126ed72-8c9b-4e5e-ac0b-d6b58bac50e3,Design Designer,456.07,negotiable,0
+eea3d644-4d61-4692-abfa-71330e13081b,2126ed72-8c9b-4e5e-ac0b-d6b58bac50e3,Design Designer,2003.96,fixed,1
+3e9698fa-0a0e-466c-a6d2-0f68f3275f91,2126ed72-8c9b-4e5e-ac0b-d6b58bac50e3,Design Designer,335.61,negotiable,2
+90d7306a-0556-4dd4-9431-7f90e749ae31,945952b8-ed28-41fb-9530-d943c79812ff,Backend Engineer,1882.46,fixed,0
+f9344e43-8f7f-4521-bf0e-ea31b5d73c2a,945952b8-ed28-41fb-9530-d943c79812ff,Backend Engineer,1913.41,negotiable,1
+1e67fe59-eb6a-44cc-bad9-2d906b42d43c,945952b8-ed28-41fb-9530-d943c79812ff,Backend Engineer,948.99,negotiable,2
+0692fb1f-19ee-4e2b-8e62-6132eaefe994,f67662ec-0e8e-4333-8bb6-b91f0d2fb903,Backend Engineer,4534.88,negotiable,0
+82cd13a1-d03d-4239-9d98-001533c8127d,92cfe771-0a9d-4355-9dd4-64c80a3bd8b7,Design Designer,2530.38,fixed,0
+22cefb1b-cdf4-4aa8-b33a-7806ebd010f4,9cf81edc-20d0-415a-a5f6-73bb615fafbf,Devops Engineer,6918.57,fixed,0
+637b3751-971d-4dd5-be0a-8cd0e7b9c10e,68c6e1c5-a1bf-428f-a6bb-bb62ff5f7c2e,Backend Engineer,1132.41,negotiable,0
+a3aeb2b1-945a-4afa-ae16-5ae88e75da8b,68c6e1c5-a1bf-428f-a6bb-bb62ff5f7c2e,Backend Engineer,1151.36,negotiable,1
+332a0141-69e6-4942-9158-8384ce1606be,02303573-0e8f-4dc0-862a-c980937b2226,Mobile Engineer,824.38,fixed,0
+f3b8e0bb-21bb-4a84-8abc-e44d85f93dd1,02303573-0e8f-4dc0-862a-c980937b2226,Mobile Engineer,5568.47,fixed,1
+deff3af8-5793-4765-bfaa-9a4ed4d077d5,53306c1e-538e-4e6f-bcf3-b572d622496d,Backend Engineer,1058.63,fixed,0
+3c6a5311-c4d9-4b9f-b5a3-b4f1f1638fa5,53306c1e-538e-4e6f-bcf3-b572d622496d,Backend Engineer,3020.9,fixed,1
+7d9af36e-55bc-44f9-a52a-8d9870db5c50,53306c1e-538e-4e6f-bcf3-b572d622496d,Backend Engineer,1764.07,fixed,2
+80b35f5a-a2ad-483f-bb91-230b1588266a,90cccf57-5223-4590-8f2f-5323ad085ff1,Frontend Engineer,879.32,fixed,0
+e96b2d43-ba69-4073-b5be-2eba36e38be7,d7711f95-0348-4111-8d98-d73b4c740b49,Devops Engineer,4063.29,negotiable,0
+59050792-e28f-410f-9278-7d3138359630,d7711f95-0348-4111-8d98-d73b4c740b49,Devops Engineer,2691.27,negotiable,1
+48895ed3-843e-4880-863c-05a67c85b18d,5dd07a81-7491-44d6-8251-0fb9a2bdefb7,Ml Ai Engineer,2933.15,negotiable,0
+cf84c13e-c077-41df-8f50-83818de8d939,e9821856-9a4b-4679-aed3-e112aeb715fb,Mobile Engineer,5836.22,negotiable,0
+931ffdae-28f6-495e-acf0-9d6b38200a77,e9821856-9a4b-4679-aed3-e112aeb715fb,Mobile Engineer,5100.66,fixed,1
+92a29f32-f009-42d6-bca3-c607fb915bbe,e9821856-9a4b-4679-aed3-e112aeb715fb,Mobile Engineer,5677.64,fixed,2
+18bdb022-f73b-44de-ba47-93366b15bddc,a0718c03-6b68-4cc2-831e-ce1b39d0fa8b,Design Designer,401.12,negotiable,0
+3b076d1c-1c72-4c59-b2e3-e17488b2f4ab,a0718c03-6b68-4cc2-831e-ce1b39d0fa8b,Design Designer,1552.47,negotiable,1
+6b4ff948-211d-44a9-a6bd-3368c66e2b46,93f5c3fd-119d-4977-bb0b-bda99171e0d8,Devops Engineer,6545.11,fixed,0
+a35e4669-4e87-47e0-9293-261995a800b4,93f5c3fd-119d-4977-bb0b-bda99171e0d8,Devops Engineer,5507.66,negotiable,1
+cf4d49fa-b206-4069-97e9-b7226547fd8c,6e53e79c-f6bc-44dd-99cf-01aa5e456a53,Frontend Engineer,3107.89,fixed,0
+7f22f467-8caa-475f-a696-c8de964c5907,6e53e79c-f6bc-44dd-99cf-01aa5e456a53,Frontend Engineer,929.82,fixed,1
+ec47fadc-468c-4d3e-ac72-5bedfd03f596,6e53e79c-f6bc-44dd-99cf-01aa5e456a53,Frontend Engineer,1333.47,fixed,2
+fb404c43-21e2-4b6e-a62f-499f2e0a6cd1,44fd54a1-6fa3-42b4-a145-a7ab507c743c,Design Designer,1596.12,fixed,0
+f4a64f4f-8714-4fad-b034-d9e60a78b043,b24ebf3c-fabd-4e8c-b743-7f1f62a8b319,Backend Engineer,1464.99,negotiable,0
+95a462e1-a5df-44d2-9a34-bbf901b78949,b24ebf3c-fabd-4e8c-b743-7f1f62a8b319,Backend Engineer,966.95,negotiable,1
+09214022-f870-43f1-8c8d-bdeea99e4f33,0cb34d83-f3c8-4e61-9d8b-712e58809572,Mobile Engineer,5836.64,fixed,0
+923b8e4e-c345-448d-ae5b-18231a90f5d2,0cb34d83-f3c8-4e61-9d8b-712e58809572,Mobile Engineer,4387.0,fixed,1
+b708b808-9580-4a34-90d2-272f093eab85,cf7ca1bf-fc63-42a9-a958-14790bac65fb,Backend Engineer,2581.28,fixed,0
+f806fae3-e113-4546-b601-5978254d983e,cf7ca1bf-fc63-42a9-a958-14790bac65fb,Backend Engineer,610.24,fixed,1
+8f74589d-89d1-4d14-9997-0f725c10c5e8,572ab600-e5b1-4411-9f78-f4682dbe3a74,Backend Engineer,1974.46,negotiable,0
+ba71b989-1537-4678-aa73-017bd87e9f7a,572ab600-e5b1-4411-9f78-f4682dbe3a74,Backend Engineer,3630.25,fixed,1
+160b77c9-594e-4792-bb7d-3e70d0230aeb,572ab600-e5b1-4411-9f78-f4682dbe3a74,Backend Engineer,1981.7,fixed,2
+499c1477-ba56-489b-a6dd-71421ff46cf3,61a68135-5265-4a33-92bc-f13781e05ff0,Backend Engineer,4307.4,negotiable,0
+6bffe65b-84a3-404a-ab2f-cdf6d198f32a,68acb79a-9516-48ea-9f6c-6d93973a1ae5,Mobile Engineer,5209.95,negotiable,0
+985fd7ae-0abb-4843-b60c-de4ed1a449b3,68acb79a-9516-48ea-9f6c-6d93973a1ae5,Mobile Engineer,4238.81,fixed,1
+cf885993-a763-4bf2-86b9-b61525e13102,68acb79a-9516-48ea-9f6c-6d93973a1ae5,Mobile Engineer,4251.85,negotiable,2
+15aafc43-72c1-48ee-b4db-d811165c0ea1,820f077d-434e-4291-8ad9-b375b3279ec2,Frontend Engineer,3077.42,negotiable,0
+9bb9d3df-22ce-4a5c-ac74-62f40d4a1ecb,910902e3-9456-4d90-b3a7-153b7b9b8e3e,Devops Engineer,2518.9,fixed,0
+627b77a5-a26e-47c1-bafe-363675c14ca1,910902e3-9456-4d90-b3a7-153b7b9b8e3e,Devops Engineer,2772.19,fixed,1
+dd813bdc-2bd0-4a31-b789-7fe5c1028a33,910902e3-9456-4d90-b3a7-153b7b9b8e3e,Devops Engineer,1807.37,fixed,2
+377273f0-080e-4a39-bbf3-706b48c33f42,219691ac-fd88-4946-8a06-676bf9d533fb,Design Designer,1419.08,negotiable,0
+14554fb3-1ff6-4aff-8b11-016c85054140,219691ac-fd88-4946-8a06-676bf9d533fb,Design Designer,2463.87,negotiable,1
+f7c6f491-0beb-42c3-8ec7-19d80652d554,219691ac-fd88-4946-8a06-676bf9d533fb,Design Designer,896.12,negotiable,2
+1c410545-173d-4354-93e0-79ed0a32e583,7b94180a-6d67-49d8-b5cf-92cd3649e57e,Design Designer,2699.7,negotiable,0
+1e3878eb-f566-44e3-b18d-3a2a10238062,7b94180a-6d67-49d8-b5cf-92cd3649e57e,Design Designer,2157.86,fixed,1
+a85072ca-e845-44c7-a4eb-0f7dfe80b983,7b94180a-6d67-49d8-b5cf-92cd3649e57e,Design Designer,1413.63,negotiable,2
+51d2764d-f6ff-4a98-b42a-7d5f9052b942,fbc66e3d-2d01-4c09-a69f-891ab9a2880e,Design Designer,1529.51,fixed,0
+e8a15325-8c75-4549-8d15-fa2141182d93,fbc66e3d-2d01-4c09-a69f-891ab9a2880e,Design Designer,1027.47,fixed,1
+5285ad9f-5e44-4816-ba6c-a347cacf5e3f,fbc66e3d-2d01-4c09-a69f-891ab9a2880e,Design Designer,889.73,negotiable,2
+810cfad2-0876-40b4-9c79-f8184a259ef0,4b76486c-e013-4b1e-a7d9-52ef6ff6709e,Fullstack Engineer,2297.56,fixed,0
+e6b222fb-63a3-4d91-b46b-99969212960f,9e8a68fe-189f-45e5-9182-3a0bfc3a10dc,Backend Engineer,1637.36,fixed,0
+d1d88b9c-ff56-4efb-8899-35c35e5e0075,9e8a68fe-189f-45e5-9182-3a0bfc3a10dc,Backend Engineer,3365.05,fixed,1
+3c94e2a0-f9a6-43fa-9d7e-d266af0158eb,9e8a68fe-189f-45e5-9182-3a0bfc3a10dc,Backend Engineer,1327.51,negotiable,2
+f08d0e2c-f6a5-4878-b85a-e68d2e419900,8eb14726-e83e-4f8f-80b7-ed317d1fb074,Fullstack Engineer,5958.58,negotiable,0
+5ee1e3cc-ce62-4059-bda1-5fe070178012,8eb14726-e83e-4f8f-80b7-ed317d1fb074,Fullstack Engineer,5297.88,negotiable,1
+c4978ccb-cd16-48d5-b0ae-3fb62e806b18,8eb14726-e83e-4f8f-80b7-ed317d1fb074,Fullstack Engineer,4495.53,negotiable,2
+6bf789b4-b816-4846-b34c-62653e7dc618,8e5fff07-d600-4bed-a629-119cbfe7aeef,Mobile Engineer,1327.06,fixed,0
+1281fba9-f007-433e-b3c0-15e10809dd34,8e5fff07-d600-4bed-a629-119cbfe7aeef,Mobile Engineer,4287.14,negotiable,1
+83dba4ef-a038-43cf-bbba-afc8ecadf162,52cba205-f6fe-41b6-8eba-91224182a0cf,Frontend Engineer,713.87,negotiable,0
+8266a380-d110-45a9-a606-e37284f36ed4,52cba205-f6fe-41b6-8eba-91224182a0cf,Frontend Engineer,1063.46,fixed,1
+aef0c9e5-4a9e-4819-af43-d65ce4d60b84,52cba205-f6fe-41b6-8eba-91224182a0cf,Frontend Engineer,1741.28,negotiable,2
+6fd35656-fabb-4b87-85a7-ac535bf2c605,5de45daf-abb2-4a89-b082-8f24a2a4abc1,Backend Engineer,3110.48,negotiable,0
+2aea1695-69ba-4b78-927b-cbf0536d2f3f,a1f81391-3464-4e07-9fe9-d171b46d01ae,Ml Ai Engineer,6887.77,negotiable,0
+a2f7ffe3-0ef9-4d99-98bf-7555ceeb4b31,a1330631-e1f6-4023-bf27-555f8e3cc380,Design Designer,2441.59,fixed,0
+88dc3431-cb20-4448-89a3-2dcc63fb6dac,a1330631-e1f6-4023-bf27-555f8e3cc380,Design Designer,2787.33,fixed,1
+7a88d420-a800-40f7-8fb7-e1055cbaee3c,a1330631-e1f6-4023-bf27-555f8e3cc380,Design Designer,534.74,negotiable,2
+e6a66740-0041-43b2-ade5-f464375189fc,1b0a1974-ea2a-4720-8290-2aab96b8253f,Blockchain Engineer,14764.44,negotiable,0
+bf5ef4c7-436d-4f4b-a2d4-92b784076d23,5b2414e2-e845-45f4-b8ce-0d12b068f7f7,Blockchain Engineer,12575.44,fixed,0
+124896e2-f29e-4b8f-a7e2-85992a2e27ab,5b2414e2-e845-45f4-b8ce-0d12b068f7f7,Blockchain Engineer,1632.74,negotiable,1
+56e3877b-5b0c-44ae-8433-93f45e107832,150c49d5-2384-488d-9821-d42fb8b52124,Mobile Engineer,2987.62,negotiable,0
+8f252486-c31b-42ec-ac70-b4f10db78ea7,db6fb8f3-4691-42c7-9722-268ace4b3da5,Frontend Engineer,1045.24,negotiable,0
+81e419ae-2aa8-438f-a77a-3abe615c5f24,9665b68f-2659-4d38-ad45-370fe09cbc39,Ml Ai Engineer,6199.9,fixed,0
+f0fe7348-1ea4-43e7-9bf8-d78faa97560f,9665b68f-2659-4d38-ad45-370fe09cbc39,Ml Ai Engineer,7664.26,fixed,1
+3097a035-3850-4610-9c6f-e1f7a2054d32,9665b68f-2659-4d38-ad45-370fe09cbc39,Ml Ai Engineer,2901.19,negotiable,2
+9c191eae-87c4-4825-a1be-560c941e6c7e,66663016-94ef-4287-b566-42b7f40aabdb,Blockchain Engineer,1119.74,fixed,0
+b4c098f7-66cb-4866-af16-91d1a236643b,66663016-94ef-4287-b566-42b7f40aabdb,Blockchain Engineer,10575.87,negotiable,1
+a90837cc-8494-4924-b190-0eaa5c3de70e,66663016-94ef-4287-b566-42b7f40aabdb,Blockchain Engineer,2896.13,negotiable,2
+ba547f4b-c753-4a99-8800-41bc8aae1be4,ed03eb62-f352-4366-9282-5838371e1816,Devops Engineer,7421.14,fixed,0
+247338c2-0fb2-40eb-b363-23c8b9a0a570,ed03eb62-f352-4366-9282-5838371e1816,Devops Engineer,4445.23,negotiable,1
+4ee7de5e-99e2-4201-9551-80becb92ac5f,ed03eb62-f352-4366-9282-5838371e1816,Devops Engineer,4588.98,fixed,2
+ff4f40be-ce1d-4887-bd22-ef89099457ca,656b6083-fdff-4e99-838c-6429f3e82c90,Blockchain Engineer,14402.22,fixed,0
+4f2f2896-dccc-44a5-93fd-8f8eb59f183f,656b6083-fdff-4e99-838c-6429f3e82c90,Blockchain Engineer,9174.15,fixed,1
+f5dcee15-73a0-4ddc-888f-7a3950b17c4e,af52abd1-04ed-4062-950d-9629736d6ff8,Mobile Engineer,1301.44,negotiable,0
+16fa9e5a-b99c-4975-94ea-f66414e8ffcf,af52abd1-04ed-4062-950d-9629736d6ff8,Mobile Engineer,4730.89,fixed,1
+854776b9-d799-482d-8f6f-5323ad077d5f,1f9609e2-2279-48fd-b7c5-0b552c3bdeb6,Ml Ai Engineer,2695.37,fixed,0
+2e72dad9-c424-49ed-88f1-9cb178b4eb43,cb87939a-8a0e-4ec2-b04c-f218d40aa72b,Ml Ai Engineer,4212.41,negotiable,0
+c9cf91b4-83a7-4a35-9b5b-4cb3d07e009c,cb87939a-8a0e-4ec2-b04c-f218d40aa72b,Ml Ai Engineer,4699.66,negotiable,1
+323347db-7cc2-4b0a-bcef-1bccb6ae7c17,cb87939a-8a0e-4ec2-b04c-f218d40aa72b,Ml Ai Engineer,8193.89,negotiable,2
+73eff272-20ff-4113-8f40-83205a8f622a,7f9004f7-4db3-45c8-a058-98da4c29062d,Blockchain Engineer,11289.2,fixed,0
+cfa97364-581d-4f1f-9711-cd6cac7a0cb4,7f9004f7-4db3-45c8-a058-98da4c29062d,Blockchain Engineer,5144.55,negotiable,1
+c58c4310-604d-4106-aea4-9afc9fe3e1cd,a36a64b4-9e12-4380-a6b5-f71aae4c9e00,Design Designer,2205.37,negotiable,0
+f63e11ea-34ba-422f-b6fc-61f77070e918,605d7aec-8cea-4fd1-b170-7d0ef99eb8e2,Mobile Engineer,3713.42,fixed,0
+c2335a90-9107-4170-ae40-2dac49c92d7e,7544faa0-3012-4903-a9f7-b59cfe727ac5,Mobile Engineer,5719.42,negotiable,0
+d1c46781-12ac-47dc-8c26-9b901bba48ca,0e7ffa0c-b98e-4c25-90ee-f0d053c6b646,Backend Engineer,968.83,fixed,0
+1de24b89-961a-40da-98e6-020dae236df7,0e7ffa0c-b98e-4c25-90ee-f0d053c6b646,Backend Engineer,1432.43,fixed,1
+da636f1e-c638-41a9-8e7e-d18dd38f618b,2848f906-0e1c-436c-86e3-e9b9dd0a49ef,Frontend Engineer,1179.38,fixed,0
+206d689b-3885-46f0-9463-84c63fa68579,2848f906-0e1c-436c-86e3-e9b9dd0a49ef,Frontend Engineer,2438.57,negotiable,1
+74f42ed1-6ca4-4984-8604-eb9e6d3e2144,2848f906-0e1c-436c-86e3-e9b9dd0a49ef,Frontend Engineer,392.09,fixed,2
+64ac35e1-c5e0-4b30-a4db-a2d6acd19689,ad96489c-89c5-4e0d-bf89-b0c49f44b127,Fullstack Engineer,2814.04,negotiable,0
+146491da-f089-40db-9f08-44857e1e777c,ad96489c-89c5-4e0d-bf89-b0c49f44b127,Fullstack Engineer,7212.78,fixed,1
+1dfdfd3d-0c27-4d88-b446-39a9bca60ba6,ad96489c-89c5-4e0d-bf89-b0c49f44b127,Fullstack Engineer,1943.21,fixed,2
+f5e39037-2105-4fbf-97f6-eb497f3b1f9e,334f72cc-f014-4697-a889-55a2a5ae861c,Devops Engineer,4335.7,fixed,0
+9c1c9937-cab9-4e48-81b0-6b89bf16eeb2,334f72cc-f014-4697-a889-55a2a5ae861c,Devops Engineer,5802.38,negotiable,1
+a2c8f81d-4d62-47a0-a679-ef2d53fb8fdc,77a8aa7a-9e55-408a-912c-f020757dac71,Ml Ai Engineer,7291.67,negotiable,0
+ede86211-238c-48bd-96f6-ad188b8ac69c,77a8aa7a-9e55-408a-912c-f020757dac71,Ml Ai Engineer,9946.07,fixed,1
+69afb2cf-1199-4de5-9b51-91cfd30bc7b2,77a8aa7a-9e55-408a-912c-f020757dac71,Ml Ai Engineer,4589.97,fixed,2
+33d5a580-b884-46b2-8931-64c1428e1f8c,5416e63d-2e5a-4094-85d6-7904c026719d,Blockchain Engineer,10036.63,negotiable,0
+dc1a3ef8-5d09-4a5e-af9b-5b2435748105,75ee2107-5fef-4c5d-bfc8-66f8e938faf5,Frontend Engineer,3886.83,negotiable,0
+3f175a28-1f1c-4511-86df-8203246e2b3b,75ee2107-5fef-4c5d-bfc8-66f8e938faf5,Frontend Engineer,3115.59,negotiable,1
+45f75092-d5cb-460a-96a6-67c471e58b30,21ae78c3-ca73-4a18-864c-aaf133751419,Design Designer,528.8,fixed,0
+a320b027-acf1-45a4-bdcb-d2c6fabf2a88,d57003e2-e459-44b5-a87a-23d7106b3697,Blockchain Engineer,7542.75,fixed,0
+c8d57c7a-7de3-4392-b8e2-e79bcdeec016,d57003e2-e459-44b5-a87a-23d7106b3697,Blockchain Engineer,4989.74,fixed,1
+50d8456e-c93b-4258-8d4f-a7d7f14bd31c,6332acfc-2fb8-4cb7-8769-33b5c70c3b5f,Ml Ai Engineer,1314.89,fixed,0
+9d4093c7-984c-4693-9764-7f6c68940de3,7cb4d554-0aea-496d-b987-b8b9c8bf925d,Frontend Engineer,1677.23,fixed,0
+3b5f3b77-a6a9-40ea-9910-6d1bc578712d,e54d0916-1092-4ab1-aa2f-0839ce879723,Mobile Engineer,1529.6,negotiable,0
+283b654c-fa51-43da-b21f-334f79505715,e54d0916-1092-4ab1-aa2f-0839ce879723,Mobile Engineer,3813.02,negotiable,1
+0a3652b8-8ec7-4d0b-a749-f245589643f1,e54d0916-1092-4ab1-aa2f-0839ce879723,Mobile Engineer,903.24,fixed,2
+bd6136cc-435a-4419-b4ae-7d3e10a6130c,3aaaec21-f018-4ff2-8ee0-3ccadf6b8747,Design Designer,2371.85,negotiable,0
+5f176454-cab2-4823-ac68-557c8453dc49,3aaaec21-f018-4ff2-8ee0-3ccadf6b8747,Design Designer,1640.29,fixed,1
+444eda56-aef5-4555-8174-4c8f7f092ed5,3aaaec21-f018-4ff2-8ee0-3ccadf6b8747,Design Designer,1036.75,fixed,2
+295b3ce9-1448-4d7e-96df-e10d55f1de14,560d11aa-8493-45c0-9b0b-c5a1f04d29e5,Design Designer,1859.41,negotiable,0
+ed1d1f41-39b4-43c9-bfb1-a202e81c3094,560d11aa-8493-45c0-9b0b-c5a1f04d29e5,Design Designer,1156.81,negotiable,1
+7053f694-6e1f-46e7-9ba1-56a7205e5e42,560d11aa-8493-45c0-9b0b-c5a1f04d29e5,Design Designer,2166.98,fixed,2
+64bdd1a9-6da0-4283-9df2-6e024874e656,7d04dbc1-1745-432e-a818-89636c41f1a0,Fullstack Engineer,5595.26,fixed,0
+6866e811-2bf9-4d99-aa04-267fe0baf3d9,7d04dbc1-1745-432e-a818-89636c41f1a0,Fullstack Engineer,7170.2,fixed,1
+536b2659-68ce-4cdb-aa45-9c5658c72047,7d04dbc1-1745-432e-a818-89636c41f1a0,Fullstack Engineer,3211.61,negotiable,2
+50e7bec0-323a-4b64-9836-983ffcb5e404,c6105f02-31cb-4c77-8ba4-10598fc39ed1,Frontend Engineer,2552.75,negotiable,0
+04a8faf2-6d4b-4f65-8af0-94678736c206,c6105f02-31cb-4c77-8ba4-10598fc39ed1,Frontend Engineer,2967.92,negotiable,1
+93972429-b286-4ff5-a956-f5404d4d10e4,5bc88699-a06c-4483-b159-9088b9ad08fd,Design Designer,2546.89,fixed,0
+2812dd22-10ef-426d-bf14-659111acc8ff,5bc88699-a06c-4483-b159-9088b9ad08fd,Design Designer,1052.71,negotiable,1
+0b5fa207-2562-424e-94b2-408ea58afc94,5bc88699-a06c-4483-b159-9088b9ad08fd,Design Designer,2778.78,fixed,2
+0536d6ef-dc3b-4dfc-9826-8ed783bbe6a7,688ac05f-dc23-45a5-b8a2-81263357e30d,Frontend Engineer,2208.95,fixed,0
+bb1e01b9-b0e9-4539-8000-550a1879f6b7,694a5f2c-b03b-45b4-b418-60250a056b5d,Devops Engineer,7864.56,negotiable,0
+720d9475-1079-46c4-802f-6357efbe8495,5257cba0-2cae-4135-adb7-91480cc980d5,Devops Engineer,7768.16,fixed,0
+77f726cc-005c-44d9-a301-41755b3d7985,5257cba0-2cae-4135-adb7-91480cc980d5,Devops Engineer,2586.15,fixed,1
+7b9686c7-eacb-4b52-a501-ec82b02fabe3,6c69feab-92bd-47e4-9a2f-a38b10f4c94f,Design Designer,866.21,fixed,0
+0676942a-447c-4d1e-a325-636fabc314ce,2650b3e6-0940-4bcf-825b-4780a688a66f,Design Designer,1194.59,negotiable,0
+ed1aee9b-10eb-4bf4-bb48-94e39cc6d1f9,2650b3e6-0940-4bcf-825b-4780a688a66f,Design Designer,746.17,fixed,1
+f465ec5f-7307-4946-ab83-3523d23d21df,2650b3e6-0940-4bcf-825b-4780a688a66f,Design Designer,2760.6,negotiable,2
+a7b2077c-e9d8-459a-b3d1-c61f697fc243,4526d2e0-4d24-4f56-9494-dbd1aaaf5609,Backend Engineer,4278.81,fixed,0
+9c974526-8b29-4164-9165-bdbb0dcf240e,078e2f22-90c7-4ec4-9269-30dfaee8334f,Devops Engineer,4259.82,negotiable,0
+3af019eb-40d5-4574-b8a7-cd29a69f5e10,078e2f22-90c7-4ec4-9269-30dfaee8334f,Devops Engineer,4192.63,negotiable,1
+c1ba95fb-9fc4-4ba6-8e00-ce4ff015e6b8,078e2f22-90c7-4ec4-9269-30dfaee8334f,Devops Engineer,3950.95,fixed,2
+94453407-f0c7-40e3-9597-b1e5f762c41e,8f4f8910-8689-4046-bde4-89c75dc272e9,Design Designer,768.41,fixed,0
+025f0f14-b83a-4cef-a261-5c53860e37a1,8f4f8910-8689-4046-bde4-89c75dc272e9,Design Designer,1217.07,negotiable,1
+e9ebd9e0-cb7e-495c-a4ff-5cdedd254b4b,84e36c0a-2a4c-4e0a-856c-a6e11313ee79,Fullstack Engineer,3047.64,fixed,0
+8710521c-d17d-4d07-aa9c-a2d31ae46b9b,d99f5cae-fa9b-47f2-9af6-a7b7bcda6e84,Mobile Engineer,1163.01,negotiable,0
+dcb21673-d8bd-42ba-95dd-b8c0118e079d,d99f5cae-fa9b-47f2-9af6-a7b7bcda6e84,Mobile Engineer,3449.27,negotiable,1
+658501eb-b4c8-4007-a5af-ad48165486b4,3c1a98b5-8c0e-4ec5-8de5-4572545966c7,Fullstack Engineer,5136.47,negotiable,0
+069f05fd-3a05-42f3-9145-0fe7ef1de676,3c1a98b5-8c0e-4ec5-8de5-4572545966c7,Fullstack Engineer,2521.89,negotiable,1
+9070b9e6-2539-43cc-ad28-fa61d01c576e,3c1a98b5-8c0e-4ec5-8de5-4572545966c7,Fullstack Engineer,4314.97,fixed,2
+2713d59f-ee33-45b3-a8a7-091e2344ee08,8f3a214f-84bb-4ec2-b465-729a19de427b,Frontend Engineer,831.99,fixed,0
+612c3a72-4e0b-410e-a759-2ecf2768bdb5,8f3a214f-84bb-4ec2-b465-729a19de427b,Frontend Engineer,2301.1,fixed,1
+8debd136-9113-4a50-91de-e49a0e7b937f,c33e0aea-06ad-4a23-99db-c65c15adf491,Blockchain Engineer,2810.21,negotiable,0
+a86b1e95-b75e-460c-9b08-e21cd3aa1d1e,4b82326a-c1b1-4cdb-ab9d-62edaa915270,Design Designer,1834.53,negotiable,0
+7a52c94f-b35e-439f-b1d8-b3b6b9aad469,4b82326a-c1b1-4cdb-ab9d-62edaa915270,Design Designer,2158.49,negotiable,1
+625681f9-73a3-4deb-ba47-1202a73bf9e1,7ae3edf8-9a86-49ac-b719-95066896f8b9,Ml Ai Engineer,4104.77,fixed,0
+9a870531-0a91-43f3-9fa6-3b403a64669a,7ae3edf8-9a86-49ac-b719-95066896f8b9,Ml Ai Engineer,7973.58,fixed,1
+5ac7b82b-d7cc-4c43-aeca-96dd4e5da192,7ae3edf8-9a86-49ac-b719-95066896f8b9,Ml Ai Engineer,5422.83,negotiable,2
+bf2baa93-3943-4bde-8b1d-f3f37f3dbff8,d5244322-b5fb-4a32-807b-f55db3390c74,Blockchain Engineer,12515.48,negotiable,0
+6907de2e-70d2-4859-a2c6-6247436922e6,2e3ec1f9-9267-4cc9-8b7c-14a7a3027549,Ml Ai Engineer,6244.75,negotiable,0
+4561fb33-965a-4a64-ab41-395608032cb3,6255e793-1f25-4f3c-bf1e-44275477997c,Fullstack Engineer,5972.7,fixed,0
+ed79402b-b867-483b-a085-2cf30a084e6d,6255e793-1f25-4f3c-bf1e-44275477997c,Fullstack Engineer,1437.49,fixed,1
+134ba787-23b8-4960-b513-e35c7d11e4d9,34fcce90-b032-4fe9-a8b3-663fdc230436,Frontend Engineer,3041.75,fixed,0
+483c5b2b-743c-475c-a3be-fd5a5a961b8b,34fcce90-b032-4fe9-a8b3-663fdc230436,Frontend Engineer,1093.05,negotiable,1
+21ddc231-fe8c-4044-a5fc-82decc3c4ba9,02d6d9e8-67d7-46ae-ac30-69d1ac64685e,Blockchain Engineer,1362.88,fixed,0
+bc4f1be6-ea38-44c4-9ad8-05a66f861faf,b6011f5a-9161-40e4-a0c1-a3c51b6b31c9,Frontend Engineer,2373.79,fixed,0
+1b363832-3eba-40c0-b53b-2e86135adfc2,b6011f5a-9161-40e4-a0c1-a3c51b6b31c9,Frontend Engineer,1417.47,negotiable,1
+3fc33054-f4c2-4b62-bb0e-5a0b48fc08fd,3f0fdfb7-818c-4c14-851f-ca5c681ebe24,Backend Engineer,2266.5,fixed,0
+8c00d2db-1da0-4bd2-a1a1-766a1095825f,3f0fdfb7-818c-4c14-851f-ca5c681ebe24,Backend Engineer,3921.69,negotiable,1
+023966fd-bfb4-4163-bf68-44556b5317c4,9c4a04cd-3791-43e8-a09e-5dc5d1143874,Backend Engineer,915.09,fixed,0
+a0375218-67a0-4468-a73d-16bf504166d7,9c4a04cd-3791-43e8-a09e-5dc5d1143874,Backend Engineer,3749.8,fixed,1
+7f8aefe8-a0b5-400f-9087-6de9f234674c,9c4a04cd-3791-43e8-a09e-5dc5d1143874,Backend Engineer,2434.36,negotiable,2
+e2ca9e32-bdc2-4234-90ea-e911bf3ddd3c,97b60160-3085-400f-a44d-308e3f2179d3,Backend Engineer,1190.73,negotiable,0
+2b85ed73-cbc6-459f-b428-7f022a9da9b6,97b60160-3085-400f-a44d-308e3f2179d3,Backend Engineer,4258.62,negotiable,1
+0140fedc-7b0f-4fce-91d1-e30d8e6f9d0b,97b60160-3085-400f-a44d-308e3f2179d3,Backend Engineer,4793.48,negotiable,2
+b15055ad-b4a2-4bbe-847b-7755c105f40a,e4abc2d2-1ca9-4a17-80d0-3ea70b3b8f05,Design Designer,1372.48,fixed,0
+ac1a6bbd-d1cb-497d-ab0b-a2e03ea83a6e,e4abc2d2-1ca9-4a17-80d0-3ea70b3b8f05,Design Designer,379.05,fixed,1
+7f448f4e-5d4a-4bf3-bd0b-cfd6b9aa0e99,1a82c4de-f53f-4c1d-8abf-e9c0b87be27b,Backend Engineer,1469.72,fixed,0
+50be47be-940a-4b8d-b166-abab4bd4c03a,1a82c4de-f53f-4c1d-8abf-e9c0b87be27b,Backend Engineer,2007.74,fixed,1
+ad03883e-bbc0-46e4-9d3b-00caa5dd75ca,f7d93e46-d09e-4a6e-95bb-2029ddc8c496,Design Designer,2714.25,negotiable,0
+16b16fa9-8fef-4ac8-ac58-75331af6fd2c,18326c80-9172-4e5a-958a-b0fa117865b3,Mobile Engineer,5142.41,fixed,0
+688d65a6-a467-4f17-b26d-55c3201bdac3,18326c80-9172-4e5a-958a-b0fa117865b3,Mobile Engineer,1978.82,negotiable,1
+7957982a-dd4c-46cb-956f-060703b53983,18326c80-9172-4e5a-958a-b0fa117865b3,Mobile Engineer,2721.63,negotiable,2
+1401946a-2180-4899-8a5d-023dc96448a3,5653f62c-3542-4dd5-907d-62ddaa38d6ae,Blockchain Engineer,1522.43,negotiable,0
+1d2e8e22-cf0f-46f1-8e4b-eaab6ae49bbc,5653f62c-3542-4dd5-907d-62ddaa38d6ae,Blockchain Engineer,11490.15,negotiable,1
+d912a4db-35f8-42ab-8992-9d6b28b46bae,9c09ddd5-f500-431b-aa5d-7e95a65d502b,Frontend Engineer,568.96,negotiable,0
+6c9284c2-55f7-460a-aa72-85b5cd8bb1fa,ec3c53ea-410a-45e8-b46c-0c9389fda4f8,Devops Engineer,6435.4,negotiable,0
+9212c3db-248f-4384-9582-2439493744b0,acba47fa-02a7-4660-9c88-957d189e9d92,Devops Engineer,7459.28,fixed,0
+540687a1-860b-4809-8472-65add17bc719,acba47fa-02a7-4660-9c88-957d189e9d92,Devops Engineer,2821.83,negotiable,1
+9de6e613-fdbe-4085-8a4a-c77a4e435cae,02ef2755-3bbf-4098-9b3f-cfa12d986c38,Mobile Engineer,4075.06,fixed,0
+3b68dfd3-8422-412d-8281-7306a21e3587,02ef2755-3bbf-4098-9b3f-cfa12d986c38,Mobile Engineer,4309.74,fixed,1
+60047fb6-f45b-40c7-b774-c960c70238a6,1a90348e-3b91-422b-9f13-f69fc37caa4f,Backend Engineer,3220.52,fixed,0
+0c33068d-063d-4927-925a-42ae694b27d0,1a90348e-3b91-422b-9f13-f69fc37caa4f,Backend Engineer,1350.39,negotiable,1
+dabd5242-9d50-43c3-b9b4-8145bcf4a6d9,1a90348e-3b91-422b-9f13-f69fc37caa4f,Backend Engineer,4422.22,negotiable,2
+0d2d57bf-952c-4e61-94dd-4cdbe1617fef,a93aa411-480b-4a8d-9f35-2e4783b00aa1,Frontend Engineer,1354.81,negotiable,0
+67ff9c3b-6010-4999-8a20-39c3379e9479,a93aa411-480b-4a8d-9f35-2e4783b00aa1,Frontend Engineer,2056.21,fixed,1
+73265016-5818-4ea7-aab0-ccd89e219f78,049ccd35-ae8e-4031-828d-63c31b6df349,Mobile Engineer,4364.44,negotiable,0
+378320b3-e871-473c-a81f-67f7712bb8c9,049ccd35-ae8e-4031-828d-63c31b6df349,Mobile Engineer,5007.02,fixed,1
+d6f997be-cb7b-4e5b-b8b7-0e8914ca6c6e,09e4303f-2269-43d1-bc69-a1aecaf9e7f0,Backend Engineer,1064.52,negotiable,0
+c32b9bbf-59ea-4731-bd35-362aa05a5e0a,b0233072-eace-4b79-a23b-f312ffc316ad,Ml Ai Engineer,9289.02,negotiable,0
+d1eac099-9619-4e4e-a706-2f6c511ee1db,b0233072-eace-4b79-a23b-f312ffc316ad,Ml Ai Engineer,5350.54,negotiable,1
+3c357a96-ac7a-45f1-bcf0-6546f23d69b4,b0233072-eace-4b79-a23b-f312ffc316ad,Ml Ai Engineer,8967.34,negotiable,2
+4aa2cfbc-65d1-466d-8a5c-127e8d050715,76ca477f-3d96-474f-8d42-11e90faf7ef2,Design Designer,2556.64,negotiable,0
+8cf38dda-2080-4956-b404-fdd7d5e5ce95,7dbd3afc-4f4d-4787-af3d-ccb48ff518cf,Backend Engineer,842.3,negotiable,0
+b8332a28-68d9-4726-b192-5799852366da,d8007f28-dd7a-4010-803a-2627628a93b8,Frontend Engineer,1643.99,negotiable,0
+2ddd6550-bcc3-475c-8d78-8e54350307fa,d8007f28-dd7a-4010-803a-2627628a93b8,Frontend Engineer,3850.59,negotiable,1
+c5f6edc4-80a3-40d2-bd40-d8e1511c24f8,776ec277-243f-4c49-af5b-894707c2a4b8,Blockchain Engineer,9855.32,negotiable,0
+10218086-8e14-432c-b766-f17debee13f5,8ff7fbfe-2445-464e-9401-af0bc18ab0c8,Frontend Engineer,1802.86,fixed,0
+415624d9-0e4d-4d5f-a8ed-5d0ff92dbed9,19110d0d-3961-4c0a-889b-d48587f85b3b,Design Designer,1729.94,fixed,0
+076c866e-0401-4558-b2cc-73e4d885f083,19110d0d-3961-4c0a-889b-d48587f85b3b,Design Designer,425.94,fixed,1
+a0214785-4476-44d0-bc92-b34fec598589,19110d0d-3961-4c0a-889b-d48587f85b3b,Design Designer,743.4,negotiable,2
+f7125848-fbed-4781-88ad-0cbc981e7b93,69abb9f5-828f-465d-8447-e70095b7c13a,Ml Ai Engineer,5425.37,negotiable,0
+431a5f05-5484-4796-ba9b-512d4313846f,69abb9f5-828f-465d-8447-e70095b7c13a,Ml Ai Engineer,8308.67,negotiable,1
+96e540f8-9680-40e6-8f0a-3c9a0c64f077,060dcc99-7323-4eb0-a777-d92fc746e1e0,Frontend Engineer,1304.35,negotiable,0
+b84556c2-bffb-4917-b233-1c25898bea79,060dcc99-7323-4eb0-a777-d92fc746e1e0,Frontend Engineer,525.74,negotiable,1
+8b25f894-d7ed-4b1f-8c76-fb9f08142982,060dcc99-7323-4eb0-a777-d92fc746e1e0,Frontend Engineer,1101.81,negotiable,2
+33664bc8-9304-47d3-91a9-050804bcb290,1005bd0e-f556-41f6-888a-fb0e77cbe54d,Mobile Engineer,4788.02,fixed,0
+279404cb-a44f-40f3-9fdd-4ac65f88884c,1005bd0e-f556-41f6-888a-fb0e77cbe54d,Mobile Engineer,2067.52,negotiable,1
+6b7c582f-eeac-495b-9b13-0f84daf77c7c,9ccdbc34-cec4-48af-93b0-72e7209f10d6,Blockchain Engineer,12767.87,fixed,0
+655b12e8-bfa8-428a-972c-be8b2f45ea7b,9ccdbc34-cec4-48af-93b0-72e7209f10d6,Blockchain Engineer,7895.94,fixed,1
+e1b31d89-3741-43b2-be8a-ef931d7c81e0,684e7b17-a254-41a6-93fa-f998d4e731f7,Blockchain Engineer,5718.26,fixed,0
+e9d7d8c9-7e0c-479c-928d-7075d1abdeb0,859ade1e-0c27-4af9-90d6-37865a1afb8c,Blockchain Engineer,5370.72,fixed,0
+0ad850a4-1e0e-46d0-8ed6-b1fd12ed06c5,859ade1e-0c27-4af9-90d6-37865a1afb8c,Blockchain Engineer,4265.1,fixed,1
+0c8f2932-3e54-433a-992e-9b1a16dbea75,859ade1e-0c27-4af9-90d6-37865a1afb8c,Blockchain Engineer,6580.73,fixed,2
+cfebd818-669d-4d75-8925-8307cfcc0603,3bb61994-3499-4bad-8281-d40d96ffff96,Blockchain Engineer,14292.69,negotiable,0
+f9b3b008-f246-469c-83e8-b75511846cbe,3bb61994-3499-4bad-8281-d40d96ffff96,Blockchain Engineer,12818.11,negotiable,1
+c74a9db3-768c-40f8-89bc-cff9dea1d7e7,bf3f81e8-f34a-498e-94b1-141c0fa9a8ef,Blockchain Engineer,3887.62,fixed,0
+6e78ba12-4635-4755-bc98-203c91f94eda,bf3f81e8-f34a-498e-94b1-141c0fa9a8ef,Blockchain Engineer,8366.42,fixed,1
+3689ae37-9b1d-4558-bd2e-f75e993adb88,7db72d9a-9552-4bfb-bae5-a62548defdde,Mobile Engineer,1490.9,negotiable,0
+7ab23742-48dc-40c0-9ff5-c8a2830da77e,91d0ac0a-8b06-4804-ab33-3e82e11cd2e7,Design Designer,2053.25,negotiable,0
+5abe60fe-6923-465c-9c4d-ea1cab678c51,91d0ac0a-8b06-4804-ab33-3e82e11cd2e7,Design Designer,2974.26,negotiable,1
+41e28730-1c12-4079-8d80-86aa8651e210,91d0ac0a-8b06-4804-ab33-3e82e11cd2e7,Design Designer,1810.69,negotiable,2
+13805fbf-3359-4a15-8ac4-85e54cf5e0d8,ed1cb71d-327a-4911-bb8b-6ba7ee5db974,Blockchain Engineer,11631.21,fixed,0
+6b2ccc28-85d2-40d2-9d16-5bad50e06a6b,ed1cb71d-327a-4911-bb8b-6ba7ee5db974,Blockchain Engineer,3814.88,negotiable,1
+ebc16a4e-da0d-48b5-b40e-5bdbbd7d503b,ed1cb71d-327a-4911-bb8b-6ba7ee5db974,Blockchain Engineer,3777.41,negotiable,2
+404b3e69-4d7c-4f9e-8a07-325a46d51d0d,8e72074e-09ea-49ed-9768-09601f7b844f,Backend Engineer,4129.99,negotiable,0
+6f0fa075-1c0f-412d-890f-0d2dff3b74de,8e72074e-09ea-49ed-9768-09601f7b844f,Backend Engineer,3573.03,fixed,1
+6ef50e82-df79-4c3c-ac01-38af06fec9bd,8e72074e-09ea-49ed-9768-09601f7b844f,Backend Engineer,3739.17,fixed,2
+df7e48a5-70e3-4d23-8446-5433fed45ea1,f6304e5c-155b-442d-8b03-8dccc4c15cc8,Devops Engineer,5143.1,negotiable,0
+218400e7-58f9-481a-bf6a-35731b28ce8c,8fb79bd7-c0e5-4472-aa61-5e6db415670d,Blockchain Engineer,9596.53,negotiable,0
+d762225c-8f3a-40a5-bbbe-91859376293b,8fb79bd7-c0e5-4472-aa61-5e6db415670d,Blockchain Engineer,12016.49,fixed,1
+daa36ebe-3219-4f6d-819e-31c6566946f2,4d3ad409-351d-4e72-95a7-8c734205b881,Backend Engineer,2458.98,negotiable,0
+e5d9eb19-68f8-4bbd-9e3e-5c741639f160,4d3ad409-351d-4e72-95a7-8c734205b881,Backend Engineer,1088.46,fixed,1
+2608338d-5380-4dbf-aca2-4638062e56ab,0d4a489c-81fd-49f8-a567-885a5fd20405,Blockchain Engineer,5966.64,negotiable,0
+96bf03c0-7787-4c92-aeb1-48f2da294807,0d4a489c-81fd-49f8-a567-885a5fd20405,Blockchain Engineer,1808.61,fixed,1
+13506950-f17c-451d-9052-26861f9b450a,18d3579c-582b-4ff4-a9b3-1822767f5ead,Fullstack Engineer,3379.95,negotiable,0
+4b3950c4-c6a4-4712-8234-b1501a1060d6,0dc93c01-7d02-4aa5-ab19-ef351a31440a,Blockchain Engineer,6874.51,negotiable,0
+7d4a2418-5e07-4efd-9d14-53d5e2aa82e5,0dc93c01-7d02-4aa5-ab19-ef351a31440a,Blockchain Engineer,7178.15,negotiable,1
+92fd2635-837e-46f9-86a5-9ccd81e0f4d3,96152ed7-edfb-403e-91c6-890b3d7d351b,Fullstack Engineer,6034.58,negotiable,0
+4691b5d5-b93c-4534-995b-f2aae41fe8d9,4c84f7e2-0e48-4550-8c0e-5e95bc1d0da7,Frontend Engineer,3426.84,negotiable,0
+ffe3d31a-dd25-4c45-84ff-9cca8a6097ec,d401f0df-06f7-4da0-bde5-25672fcec64e,Fullstack Engineer,1562.68,fixed,0
+e0b47db6-f9d1-4f6d-8b90-ab4d68f9c59f,847405e7-08d0-4d26-a444-91c368e0235c,Frontend Engineer,3291.15,negotiable,0
+d46541fd-ade1-49c9-afa7-80a6daa5ec20,847405e7-08d0-4d26-a444-91c368e0235c,Frontend Engineer,747.01,fixed,1
+59e9181a-e9fa-4d6f-b736-2bd4df94ea21,847405e7-08d0-4d26-a444-91c368e0235c,Frontend Engineer,3241.33,negotiable,2
+fb3b4d49-5d72-430a-8c4d-12a4ab7968c3,0c06b2f8-c8ad-4651-81db-de44fdabaceb,Fullstack Engineer,1530.17,negotiable,0
+e9d9484a-44eb-471f-84f1-a9f50bf03354,0c06b2f8-c8ad-4651-81db-de44fdabaceb,Fullstack Engineer,2294.26,fixed,1
+6cc122b7-c977-47f5-b126-6c2451a03811,0c06b2f8-c8ad-4651-81db-de44fdabaceb,Fullstack Engineer,4850.27,negotiable,2
+4091d6ac-3636-4b89-8632-ab49a0991949,90031297-3cef-4b3e-8ab7-1d60e0ea5ee2,Blockchain Engineer,8779.4,negotiable,0
+225ffdac-5b3c-4fce-9fed-3d372cb6b1f3,90031297-3cef-4b3e-8ab7-1d60e0ea5ee2,Blockchain Engineer,1956.11,fixed,1
+88bfe03b-8a3c-4d9b-9ed3-d400c9af838a,90031297-3cef-4b3e-8ab7-1d60e0ea5ee2,Blockchain Engineer,13835.9,negotiable,2
+a623b527-3c54-42b6-b879-5d217b578cfa,17b862e7-76f2-4bee-a8d3-e9663bb46613,Devops Engineer,5604.02,fixed,0
+dd4b896e-5669-4d05-a029-0387e0d2dcc7,e425f9d7-1821-4ee0-b8b1-4f17e51a218b,Mobile Engineer,3343.03,negotiable,0
+47d5b5dd-5994-4dba-93f4-42aa7e5abb3e,e425f9d7-1821-4ee0-b8b1-4f17e51a218b,Mobile Engineer,1794.27,negotiable,1
+7bdd4102-2d3b-4011-aa8f-0e8b8d1bbc08,e425f9d7-1821-4ee0-b8b1-4f17e51a218b,Mobile Engineer,5821.19,negotiable,2
+2ff179a0-7b84-43fa-a8b4-34871affaffd,927a1c49-c1d4-489b-89e3-03a11bc76c82,Frontend Engineer,2219.81,negotiable,0
+75c399d1-47e0-4603-8f12-e6d38e9fe9cd,3636d6fe-dd22-408f-9ed4-39f2fda3b784,Frontend Engineer,3410.89,negotiable,0
+1b75b386-9de6-4378-bf48-ae4b5afbb13b,3636d6fe-dd22-408f-9ed4-39f2fda3b784,Frontend Engineer,3334.84,fixed,1
+331e9bb1-13d0-4b5c-9d3b-aea596caaa38,3636d6fe-dd22-408f-9ed4-39f2fda3b784,Frontend Engineer,1899.13,fixed,2
+6c6265aa-2559-4abb-b827-ebd3b8851574,15c3f978-6ff6-45f2-bffb-394878cffc84,Frontend Engineer,3740.68,negotiable,0
+76775bc6-69ac-436c-bf89-1d9532764298,15c3f978-6ff6-45f2-bffb-394878cffc84,Frontend Engineer,2537.83,negotiable,1
+6c953f92-3342-439a-81b3-3052e8bcc5c0,cf4a5735-147e-46a2-8ed2-8a9d7d6a8655,Devops Engineer,3105.22,fixed,0
+bc4eb611-889a-49ad-aa88-20efbab1595f,cf4a5735-147e-46a2-8ed2-8a9d7d6a8655,Devops Engineer,6261.6,negotiable,1
+d50c9420-cc2e-4e8b-bf86-86a0c176f8fb,cf4a5735-147e-46a2-8ed2-8a9d7d6a8655,Devops Engineer,3020.78,fixed,2
+524a6144-cf6f-419b-bf75-b8a28466bc5b,85a4cdaf-6814-4178-805d-5474e0a41cbe,Devops Engineer,2926.54,fixed,0
+e8269e4d-b3af-4958-b096-2535094bd019,85a4cdaf-6814-4178-805d-5474e0a41cbe,Devops Engineer,2285.23,fixed,1
+22ab4fdb-7a99-46f1-9926-f8a1e4140140,85a4cdaf-6814-4178-805d-5474e0a41cbe,Devops Engineer,6760.19,negotiable,2
+ccf2e835-2007-426b-bfb3-a975f9721771,04ac2ce2-0d88-4866-aece-6fb7596fd69e,Devops Engineer,3244.25,fixed,0
+60d50b63-0464-4a0b-b33f-6661b5fb91d5,f8e76dca-ad07-44de-8f2c-dfc2efb501a7,Mobile Engineer,2378.69,fixed,0
+c5e7460d-c038-4c91-9028-7a57f305a57f,493a8e6a-1462-43db-8bdf-17983a5600a0,Ml Ai Engineer,9178.96,fixed,0
+8fc8e221-c09f-4182-8161-ab26e72ea858,493a8e6a-1462-43db-8bdf-17983a5600a0,Ml Ai Engineer,8883.56,negotiable,1
+e179505f-3bf3-4b60-be8c-c2df9ac75aba,a7acef26-3e82-4eb9-a0b2-3502f6d88d75,Frontend Engineer,2604.02,fixed,0
+3ff6125e-9dea-4846-83ef-d30ef9c4f018,a7acef26-3e82-4eb9-a0b2-3502f6d88d75,Frontend Engineer,3274.87,negotiable,1
+d16787d1-b53d-49df-9ff5-112990d12098,addfcea4-e375-40ad-84cd-93b2c9c7b91a,Mobile Engineer,4792.03,negotiable,0
+2aba04fd-78bd-4df1-af50-624caf541a6d,addfcea4-e375-40ad-84cd-93b2c9c7b91a,Mobile Engineer,4644.52,negotiable,1
+2cbe2fa7-979f-43af-8f70-cc4166481366,202f6b76-5819-4d1c-b7b3-2ae36cc2639b,Design Designer,1794.55,negotiable,0
+688d48ae-9c43-4045-818a-2075ba0ad08b,7d328cee-6892-45a3-84dd-3004cb2f02bc,Fullstack Engineer,3977.94,negotiable,0
+583b33a7-b380-4938-aed7-3685e93d8a99,7d328cee-6892-45a3-84dd-3004cb2f02bc,Fullstack Engineer,1369.02,fixed,1
+845fb226-a415-416f-8de5-a826f0689e00,74436c09-3502-40a3-a565-9c5862defd72,Mobile Engineer,1154.7,fixed,0
+4b2ad5cc-1bba-441f-b9a2-2bcb7c050686,858d6eda-15c3-459a-9adb-57734f27d8b3,Ml Ai Engineer,1137.03,negotiable,0
+a664000b-4f57-42cf-8ca3-82eb2ee6dfbb,39173867-34c8-4453-b458-623cdf1222c8,Ml Ai Engineer,2921.8,negotiable,0
+b7c9141f-cf83-473e-b514-2e6e50fc7945,1b03ffdf-4135-4f60-a230-d92062b1f917,Mobile Engineer,3959.99,negotiable,0
+f42a1d45-28a0-4e99-a468-ab8bd32ce83a,84221f7e-e488-4f68-b01b-812f022a14e7,Mobile Engineer,3838.11,negotiable,0
+42c7b667-1cb7-4d28-8ef3-96c1387f08b0,84221f7e-e488-4f68-b01b-812f022a14e7,Mobile Engineer,3363.37,fixed,1
+9b4835fb-2b16-4eef-9b37-8006bba4913f,84221f7e-e488-4f68-b01b-812f022a14e7,Mobile Engineer,3064.26,fixed,2
+5969abce-0f4f-4e17-b2a2-c4f42ddcf9c6,b9480d6b-cc8e-42f6-b2e6-b0a1d4a58792,Mobile Engineer,2336.06,fixed,0
+38fefa2b-9f17-45a4-9599-454b80bfc124,b9480d6b-cc8e-42f6-b2e6-b0a1d4a58792,Mobile Engineer,4906.8,negotiable,1
+7657a973-5aa7-48f2-ade3-e8e46e5f3cc7,b9480d6b-cc8e-42f6-b2e6-b0a1d4a58792,Mobile Engineer,697.19,negotiable,2
+3278a293-2e79-4ea0-ae12-a9a73117eec7,12de3619-8321-43b6-88e2-cb9e9ac682b7,Fullstack Engineer,1670.64,fixed,0
+4a3d879d-bf85-4fd2-aa1f-be2f9dcce019,30673551-4af5-4bdb-a390-4c87c0077c8d,Ml Ai Engineer,9156.79,negotiable,0
+66f150d5-ceb6-49e1-8897-0cdfd040c353,e449c2b8-d538-4fc3-9de0-76e44d9f14ae,Mobile Engineer,1710.15,negotiable,0
+1320c262-8bf2-4bf2-8847-a99f308d7047,e449c2b8-d538-4fc3-9de0-76e44d9f14ae,Mobile Engineer,1431.71,negotiable,1
+ae1f9dcc-6a6c-4262-ab5b-925ca88088aa,80cfe86b-ee0d-4990-a606-dd908ca8f2dc,Frontend Engineer,3770.48,negotiable,0
+74257042-8b82-4788-96f2-0d4903649c48,80cfe86b-ee0d-4990-a606-dd908ca8f2dc,Frontend Engineer,3031.02,negotiable,1
+0251ad7c-600c-4c50-8729-91038ba76c0c,80cfe86b-ee0d-4990-a606-dd908ca8f2dc,Frontend Engineer,3709.17,fixed,2
+2b51cccf-54ff-4e88-9788-866ef7f225cc,3660b6cd-ea32-42d8-9718-1a160c6d73dc,Devops Engineer,3398.34,negotiable,0
+6a9b1a1c-dede-463f-8593-9077930c6d2b,d112e231-6048-4c5c-9c25-6eaa29ef4ee6,Blockchain Engineer,1328.82,negotiable,0
+eeded323-500c-443d-bc8f-5849323739d2,d112e231-6048-4c5c-9c25-6eaa29ef4ee6,Blockchain Engineer,3806.78,fixed,1
+a9b4a60c-cdf0-4080-94de-6bf5bf2b863c,d112e231-6048-4c5c-9c25-6eaa29ef4ee6,Blockchain Engineer,2315.68,fixed,2
+eb9de143-5b47-4c2d-91ef-f0543cad7f9f,fe83be1d-633c-43b2-928e-e3e123488724,Ml Ai Engineer,6566.27,fixed,0
+4f0f6117-6b51-469d-b60f-2170bc7311c8,fe83be1d-633c-43b2-928e-e3e123488724,Ml Ai Engineer,8776.06,negotiable,1
+25ded3be-cb72-4479-8073-2b50a45d19b7,f5d87238-9021-42d7-a14f-9a20d320f8ec,Frontend Engineer,1711.26,negotiable,0
+e9deca28-1c30-4f57-95d1-e8ccf5a84bb5,7be47730-6a38-47fa-bcfd-3cf62f4bde40,Devops Engineer,2999.98,fixed,0
+fe55ad70-9de0-4221-aca3-15b28c03e138,7be47730-6a38-47fa-bcfd-3cf62f4bde40,Devops Engineer,7862.59,negotiable,1
+a55e209f-dac5-4176-9541-a46c83bfcbf3,fda6df84-a517-4c03-a9cb-1cb7cb083e31,Fullstack Engineer,5705.29,negotiable,0
+e9b96e25-700d-4a45-b040-73e355ece899,ce922ee8-e286-46f3-92d6-23da180e967b,Devops Engineer,4773.14,negotiable,0
+a596f9e9-4e12-444e-8ac0-65586cb5ec0c,ce922ee8-e286-46f3-92d6-23da180e967b,Devops Engineer,7580.7,negotiable,1
+2213eca1-a0e9-4e5a-ba9d-7a9ffd7ef179,ce922ee8-e286-46f3-92d6-23da180e967b,Devops Engineer,1167.63,negotiable,2
+6e00b6f0-f43d-4dd5-8a13-8d913e313d9e,d5e8e52e-ebe6-40a9-bfe9-980f39237ec0,Devops Engineer,5521.92,negotiable,0
+6bade666-b791-4a25-9aa7-45958131fafe,d5e8e52e-ebe6-40a9-bfe9-980f39237ec0,Devops Engineer,2780.55,negotiable,1
+0f0dd05a-2cec-4684-8356-9ea4b6202097,69ed3bd8-3229-4e81-86b8-a516810fc81d,Mobile Engineer,4514.87,negotiable,0
+25df2adb-b037-4084-be22-9e31eb4bfc81,69ed3bd8-3229-4e81-86b8-a516810fc81d,Mobile Engineer,2981.0,negotiable,1
+5ab879cb-e4ce-485d-8245-fdc8e4b30b7a,69ed3bd8-3229-4e81-86b8-a516810fc81d,Mobile Engineer,1673.1,negotiable,2
+06335751-5fa5-41d2-b002-b4cdc44524b6,2ff94e0f-cfe7-416a-bfd8-f297da331eb6,Devops Engineer,7415.38,fixed,0
+7575d887-62b1-4487-b809-32646227cebc,2ff94e0f-cfe7-416a-bfd8-f297da331eb6,Devops Engineer,3332.59,negotiable,1
+3118b371-015e-4fd0-a5fd-b96637da6d26,2ff94e0f-cfe7-416a-bfd8-f297da331eb6,Devops Engineer,6575.59,fixed,2
+62d6a185-56f6-4801-980d-2116d58b6ce2,76eebec3-fdbb-4e2c-aeb7-4e8416754b37,Devops Engineer,7019.14,fixed,0
+3469aa1a-3a9f-4f47-93a9-db26c3480e6d,76eebec3-fdbb-4e2c-aeb7-4e8416754b37,Devops Engineer,6720.1,negotiable,1
+e65a597a-b0dc-4c49-925e-5a652f07cbda,fef54013-9f99-4bad-856e-13f5f34c798e,Ml Ai Engineer,2611.35,negotiable,0
+ffbd1494-7606-4b9b-b81d-d3f12de58e4b,daa7e50c-8fcb-4b21-94a0-373fff3605da,Ml Ai Engineer,2819.66,fixed,0
+a82b8aa4-a9d3-4606-86af-cc32c92bf487,daa7e50c-8fcb-4b21-94a0-373fff3605da,Ml Ai Engineer,9005.02,negotiable,1
+336a9343-07ae-4795-8586-84825dfc6cd7,bbcf752c-a787-4871-8e4e-44d8955e831c,Fullstack Engineer,6997.17,negotiable,0
+a8a40234-518d-4a3e-9bfc-dc444479b6d8,bbcf752c-a787-4871-8e4e-44d8955e831c,Fullstack Engineer,5382.86,fixed,1
+997af3c6-3cff-4614-be22-3212f2ccae79,39d4a0b8-9b98-43d6-aaa8-0e0f7d5537d1,Fullstack Engineer,5035.4,negotiable,0
+935bdb33-fe31-4f92-9aba-051d8d54ab60,39d4a0b8-9b98-43d6-aaa8-0e0f7d5537d1,Fullstack Engineer,4387.25,negotiable,1
+69e761b5-3dd8-4949-ba3e-b29ca2ee45db,39d4a0b8-9b98-43d6-aaa8-0e0f7d5537d1,Fullstack Engineer,4322.81,fixed,2
+022303cc-6961-4793-871a-4aba48d515bf,e9ed62c8-f579-4420-b091-5614e4437ced,Ml Ai Engineer,7126.57,negotiable,0
+0a78a5db-710d-4e9e-b171-be32ec12512d,e9ed62c8-f579-4420-b091-5614e4437ced,Ml Ai Engineer,3051.98,negotiable,1
+9c71c9b2-91f1-4157-a268-70e4fb2e8054,e9ed62c8-f579-4420-b091-5614e4437ced,Ml Ai Engineer,5312.88,fixed,2
+087f6648-ba8f-4b08-be74-d2d20fd62981,976167c8-5028-45f6-8ae3-beda189b4632,Devops Engineer,3881.76,negotiable,0
+b6949456-ac89-44eb-a128-1db2feb56608,9748c34b-4464-4785-a583-f42bc513bdda,Fullstack Engineer,3937.14,negotiable,0
+4df0b656-d55c-4138-8c3f-ef87c62a3f74,9748c34b-4464-4785-a583-f42bc513bdda,Fullstack Engineer,1694.23,negotiable,1
+3537d8af-eb63-453f-9a9a-d7201dc9be19,1809c360-e2b3-45f2-b6a8-677b654d0aeb,Devops Engineer,7353.83,negotiable,0
+2ce49578-1c01-4365-8755-4f0791253f1d,be6da473-11af-47e6-8711-0c169851aa32,Ml Ai Engineer,9319.52,fixed,0
+f1e0b66f-ab95-47f3-a9ea-f23594f8bc9a,8ba75827-b651-4d01-8023-a2e908fe582e,Design Designer,2857.9,fixed,0
+1501fb44-aa60-4a2a-8438-c59b71fad54a,8ba75827-b651-4d01-8023-a2e908fe582e,Design Designer,2480.92,fixed,1
+b0262a57-1b06-41bd-a02c-331a6c9cb5b8,8ba75827-b651-4d01-8023-a2e908fe582e,Design Designer,2757.13,fixed,2
+47d75765-ad60-4925-837f-c61428ec6f3d,65b807dd-8f3d-446d-be46-4a1cbd479aa3,Blockchain Engineer,9216.78,fixed,0
+edf2d06e-b6f9-4b4e-82a2-927b6b1abbd2,88ab2263-26f2-4f8a-afef-2111ad1a2f23,Frontend Engineer,3480.38,fixed,0
+0d9ec676-082c-4cd8-a1e4-bc60531e28b9,6780bb59-b70a-4f5d-b3cd-744de07134bd,Design Designer,2415.29,fixed,0
+93a5a912-e01f-474c-a260-99c21b79d236,6780bb59-b70a-4f5d-b3cd-744de07134bd,Design Designer,2581.41,negotiable,1
+c63984a8-2b45-4780-bf5f-461c3c554558,6780bb59-b70a-4f5d-b3cd-744de07134bd,Design Designer,1880.05,fixed,2
+fc9d9aa6-b5ad-4611-ad9f-44790a51702a,8c4c94b3-41c4-44fd-a27b-9e971f7e0c33,Ml Ai Engineer,6360.94,negotiable,0
+433dfb61-79ba-41c2-9d71-d1edad912d92,8c4c94b3-41c4-44fd-a27b-9e971f7e0c33,Ml Ai Engineer,8729.23,fixed,1
+2b4158a0-b5c0-445a-940d-4b029d95034f,573ea016-ba39-46e1-a133-e9e00a7230c0,Blockchain Engineer,6179.12,fixed,0
+e85c548b-1ce8-4dcc-94d2-a885e67fe13f,60748eea-c991-483c-a626-24c2cd1fb7f6,Ml Ai Engineer,1346.84,negotiable,0
+45393226-f018-4e98-9882-1ef80c4555d0,60748eea-c991-483c-a626-24c2cd1fb7f6,Ml Ai Engineer,6122.72,negotiable,1
+e09cc64d-dde1-434f-8ec8-898b79adb0a8,60748eea-c991-483c-a626-24c2cd1fb7f6,Ml Ai Engineer,7099.7,negotiable,2
+71843ff2-5c0e-4d8d-9a6b-66a6f614e540,f63ccbd9-10c0-4f4e-9b84-f6ee7a043e10,Design Designer,1984.98,fixed,0
+782fc5e1-f2ee-44ca-89ba-355928c72549,f63ccbd9-10c0-4f4e-9b84-f6ee7a043e10,Design Designer,1372.71,fixed,1
+600f3186-9dc1-4791-9fd6-57fb7cf0be20,ca9efaad-1645-4f28-929d-b02f41842e7f,Mobile Engineer,2430.52,negotiable,0
+daef875b-5a9d-43a2-905f-e85f9c3d2df9,e5418ee6-f0e6-44a0-9f6d-8853a0ef9818,Design Designer,2882.04,fixed,0
+b496855e-1b40-4eaa-8937-34a709b4dff9,e5418ee6-f0e6-44a0-9f6d-8853a0ef9818,Design Designer,1813.32,negotiable,1
+7b505867-f806-4f3d-a878-a0c88839069b,e5418ee6-f0e6-44a0-9f6d-8853a0ef9818,Design Designer,1657.4,fixed,2
+eaddbdd0-0dd2-430f-bbbf-f3f415cf5d81,52c74306-53e0-4905-ba29-905378d5c9de,Design Designer,1874.29,fixed,0
+817c0286-4c6a-4894-b0d4-837825b5ede2,52c74306-53e0-4905-ba29-905378d5c9de,Design Designer,1713.48,negotiable,1
+c8d257c2-3099-49e1-b182-599ee87e36b2,46287524-8283-4606-af81-ad4b11057e92,Frontend Engineer,1801.82,fixed,0
+e7caf578-edc1-4363-a43a-7f286512726d,1cb14d66-7801-4f40-9e42-c1beb3779079,Blockchain Engineer,8606.8,negotiable,0
+24dbde84-ae75-4dc9-a8de-a9805db428e8,e7fdaf89-3c00-4e8e-8569-92b3ae5f4fd7,Blockchain Engineer,11468.24,negotiable,0
+10a45b85-0ed5-450a-83d5-31b4e0f94b87,2a932d06-129f-4d1c-abe3-f47b8e07873c,Ml Ai Engineer,7893.32,negotiable,0
+6b853406-1f43-4629-85aa-4e15812ba0ed,2a932d06-129f-4d1c-abe3-f47b8e07873c,Ml Ai Engineer,3318.91,fixed,1
+493818af-6bd9-4577-8492-287228e3ebb7,2a932d06-129f-4d1c-abe3-f47b8e07873c,Ml Ai Engineer,6344.95,negotiable,2
+dc61e220-1307-4eba-8230-d01a3322ff19,a0f7badc-bae4-4f21-ad7c-f81e8477fe4b,Ml Ai Engineer,6973.76,negotiable,0
+c57ceb2c-8722-456c-afd2-9d9a4db46376,a0f7badc-bae4-4f21-ad7c-f81e8477fe4b,Ml Ai Engineer,1826.66,negotiable,1
+04509a3e-6b55-4145-a993-4cd7183247bc,0e7e07d1-5869-43d3-ac7c-300e0e7d22b0,Ml Ai Engineer,7831.04,negotiable,0
+3b3e21a1-585e-43d5-b632-07bb6124405e,0e7e07d1-5869-43d3-ac7c-300e0e7d22b0,Ml Ai Engineer,8558.04,fixed,1
+03d37812-7509-471a-8c5b-9e0b2a2b3e89,0e7e07d1-5869-43d3-ac7c-300e0e7d22b0,Ml Ai Engineer,2236.34,fixed,2
+89f3631e-6f39-43dd-ac00-0f7052943feb,ee802867-40ad-40f1-b468-0f70565c5e58,Backend Engineer,4639.63,negotiable,0
+296d73cb-57e3-4340-b14f-79e770a53fc9,ee802867-40ad-40f1-b468-0f70565c5e58,Backend Engineer,3541.01,negotiable,1
+5efc7d9b-2a85-4bed-81b0-490e1642c606,a0686922-a8be-4991-8da0-44ccf1f76735,Design Designer,2059.48,negotiable,0
+db3f8385-bb8f-4695-b161-6c89cec6fc65,a0686922-a8be-4991-8da0-44ccf1f76735,Design Designer,747.14,fixed,1
+5cc36cca-878a-4067-a5d5-54e23a847cdc,a41f9108-3fd9-4983-9951-85e611ac6536,Ml Ai Engineer,5590.91,negotiable,0
+686f9712-b220-4b27-a5e6-253ace272291,a41f9108-3fd9-4983-9951-85e611ac6536,Ml Ai Engineer,3246.04,fixed,1
+fa806f08-c41f-43b7-a3b4-3d7797ebcc17,a41f9108-3fd9-4983-9951-85e611ac6536,Ml Ai Engineer,4679.63,fixed,2
+e0f33c9f-23c3-469b-b80e-81457ba2ca03,9c962452-02d7-4f49-a627-8cbcfdb710a6,Ml Ai Engineer,8812.28,negotiable,0
+ca31fdf6-2524-4e70-874f-e420e89942f6,9c962452-02d7-4f49-a627-8cbcfdb710a6,Ml Ai Engineer,2840.1,fixed,1
+652f3a63-ac89-46ca-814e-f0cc8182097a,9c962452-02d7-4f49-a627-8cbcfdb710a6,Ml Ai Engineer,1343.44,fixed,2
+a049f950-8a2f-43bd-8ea2-226dd1376655,895a7753-e280-4f3d-8033-9bc81d37664d,Ml Ai Engineer,4003.77,fixed,0
+074e9c63-fa64-454e-a763-5f954e231aba,c282a97d-8953-447b-bb2c-86db906845be,Ml Ai Engineer,6647.6,negotiable,0
+feeee8f8-7a8c-4854-8afc-f6c2c0d99f50,29d57d3c-9223-4a43-bee4-654c60700289,Backend Engineer,3144.53,negotiable,0
+dc805436-ef14-45e4-b13e-e5825a281682,29d57d3c-9223-4a43-bee4-654c60700289,Backend Engineer,4848.92,fixed,1
+ca3272f6-a5e4-4d06-bc6f-ec51a4ab9784,29d57d3c-9223-4a43-bee4-654c60700289,Backend Engineer,3243.15,negotiable,2
+3b958fd1-e2e0-4c5f-b9f7-c76594fa64dc,40d52cc1-ed97-4e3a-a98b-bc88eb106087,Design Designer,533.41,negotiable,0
+e705e812-d3c2-465b-a1e9-88dd16e6ec63,40d52cc1-ed97-4e3a-a98b-bc88eb106087,Design Designer,976.48,negotiable,1
+1aafeddc-f120-4662-a3f5-057442d62dc5,87999555-a50d-450e-8fc4-02ecf8c51b64,Backend Engineer,758.49,negotiable,0
+a0e31c20-3535-4c06-8e00-09fe465da782,87999555-a50d-450e-8fc4-02ecf8c51b64,Backend Engineer,3105.71,negotiable,1
+374744c9-71c1-4a7d-b7ba-6f00e988d2e4,87999555-a50d-450e-8fc4-02ecf8c51b64,Backend Engineer,4412.75,fixed,2
+9d7d27f7-8deb-4a49-b738-db0faf91a087,9be4e4e3-4c70-4478-8d66-ea0fd1cc7391,Ml Ai Engineer,3977.62,fixed,0
+3c3b5836-ce84-45a9-8371-0b2435854854,9be4e4e3-4c70-4478-8d66-ea0fd1cc7391,Ml Ai Engineer,7356.37,fixed,1
+67ce7f6a-8973-4b8f-b18f-520c202c637f,43df81a2-1133-42b1-adb7-4dffffb010c7,Devops Engineer,5322.18,negotiable,0
+c96e3ea8-c526-457a-8e06-e5b187e3d465,43df81a2-1133-42b1-adb7-4dffffb010c7,Devops Engineer,5989.36,negotiable,1
+b1aefaf7-dbc5-48e8-b1bf-634ddb162374,5652eff8-70de-4b00-b1b4-58e67b6e129b,Design Designer,2253.19,fixed,0
+4bc1955f-f6a7-4875-b619-39ba742958c8,5652eff8-70de-4b00-b1b4-58e67b6e129b,Design Designer,2191.5,fixed,1
+b3275d6b-f2ad-4795-9ded-fed646751a24,d3d8abdc-1638-4a43-9ada-dc1c78daf191,Ml Ai Engineer,1863.03,negotiable,0
+82640fee-1217-498b-9d96-907e0ed561d9,6209e325-d45c-4660-9895-6178d5da9c23,Frontend Engineer,927.58,fixed,0
+397285f2-a3eb-4747-805c-d2c7c1e921d7,6209e325-d45c-4660-9895-6178d5da9c23,Frontend Engineer,1961.6,negotiable,1
+cce3ada0-76f6-4ed9-857e-4c418bdd24c9,6209e325-d45c-4660-9895-6178d5da9c23,Frontend Engineer,2535.93,negotiable,2
+43df2b90-9cc4-4a96-b201-b5a6a092e156,22d1515e-a2df-4196-99e7-37c79f24198a,Frontend Engineer,610.66,negotiable,0
+1af100c9-dd58-4f5c-a141-31388908189b,22d1515e-a2df-4196-99e7-37c79f24198a,Frontend Engineer,1363.83,negotiable,1
+ef6fa797-4e64-485c-b7a4-be4f12599d50,22d1515e-a2df-4196-99e7-37c79f24198a,Frontend Engineer,1596.43,negotiable,2
+d475895c-c49b-463b-9863-925b10c6ddbc,26ef05f7-9dbb-4951-9ed6-88c1009b95d6,Blockchain Engineer,6487.41,fixed,0
+d0f8d874-5114-4de0-9e78-93894b3e00e0,26ef05f7-9dbb-4951-9ed6-88c1009b95d6,Blockchain Engineer,6749.38,fixed,1
+a6aa1811-f33e-4a06-8028-9154049be0a3,cf66981b-0f7b-46d7-93ac-1620c3537987,Frontend Engineer,2702.61,negotiable,0
+8a44ebb8-1963-47e4-8770-7b31dae2b598,cf66981b-0f7b-46d7-93ac-1620c3537987,Frontend Engineer,3980.26,negotiable,1
+732f29b4-2c1e-4744-9ec9-2d9d0f2a6b5f,cf66981b-0f7b-46d7-93ac-1620c3537987,Frontend Engineer,3449.21,fixed,2
+5b1e0010-0eb0-4661-91dd-7583116b2921,086fe258-4162-4f3d-a9e1-899be2c0f706,Frontend Engineer,2519.62,negotiable,0
+c7f81ca9-5887-41ce-9838-21ad1964f5db,086fe258-4162-4f3d-a9e1-899be2c0f706,Frontend Engineer,2652.24,negotiable,1
+eb3720cc-9823-4d40-9b06-fc231418c49e,086fe258-4162-4f3d-a9e1-899be2c0f706,Frontend Engineer,1610.17,fixed,2
+ca88fa18-c705-4aa6-819e-b7e45bb2b64b,4602a317-925f-478b-b566-72eb0e345d91,Backend Engineer,1695.58,negotiable,0
+6a7b5e31-e827-460f-8bc2-25eddf2a7b5a,4602a317-925f-478b-b566-72eb0e345d91,Backend Engineer,3788.7,negotiable,1
+d3b04ed8-4faa-4901-a19a-4e45dd8a60a9,4602a317-925f-478b-b566-72eb0e345d91,Backend Engineer,4384.92,negotiable,2
+8abfe78c-fde4-4913-acd1-0f680f3e90f1,97f9bd49-3b8d-44f5-ae85-6a7377ec9739,Fullstack Engineer,5818.6,negotiable,0
+6a12528d-ad5f-4a1f-962e-a7f7e870c382,4aefc225-e1d7-4b47-ab0d-f9cab1cfe11f,Devops Engineer,1070.52,fixed,0
+9fec5e87-25d7-4dd8-9e88-b1768d194b41,4aefc225-e1d7-4b47-ab0d-f9cab1cfe11f,Devops Engineer,1085.16,negotiable,1
+70590885-5594-4d47-b0d6-68c0f3b13c94,4aefc225-e1d7-4b47-ab0d-f9cab1cfe11f,Devops Engineer,2495.04,negotiable,2
+b294658e-32a2-4ff8-821f-c2110a225a8b,45ad14ab-f47c-47fa-8d8b-325428997d9d,Ml Ai Engineer,2023.63,fixed,0
+69b30173-04e4-4a09-829c-bd766ea7fd74,3a5afeca-c41f-4139-a679-e983972fb399,Mobile Engineer,1046.6,negotiable,0
+2e0f0802-a8b9-4311-8233-71b2a8a7e2fd,253fe287-ec0a-4f2f-8fd2-5f6fc3df299d,Design Designer,1602.79,fixed,0
+550f26c5-2832-4843-acc4-c92662b6cbc5,253fe287-ec0a-4f2f-8fd2-5f6fc3df299d,Design Designer,2030.0,fixed,1
+2481eb39-c599-4111-99f6-6082ea5b9ae0,253fe287-ec0a-4f2f-8fd2-5f6fc3df299d,Design Designer,2614.03,fixed,2
+f6604253-1638-4ae0-8a57-a79a84a99f46,68945793-9d20-48e5-a89c-ea08eb747e87,Design Designer,1856.87,negotiable,0
+39b3a375-d8f8-48b0-a8aa-d26160bdc4d6,e9c00f35-dad7-48f6-8e98-ed71a3098444,Mobile Engineer,4843.59,fixed,0
+bda172c6-89b3-43fb-9f7e-81e91af0e8ab,638b0b90-d5c3-440f-9dbd-8a75cf8210b9,Ml Ai Engineer,2032.59,fixed,0
+e5c4e743-b4a0-405e-8f31-4f3d529d0af6,0516e329-65d5-4b92-9dcf-e30c8e1be950,Fullstack Engineer,2312.99,negotiable,0
+1a7435cb-08f8-4fde-a93a-75b21d42db0c,0516e329-65d5-4b92-9dcf-e30c8e1be950,Fullstack Engineer,6956.66,negotiable,1
+e7be3372-d688-4074-8be1-2c46c46da3e5,d169e7c9-0bfa-461d-bae4-6781306c1be1,Fullstack Engineer,823.37,fixed,0
+6e4d6858-2ac8-4d30-88d2-569287381c95,1e0ec73d-98e5-4424-b753-17c6afa71ebb,Mobile Engineer,4654.05,fixed,0
+642b88b6-a1fb-4016-a391-12ef5a18aab3,d6efbbcb-bca0-4c9e-9267-b1a38d3926ba,Design Designer,2087.38,negotiable,0
+95c2b829-9173-440c-b9b4-399eace0ece2,d6efbbcb-bca0-4c9e-9267-b1a38d3926ba,Design Designer,438.97,negotiable,1
+d7b803aa-d292-43e6-be01-5063f503e8ee,d6efbbcb-bca0-4c9e-9267-b1a38d3926ba,Design Designer,1001.35,fixed,2
+d057f67c-d7d4-491a-b740-26fe8972bcab,8b6a80c4-686d-4372-a029-fcc1bf549eed,Design Designer,1211.07,negotiable,0
+99145d28-aa62-477a-afbc-b987f12cc2d6,8b6a80c4-686d-4372-a029-fcc1bf549eed,Design Designer,889.5,fixed,1
+22e12e22-0910-42b9-b65c-7155c86ebcef,8b6a80c4-686d-4372-a029-fcc1bf549eed,Design Designer,1187.6,negotiable,2
+ce96278b-3dc8-4beb-9b24-6fec56172a34,7de45d2f-7742-48a6-a176-6948663be6cc,Backend Engineer,1302.27,fixed,0
+32ccfb77-4663-4918-9e55-ba12f0126d08,7de45d2f-7742-48a6-a176-6948663be6cc,Backend Engineer,3426.84,fixed,1
+9a601bdb-6fce-4e25-af14-3cd48f2ef3ad,7de45d2f-7742-48a6-a176-6948663be6cc,Backend Engineer,1473.8,negotiable,2
+16e78be6-9a61-4015-a2e8-c1dab8838cc9,a46728a8-1b8b-4c3c-adc0-2da54366c019,Design Designer,591.8,negotiable,0
+faf89a99-3244-4189-a2e0-ad8118b62596,6f380b0a-0e6b-4328-aebe-7fa4c62bee5c,Devops Engineer,1857.5,fixed,0
+7e8510f7-d1fb-4184-9d6f-b7c646d6fe07,6f380b0a-0e6b-4328-aebe-7fa4c62bee5c,Devops Engineer,7635.85,fixed,1
+112eb8e5-e1bb-4ed7-be62-622690e74fcb,6f380b0a-0e6b-4328-aebe-7fa4c62bee5c,Devops Engineer,6530.46,fixed,2
+138402ea-6a04-4dad-b804-281697f802d4,41e3df78-ce73-4446-a217-be34e4efaf62,Backend Engineer,4229.7,fixed,0
+bda4d39b-f82d-4636-b0df-079cbfb7fc09,41e3df78-ce73-4446-a217-be34e4efaf62,Backend Engineer,1163.98,negotiable,1
+500f4316-9ac1-4ecd-a083-2ae3be9662f8,50e389b5-7683-42bb-995e-07e1f85cf479,Backend Engineer,1215.17,negotiable,0
+016eb1e9-cafa-4315-af73-3460bce2d72e,50e389b5-7683-42bb-995e-07e1f85cf479,Backend Engineer,1899.22,fixed,1
+d2c4f506-395a-4422-8958-a6f54dbaf0a7,acc46baa-a3a2-4ec8-bf0d-1965e4bf9819,Blockchain Engineer,1556.04,negotiable,0
+d60b2449-7914-48a8-962b-3b31a2fec23a,c3928c25-8343-4839-9dc1-dcab7fcd11d8,Mobile Engineer,4314.78,negotiable,0
+e1bc080f-1618-47ef-ae83-c09eb50d0417,9e27fb74-0142-4035-b8ee-0003290f79a5,Design Designer,1479.54,fixed,0
+d451c76f-48d4-4a3f-be9e-8c220ca33c8b,c1223d60-0cbc-43d1-83ed-b12136e15bde,Frontend Engineer,2697.99,fixed,0
+820744eb-bfb1-4f18-9b94-b1b9ba9a655e,c1223d60-0cbc-43d1-83ed-b12136e15bde,Frontend Engineer,968.39,fixed,1
+efece41e-8ba6-4f8c-b03c-09d09e412383,44f9fdb0-6ad1-4550-bcce-12bcdcb5fa9f,Devops Engineer,3094.99,negotiable,0
+f9f9ed83-e389-4441-9ce3-d699395ae045,72b312d0-3068-4fc9-856a-4b1f7870590f,Backend Engineer,3242.4,negotiable,0
+4bf13ea7-6dc4-4985-99f0-b2df7aca32c1,72b312d0-3068-4fc9-856a-4b1f7870590f,Backend Engineer,3669.57,negotiable,1
+20bb2d51-cf73-49dd-b650-8b9c2c315bfd,72b312d0-3068-4fc9-856a-4b1f7870590f,Backend Engineer,3248.99,negotiable,2
+b1c1abf9-247b-406a-aa3f-3e2537e68053,eb889b4e-9e36-465e-8148-1dfaa973652b,Design Designer,2211.55,negotiable,0
+0dbe1c1d-2cf1-4836-a754-373455c03bf2,5961f670-ff09-4962-b5b7-97f2200ad1b4,Devops Engineer,7451.65,fixed,0
+a0ef28d9-52ca-4fe0-a37b-808c613ff101,5961f670-ff09-4962-b5b7-97f2200ad1b4,Devops Engineer,1572.23,fixed,1
+9e2ce70e-e718-4557-8de6-f31f9d6c187a,5961f670-ff09-4962-b5b7-97f2200ad1b4,Devops Engineer,2508.93,fixed,2
+13362f89-b767-4e34-b2fe-9d5c82ed3836,299d0d7d-95fa-4787-add4-08ba2ea0317c,Backend Engineer,4214.91,fixed,0
+06d326d3-a5b2-4547-b582-cb2f38613b5c,299d0d7d-95fa-4787-add4-08ba2ea0317c,Backend Engineer,4490.79,fixed,1
+d5f1878d-bd4e-4c85-a24f-83f80ef990a4,299d0d7d-95fa-4787-add4-08ba2ea0317c,Backend Engineer,4564.21,negotiable,2
+bc3f7c15-ae35-4ebe-bf27-53e9fe6de0c9,6236b0c2-4316-47db-b616-0bee154c97c7,Frontend Engineer,3621.36,negotiable,0
+41955907-46db-4dc3-92e9-fe333c87ff0d,5340dba4-edfe-4179-a204-d3d754fcf5f3,Mobile Engineer,4406.91,negotiable,0
+97ac4186-d195-476b-be65-c53b7d83f81f,635e0ba9-72ea-4edb-8a0b-1c56a9a1b798,Fullstack Engineer,1127.9,negotiable,0
+72c372c5-8a4f-4bec-9d93-44b9959c3392,635e0ba9-72ea-4edb-8a0b-1c56a9a1b798,Fullstack Engineer,4888.68,negotiable,1
+8877a6be-1688-4cc4-8a12-cece5f43e739,e67337b2-1902-448e-bb35-4fdc209bcd15,Backend Engineer,3759.07,negotiable,0
+9b168adb-7980-4ed2-88ff-0460a93088b0,c84863f4-e680-465a-9fc9-405c463f530b,Backend Engineer,1815.33,fixed,0
+d0a52cc2-ec6d-4abf-9803-548f1a827087,c84863f4-e680-465a-9fc9-405c463f530b,Backend Engineer,3070.51,fixed,1
+9f481a86-e1aa-48e0-856d-ed640556b353,c84863f4-e680-465a-9fc9-405c463f530b,Backend Engineer,3580.85,fixed,2
+0f8d41bc-3c53-4d56-bb7f-e1bce9b95ceb,b50c93d1-d580-4580-9786-dc070c0d3e0c,Devops Engineer,7216.8,negotiable,0
+6ff3ed52-7eca-4c8f-b380-c73c1daeaef7,b50c93d1-d580-4580-9786-dc070c0d3e0c,Devops Engineer,2367.71,negotiable,1
+ea856dcc-0e17-411d-8695-e7fe599f804e,b50c93d1-d580-4580-9786-dc070c0d3e0c,Devops Engineer,2799.69,negotiable,2
+47153301-b374-4702-a92c-6dcce0187460,6ab79fd6-d18b-4bfb-8883-5d1ccc9f81e2,Ml Ai Engineer,6806.8,negotiable,0
+703ce006-601a-48d7-9cc1-563589cf627a,7ac08b8c-e518-45ce-8a6b-2de9323c2127,Backend Engineer,2794.99,fixed,0
+0e894645-527a-4ff5-9bf0-acb7593c39f9,7ac08b8c-e518-45ce-8a6b-2de9323c2127,Backend Engineer,648.36,negotiable,1
+789cb33e-c304-4723-965a-b896dad63eca,7e7abdaf-64f2-483e-8daa-16057f92d613,Blockchain Engineer,4190.65,negotiable,0
+afa98098-8b7a-4d66-a6a1-fe51ddcd4364,7e7abdaf-64f2-483e-8daa-16057f92d613,Blockchain Engineer,3761.08,negotiable,1
+84c81128-35fe-4dfb-a98b-f48b94e04d7a,6b626c72-2e2b-4053-b635-50aa3a31664a,Mobile Engineer,3030.95,negotiable,0
+c6453b8e-f4ab-41a1-9d74-2e7c69913005,7f78bf99-9f61-449d-b187-d83c415bdd44,Backend Engineer,4665.05,fixed,0
+0568e291-14ae-4549-831e-df83c8603b6d,87d48c74-9e08-4981-9a52-aceb945cf04c,Ml Ai Engineer,7235.65,negotiable,0
+cc38ab2e-6996-4eef-88e0-a838df4e781f,87d48c74-9e08-4981-9a52-aceb945cf04c,Ml Ai Engineer,5696.35,negotiable,1
+001a01fb-a5d3-4793-8a96-86bbcd49a786,87d48c74-9e08-4981-9a52-aceb945cf04c,Ml Ai Engineer,7261.34,negotiable,2
+5b7b4a57-5bc9-4233-b174-4968291463f5,437bac73-c8ce-41a7-96b0-c0f8f1e7198f,Mobile Engineer,2140.43,negotiable,0
+ca365612-1cef-435c-b3a1-feb524f59d15,437bac73-c8ce-41a7-96b0-c0f8f1e7198f,Mobile Engineer,2262.97,negotiable,1
+27ea0fd8-e161-452a-ab9a-4dfad58bcaea,437bac73-c8ce-41a7-96b0-c0f8f1e7198f,Mobile Engineer,4909.71,fixed,2
+99724b6d-e245-4b82-acc9-fdda514bddbd,fd1190ee-e8ec-4757-ab31-fd0ab7dc729b,Devops Engineer,6956.53,fixed,0
+fc352ca1-41c4-494a-86dd-5d30a71d54a0,fd1190ee-e8ec-4757-ab31-fd0ab7dc729b,Devops Engineer,1471.36,negotiable,1
+0bc2ad84-2588-47cd-b756-22261e0da621,a0942e73-86fc-4350-a559-c30cd591d567,Design Designer,517.82,negotiable,0
+4aa70018-89b6-421d-ace7-404db99c2800,a0942e73-86fc-4350-a559-c30cd591d567,Design Designer,1031.19,fixed,1
+bc70fda3-ce2b-4ef9-84b2-18125eacaf44,a0942e73-86fc-4350-a559-c30cd591d567,Design Designer,1151.05,fixed,2
+747436f9-01ad-45de-8f42-b6691bf39ddc,bac589a4-dec2-4e69-98a6-2ccc1da29fcd,Frontend Engineer,342.85,fixed,0
+7ce9e5ee-ca37-446d-a0ed-02f7111c5d17,bac589a4-dec2-4e69-98a6-2ccc1da29fcd,Frontend Engineer,495.2,fixed,1
+cd8b0353-31a7-4ddd-aeb6-b4b440e2573a,f3329b61-c8ef-4120-aa0b-c4a4ab531f55,Blockchain Engineer,8847.53,fixed,0
+f8f30ae1-4d2f-48b9-a5ac-1afb5affb0e8,5291ca2b-e081-4c1f-bc77-8045b231f5c0,Ml Ai Engineer,5805.45,negotiable,0
+afe833b8-b716-4af0-8854-a07402049db6,4aa3f77b-1bf9-48bc-8de5-4540745de1e8,Design Designer,2505.97,negotiable,0
+067d4662-d4c4-4682-9db7-7249a20b5db8,4aa3f77b-1bf9-48bc-8de5-4540745de1e8,Design Designer,826.1,negotiable,1
+de827a52-de42-4a98-96d0-eacf48c8271d,4aa3f77b-1bf9-48bc-8de5-4540745de1e8,Design Designer,1207.37,negotiable,2
+68c258ea-f454-4c63-bd23-1a52abfb0599,9a716667-83e9-4fc4-8781-cf8b8ce7a33a,Ml Ai Engineer,5260.25,negotiable,0
+ddb44055-64f2-496b-91cb-8e29ee1b8a70,9a716667-83e9-4fc4-8781-cf8b8ce7a33a,Ml Ai Engineer,3540.81,fixed,1
+feef7223-9b8f-469d-a67b-648a2d1f088d,9a716667-83e9-4fc4-8781-cf8b8ce7a33a,Ml Ai Engineer,4511.57,negotiable,2
+24db7da5-7fff-4cf6-9630-9a7f67cfc233,cf29ebbb-4e2b-4792-a5b2-fa601d0b563f,Blockchain Engineer,12262.47,fixed,0
+414b9c9f-fac7-45cc-b151-b22426ef1ab8,cf29ebbb-4e2b-4792-a5b2-fa601d0b563f,Blockchain Engineer,13403.34,negotiable,1
+9489a631-8475-433d-9ba9-9d795beae822,cf29ebbb-4e2b-4792-a5b2-fa601d0b563f,Blockchain Engineer,11235.95,negotiable,2
+140b4810-8363-498a-8656-67f3c642f070,06ccd3fa-7c47-4a63-ad52-754801c2dc75,Mobile Engineer,1373.95,fixed,0
+aa3ee171-d4ca-4f06-855e-77f0c853ed78,06ccd3fa-7c47-4a63-ad52-754801c2dc75,Mobile Engineer,4302.44,fixed,1
+f1d063b2-b654-4e19-9475-83498a4b1d64,06ccd3fa-7c47-4a63-ad52-754801c2dc75,Mobile Engineer,4239.53,negotiable,2
+878e6623-f484-4ecf-bcde-9249e3f7611d,13e3635a-c957-4633-86c3-ebd0e1f42efd,Devops Engineer,3781.8,negotiable,0
+59ed2a7c-a148-4912-90fa-8af13211e5a5,13e3635a-c957-4633-86c3-ebd0e1f42efd,Devops Engineer,2047.77,fixed,1
+989e8216-9498-4785-8b07-a892dd048fed,13e3635a-c957-4633-86c3-ebd0e1f42efd,Devops Engineer,1755.6,fixed,2
+645f4acd-3a68-481b-bd36-a8dc47ae7ea5,22e77a91-ea57-4563-8260-506421a27ae3,Devops Engineer,2792.76,fixed,0
+21e4e7a2-4c3a-401a-a755-6e26ac35f730,22e77a91-ea57-4563-8260-506421a27ae3,Devops Engineer,1381.54,negotiable,1
+a8865fc0-e4c1-4060-b127-76069760f229,22e77a91-ea57-4563-8260-506421a27ae3,Devops Engineer,3321.55,fixed,2
+0a4e29fc-808a-43f3-9148-1297283967ef,d60692dc-cffb-4d2b-82c9-8216e6e58f50,Blockchain Engineer,5991.1,fixed,0
+b10c5b18-4d33-4b7a-814c-a54c35c95fd7,d60692dc-cffb-4d2b-82c9-8216e6e58f50,Blockchain Engineer,3887.89,fixed,1
+1e016331-d9a6-477d-94a1-08540b660dde,d60692dc-cffb-4d2b-82c9-8216e6e58f50,Blockchain Engineer,8280.41,fixed,2
+db448124-934b-48de-a856-c165212de4d5,a270b89d-c8d2-471f-b0ce-2a533f69fa7c,Backend Engineer,804.71,fixed,0
+d4e427e9-5453-4c56-ba6f-3fa975203de4,79b273a5-abe5-4b51-b4a2-d59665568e7d,Frontend Engineer,1617.56,fixed,0
+6319cd97-cb69-44a8-9232-484de068067c,1cc99708-f0bf-42dc-bcf6-7898e570207f,Backend Engineer,4285.83,negotiable,0
+04b11c17-8d92-46f6-aa8d-f151429e794d,dc22af39-5d05-436b-be9d-a84a11ff94f3,Frontend Engineer,2832.15,negotiable,0
+611e02e1-bee2-4820-88ff-7d4fa37632d7,b7fc845a-264c-4cd3-be53-95b7a42d0746,Devops Engineer,1885.35,fixed,0
+540c9836-1185-499b-ba7e-4d4a3a90a622,b7fc845a-264c-4cd3-be53-95b7a42d0746,Devops Engineer,5092.7,negotiable,1
+f7c66601-910d-4fc8-af1e-8895ea68873f,cf8bcada-a323-4b4a-b59f-8cc551ddf778,Design Designer,833.79,fixed,0
+4fb3f688-9399-4d08-b385-fb718b88ae72,3a647476-c772-413b-be3e-feefbc03d4a0,Frontend Engineer,1334.8,fixed,0
+028f1d90-5dd5-4f6c-a43c-b1f0fb9480fe,3a647476-c772-413b-be3e-feefbc03d4a0,Frontend Engineer,2208.0,negotiable,1
+0f5481f5-154a-4e82-9b7d-7f859158ddc5,3a647476-c772-413b-be3e-feefbc03d4a0,Frontend Engineer,2474.49,fixed,2
+bede231e-ec39-4267-ba55-d3efffdaab6e,21f010c9-71ba-44fe-9e08-54d656cdaec4,Mobile Engineer,1561.1,negotiable,0
+d41b1dfc-9a30-4325-8d12-5852128fa2b4,21f010c9-71ba-44fe-9e08-54d656cdaec4,Mobile Engineer,812.54,fixed,1
+cbfb4da5-46d8-4c06-ab2a-1ca39c5e6aea,e0cdd0c2-c838-44ab-a52e-78c2f2dd37c2,Frontend Engineer,2537.66,fixed,0
+a98e0a04-4c74-4452-8621-3f5b3ffce636,e0cdd0c2-c838-44ab-a52e-78c2f2dd37c2,Frontend Engineer,2356.88,negotiable,1
+f59f55fd-658e-4618-8e1e-9708a295f162,78d6afe6-12d4-4ef1-b116-52ab2fde27e7,Devops Engineer,4428.83,fixed,0
+519afb17-042d-4322-82d4-1178c3878d92,2586d051-2e50-41e5-98ab-1e038e1d0e1e,Fullstack Engineer,3365.89,fixed,0
+b6a171e5-58fb-4881-8fef-b16b0e71d4e7,2586d051-2e50-41e5-98ab-1e038e1d0e1e,Fullstack Engineer,2907.62,negotiable,1
+b5477991-2a51-4a99-900b-eea8f4f68d91,680a3dee-0664-452c-ad1c-e38310322214,Devops Engineer,5611.26,fixed,0
+b0a05718-1fbc-4f09-bad1-c4d90d209085,a6bd4279-6125-4288-853e-0d3271dece65,Fullstack Engineer,6419.09,negotiable,0
+7a3603d6-737d-4d92-a81e-f84df17585d5,a6bd4279-6125-4288-853e-0d3271dece65,Fullstack Engineer,5880.6,fixed,1
+d09d9262-d15e-41b9-a84d-9d56b8ea834d,a6bd4279-6125-4288-853e-0d3271dece65,Fullstack Engineer,6640.62,fixed,2
+71a5b8fa-746e-4b63-bd8f-e4d970806bab,f8e6ed9d-e11e-42ce-b3ff-fdd2ef2f3d44,Ml Ai Engineer,2701.43,negotiable,0
+5aaf1bef-8ed3-4e96-b818-8d3b3f987a21,f8e6ed9d-e11e-42ce-b3ff-fdd2ef2f3d44,Ml Ai Engineer,7627.3,fixed,1
+acd0d62e-fe30-420d-90f6-9b8af9442527,f8e6ed9d-e11e-42ce-b3ff-fdd2ef2f3d44,Ml Ai Engineer,8484.09,fixed,2
+3fbfc5ec-5a70-41d6-a974-161b98a7d8db,963c9c95-f049-41ea-b9da-835ecc29e2e1,Ml Ai Engineer,1742.03,negotiable,0
+028aa7cf-9757-4cb3-9b1e-4b2d9e2af39a,963c9c95-f049-41ea-b9da-835ecc29e2e1,Ml Ai Engineer,8874.88,negotiable,1
+4a42eb0d-4d06-4f85-95dd-7c134a477ee1,c3c333d6-5956-42ab-a92f-2c297fdfe971,Devops Engineer,4396.2,fixed,0
+689902d1-c2b5-455e-92a5-8a2fc1ad1126,c3c333d6-5956-42ab-a92f-2c297fdfe971,Devops Engineer,5319.92,negotiable,1
+0fec7aa9-14ef-4ff9-bb5d-22a29144f16f,c3c333d6-5956-42ab-a92f-2c297fdfe971,Devops Engineer,2292.13,negotiable,2
+de13dda7-7ca3-486a-a719-4f680756016b,e3698cce-5877-4256-9f5b-53f32ad2d6a7,Mobile Engineer,677.21,fixed,0
+3f646e39-3144-4a75-b6cb-1451c7e14dde,169ec73b-1f81-43f8-bb82-972550522310,Devops Engineer,2714.61,negotiable,0
+d056fdf5-fd4b-4c5f-a59a-6ed36361c43b,169ec73b-1f81-43f8-bb82-972550522310,Devops Engineer,5736.48,negotiable,1
+eb98de42-3600-4671-ab7b-b0d2ae9b385f,169ec73b-1f81-43f8-bb82-972550522310,Devops Engineer,5980.95,negotiable,2
+b1110eae-8b27-464c-aff6-b087c24c7026,2f7d7f8a-6c53-4dbb-97ee-df016289efea,Backend Engineer,1898.83,negotiable,0
+91d8f36b-ce54-4138-86eb-30a17f9536a3,2f7d7f8a-6c53-4dbb-97ee-df016289efea,Backend Engineer,1793.83,negotiable,1
+2efb0f6e-d999-4bfd-ae34-59968e75a28c,36f6e1ed-dd33-4231-9b91-385739e1e8d7,Design Designer,507.91,negotiable,0
+e7bb7d87-b461-4a56-91b4-fc8b6dafece4,36f6e1ed-dd33-4231-9b91-385739e1e8d7,Design Designer,2419.83,negotiable,1
+aa26859c-90f6-4c15-bba1-83c05d1751bd,a254a575-2a1e-4e5d-8a25-905c2bcff3ab,Devops Engineer,1968.04,fixed,0
+1dee7526-bf58-48a8-9486-38fcfae90a17,a6d8fa9b-73b3-4def-a788-6985e52f108e,Frontend Engineer,1781.79,negotiable,0
+a9f445d9-f753-48d9-8edf-6be2fa3543ff,87a08990-0937-4566-961a-90eb55dbd470,Design Designer,820.71,negotiable,0
+eb1d910c-482e-4e3a-9524-b73429d845c2,87a08990-0937-4566-961a-90eb55dbd470,Design Designer,2831.14,fixed,1
+b4960474-ae72-4107-aa0e-bfc3d9971562,a58be6fd-7e1f-40a2-8252-0ca8fc223173,Mobile Engineer,2961.76,negotiable,0
+c5a06101-1bd9-46d8-b0b8-cd7c7a51780d,a58be6fd-7e1f-40a2-8252-0ca8fc223173,Mobile Engineer,4339.5,fixed,1
+b3b9bceb-ebbb-415f-983a-c246da295511,a58be6fd-7e1f-40a2-8252-0ca8fc223173,Mobile Engineer,4399.88,fixed,2
+28067a03-3f2f-4676-81b9-f248e663ca76,34312d2a-aa1d-4e1b-8c37-9a7098dfc3eb,Frontend Engineer,2989.48,fixed,0
+0d1c4cbe-48ed-42ca-9ad3-7187fac65e45,34312d2a-aa1d-4e1b-8c37-9a7098dfc3eb,Frontend Engineer,3467.43,fixed,1
+c9d129a0-2d50-4bc1-84de-a1c824efa236,34312d2a-aa1d-4e1b-8c37-9a7098dfc3eb,Frontend Engineer,759.54,negotiable,2
+c603da1b-7f3c-4158-8e97-de99ad59e2f1,112a70d6-4b74-4438-82a0-2e8fe3362267,Ml Ai Engineer,1320.86,negotiable,0
+ab32438c-8081-4f4f-a870-dfb0c4bb6254,044d911d-4bec-4682-ae05-e4943c125f72,Ml Ai Engineer,7062.37,fixed,0
+b42c23fe-da93-4b1b-939f-fa743d16bbd7,fb14cd9f-f85d-40d9-b317-781dc1116691,Frontend Engineer,2258.11,fixed,0
+307d6101-627f-40b0-941c-168fd9cd3f30,fb14cd9f-f85d-40d9-b317-781dc1116691,Frontend Engineer,3111.88,fixed,1
+8fdf6693-5a74-4505-919c-1666321d5492,2c02d1dd-8c80-403a-9220-ac82e8fc8326,Ml Ai Engineer,1108.22,negotiable,0
+1db0f913-f4c0-49ef-98f3-1e059fe84457,2c02d1dd-8c80-403a-9220-ac82e8fc8326,Ml Ai Engineer,3120.49,negotiable,1
+ad6b7866-7d84-44ab-9211-afd19f48b4b5,2c02d1dd-8c80-403a-9220-ac82e8fc8326,Ml Ai Engineer,4088.33,negotiable,2
+da628c7e-4f5c-4ffa-833d-b3dde4a6618d,1a725690-9ab0-4cc0-a74d-ab1fb474799a,Design Designer,785.26,negotiable,0
+2af611f9-5908-4a3e-8246-eeda276a6b4a,b50ba80f-c8c0-4ba7-8f7e-51c7e73f3fc9,Fullstack Engineer,1223.86,fixed,0
+8c511e96-77e9-4275-b94f-76c461247cd0,b50ba80f-c8c0-4ba7-8f7e-51c7e73f3fc9,Fullstack Engineer,5254.86,negotiable,1
+d62063aa-5bae-4fd1-9f47-36100788dc6b,cf3b2fa7-1b84-4db7-903b-c1bac67d15b7,Mobile Engineer,5268.57,fixed,0
+cc1f82e2-ea8d-45f0-bc30-bac6d764f6e8,cf3b2fa7-1b84-4db7-903b-c1bac67d15b7,Mobile Engineer,2301.31,fixed,1
+c2c7796e-00ec-4992-a84a-6f6be155b97f,cf3b2fa7-1b84-4db7-903b-c1bac67d15b7,Mobile Engineer,2875.68,fixed,2
+7e7cc135-d995-4d12-810a-3ca7c1f1a88b,0e8105c4-3bcc-494d-8b86-b4d95e8a4008,Backend Engineer,2265.33,negotiable,0
+69ee1a26-4e46-4342-bfbf-d3aa28ee8076,047950a1-cc2d-4904-8672-8bb131346dbc,Fullstack Engineer,1881.77,negotiable,0
+799a4593-c9e8-46f0-9ee7-47ce08581481,047950a1-cc2d-4904-8672-8bb131346dbc,Fullstack Engineer,7436.53,negotiable,1
+a17980c5-6984-486a-bfdf-25bdcba63638,047950a1-cc2d-4904-8672-8bb131346dbc,Fullstack Engineer,1113.91,fixed,2
+7baa995a-bcc8-405b-8658-2d0670297cb4,d1da0581-9d9b-4e8c-b8b4-4fb7a9b156eb,Fullstack Engineer,7169.9,negotiable,0
+6bec042b-39f6-4d07-b074-1955e9be2acc,d1da0581-9d9b-4e8c-b8b4-4fb7a9b156eb,Fullstack Engineer,4779.73,negotiable,1
+74395234-a0aa-47a8-b253-7922808cf5b9,296e4435-98eb-43f8-b28f-8d739bbefc61,Fullstack Engineer,3774.39,negotiable,0
+9c95cc84-6363-4d65-a51a-4f6ade13e94f,296e4435-98eb-43f8-b28f-8d739bbefc61,Fullstack Engineer,4151.88,negotiable,1
+838033f9-2d1d-43bf-af3f-dd9ba5c887c3,296e4435-98eb-43f8-b28f-8d739bbefc61,Fullstack Engineer,3650.36,negotiable,2
+568a4526-6f1e-4bc2-bf44-922d367b3430,9ec45df5-034d-4e96-934b-a9aedfefed4f,Backend Engineer,1916.5,fixed,0
+1a9ea989-3602-4d5f-afe7-b498d3fe357d,9ec45df5-034d-4e96-934b-a9aedfefed4f,Backend Engineer,539.17,fixed,1
+66955056-613a-467f-99b5-faa2c56adede,9ec45df5-034d-4e96-934b-a9aedfefed4f,Backend Engineer,4630.14,negotiable,2
+5916ab09-c0b3-4a4d-bef7-0eacc6e94fdb,63cf1e8e-7357-4967-ac3b-6a93b413134c,Blockchain Engineer,14099.99,negotiable,0
+383d7527-c162-4ea5-91dd-1f0cf93b0240,e6b3485c-7e97-4899-af5e-928dca0cd953,Mobile Engineer,1258.04,fixed,0
+13a5c7c9-5a0e-4fec-8570-65ee66cd0330,5fb1680f-f8dc-4966-851b-2afbcd417278,Frontend Engineer,2360.87,fixed,0
+7a194e30-c74d-4986-9fbd-674f36018b4b,8205d050-7929-4cad-93af-8e9dee594360,Ml Ai Engineer,1452.68,negotiable,0
+0c0051c9-23df-4782-9576-311332b33382,43934d8d-73ab-492b-ae05-4777cd37a571,Ml Ai Engineer,7120.07,negotiable,0
+575065f7-ca83-4eae-806d-eb0cce3ea877,1613a4cd-634b-4259-9eed-50a5ae8e0360,Design Designer,788.07,negotiable,0
+5bb06f83-30d2-4a2e-a549-88a3360c42e5,1613a4cd-634b-4259-9eed-50a5ae8e0360,Design Designer,868.93,fixed,1
+73f4c2e7-2f83-4094-8e6f-4d10ebcf9bab,1613a4cd-634b-4259-9eed-50a5ae8e0360,Design Designer,2894.55,negotiable,2
+e4432b0b-afc7-49ec-b36f-417c61ebbcc0,a5a01d21-9046-40e7-94f6-bfccbe94e379,Devops Engineer,5116.37,negotiable,0
+df8b69ba-2383-48b7-a33e-82bb2761e732,a5a01d21-9046-40e7-94f6-bfccbe94e379,Devops Engineer,2015.41,negotiable,1
+21e7afd2-8d3f-4755-9c3b-04d58964b3cb,143d6a96-00a9-45b5-b9d1-b5f470cf38bc,Mobile Engineer,3956.55,negotiable,0
+cfa6d1c4-4ce4-47e3-91ad-b17264552836,143d6a96-00a9-45b5-b9d1-b5f470cf38bc,Mobile Engineer,5190.51,fixed,1
+057c09a6-a626-4f3c-b3d8-a02f0d21e2b1,19f58fbb-ce31-4f8d-90a4-202f005a6b99,Frontend Engineer,552.03,fixed,0
+72094181-0a29-4d1f-a2c0-b843a15dfd21,19f58fbb-ce31-4f8d-90a4-202f005a6b99,Frontend Engineer,2637.06,fixed,1
+93948c3b-334c-461b-99cb-1c786bbff9fc,19f58fbb-ce31-4f8d-90a4-202f005a6b99,Frontend Engineer,3742.41,fixed,2
+63512e31-ac03-41cb-bb80-da50907bca1f,737b74e6-70b7-4dd2-b390-55e4fca820e8,Design Designer,568.4,fixed,0
+14c0f0a1-d313-4932-8215-9e0e636594d3,737b74e6-70b7-4dd2-b390-55e4fca820e8,Design Designer,1085.94,fixed,1
+e24ec90c-4f6b-4288-9f92-fa2a4e72b403,737b74e6-70b7-4dd2-b390-55e4fca820e8,Design Designer,795.7,fixed,2
+8e991d7c-203c-4fac-ba43-d356524cac56,9aa08cfd-0170-4351-b0a5-0fcd86d9dd36,Design Designer,1612.09,negotiable,0
+337ab311-d522-414f-a5d5-85d369f72157,9aa08cfd-0170-4351-b0a5-0fcd86d9dd36,Design Designer,2645.81,fixed,1
+f1553858-103a-4e64-b7be-2e8ab02c12a2,52fc530c-e4d2-4e3f-8f56-8405fe1a4d35,Frontend Engineer,1426.45,fixed,0
+6ba86418-3b58-4db9-b48a-97678ff70d38,52fc530c-e4d2-4e3f-8f56-8405fe1a4d35,Frontend Engineer,3622.26,negotiable,1
+fe1c0837-c2b3-4878-b864-e208ef8f65e7,b6ffcff2-7167-400c-aab4-769e7f2f5bd2,Fullstack Engineer,5528.88,fixed,0
+7b469662-18bb-4fee-bc96-1e0b4f7949b9,b4c9f3f2-6d83-4dd5-a3a9-a19859ae1c6f,Frontend Engineer,3520.61,fixed,0
+201e9a5f-e3cf-4ad1-bc3f-7331becfd66f,b4c9f3f2-6d83-4dd5-a3a9-a19859ae1c6f,Frontend Engineer,813.68,negotiable,1
+d5930f59-56e7-44c9-8e24-b64fefe30c14,b4c9f3f2-6d83-4dd5-a3a9-a19859ae1c6f,Frontend Engineer,1635.5,fixed,2
+393c80c2-6368-4cf6-8df0-0de65da79e8e,c0e3ed6d-daa0-4ed6-816f-91f5ba7e4af7,Devops Engineer,7672.89,fixed,0
+beb507ae-0405-4ef8-a448-de178c2c54a2,c0e3ed6d-daa0-4ed6-816f-91f5ba7e4af7,Devops Engineer,6194.96,fixed,1
+cdbe5a47-2ac6-4f90-9502-51a05b67e231,c0e3ed6d-daa0-4ed6-816f-91f5ba7e4af7,Devops Engineer,6105.36,fixed,2
+48ec4236-5dc7-41ed-9f3e-7632a93b05a0,1206365f-2e0c-4c99-83f2-20965957e3ae,Devops Engineer,2028.55,fixed,0
+ceb721f3-5a78-4552-b1f9-7422d7ebddce,cba832d3-bd61-4167-9e07-afeb8185c065,Mobile Engineer,748.33,negotiable,0
+3a378233-1ce4-4c9c-aa94-0b991e6075fc,cba832d3-bd61-4167-9e07-afeb8185c065,Mobile Engineer,3557.84,negotiable,1
+b993c15f-cfe1-48b6-b2b7-01af744f57c0,8aa22103-8431-4086-8c28-7a257885912f,Blockchain Engineer,14946.64,negotiable,0
+cd5dacd3-cbf9-4587-a093-85791fdeb783,49d36b19-b30c-4c00-9d47-3829a5a09154,Frontend Engineer,2501.29,negotiable,0
+81d9ee91-f32d-43c1-9ea4-4e3454dbab9c,49d36b19-b30c-4c00-9d47-3829a5a09154,Frontend Engineer,2389.42,fixed,1
+1f04c8f9-4740-4971-94a0-0c95e02b8517,49d36b19-b30c-4c00-9d47-3829a5a09154,Frontend Engineer,632.97,fixed,2
+f91417fe-5852-409b-96f8-297a6063cee1,688e4ffb-e2f2-4b11-9bca-904533de53b5,Devops Engineer,5095.07,negotiable,0
+5b3fb8a6-92f5-418f-8853-d5d8db2f6fb4,688e4ffb-e2f2-4b11-9bca-904533de53b5,Devops Engineer,3688.85,fixed,1
+05122745-69e0-45dd-b345-0c2f5cd8b2c1,688e4ffb-e2f2-4b11-9bca-904533de53b5,Devops Engineer,4118.4,negotiable,2
+89814959-51f0-4397-a94d-470b2791afbb,d509fcfc-1ae1-4b79-bec8-fa212d61c614,Fullstack Engineer,5149.99,negotiable,0
+3171fb70-f2e1-4af6-a790-8897fe76f393,d509fcfc-1ae1-4b79-bec8-fa212d61c614,Fullstack Engineer,1518.55,negotiable,1
+03f4f68f-633f-4a8e-91c8-a4c7aa3d3104,d509fcfc-1ae1-4b79-bec8-fa212d61c614,Fullstack Engineer,7295.26,negotiable,2
+56f25024-3c2d-482f-81d6-52b908cff6b4,9e2fe6f6-14f4-4d33-bf86-d5b340171666,Fullstack Engineer,7510.3,negotiable,0
+123a8d4f-d6b2-437b-bff4-63e22bb0f42f,ef0bbad9-fd13-4dba-848c-59e419848f7f,Ml Ai Engineer,3903.36,fixed,0
+b9ddd6f0-bcfe-406c-a143-2bb4f3bf801b,230d48c7-2acd-474c-9441-da0ebd2c9604,Mobile Engineer,3944.76,fixed,0
+094b89ea-834b-485f-b5c3-b02b12fed6ce,a8d130f4-7760-4b42-89c3-8471f6b0163c,Mobile Engineer,3874.7,negotiable,0
+d8385505-edff-4c74-abae-ecfe3184f10e,a8d130f4-7760-4b42-89c3-8471f6b0163c,Mobile Engineer,3761.9,fixed,1
+7b794435-3c89-416e-8692-efb2c7f0fbd0,a8d130f4-7760-4b42-89c3-8471f6b0163c,Mobile Engineer,3855.18,negotiable,2
+fc8e1be5-9c46-4d2c-b039-9296d9141663,55398742-691a-45b2-a11d-19c2355f5d7b,Design Designer,2835.51,fixed,0
+86e3cd8f-ce73-4e25-be61-d23c20ad4971,21dcb71c-c19b-4ae5-a5ea-be59e9251c91,Ml Ai Engineer,1826.8,negotiable,0
+5ad5ff89-5620-4a4c-9361-20f161188653,fc43010c-a4a8-4b54-bd66-2d4dc230edbd,Fullstack Engineer,3423.95,fixed,0
+6a99a10e-5822-40ad-bad3-b6c3dc92d387,c8f3d5bc-8024-4696-ac9e-030460767469,Ml Ai Engineer,3386.24,negotiable,0
+c653d2fd-8ac0-4f22-8a6a-aa3fd5f5533b,c8f3d5bc-8024-4696-ac9e-030460767469,Ml Ai Engineer,7887.78,fixed,1
+9f64f343-56dd-4ea3-bd7d-ca289378b4fe,90f33016-7a67-478f-b853-338ccec0b873,Frontend Engineer,2558.67,negotiable,0
+e4deebd2-5a8b-435b-bcc8-805fa0970cbc,90f33016-7a67-478f-b853-338ccec0b873,Frontend Engineer,1236.79,fixed,1
+1430bf95-3452-4aaf-b516-c53e91a953ec,90f33016-7a67-478f-b853-338ccec0b873,Frontend Engineer,1632.49,fixed,2
+b94b8820-41fc-45a6-8ee0-f02f53914678,7b8e9dd0-8708-4186-bf2a-6d65be1c29c1,Ml Ai Engineer,5320.96,fixed,0
+06153f3c-5ba9-4d65-ac7e-52e55fe38655,7b8e9dd0-8708-4186-bf2a-6d65be1c29c1,Ml Ai Engineer,9978.78,fixed,1
+de572c65-eaa6-4f5e-bc67-baff885ea9b8,cb81f743-bea5-40b1-9b06-89767977e31b,Blockchain Engineer,1664.24,fixed,0
+d3adc94b-0fbc-43ad-a9a4-2aefcc08fa97,cb81f743-bea5-40b1-9b06-89767977e31b,Blockchain Engineer,2599.25,fixed,1
+a23bee4a-c1f7-4b06-8c4b-b72e187564b5,cb81f743-bea5-40b1-9b06-89767977e31b,Blockchain Engineer,13333.33,fixed,2
+b7f4e5ac-76ba-45f1-a522-a3eefcedf0a6,93525274-e691-4b35-88ba-2e8945680af8,Devops Engineer,864.72,fixed,0
+b76a41e7-16fc-4886-b4c2-110588321447,93525274-e691-4b35-88ba-2e8945680af8,Devops Engineer,811.86,negotiable,1
+c27df136-4c85-46fe-8c21-26951175d95e,93525274-e691-4b35-88ba-2e8945680af8,Devops Engineer,4817.04,negotiable,2
+319f89d5-56e3-46f7-83e3-5534d0443db4,f42afd83-e03d-4e0b-bfaf-6a27fd168945,Backend Engineer,2965.98,fixed,0
+d7727968-f606-4e45-82e6-d838a7c5eefd,f42afd83-e03d-4e0b-bfaf-6a27fd168945,Backend Engineer,1237.67,fixed,1
+925aca9d-de5e-4a8f-8773-8f8dd1ec66e1,f42afd83-e03d-4e0b-bfaf-6a27fd168945,Backend Engineer,1658.25,fixed,2
+27c16ed2-1bc4-4443-a212-43e7807fc8cf,072d3592-9dee-4bfc-b376-10eb91c960e6,Design Designer,1037.8,negotiable,0
+eb7c2957-75db-4c66-9b7a-8fea7077e3a8,072d3592-9dee-4bfc-b376-10eb91c960e6,Design Designer,1218.04,negotiable,1
+d4943d7c-72ce-4b71-ac3c-dd6cbba5a4ab,072d3592-9dee-4bfc-b376-10eb91c960e6,Design Designer,1142.08,fixed,2
+edba09a7-9f63-4773-bc39-e2c06dee1a7c,54e96a38-dc62-4e2f-95d5-3218a99d49fe,Backend Engineer,2034.5,negotiable,0
+4142f033-e64c-40a1-864a-543df4e2a7f7,e15e2580-17f8-4b3d-a504-4c72e9c17e4b,Devops Engineer,4169.62,negotiable,0
+f6d218d6-527a-4b80-87fd-efa2fe4e95f1,e15e2580-17f8-4b3d-a504-4c72e9c17e4b,Devops Engineer,6539.83,fixed,1
+c40916b1-64a3-415c-9877-c768c0cb4b87,e15e2580-17f8-4b3d-a504-4c72e9c17e4b,Devops Engineer,1989.4,fixed,2
+5e250ba9-c451-4314-b828-67f270e327e9,683a4d6d-1623-4cd6-b37a-c5e382050b07,Ml Ai Engineer,6698.82,negotiable,0
+184ec24b-db7e-497c-9396-1b094dfc93e2,683a4d6d-1623-4cd6-b37a-c5e382050b07,Ml Ai Engineer,7955.94,negotiable,1
+d601c6ec-da91-49b9-9047-301944b96f87,683a4d6d-1623-4cd6-b37a-c5e382050b07,Ml Ai Engineer,5372.57,negotiable,2
+dc425ab0-64d8-4fd6-8ef0-e0a138dbd627,bb566e1a-63b8-4448-a074-b6513f882bf7,Design Designer,2583.4,fixed,0
+b29911b6-6fd0-49de-af57-7aa2e4f0f195,bb566e1a-63b8-4448-a074-b6513f882bf7,Design Designer,2600.67,negotiable,1
+67685861-07fb-464c-ba24-e689812f15ad,bb566e1a-63b8-4448-a074-b6513f882bf7,Design Designer,2423.65,negotiable,2
+ca733bad-6d09-4a0c-8ad1-8c132db6b06c,fccf5822-564b-4ee4-ad8c-b4189b52830b,Blockchain Engineer,2150.07,fixed,0
+348fc761-b212-44d7-af10-dae5d236ccf8,fccf5822-564b-4ee4-ad8c-b4189b52830b,Blockchain Engineer,12720.19,negotiable,1
+cc238ee8-2942-4d82-8961-3f55f328ae29,fccf5822-564b-4ee4-ad8c-b4189b52830b,Blockchain Engineer,5671.93,negotiable,2
+bedc3e23-da0b-41ad-bf20-5c15eae3ebfe,fee311ec-9123-490c-a6ff-7cdeb7286491,Backend Engineer,1420.22,negotiable,0
+b6eba4ba-6f5c-4baa-bc22-3819dae699c0,234e87b4-19f7-4609-b60f-859ab6c32f82,Blockchain Engineer,14952.4,fixed,0
+4ddf5a1f-07d0-45c6-8184-3c6257993f17,234e87b4-19f7-4609-b60f-859ab6c32f82,Blockchain Engineer,7733.48,negotiable,1
+dfe4d843-5052-4b2c-895c-b95185873972,14524bca-b2b7-429f-b013-f4a2652959b2,Ml Ai Engineer,1487.99,fixed,0
+e58656ea-ed32-41be-a5d7-c4b138629340,14524bca-b2b7-429f-b013-f4a2652959b2,Ml Ai Engineer,1784.46,negotiable,1
+bc599de1-588e-43fc-9db5-57b1a1fde4b4,d06b7648-ed4a-4637-9aad-a45713fe4497,Mobile Engineer,3292.82,negotiable,0
+e6cacc6a-9273-4fde-a994-8cff355c4138,d06b7648-ed4a-4637-9aad-a45713fe4497,Mobile Engineer,2528.23,negotiable,1
+da3f2111-f7a2-4cf5-bec1-ec54a85f7e7d,182b1640-5b24-421f-9223-e05a3278d774,Design Designer,2249.18,fixed,0
+0b2c34dc-659e-476a-8bfe-fc915ad0b4bf,182b1640-5b24-421f-9223-e05a3278d774,Design Designer,854.64,fixed,1
+2e4c67f2-fc47-4021-a3b2-c70553cac015,182b1640-5b24-421f-9223-e05a3278d774,Design Designer,1140.58,negotiable,2
+b9e67690-0381-4161-896a-3a2c810d8ebe,d55d6cc7-184e-4cd6-87c0-237104f66584,Devops Engineer,5964.57,negotiable,0
+bfd3ae2e-c37d-489d-ae1e-93ae9a5e8c18,d55d6cc7-184e-4cd6-87c0-237104f66584,Devops Engineer,3946.25,fixed,1
+5a9057f6-574e-47f4-9ce9-2810b767a511,2b75cf70-852b-4fc7-9090-143267ad5d3a,Backend Engineer,4212.74,fixed,0
+e6e2edc2-2e2b-4902-be4a-3f696efc1978,2b75cf70-852b-4fc7-9090-143267ad5d3a,Backend Engineer,3832.37,negotiable,1
+7aacc7a7-f7da-468b-b7d9-5bb4f8697e9b,f740d673-9cfe-4eac-888e-b1a9d817b1db,Design Designer,1926.98,fixed,0
+e93168bd-2e6c-444f-99de-07e714e8a983,f740d673-9cfe-4eac-888e-b1a9d817b1db,Design Designer,1146.63,negotiable,1
+a1913fee-feb8-4d62-bcfa-eb63ad956ebe,f740d673-9cfe-4eac-888e-b1a9d817b1db,Design Designer,2526.6,fixed,2
+4eed32e0-31c9-4036-af1b-8789382d96f7,423e57f9-9629-4729-a8d7-0d631eed4265,Fullstack Engineer,2640.65,fixed,0
+51125a4e-5797-44f5-b90b-3c0d859fae56,423e57f9-9629-4729-a8d7-0d631eed4265,Fullstack Engineer,6304.39,fixed,1
