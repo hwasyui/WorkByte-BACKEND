@@ -357,7 +357,7 @@ class EducationResponse(BaseModel):
 # ==================== JOB POSTS ====================
 class JobPostCreate(BaseModel):
     job_post_id: Optional[str] = None
-    client_id: str
+    client_id: Optional[str] = None
     job_title: str
     job_description: str
     project_type: str  # individual, team
@@ -404,6 +404,82 @@ class JobPostResponse(BaseModel):
     class Config:
         from_attributes = True
 
+# ==================== JOB PAYMENT ====================
+
+class JobPaymentCreate(BaseModel):
+    job_post_id: str
+    payment_type: str                   # 'full' or 'milestone'
+    payment_option: str                 # e.g. '2 milestones', 'full'
+
+
+class JobPaymentUpdate(BaseModel):
+    payment_type: Optional[str] = None
+    payment_option: Optional[str] = None
+    status: Optional[str] = None
+
+
+class JobPaymentResponse(BaseModel):
+    job_payment_id: str
+    job_post_id: str
+    payment_type: str
+    payment_option: str
+    status: str
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+# ==================== JOB MILESTONE ====================
+
+class JobMilestoneItem(BaseModel):
+    milestone_order: int
+    work_progress: str                  # e.g. '25%'
+    payment_percentage: str             # e.g. '25%'
+
+
+class JobMilestoneCreate(BaseModel):
+    job_payment_id: str
+    milestone_order: int
+    work_progress: str
+    payment_percentage: str
+
+
+class JobMilestoneBulkCreate(BaseModel):
+    job_payment_id: str
+    milestones: List[JobMilestoneItem]
+
+
+class JobMilestoneUpdate(BaseModel):
+    work_progress: Optional[str] = None
+    payment_percentage: Optional[str] = None
+    milestone_order: Optional[int] = None
+
+
+class JobMilestoneResponse(BaseModel):
+    milestone_id: str
+    job_payment_id: str
+    milestone_order: int
+    work_progress: str
+    payment_percentage: str
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+# ==================== COMBINED (used by Flutter summary POST) ====================
+
+class JobPaymentWithMilestonesCreate(BaseModel):
+    """
+    Single payload from Flutter — creates job_payment + all job_milestones in one request.
+    Only used when payment_type is 'milestone'. For 'full', milestones list is empty.
+    """
+    job_post_id: str
+    payment_type: str
+    payment_option: str
+    milestones: Optional[List[JobMilestoneItem]] = []
 
 # ==================== JOB ROLES ====================
 class JobRoleCreate(BaseModel):

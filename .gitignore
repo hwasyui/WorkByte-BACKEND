@@ -10,3 +10,4 @@ __pycache__/
 *.log
 notes.txt
 *.json
+venv

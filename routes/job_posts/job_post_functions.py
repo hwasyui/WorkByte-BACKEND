@@ -24,7 +24,7 @@ class JobPostFunctions:
     """Handle all job post-related database operations"""
 
     @staticmethod
-    def get_all_job_posts(limit: Optional[int] = None, offset: int = 0) -> List[Dict]:
+    def get_all_job_posts(limit: Optional[int] = None) -> List[Dict]:
         """Fetch all job posts"""
         try:
             db = get_db()
@@ -35,7 +35,6 @@ class JobPostFunctions:
                         "view_count", "proposal_count", "created_at", "updated_at", "posted_at", "closed_at"],
                 order_by="created_at DESC",
                 limit=limit,
-                offset=offset
             )
             
             logger("JOB_POST_FUNCTIONS", f"Fetched {len(rows)} job posts", level="INFO")
