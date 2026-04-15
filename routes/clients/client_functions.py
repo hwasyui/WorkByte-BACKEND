@@ -9,17 +9,18 @@ import uuid
 from datetime import datetime
 
 def convert_uuids_to_str(data: Dict) -> Dict:
-    """Convert all UUID objects in dict to strings"""
+    """Convert all UUID and datetime objects in dict to strings"""
     if not data:
         return data
     result = {}
     for key, value in data.items():
         if hasattr(value, '__class__') and 'UUID' in value.__class__.__name__:
             result[key] = str(value)
+        elif hasattr(value, 'isoformat'):  # catches datetime and date objects
+            result[key] = value.isoformat()
         else:
             result[key] = value
     return result
-
 
 class ClientFunctions:
     """Handle all client-related database operations"""

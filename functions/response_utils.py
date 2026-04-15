@@ -1,90 +1,58 @@
-"""
-Response utility module for standardized API responses
-"""
+"""Helpers for building standardized API responses."""
+
 from fastapi.responses import JSONResponse
-from typing import Any, Optional, Dict
-import json
+from fastapi.encoders import jsonable_encoder
+from typing import Any
+from uuid import UUID
+from datetime import date, datetime
+from decimal import Decimal
+
 
 class ResponseSchema:
-    """Standardized response schemas for API"""
-    
+
     @staticmethod
     def success(details: Any = None, status_code: int = 200) -> JSONResponse:
-        """
-        Success response with optional data
-        
-        Args:
-            details: Can be a string message or dict/object with data
-            status_code: HTTP status code (200, 201, 204, etc.)
-        """
+        """Build a success response. details can be a string, dict, or Pydantic model."""
+
         if status_code == 204:
-            # No content response
             return JSONResponse(status_code=204, content=None)
-        
-        # If details is a dict but empty, return as message string
-        if isinstance(details, dict):
-            body = {
-                "status": "success",
-                "details": details
+
+        body = {
+            "status": "success",
+            "details": details
+        }
+
+        # Convert everything into JSON-safe format
+        encoded_body = jsonable_encoder(
+            body,
+            custom_encoder={
+                date: lambda v: v.isoformat(),
+                datetime: lambda v: v.isoformat(),
+                UUID: str,
+                Decimal: float,
             }
-        elif isinstance(details, str):
-            body = {
-                "status": "success",
-                "details": details
-            }
-        else:
-            # Try to convert to dict if it's a Pydantic model or similar
-            if hasattr(details, 'model_dump'):
-                body = {
-                    "status": "success",
-                    "details": details.model_dump()
-                }
-            elif hasattr(details, 'dict'):
-                body = {
-                    "status": "success",
-                    "details": details.dict()
-                }
-            else:
-                # Fallback: convert to dict
-                try:
-                    body = {
-                        "status": "success",
-                        "details": json.loads(json.dumps(details, default=str))
-                    }
-                except:
-                    body = {
-                        "status": "success",
-                        "details": str(details)
-                    }
-        
-        return JSONResponse(status_code=status_code, content=body)
-    
+        )
+
+        return JSONResponse(status_code=status_code, content=encoded_body)
+
     @staticmethod
     def error(details: str, status_code: int = 400) -> JSONResponse:
-        """
-        Error response
-        
-        Args:
-            details: Error message describing what went wrong
-            status_code: HTTP status code (400, 404, 500, etc.)
-        """
+        """Build an error response."""
         body = {
             "status": "error",
             "details": details
         }
-        return JSONResponse(status_code=status_code, content=body)
-    
+
+        return JSONResponse(
+            status_code=status_code,
+            content=jsonable_encoder(body)
+        )
+
     @staticmethod
     def validation_error(details: Any, status_code: int = 422) -> JSONResponse:
-        """
-        Validation error response with detailed information
-        
-        Args:
-            details: Can be a string or dict with error information
-            status_code: HTTP status code (typically 422)
-        """
+        """Build a 422 validation error response."""
+
         if isinstance(details, list):
-            # Convert pydantic errors to readable format
             error_details = {}
             for error in details:
                 field = ".".join(str(x) for x in error.get("loc", [])[1:])  # Skip "body"
@@ -92,11 +60,16 @@ class ResponseSchema:
                 error_type = error.get("type", "unknown")
                 error_details[field] = f"{msg} (type: {error_type})"
             details = error_details
+
         elif isinstance(details, str):
             details = {"error": details}
-        
+
         body = {
             "status": "error",
             "details": details
         }
-        return JSONResponse(status_code=status_code, content=body)
+
+        return JSONResponse(
+            status_code=status_code,
+            content=jsonable_encoder(body)
+        )

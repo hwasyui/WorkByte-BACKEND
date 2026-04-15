@@ -127,7 +127,7 @@ async def delete_performance_rating(freelancer_id: str, current_user: UserInDB =
         
         success_msg = f"Deleted performance rating for freelancer {freelancer_id}"
         logger("PERFORMANCE_RATING", success_msg, "DELETE /performance-ratings/freelancer/{freelancer_id}", "INFO")
-        return ResponseSchema.success(None, 200)
+        return ResponseSchema.success("Deleted successfully", 200)
     except Exception as e:
         error_msg = f"Failed to delete performance rating for freelancer {freelancer_id}: {str(e)}"
         logger("PERFORMANCE_RATING", error_msg, "DELETE /performance-ratings/freelancer/{freelancer_id}", "ERROR")

@@ -23,10 +23,10 @@ async def get_all_contract_milestones(limit: Optional[int] = None, current_user:
     try:
         # Limit milestone list to contracts involving the current user.
         if current_user.type == "client":
-            client_contracts = ContractFunctions.get_contracts_by_client_id(get_current_user(current_user).user_id)
+            client_contracts = ContractFunctions.get_contracts_by_client_id(current_user.user_id)
             contract_ids = [c["contract_id"] for c in client_contracts]
         elif current_user.type == "freelancer":
-            freelancer_contracts = ContractFunctions.get_contracts_by_freelancer_id(get_current_user(current_user).user_id)
+            freelancer_contracts = ContractFunctions.get_contracts_by_freelancer_id(current_user.user_id)
             contract_ids = [c["contract_id"] for c in freelancer_contracts]
         else:
             return ResponseSchema.error("Only clients and freelancers can access contract milestones", 403)
