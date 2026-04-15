@@ -83,7 +83,7 @@ async def create_client(client: ClientCreate, current_user: UserInDB = Depends(g
             website_url=client.website_url,
             profile_picture_url=client.profile_picture_url
         )
-        
+
         success_msg = f"Created client {client_id} for user {client.user_id} with full name '{client.full_name}'"
         logger("CLIENT", success_msg, "POST /clients", "INFO")
         return ResponseSchema.success(new_client, 201)

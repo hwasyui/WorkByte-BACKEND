@@ -80,7 +80,15 @@ async def create_proposal(proposal: ProposalCreate, current_user: UserInDB = Dep
     """Create a new proposal - Authenticated users only - JSON body accepted"""
     try:
         proposal_id = proposal.proposal_id or str(uuid.uuid4())
-        
+
+        # Enforce one proposal per freelancer per job role.
+        existing = ProposalFunctions.get_proposals_by_freelancer_id(proposal.freelancer_id)
+        for p in existing:
+            if proposal.job_role_id and str(p.get("job_role_id")) == str(proposal.job_role_id):
+                return ResponseSchema.error("You have already submitted a proposal for this job role", 409)
+            if not proposal.job_role_id and str(p.get("job_post_id")) == str(proposal.job_post_id):
+                return ResponseSchema.error("You have already submitted a proposal for this job post", 409)
+
         new_proposal = ProposalFunctions.create_proposal(
             job_post_id=proposal.job_post_id,
             freelancer_id=proposal.freelancer_id,

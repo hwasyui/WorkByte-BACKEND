@@ -4,6 +4,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 
 from fastapi import APIRouter, Depends, status
 from typing import List, Optional, Dict
+from datetime import datetime, timezone
 import uuid
 from functions.schema_model import ContractMilestoneCreate, ContractMilestoneUpdate, ContractMilestoneResponse
 from functions.schema_model import UserInDB
@@ -13,6 +14,7 @@ from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.contract_milestones.contract_milestone_functions import ContractMilestoneFunctions
 from routes.contracts.contract_functions import ContractFunctions
+from functions.access_control import get_client_profile_for_user, get_freelancer_profile_for_user
 
 contract_milestone_router = APIRouter(prefix="/contract-milestones", tags=["Contract Milestones"])
 
@@ -24,10 +26,12 @@ async def get_all_contract_milestones(limit: Optional[int] = None, current_user:
     """Fetch all contract milestones visible to the current user."""
     try:
         if current_user.type == "client":
-            client_contracts = ContractFunctions.get_contracts_by_client_id(current_user.user_id)
+            client = get_client_profile_for_user(current_user)
+            client_contracts = ContractFunctions.get_contracts_by_client_id(client["client_id"])
             contract_ids = [c["contract_id"] for c in client_contracts]
         elif current_user.type == "freelancer":
-            freelancer_contracts = ContractFunctions.get_contracts_by_freelancer_id(current_user.user_id)
+            freelancer = get_freelancer_profile_for_user(current_user)
+            freelancer_contracts = ContractFunctions.get_contracts_by_freelancer_id(freelancer["freelancer_id"])
             contract_ids = [c["contract_id"] for c in freelancer_contracts]
         else:
             return ResponseSchema.error("Only clients and freelancers can access contract milestones", 403)
@@ -147,6 +151,8 @@ async def update_contract_milestone(milestone_id: str, milestone_update: Contrac
                 return ResponseSchema.error("Invalid status update value", 400)
             if desired_status in ["in_progress", "completed"]:
                 update_data["client_approved"] = True
+            if desired_status == "completed":
+                update_data["completed_at"] = datetime.now(timezone.utc)
             if desired_status == "paid":
                 update_data["payment_requested"] = True
                 update_data["client_approved"] = True
@@ -209,6 +215,7 @@ async def confirm_milestone_payment(milestone_id: str, current_user: UserInDB = 
             "status": "paid",
             "freelancer_confirmed_paid": True,
             "payment_released": True,
+            "paid_at": datetime.now(timezone.utc),
         }
 
         updated_milestone = ContractMilestoneFunctions.update_contract_milestone(milestone_id, update_data)

@@ -32,8 +32,8 @@ class ClientFunctions:
             db = get_db()
             rows = db.fetch_data(
                 table_name="client",
-                columns=["client_id", "user_id", "full_name", "bio", "website_url", "profile_picture_url", 
-                        "total_jobs_posted", "total_projects_completed", 
+                columns=["client_id", "user_id", "full_name", "bio", "website_url", "profile_picture_url",
+                        "total_jobs_posted", "total_jobs_completed",
                         "average_rating_given", "created_at", "updated_at"],
                 order_by="created_at DESC",
                 limit=limit
@@ -117,7 +117,7 @@ class ClientFunctions:
         try:
             db = get_db()
             client_id = str(uuid.uuid4())
-            
+
             client_data = {
                 "client_id": client_id,
                 "user_id": user_id,
@@ -126,7 +126,7 @@ class ClientFunctions:
                 "website_url": website_url,
                 "profile_picture_url": profile_picture_url,
                 "total_jobs_posted": 0,
-                "total_projects_completed": 0
+                "total_jobs_completed": 0
             }
             
             db.insert_data(table_name="client", data=client_data)

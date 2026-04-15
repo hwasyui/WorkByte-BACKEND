@@ -90,7 +90,7 @@ async def create_rating(rating: RatingCreate, current_user: UserInDB = Depends(g
         if str(contract["client_id"]) != str(current_user.user_id):
             return ResponseSchema.error("Client does not own this contract", 403)
 
-        if str(contract["freelancer_id"]) != str(rating.ratee_id):
+        if str(contract["freelancer_id"]) != str(rating.freelancer_id):
             return ResponseSchema.error("Freelancer mismatch for contract", 400)
 
         if contract.get("status") not in ["completed", "cancelled", "disputed"]:
@@ -99,12 +99,12 @@ async def create_rating(rating: RatingCreate, current_user: UserInDB = Depends(g
         new_rating = RatingFunctions.create_rating(
             contract_id=rating.contract_id,
             client_id=current_user.user_id,
-            freelancer_id=rating.ratee_id,
-            communication_score=int(rating.rating_score),
-            result_quality_score=int(rating.rating_score),
-            professionalism_score=int(rating.rating_score),
-            timeline_compliance_score=int(rating.rating_score),
-            overall_rating=rating.rating_score,
+            freelancer_id=rating.freelancer_id,
+            communication_score=rating.communication_score,
+            result_quality_score=rating.result_quality_score,
+            professionalism_score=rating.professionalism_score,
+            timeline_compliance_score=rating.timeline_compliance_score,
+            overall_rating=rating.overall_rating,
             review_text=rating.review_text
         )
 

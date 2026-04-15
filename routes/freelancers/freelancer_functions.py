@@ -164,7 +164,7 @@ class FreelancerFunctions:
                 table_name="freelancer",
                 columns=["freelancer_id", "user_id", "full_name", "bio", "cv_file_url", 
                         "profile_picture_url", "estimated_rate", "rate_time", "rate_currency", 
-                        "total_projects", "created_at", "updated_at"],
+                        "total_jobs", "created_at", "updated_at"],
                 order_by="created_at DESC",
                 limit=limit
             )
@@ -259,7 +259,7 @@ class FreelancerFunctions:
                 "estimated_rate": estimated_rate,
                 "rate_time": rate_time,
                 "rate_currency": rate_currency,
-                "total_projects": 0
+                "total_jobs": 0
             }
             
             db.insert_data(table_name="freelancer", data=freelancer_data)
@@ -368,7 +368,7 @@ def get_comprehensive_freelancer_profile(freelancer_id: str) -> Optional[Dict]:
         # Get freelancer basic info
         freelancer_conditions = [("freelancer_id", "=", freelancer_id)]
         freelancer_rows = db.fetch_data(
-            table_name="freelancers",
+            table_name="freelancer",
             conditions=freelancer_conditions,
             limit=1
         )
@@ -382,8 +382,8 @@ def get_comprehensive_freelancer_profile(freelancer_id: str) -> Optional[Dict]:
         skills_query = """
             SELECT fs.freelancer_skill_id, fs.proficiency_level, fs.created_at,
                    s.skill_id, s.skill_name, s.skill_category, s.description, s.created_at as skill_created_at
-            FROM freelancer_skills fs
-            JOIN skills s ON fs.skill_id = s.skill_id
+            FROM freelancer_skill fs
+            JOIN skill s ON fs.skill_id = s.skill_id
             WHERE fs.freelancer_id = %s
             ORDER BY fs.created_at DESC
         """
@@ -394,8 +394,8 @@ def get_comprehensive_freelancer_profile(freelancer_id: str) -> Optional[Dict]:
         specialities_query = """
             SELECT fsp.freelancer_speciality_id, fsp.is_primary, fsp.created_at,
                    sp.speciality_id, sp.speciality_name, sp.description, sp.created_at as speciality_created_at
-            FROM freelancer_specialities fsp
-            JOIN specialities sp ON fsp.speciality_id = sp.speciality_id
+            FROM freelancer_speciality fsp
+            JOIN speciality sp ON fsp.speciality_id = sp.speciality_id
             WHERE fsp.freelancer_id = %s
             ORDER BY fsp.is_primary DESC, fsp.created_at DESC
         """
@@ -406,8 +406,8 @@ def get_comprehensive_freelancer_profile(freelancer_id: str) -> Optional[Dict]:
         languages_query = """
             SELECT fl.freelancer_language_id, fl.proficiency_level, fl.created_at,
                    l.language_id, l.language_name, l.iso_code, l.created_at as language_created_at
-            FROM freelancer_languages fl
-            JOIN languages l ON fl.language_id = l.language_id
+            FROM freelancer_language fl
+            JOIN language l ON fl.language_id = l.language_id
             WHERE fl.freelancer_id = %s
             ORDER BY fl.created_at DESC
         """
@@ -443,20 +443,21 @@ def get_comprehensive_freelancer_profile(freelancer_id: str) -> Optional[Dict]:
         
         # Get ratings received by this freelancer
         ratings_query = """
-            SELECT r.rating_id, r.contract_id, r.rater_id, r.ratee_id, r.rating_score, 
-                   r.rating_category, r.review_text, r.created_at
-            FROM ratings r
-            WHERE r.ratee_id = %s
+            SELECT r.rating_id, r.contract_id, r.client_id, r.freelancer_id,
+                   r.communication_score, r.result_quality_score, r.professionalism_score,
+                   r.timeline_compliance_score, r.overall_rating, r.review_text, r.created_at
+            FROM rating r
+            WHERE r.freelancer_id = %s
             ORDER BY r.created_at DESC
         """
         ratings_rows = db.execute_query(ratings_query, (freelancer_id,))
         ratings = [dict(row) for row in ratings_rows] if ratings_rows else []
-        
+
         # Calculate rating stats
         total_ratings = len(ratings)
         average_rating = None
         if ratings:
-            average_rating = sum(r['rating_score'] for r in ratings) / total_ratings
+            average_rating = sum(r['overall_rating'] for r in ratings if r['overall_rating']) / total_ratings
         
         return {
             "freelancer": freelancer,
