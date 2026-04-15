@@ -44,8 +44,6 @@ async def get_message(message_id: str, current_user: UserInDB = Depends(get_curr
             return ResponseSchema.error(error_msg, 404)
         if str(current_user.user_id) not in [str(message["sender_id"]), str(message["receiver_id"])]:
             return ResponseSchema.error("Cannot access another user's message", 403)
-            logger("MESSAGE", error_msg, "GET /messages/{message_id}", "WARNING")
-            return ResponseSchema.error(error_msg, 404)
         success_msg = f"Retrieved message {message_id}"
         logger("MESSAGE", success_msg, "GET /messages/{message_id}", "INFO")
         return ResponseSchema.success(message, 200)
@@ -174,7 +172,7 @@ async def delete_message(message_id: str, current_user: UserInDB = Depends(get_c
         
         success_msg = f"Deleted message {message_id}"
         logger("MESSAGE", success_msg, "DELETE /messages/{message_id}", "INFO")
-        return ResponseSchema.success(None, 200)
+        return ResponseSchema.success("Deleted successfully", 200)
     except Exception as e:
         error_msg = f"Failed to delete message {message_id}: {str(e)}"
         logger("MESSAGE", error_msg, "DELETE /messages/{message_id}", "ERROR")
