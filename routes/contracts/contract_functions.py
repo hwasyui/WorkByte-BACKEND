@@ -33,7 +33,8 @@ class ContractFunctions:
                 columns=["contract_id", "job_post_id", "job_role_id", "proposal_id", "freelancer_id", "client_id",
                         "contract_title", "role_title", "agreed_budget", "budget_currency", "payment_structure",
                         "agreed_duration", "status", "start_date", "end_date", "actual_completion_date",
-                        "total_hours_worked", "total_paid", "created_at", "updated_at"],
+                        "total_hours_worked", "total_paid", "contract_pdf_url", "contract_pdf_generated_at",
+                        "created_at", "updated_at"],
                 order_by="created_at DESC",
                 limit=limit,
                 offset=offset

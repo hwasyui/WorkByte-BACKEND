@@ -62,12 +62,9 @@ async def create_performance_rating(rating: PerformanceRatingCreate, current_use
 
         new_rating = PerformanceRatingFunctions.create_performance_rating(
             freelancer_id=rating.freelancer_id,
-            total_contracts=rating.total_contracts,
-            completed_contracts=rating.completed_contracts,
-            average_rating=rating.average_rating,
-            on_time_delivery_rate=rating.on_time_delivery_rate,
-            total_earnings=rating.total_earnings,
-            customer_satisfaction_score=rating.customer_satisfaction_score
+            overall_performance_score=rating.overall_performance_score or 0.0,
+            confidence_score=rating.confidence_score or 0.0,
+            total_ratings_received=rating.total_ratings_received or 0,
         )
 
         success_msg = f"Created performance rating for freelancer {rating.freelancer_id}"

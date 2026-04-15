@@ -109,7 +109,7 @@ class FreelancerResponse(BaseModel):
     estimated_rate: Optional[float] = None
     rate_time: Optional[str] = None
     rate_currency: Optional[str] = None
-    total_projects: Optional[int] = 0
+    total_jobs: Optional[int] = 0
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
@@ -119,7 +119,7 @@ class FreelancerResponse(BaseModel):
 
 # ==================== CLIENTS ====================
 class ClientCreate(BaseModel):
-    client_id: Optional[str] = None  # Auto-generated if not provided
+    client_id: Optional[str] = None
     user_id: str
     full_name: Optional[str] = None
     bio: Optional[str] = None
@@ -140,7 +140,7 @@ class ClientResponse(BaseModel):
     website_url: Optional[str] = None
     profile_picture_url: Optional[str] = None
     total_jobs_posted: Optional[int] = 0
-    total_projects_completed: Optional[int] = 0
+    total_jobs_completed: Optional[int] = 0
     average_rating_given: Optional[float] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
@@ -754,24 +754,32 @@ class SavedJobResponse(BaseModel):
 class RatingCreate(BaseModel):
     rating_id: Optional[str] = None
     contract_id: str
-    rater_id: str
-    ratee_id: str
-    rating_score: float
-    rating_category: Optional[str] = None  # communication, quality, timeliness, professionalism
+    freelancer_id: str
+    communication_score: int
+    result_quality_score: int
+    professionalism_score: int
+    timeline_compliance_score: int
+    overall_rating: float
     review_text: Optional[str] = None
 
 class RatingUpdate(BaseModel):
-    rating_score: Optional[float] = None
-    rating_category: Optional[str] = None
+    communication_score: Optional[int] = None
+    result_quality_score: Optional[int] = None
+    professionalism_score: Optional[int] = None
+    timeline_compliance_score: Optional[int] = None
+    overall_rating: Optional[float] = None
     review_text: Optional[str] = None
 
 class RatingResponse(BaseModel):
     rating_id: str
     contract_id: str
-    rater_id: str
-    ratee_id: str
-    rating_score: float
-    rating_category: Optional[str] = None
+    client_id: str
+    freelancer_id: str
+    communication_score: Optional[int] = None
+    result_quality_score: Optional[int] = None
+    professionalism_score: Optional[int] = None
+    timeline_compliance_score: Optional[int] = None
+    overall_rating: Optional[float] = None
     review_text: Optional[str] = None
     update_count: Optional[int] = 0
     created_at: Optional[datetime] = None
@@ -785,31 +793,40 @@ class RatingResponse(BaseModel):
 class PerformanceRatingCreate(BaseModel):
     performance_rating_id: Optional[str] = None
     freelancer_id: str
-    total_contracts: Optional[int] = 0
-    completed_contracts: Optional[int] = 0
-    average_rating: Optional[float] = None
-    on_time_delivery_rate: Optional[float] = None
-    total_earnings: Optional[float] = 0
-    customer_satisfaction_score: Optional[float] = None
+    overall_performance_score: Optional[float] = None
+    confidence_score: Optional[float] = None
+    total_ratings_received: Optional[int] = 0
+    average_communication: Optional[float] = None
+    average_result_quality: Optional[float] = None
+    average_professionalism: Optional[float] = None
+    average_scope_compliance: Optional[float] = None
+    average_timeline_compliance: Optional[float] = None
+    success_rate: Optional[float] = None
 
 class PerformanceRatingUpdate(BaseModel):
-    total_contracts: Optional[int] = None
-    completed_contracts: Optional[int] = None
-    average_rating: Optional[float] = None
-    on_time_delivery_rate: Optional[float] = None
-    total_earnings: Optional[float] = None
-    customer_satisfaction_score: Optional[float] = None
+    overall_performance_score: Optional[float] = None
+    confidence_score: Optional[float] = None
+    total_ratings_received: Optional[int] = None
+    average_communication: Optional[float] = None
+    average_result_quality: Optional[float] = None
+    average_professionalism: Optional[float] = None
+    average_scope_compliance: Optional[float] = None
+    average_timeline_compliance: Optional[float] = None
+    success_rate: Optional[float] = None
 
 class PerformanceRatingResponse(BaseModel):
     performance_rating_id: str
     freelancer_id: str
-    total_contracts: Optional[int] = 0
-    completed_contracts: Optional[int] = 0
-    average_rating: Optional[float] = None
-    on_time_delivery_rate: Optional[float] = None
-    total_earnings: Optional[float] = 0
-    customer_satisfaction_score: Optional[float] = None
-    created_at: Optional[datetime] = None
+    overall_performance_score: Optional[float] = None
+    confidence_score: Optional[float] = None
+    total_ratings_received: Optional[int] = 0
+    average_communication: Optional[float] = None
+    average_result_quality: Optional[float] = None
+    average_professionalism: Optional[float] = None
+    average_scope_compliance: Optional[float] = None
+    average_timeline_compliance: Optional[float] = None
+    success_rate: Optional[float] = None
+    last_calculated_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
     class Config:
@@ -820,31 +837,31 @@ class PerformanceRatingResponse(BaseModel):
 class ClientTrustScoreCreate(BaseModel):
     client_trust_score_id: Optional[str] = None
     client_id: str
-    total_jobs_posted: Optional[int] = 0
-    total_jobs_completed: Optional[int] = 0
-    average_rating_received: Optional[float] = None
-    payment_reliability_score: Optional[float] = None
-    dispute_count: Optional[int] = 0
     trust_score: Optional[float] = None
+    rating_consistency_score: Optional[float] = None
+    extreme_rating_ratio: Optional[float] = None
+    project_completion_rate: Optional[float] = None
+    average_budget_gap: Optional[float] = None
+    total_ratings_given: Optional[int] = 0
 
 class ClientTrustScoreUpdate(BaseModel):
-    total_jobs_posted: Optional[int] = None
-    total_jobs_completed: Optional[int] = None
-    average_rating_received: Optional[float] = None
-    payment_reliability_score: Optional[float] = None
-    dispute_count: Optional[int] = None
     trust_score: Optional[float] = None
+    rating_consistency_score: Optional[float] = None
+    extreme_rating_ratio: Optional[float] = None
+    project_completion_rate: Optional[float] = None
+    average_budget_gap: Optional[float] = None
+    total_ratings_given: Optional[int] = None
 
 class ClientTrustScoreResponse(BaseModel):
     client_trust_score_id: str
     client_id: str
-    total_jobs_posted: Optional[int] = 0
-    total_jobs_completed: Optional[int] = 0
-    average_rating_received: Optional[float] = None
-    payment_reliability_score: Optional[float] = None
-    dispute_count: Optional[int] = 0
     trust_score: Optional[float] = None
-    created_at: Optional[datetime] = None
+    rating_consistency_score: Optional[float] = None
+    extreme_rating_ratio: Optional[float] = None
+    project_completion_rate: Optional[float] = None
+    average_budget_gap: Optional[float] = None
+    total_ratings_given: Optional[int] = 0
+    last_calculated_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
     class Config:
