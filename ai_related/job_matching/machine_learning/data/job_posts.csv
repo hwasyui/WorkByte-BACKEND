@@ -1,0 +1,601 @@
+job_post_id,client_id,job_title,job_description,project_type,project_scope,experience_level,status,domain
+ff372779-c496-4800-950b-e91caf25b261,6a492a53-edec-4bc2-9b42-2ecd769183fd,Design Project,Need intermediate design developer.,individual,large,intermediate,active,design
+28318acc-4036-4f35-a97d-e35b82e1ced9,b254fbae-7139-46ec-b537-e9004945c524,Backend Project,Need expert backend developer.,team,small,expert,active,backend
+db148ac3-b062-464e-b878-a77bf997b915,36a4a6f4-050f-4ea3-bcb7-883a988fcdb8,Devops Project,Need intermediate devops developer.,team,large,intermediate,active,devops
+cf225b47-aa3e-477f-9348-24c51767e758,2c2f569e-b5db-44bb-a68d-3cf668ade1f8,Ml Ai Project,Need intermediate ml ai developer.,individual,small,intermediate,filled,ml_ai
+7273755d-7ce6-4984-b232-24e678f98c3b,c4d2df72-cc85-4c13-9530-5d577c705613,Mobile Project,Need entry mobile developer.,individual,large,entry,active,mobile
+d0cd8c6a-a2f9-4c9d-ba7d-960125995906,6fb2bedd-751e-4488-8882-a1c3ce2cc4a7,Ml Ai Project,Need intermediate ml ai developer.,team,medium,intermediate,active,ml_ai
+7ca40853-2dab-4253-9622-86b3df29e496,86f99188-418a-4164-9676-36779068de5d,Devops Project,Need intermediate devops developer.,individual,small,intermediate,active,devops
+aad817ef-1ee4-402d-86bd-61127a166ee3,76c1d9a9-1adf-46fb-88f4-8bde7caec5b3,Backend Project,Need entry backend developer.,team,large,entry,active,backend
+d378a672-fef6-47f8-8cc6-e4494db82cee,02bf6172-7b78-4946-9bde-09011b2ad0f1,Mobile Project,Need expert mobile developer.,team,small,expert,closed,mobile
+524b9d7a-59aa-4fe4-bb8d-8356125cca9b,dc353c9d-b72d-40e3-9ff5-607ea58c3d10,Ml Ai Project,Need intermediate ml ai developer.,individual,medium,intermediate,closed,ml_ai
+3c8b0bc2-56fc-4195-addf-2e391d578b92,afd89444-cca4-4a7f-8503-ee0847f188b4,Ml Ai Project,Need intermediate ml ai developer.,individual,large,intermediate,active,ml_ai
+3fb21dcb-1e0d-4163-8cdc-15ef257db445,31e08ac0-8bc5-4ff4-b4a9-abc45293038e,Blockchain Project,Need entry blockchain developer.,team,large,entry,active,blockchain
+727086a6-8da3-4984-ac43-b8eaed09993e,6764e4aa-9955-4cc8-a8a0-9cf821ee8add,Ml Ai Project,Need entry ml ai developer.,individual,small,entry,active,ml_ai
+40e28774-c742-4508-bfca-ba3acd508cac,5021b45e-c9e6-4f6b-87c7-911fdc441dbf,Fullstack Project,Need expert fullstack developer.,team,large,expert,active,fullstack
+2c7acc70-2e4c-4674-b71a-462a9b8163a1,7ea733e1-78d1-4701-8be3-34e198c598f1,Blockchain Project,Need intermediate blockchain developer.,team,medium,intermediate,filled,blockchain
+10eae21a-dcc9-4487-82e4-853cc467be03,31a8ea87-b676-404a-bb93-520d4a9a8c2d,Frontend Project,Need intermediate frontend developer.,individual,medium,intermediate,active,frontend
+44ef0d6b-55bf-4f47-8e09-a317366d07f4,d62db474-f43e-4e2c-a82e-0b24f3eda0fe,Fullstack Project,Need intermediate fullstack developer.,individual,small,intermediate,closed,fullstack
+d64f9836-776f-4cbe-905f-493d2f1d1399,1dc1a249-188e-4885-b59c-1d4d4322cbe2,Ml Ai Project,Need expert ml ai developer.,team,small,expert,closed,ml_ai
+30bca8c0-3638-4b46-85af-355ec6a859f7,0ab957fc-636d-4f47-b80b-7ec46bdaf261,Devops Project,Need entry devops developer.,individual,large,entry,active,devops
+ba9e125d-1b07-47ee-8bad-dc0c20cee8c4,c46dc58f-4644-407a-9f15-0c938be366ad,Blockchain Project,Need entry blockchain developer.,team,medium,entry,closed,blockchain
+a4f8ee1c-a9a5-4273-a260-73660556d1d6,02f25658-7858-48b7-be1e-ab00082d03a4,Design Project,Need intermediate design developer.,team,large,intermediate,closed,design
+1a542cbe-dcd7-4885-9961-d661fbed11ed,b573d2fd-b5a8-4865-9651-065320f5d0b0,Frontend Project,Need intermediate frontend developer.,individual,small,intermediate,active,frontend
+55275d70-2279-4e45-b5f0-d7744079c043,5ee34665-d768-4c2c-8d12-989bcc6f24e2,Ml Ai Project,Need entry ml ai developer.,team,small,entry,closed,ml_ai
+a3c71200-0caa-4591-a8af-02efe3d6a1f5,f738b392-413c-429b-9fab-6eceffb8f947,Ml Ai Project,Need intermediate ml ai developer.,team,large,intermediate,filled,ml_ai
+468899ee-5a79-464c-becc-60f4abfaa472,03aeec2f-b14e-4395-88de-69f7b5a57777,Fullstack Project,Need intermediate fullstack developer.,team,small,intermediate,closed,fullstack
+f4d8ddc9-e857-4c8a-9c22-8a3561a8855e,f4841d57-5483-4f36-96ca-8c44ec5c0095,Design Project,Need intermediate design developer.,team,large,intermediate,active,design
+21c592c0-05e2-4d39-bc17-4598b5026987,66babf67-6814-4857-aa08-fafef88a6ef1,Blockchain Project,Need entry blockchain developer.,individual,medium,entry,active,blockchain
+f12ef756-9e4a-4d29-ba14-bc035511b4ad,26fba15b-48fd-48ec-a7e2-17deeaa210d9,Ml Ai Project,Need expert ml ai developer.,individual,small,expert,closed,ml_ai
+2ab7e520-8c6b-45ca-8355-d66ab57a3627,f6bdb2a2-9a62-46c8-964a-419a474d4eea,Devops Project,Need expert devops developer.,team,large,expert,active,devops
+3c2d2c05-80d5-4125-8025-49d7b9c53ded,58f31595-87d2-4413-8249-8a0f904b691f,Frontend Project,Need expert frontend developer.,individual,large,expert,active,frontend
+a4e3feb3-ccb6-4244-b5ec-1afdcba9eab8,3fb5b8be-8469-4037-a5f0-ccba07321d9e,Fullstack Project,Need entry fullstack developer.,team,small,entry,active,fullstack
+678aab56-5fdc-4d9b-84b3-883a68a71022,eeb8a176-58ba-46d0-b902-907290f8bd14,Blockchain Project,Need intermediate blockchain developer.,team,medium,intermediate,filled,blockchain
+661ec12e-ecdf-4f08-8148-8e8354d2ad6b,4d03fb31-a626-4945-a9d7-11866eeddb6a,Blockchain Project,Need entry blockchain developer.,individual,large,entry,active,blockchain
+6c692a52-ff29-4a61-ba4e-09ae4066e7d3,d41da99d-5e46-43df-9e52-f6dd25fcb830,Frontend Project,Need entry frontend developer.,team,large,entry,active,frontend
+f5dee908-37bf-46b1-b022-ba2e512b216b,26fb20a2-a6d5-4938-8bea-49e422b0db00,Ml Ai Project,Need entry ml ai developer.,individual,medium,entry,active,ml_ai
+f25f0a04-49de-432a-b65b-7e5c541f4169,08239bf0-7089-4cc1-a1b8-7b821688cdc9,Blockchain Project,Need intermediate blockchain developer.,individual,large,intermediate,active,blockchain
+ba8c4c4b-c44d-4ca4-9a52-2c3252b83a41,ac9cafbc-fa88-4e91-96f0-afec3670207a,Backend Project,Need entry backend developer.,team,large,entry,closed,backend
+f957e60e-d33c-4dd7-99e5-ed884f15b9f9,0e94844e-ba29-417e-927f-aed8d9d0415c,Devops Project,Need entry devops developer.,individual,small,entry,active,devops
+17cac43d-99ce-4148-a6c1-dfae694e0949,49e82f1b-c592-4327-9626-d6e099e9f692,Ml Ai Project,Need intermediate ml ai developer.,individual,small,intermediate,active,ml_ai
+45145f99-a1df-4245-9f85-d8eb6a6db67a,74637b1a-c2a0-42a5-9b3e-fb343b3e5d69,Fullstack Project,Need entry fullstack developer.,individual,small,entry,active,fullstack
+081df4a7-e77d-4bd9-8487-cd1713ff4d6b,b4f72c10-d9ed-45c2-a2bb-584254230ee1,Ml Ai Project,Need intermediate ml ai developer.,individual,small,intermediate,active,ml_ai
+e4a3179d-9049-41b8-ae6d-411b96faf1d3,f48d777f-d627-47cb-8aec-6e402c52338b,Fullstack Project,Need entry fullstack developer.,team,medium,entry,filled,fullstack
+5f532d79-6b7a-4021-b42b-4cfdecce443b,c1857858-3fc7-4176-afd6-75ce807fc062,Ml Ai Project,Need entry ml ai developer.,individual,large,entry,filled,ml_ai
+552e821a-077f-4cc2-ab96-df6541fb6c4c,b8b66fb3-052a-4446-8e3a-064f11b2caa8,Ml Ai Project,Need intermediate ml ai developer.,team,small,intermediate,active,ml_ai
+38e2eeb1-7c7c-44cd-ad8e-d8be901bc2af,7fe893d3-f50b-4710-8430-b92c6d0c584d,Devops Project,Need expert devops developer.,team,small,expert,active,devops
+707c5fa9-b247-480d-8ee0-9378a021517c,d66b14c2-81a0-4be4-9e05-ac96693ead1e,Fullstack Project,Need intermediate fullstack developer.,team,small,intermediate,closed,fullstack
+47f5f36a-4b54-4f2b-8c90-a1a590832226,f0f69180-e117-419c-8f47-796deb98ce1a,Mobile Project,Need entry mobile developer.,individual,medium,entry,active,mobile
+d5fec0e2-ff90-472f-b4ae-4ebd6f182582,f0e50d29-7a2b-4436-99a7-cbb7e7a05c2d,Devops Project,Need intermediate devops developer.,individual,small,intermediate,active,devops
+05b20be4-e84d-4e46-b53d-a5502ca774a6,b883c65e-2bc3-4606-aea6-aff42d09f0fa,Ml Ai Project,Need expert ml ai developer.,individual,medium,expert,filled,ml_ai
+d35a4cda-73f0-411d-a508-54c7017f0e71,2386edf1-4f7a-4771-9ce1-71d16f9e4b37,Frontend Project,Need intermediate frontend developer.,team,large,intermediate,active,frontend
+5ea19d03-bbd1-4fc1-947d-fad1a3e45982,608fe4bb-1d6f-4320-95db-d5ab9d917b9b,Mobile Project,Need entry mobile developer.,team,small,entry,active,mobile
+3516818b-b9de-4c94-859f-5d430b9596f4,4c2ebc90-41b8-4eb3-aa81-787efbc91c52,Ml Ai Project,Need intermediate ml ai developer.,individual,small,intermediate,active,ml_ai
+f012d8fd-a7cd-48e7-875f-9c0823e34b13,d4da5c76-3d87-43a9-aabc-4e820208d0c8,Frontend Project,Need expert frontend developer.,individual,medium,expert,active,frontend
+e017cccd-cab1-44ae-890e-9444fb3db9d6,f71c5b6e-a322-41fa-9d88-60a874c02ef9,Blockchain Project,Need entry blockchain developer.,individual,large,entry,active,blockchain
+04e13602-f288-4fd6-8bd1-92b22762678c,05a980a9-b9bb-4612-887c-120ef41d3f09,Ml Ai Project,Need expert ml ai developer.,individual,large,expert,active,ml_ai
+e796d51f-3ea8-487e-a0e3-41b75300c5cd,19c691e1-060f-4ca2-bca3-3c9da392f91b,Devops Project,Need expert devops developer.,individual,medium,expert,active,devops
+82a4fae8-4525-493f-ad49-47a36f7dcc3b,241a601e-ebc5-4083-83a4-e9a86d487d63,Design Project,Need intermediate design developer.,team,large,intermediate,filled,design
+fde41545-cf15-44c2-b198-a65e7a2c780e,191f4bff-bdab-4bf8-bfa0-486921be9b16,Devops Project,Need entry devops developer.,team,medium,entry,active,devops
+3d8a9df8-5f33-405e-ae53-adfd69656f42,35ca2e8f-29aa-4b24-a7a5-000391a32d9a,Backend Project,Need entry backend developer.,team,medium,entry,active,backend
+7aa0a720-4acc-426d-a22b-88f4e282d869,f876887c-56ab-4722-8374-bab09d390c30,Frontend Project,Need entry frontend developer.,individual,small,entry,active,frontend
+821098b0-fafe-41ff-9d22-31281f84a035,5e9fc5e1-0a4d-4783-958f-cc778e680972,Mobile Project,Need intermediate mobile developer.,individual,large,intermediate,active,mobile
+0c8ed749-8f2f-46ac-8ea4-b8c7dbcce668,1e07d283-6d56-46ac-babc-7922c1434da2,Fullstack Project,Need intermediate fullstack developer.,individual,small,intermediate,closed,fullstack
+6fedb04f-c92c-48b4-92d5-ba2a5367ed0f,7af57ac5-9d6d-4fd7-8fcd-f7353f6e95e3,Ml Ai Project,Need expert ml ai developer.,team,small,expert,active,ml_ai
+9e80b246-f6dc-44a5-b5f7-8c5201e7495b,41f3325e-141b-43a4-b53d-10f3926589ca,Mobile Project,Need intermediate mobile developer.,individual,large,intermediate,active,mobile
+b7e684ef-1f37-4c45-b4fb-de54718b2cc0,63f3ade4-8a6c-46db-92b2-4a36c5491824,Design Project,Need expert design developer.,team,medium,expert,filled,design
+0dbfb8b1-11de-43d4-aa8a-a4bd0dafdf3e,0dd032f8-a7e8-4990-88d3-b5cd007052de,Backend Project,Need intermediate backend developer.,individual,medium,intermediate,active,backend
+f1437dea-c0b3-4b08-a0d8-110f3dd6a9bd,c23ef0b1-ff4d-42d1-9575-d079129e6513,Ml Ai Project,Need intermediate ml ai developer.,individual,small,intermediate,active,ml_ai
+4d96aac8-eedf-4807-876c-7cc82e52eb85,3b4e23d2-2c2a-460b-82ee-9ccbeadb6c16,Backend Project,Need entry backend developer.,team,large,entry,active,backend
+f2f6e2df-80b2-4503-b2b3-e7c8b427dfef,5fb9af6b-fddd-420b-8bee-37eebe4be2f4,Design Project,Need intermediate design developer.,team,medium,intermediate,active,design
+276949e0-9128-41a0-bc48-f0250bd3894d,a4cd9a5d-66f3-4867-a436-84cc71d1baf0,Design Project,Need intermediate design developer.,individual,large,intermediate,active,design
+21005616-4a82-4d74-afaf-1c5960407215,42916498-f817-4354-b843-b29b782a863b,Blockchain Project,Need entry blockchain developer.,individual,large,entry,active,blockchain
+5180f6af-2f36-4945-bbbd-3f2ad920cc20,6c78e37d-fbaf-4f1b-817b-2e652903aaa5,Devops Project,Need intermediate devops developer.,team,small,intermediate,active,devops
+265089a4-92f2-4ed3-ad6a-a2cb440b7440,ec4aee17-5667-49a5-b03f-bcf1fba869c8,Backend Project,Need intermediate backend developer.,team,small,intermediate,active,backend
+48fd11e9-ce56-4b94-ae74-1c1d0edcee6f,ef52e94d-7c43-46a5-8f56-59a292436286,Blockchain Project,Need intermediate blockchain developer.,individual,large,intermediate,active,blockchain
+d419ede4-dcdb-4b4a-892d-29eafb2a9016,72df609b-fa6f-484a-8ace-1a7f3204b253,Design Project,Need intermediate design developer.,team,large,intermediate,active,design
+19b0b03a-5bbf-48aa-975a-1b68f03e1e68,4a9c305f-fd39-42b7-a691-c87dfb574a07,Frontend Project,Need intermediate frontend developer.,team,small,intermediate,closed,frontend
+bc0aea30-12e8-4efe-ac51-048b5ed7ebd2,8b243b8c-24e8-4bff-ac91-381c7abd078c,Backend Project,Need intermediate backend developer.,team,large,intermediate,active,backend
+669deb46-9daf-48cf-a0ae-41de7db8cb19,9d0da879-90a1-4b3b-a2b6-09c15f70d573,Ml Ai Project,Need expert ml ai developer.,team,small,expert,active,ml_ai
+f8a785c4-e725-49a9-8687-c55b60ddd4e9,5611c058-6cde-471e-86ee-051fb2ddfc6f,Frontend Project,Need entry frontend developer.,team,medium,entry,active,frontend
+1ce2a135-908b-4a3b-94ff-7a4234151c3d,119e1c03-2e95-4f32-8c18-bc3932afd7d1,Design Project,Need entry design developer.,team,medium,entry,active,design
+314ad61d-3264-4bc3-9c08-06114b74f264,538f34ee-2142-4b4f-95f7-758053ad2f80,Ml Ai Project,Need intermediate ml ai developer.,individual,small,intermediate,active,ml_ai
+eb5ee3ff-66b0-433c-95c6-7705ed9d9df6,11e3b9b7-9dad-4299-bab2-95ab354c3827,Fullstack Project,Need intermediate fullstack developer.,individual,large,intermediate,active,fullstack
+ffd2c63f-7bf4-4ecf-8df4-16e4156a3ffe,ecde7e98-efa2-4b9d-ab1d-8d7a0d05dedf,Frontend Project,Need intermediate frontend developer.,team,small,intermediate,active,frontend
+9bcc3ac3-e954-4639-bdd1-abdd54e4f1b1,1bb1fbbf-2502-4438-8886-ace3d388ff24,Design Project,Need entry design developer.,team,large,entry,closed,design
+825bd924-d78a-4907-b6b8-6dd0bc7628e3,8a03975c-91f4-424e-87fd-7b025bb8af5e,Blockchain Project,Need intermediate blockchain developer.,team,small,intermediate,active,blockchain
+63a2fe99-088e-4dbc-81bd-2720219b5b31,0a879fc1-96a4-4a9a-925e-ead1443843ab,Mobile Project,Need expert mobile developer.,individual,medium,expert,filled,mobile
+d61ef5c8-d6c6-4c14-ab8f-921d2c3ed02f,6b3abb4e-6f69-473f-be86-2d0b57d0984a,Mobile Project,Need intermediate mobile developer.,individual,small,intermediate,active,mobile
+1ec1f911-921a-4952-99b3-23a66f527421,b7027283-fd03-4be3-9dfb-b22c6007c48b,Design Project,Need intermediate design developer.,team,small,intermediate,closed,design
+fd0881e8-0756-4bc2-b27c-fd710bc8b475,149be3cd-51a4-470a-9703-c150d4c68674,Devops Project,Need intermediate devops developer.,team,medium,intermediate,active,devops
+bcb5fb65-8b4c-4a11-bfde-6dffe1c6fff8,6f8a959c-c6e6-4815-8cb0-b54e77499a22,Blockchain Project,Need intermediate blockchain developer.,individual,medium,intermediate,filled,blockchain
+d9d36271-fc65-4de8-8fca-ea05bd747fa4,3c9ff79d-9b3a-43e5-9cb8-7484cd833eb1,Backend Project,Need intermediate backend developer.,individual,medium,intermediate,active,backend
+2cfdf935-8f2c-40e7-94c6-fb659ded2623,97ab4233-c586-4b83-b17d-bac6722c15ba,Frontend Project,Need intermediate frontend developer.,team,medium,intermediate,active,frontend
+cd9ff220-ae7e-45e1-95e6-7225aeba3e75,83114536-8a7f-49fa-b18f-5e5df5600d19,Backend Project,Need entry backend developer.,team,small,entry,active,backend
+4677429b-0ec3-4aaf-a249-05384d7988b3,e300a5c3-d89a-4e32-9522-3db49b183f79,Frontend Project,Need expert frontend developer.,individual,large,expert,active,frontend
+4be2186e-46e0-44c3-9afe-ef3415397d91,cd79eb46-85f8-43eb-84aa-5f4ac6842af0,Blockchain Project,Need expert blockchain developer.,individual,small,expert,filled,blockchain
+1264b2e8-7a9b-4926-9055-335df9648bfe,4e70bd07-7ddb-4fbd-b8a4-d35c39e45db9,Design Project,Need intermediate design developer.,team,large,intermediate,closed,design
+f05e61e5-8897-4637-a2be-d8c5ee1e6820,52a5a67e-25fc-41d2-b049-59a46d5c43b6,Mobile Project,Need entry mobile developer.,team,small,entry,active,mobile
+6623dbd7-31e3-4ba4-9f70-1ba9132730a6,aef23a15-d735-4b15-830b-e14fbede50b5,Design Project,Need intermediate design developer.,individual,small,intermediate,filled,design
+a9b267e6-0b16-4101-a3e2-2a99323c3dc4,aaf6eded-9c6f-42b1-93b7-51c0e6314eb1,Mobile Project,Need entry mobile developer.,team,large,entry,active,mobile
+99094b43-0a47-4984-8712-2c83850c061e,2c4a7fa1-979c-4643-8c26-e6e3341e6e1e,Ml Ai Project,Need intermediate ml ai developer.,team,large,intermediate,active,ml_ai
+f11e5b3d-a17e-4d1e-97af-5264ef057aad,3ca46c00-c4dd-4a3b-8081-5a2ae20bdb56,Blockchain Project,Need intermediate blockchain developer.,team,small,intermediate,active,blockchain
+78106c0d-9ba5-4ab9-b64e-aa08199e0452,43035039-e50e-489b-9e43-24b1c1799fe8,Backend Project,Need intermediate backend developer.,individual,large,intermediate,closed,backend
+f9e43793-cf8d-46b4-a7f2-e3b9e84dd3b4,82e34984-771d-41cc-9796-aaef79b6d5bd,Backend Project,Need intermediate backend developer.,individual,large,intermediate,filled,backend
+7003c110-0d61-491d-8bc1-b9ca02857123,e4590a39-5e14-453b-961d-32b8268ac312,Frontend Project,Need entry frontend developer.,individual,large,entry,closed,frontend
+a94e114e-ad84-4c5a-b09c-13028ed0e32a,58be2214-8516-4a8c-8956-5069bf17e33a,Ml Ai Project,Need entry ml ai developer.,team,large,entry,active,ml_ai
+030a909e-df8f-49b4-a99e-bbceccd7b46a,5d69800c-8878-4269-b35c-2754cf41bce8,Devops Project,Need intermediate devops developer.,team,small,intermediate,active,devops
+823345c4-78cf-4b43-8bf3-cbde6da2afba,3f3a3f19-5d1f-414a-8cc2-ed801360447c,Mobile Project,Need expert mobile developer.,individual,small,expert,active,mobile
+aa4c996e-9e9d-48d0-b7dc-f8c4889d454e,e267658b-7249-499f-9ff6-7d3b007381a8,Mobile Project,Need intermediate mobile developer.,individual,large,intermediate,filled,mobile
+b852cc12-faf0-452f-a1d3-7ff0e2f00f96,ba9b422f-fe2a-4b88-9d04-0f19bba71f4e,Backend Project,Need intermediate backend developer.,individual,medium,intermediate,active,backend
+972a2143-16b3-4da6-a954-8b21f9aa4f99,98d0f857-0132-4b06-bc65-1738a9628a3a,Fullstack Project,Need entry fullstack developer.,individual,medium,entry,closed,fullstack
+ea0f9f7f-9dcf-4f55-98db-eb6a19a5c7d0,da556f0d-5f8f-43c8-950b-1139639b5247,Fullstack Project,Need expert fullstack developer.,individual,medium,expert,closed,fullstack
+62814375-0c60-46b1-8ab3-bf2e6e5456d8,d8ff9990-3d4f-411b-8082-f5b10f6ebaf6,Ml Ai Project,Need expert ml ai developer.,individual,medium,expert,active,ml_ai
+632ca9fd-14e6-486f-a4d9-b8eff3fa17bb,8403d457-9555-4585-aec1-8dfcd3038916,Ml Ai Project,Need intermediate ml ai developer.,individual,large,intermediate,filled,ml_ai
+04a8232b-94cd-41f1-b1fb-aa6157986d40,28bf58ee-8d0d-49c5-831b-d075bd82d7fc,Backend Project,Need expert backend developer.,team,small,expert,active,backend
+2b6f7336-4b2d-482c-911b-292598dc5f71,314b00a6-5bb4-4966-9ed9-e3196ef1e7c6,Backend Project,Need intermediate backend developer.,team,small,intermediate,filled,backend
+16f9b532-3df4-4469-9fab-ed88b48e2215,5d9e550e-81e3-494a-a139-93dc9da3b065,Backend Project,Need entry backend developer.,team,small,entry,closed,backend
+24c2ee63-c367-4c3a-9cf3-9a7a39aa1459,f0dc4397-1b70-44c7-b0ec-0c6840020e2c,Blockchain Project,Need expert blockchain developer.,individual,large,expert,active,blockchain
+d563438f-f37d-4527-a052-46b21415b1d0,4d98dafd-3878-41fd-a17e-df26d7ffb698,Fullstack Project,Need intermediate fullstack developer.,individual,medium,intermediate,active,fullstack
+490915ef-2118-47b7-ba01-df13116b1b2f,6ce3a1d8-62bf-4823-a894-9fe4e8716dba,Fullstack Project,Need intermediate fullstack developer.,team,small,intermediate,active,fullstack
+97060418-824c-47fc-8abf-88e1cc8149a8,ccace7b2-a362-48da-ac3e-07961ba91302,Mobile Project,Need expert mobile developer.,team,small,expert,active,mobile
+179be58c-d706-491d-ab19-36289ddcf339,523b2121-d825-4f38-bb7c-1f426fd6b601,Backend Project,Need intermediate backend developer.,team,small,intermediate,closed,backend
+3daca9bb-b3b7-489d-8637-75b608ada1a0,2b6a9238-6e42-4ada-a754-6094edfb22a9,Frontend Project,Need intermediate frontend developer.,team,large,intermediate,active,frontend
+4090f3ab-8b98-4818-83e9-ff4ff2c9222e,936a1270-42e6-4f48-bf72-f325a4b97913,Blockchain Project,Need intermediate blockchain developer.,individual,medium,intermediate,active,blockchain
+8bd6c41e-5d3f-4e18-83a5-3091ca5cdbe0,9902358c-e263-4275-afe1-22de73364e97,Frontend Project,Need expert frontend developer.,individual,large,expert,closed,frontend
+df315fec-8a84-4824-97e6-2a9af48b84f7,1256df09-4b1d-41ce-a2d8-34858ec31ddd,Ml Ai Project,Need intermediate ml ai developer.,individual,medium,intermediate,filled,ml_ai
+1ec1d892-9557-4be3-a672-ed81edc48a42,28fbb904-6dcd-4150-a4bb-9ef65f25f8b8,Fullstack Project,Need intermediate fullstack developer.,team,large,intermediate,filled,fullstack
+c890a379-bce8-4685-9642-a2c0391a6c5b,815c16f9-c955-4c31-9786-a71af90a0606,Fullstack Project,Need intermediate fullstack developer.,team,medium,intermediate,closed,fullstack
+e5ad33fc-a33c-4f41-8567-52aefc41afc9,088731bf-dc3e-4c80-8414-910cad2200e8,Ml Ai Project,Need intermediate ml ai developer.,individual,small,intermediate,closed,ml_ai
+4e7aac13-4e87-465a-ac96-d6301cdbe98d,d0a32654-9513-4693-8e19-660236ad51f4,Fullstack Project,Need intermediate fullstack developer.,individual,small,intermediate,active,fullstack
+41976c2b-0849-4982-863c-efb9a485872b,0c27a609-03b9-4578-9a6d-f7dfdc3bc6c7,Frontend Project,Need entry frontend developer.,individual,small,entry,filled,frontend
+5bade825-395e-43dd-b061-65ccda5b32f5,175be6aa-eea8-480d-86ba-87caa79f15cb,Design Project,Need entry design developer.,individual,medium,entry,active,design
+bc18c12c-5101-48e7-b540-e9170f127e7a,1d77399d-2e7d-4753-b626-76affac598f9,Fullstack Project,Need intermediate fullstack developer.,team,small,intermediate,active,fullstack
+a9126449-22a6-4e0e-a598-3af7b4243f65,86b10c72-cceb-497f-887a-86df5f658d14,Blockchain Project,Need entry blockchain developer.,team,large,entry,active,blockchain
+955608d5-a7c8-428f-bdad-5791492392b0,7977805b-daaf-4a03-866c-3e1d84d13de9,Devops Project,Need expert devops developer.,individual,medium,expert,active,devops
+43941ef5-a7f4-4f52-87bc-d94d8228956a,be26f0de-cd4d-48b3-b65d-f133af545d4c,Ml Ai Project,Need intermediate ml ai developer.,team,large,intermediate,filled,ml_ai
+adfeb070-4794-4936-9aea-991e7a0cf7ff,fa3030d0-0936-4d0f-abdc-0df5296e63b0,Frontend Project,Need intermediate frontend developer.,individual,large,intermediate,filled,frontend
+0deb1274-6fb8-42af-b57a-4eb994e45544,c5d890e5-7ef3-4626-ba9f-7666caf2df90,Backend Project,Need entry backend developer.,individual,medium,entry,closed,backend
+7690dbac-50b5-4c96-b842-86991563bffe,6ced7414-307c-4393-b527-0a6938ec0a51,Frontend Project,Need entry frontend developer.,team,medium,entry,filled,frontend
+b2932cf3-fb7f-48bb-b7da-444c644cc788,8fb20ad7-709c-4269-a99d-5955ccef4032,Blockchain Project,Need expert blockchain developer.,team,medium,expert,active,blockchain
+2306e64d-5824-49ae-b33c-7372ada50e93,19d84f25-a911-47e6-a0fb-34f0aac1afcd,Mobile Project,Need intermediate mobile developer.,individual,small,intermediate,active,mobile
+9b9bb74c-b12c-43b5-9dc1-8970321807e1,3d1e16a3-ec84-48e7-98f3-8cffc9235c96,Backend Project,Need intermediate backend developer.,team,medium,intermediate,active,backend
+f4dd3a5f-0619-4123-bf94-bb4584c2b7ae,c3228bda-bafc-4280-96c8-25e9e8256d9f,Mobile Project,Need intermediate mobile developer.,team,small,intermediate,closed,mobile
+071aa06d-e2de-4ee6-b8fa-99e3b9333c83,fb069270-993d-4faa-869c-eafc1ddf2a9f,Fullstack Project,Need expert fullstack developer.,individual,large,expert,filled,fullstack
+32e2eff5-793f-433b-917b-ab04ee3d22d5,20556a2b-f561-4efa-964a-556854dd0a69,Blockchain Project,Need intermediate blockchain developer.,team,large,intermediate,active,blockchain
+e2a51bff-c126-44c3-9eb1-0ed0123d74c2,479664b0-5f4a-4594-84df-e82998f84020,Blockchain Project,Need entry blockchain developer.,team,medium,entry,active,blockchain
+a6ac028d-e6d6-41da-a066-dbb2972bd4f9,a3042b07-000d-4dc6-bffc-0baa4b970a43,Ml Ai Project,Need entry ml ai developer.,individual,medium,entry,closed,ml_ai
+dde5a79f-b860-420b-bb6c-587ea2140fc9,0e62337b-a951-4e10-9c7a-e66b554e2ab2,Blockchain Project,Need intermediate blockchain developer.,individual,small,intermediate,active,blockchain
+edf7d725-872f-4c18-8ea7-b4d821c08e81,67a1b800-9d31-4712-83ec-f816c04ab741,Fullstack Project,Need entry fullstack developer.,individual,small,entry,active,fullstack
+86af392c-3267-41f7-b499-376af102fbaf,0525cf46-fe82-46bd-9bb9-80b0e8ddadda,Fullstack Project,Need entry fullstack developer.,team,medium,entry,closed,fullstack
+c2da8240-3ff9-487e-b24e-4b1d1a72c182,8768f0a4-9c85-41b6-a44b-b695b96a9b1a,Blockchain Project,Need entry blockchain developer.,team,small,entry,active,blockchain
+19295b19-1c86-4236-a521-0c57653d1b33,fd9e49d4-8ab0-403a-bd23-13b67e205f8e,Ml Ai Project,Need intermediate ml ai developer.,individual,small,intermediate,active,ml_ai
+2ea1a783-75dc-4fcf-9f1a-830ed4de5128,7d26a82a-1e6b-4f10-80d8-1a9e04199bab,Ml Ai Project,Need intermediate ml ai developer.,individual,small,intermediate,active,ml_ai
+4782456d-f840-4d08-8ebe-f15c756ce884,ad1c6fdf-e9a0-4fe7-807a-b95050fc55d2,Design Project,Need entry design developer.,team,small,entry,active,design
+ad2460b2-a1af-48f2-b4e1-0f288cd1fecb,ef4d6391-0315-48fb-a12f-819258a66b17,Fullstack Project,Need expert fullstack developer.,team,small,expert,closed,fullstack
+a05cafa1-ce9e-4d6a-bc87-95cc820fffd9,50150fb0-da31-4a40-a0d7-63474bcdc84f,Devops Project,Need intermediate devops developer.,individual,large,intermediate,closed,devops
+b087178c-efeb-48bf-8954-0bef66bfa9f9,6de336ea-471a-4b5f-a5b3-57ea69aaacff,Fullstack Project,Need expert fullstack developer.,team,medium,expert,active,fullstack
+0b6cf69a-9304-46c2-889f-de091dab5761,4f59d205-fed8-4fc0-b2d8-295157832229,Mobile Project,Need entry mobile developer.,individual,large,entry,filled,mobile
+359d81ec-ee60-452c-b749-3e9d6d5fea04,e941fb43-b817-4731-a535-381844e544b1,Blockchain Project,Need intermediate blockchain developer.,team,medium,intermediate,active,blockchain
+0ff92202-e1cf-4436-81a1-e38be3876979,330d70e1-4ba2-4145-8611-4df692b3be9d,Design Project,Need entry design developer.,team,small,entry,active,design
+d00c1cfc-b9e8-415f-93cd-1cafdbe374c5,47fe7430-c877-4479-817c-be6a67f806ba,Ml Ai Project,Need intermediate ml ai developer.,team,small,intermediate,active,ml_ai
+3cc4b1e5-a153-4913-9e48-7371de2f4724,aaea2b78-f6a7-42c2-ab8b-804d8f530b4a,Backend Project,Need intermediate backend developer.,team,medium,intermediate,active,backend
+d97eed46-5072-41b4-b4c4-8f3f77e1a4b6,ba9c6606-d87d-4828-95fb-a54ee4690188,Ml Ai Project,Need intermediate ml ai developer.,team,medium,intermediate,active,ml_ai
+eb5139b8-bf42-45ea-9228-f9af8c595ebe,23677593-ca4f-425e-939e-b919d58a3c3d,Backend Project,Need intermediate backend developer.,individual,medium,intermediate,active,backend
+9f1958b0-1fda-4a66-8999-6e9d9d6e4e71,e94382ff-f356-4757-9e96-941272cfabca,Frontend Project,Need entry frontend developer.,team,small,entry,active,frontend
+4a5eb0e7-295c-49bd-98b0-73496d84af21,7e5c7f69-a273-40d8-8525-4cd19de86fa4,Mobile Project,Need intermediate mobile developer.,individual,medium,intermediate,active,mobile
+877fbaca-0cba-499d-9755-787a8036d908,6251b016-bd43-4545-92d1-f5f3bb575179,Frontend Project,Need expert frontend developer.,team,small,expert,active,frontend
+d1176ec3-5859-4ff8-bcab-116137394ba9,cdc6ed50-2b10-4bf7-b82e-8a522975b78d,Fullstack Project,Need intermediate fullstack developer.,team,large,intermediate,closed,fullstack
+48b58e9f-8649-458d-90da-26458eaf41e9,f58ee1ab-e0a7-4c2b-9217-9e57995f73d9,Mobile Project,Need intermediate mobile developer.,individual,large,intermediate,filled,mobile
+7df698f9-18bd-424f-8139-c6b83d7d1a22,65e6803c-a09d-4430-8ed4-3580da23fcea,Ml Ai Project,Need entry ml ai developer.,individual,medium,entry,filled,ml_ai
+26d5e542-5121-449f-937d-fea385b7ded2,70825109-f7e0-4430-b47d-2db95ed1b459,Ml Ai Project,Need entry ml ai developer.,individual,medium,entry,closed,ml_ai
+798582b0-d0d2-4111-95cd-5efb52b0c2f5,c44c6815-6b76-427d-aa70-12f56d046f97,Frontend Project,Need intermediate frontend developer.,individual,small,intermediate,active,frontend
+27350e31-b747-4ec0-9831-69031d9ac181,9811e582-4e3c-4085-9330-383281260cdf,Fullstack Project,Need intermediate fullstack developer.,individual,small,intermediate,active,fullstack
+6fbb90ee-11a7-47e8-ab96-e89d2c3b2406,9297eed8-70be-49eb-87f9-a2490963fecc,Frontend Project,Need intermediate frontend developer.,team,medium,intermediate,filled,frontend
+e8a7d4f5-aa72-4c37-be65-004fc423ab5f,826c19da-4288-436c-ac25-0a3774c43a97,Blockchain Project,Need entry blockchain developer.,individual,small,entry,active,blockchain
+18d87c37-03f8-416f-9baa-eeb4124899e1,10fcf558-faab-4e9d-92dc-2c3e60516116,Frontend Project,Need entry frontend developer.,team,small,entry,active,frontend
+04dd630a-15a8-44d6-a51e-3bce3031730a,44d3c716-eeb1-4cd0-a380-ed3f22dd6ff7,Backend Project,Need entry backend developer.,individual,small,entry,closed,backend
+857b252c-8be5-4257-b199-ab81fad789cf,9fe42784-46f2-41a0-8c0a-d8eae183e7c8,Backend Project,Need intermediate backend developer.,individual,medium,intermediate,filled,backend
+39eb67db-baa7-4c45-a0e9-40810ede486e,63706fdb-715b-441e-a5c0-c6720ffc7009,Backend Project,Need expert backend developer.,individual,large,expert,filled,backend
+d086136d-13c0-404a-a1a4-cebde178ed4b,1af753d2-edf1-4401-9f46-2a70e0533abe,Ml Ai Project,Need intermediate ml ai developer.,individual,medium,intermediate,active,ml_ai
+1862e961-21ee-4fc2-9edd-d024d2005366,c4acc434-c8c8-4569-9a6d-6f97da8c9270,Fullstack Project,Need intermediate fullstack developer.,individual,medium,intermediate,closed,fullstack
+bdfc76d7-41d2-42d2-9d99-5a1f55663c86,acde9f70-44f0-4989-bf61-bb92303ee724,Ml Ai Project,Need intermediate ml ai developer.,individual,medium,intermediate,filled,ml_ai
+3cb86d41-e82a-45e0-84ff-e945f3be5e43,5fd84a4d-7e09-46ca-804d-546fa6785919,Design Project,Need intermediate design developer.,individual,large,intermediate,closed,design
+7e2e73e8-1674-453a-9703-681cb5a01e3b,7710f066-f2f4-4d24-9298-a54543fb3503,Mobile Project,Need intermediate mobile developer.,individual,small,intermediate,filled,mobile
+7005fe11-9484-4e64-a536-ba6604bcbea3,3d588a87-0d64-4bba-b81c-454c06646c53,Ml Ai Project,Need intermediate ml ai developer.,individual,small,intermediate,filled,ml_ai
+cbcdca22-3419-45d1-81eb-75da95bb2bd3,a933e788-dcfa-454b-8d92-c26af82456e9,Devops Project,Need intermediate devops developer.,team,large,intermediate,filled,devops
+27b98306-9321-43cc-9f26-a8f520143d34,e64088dc-5129-4227-aff2-b210d954031a,Design Project,Need intermediate design developer.,individual,large,intermediate,active,design
+f2c1a769-0c9c-4e33-8089-6ded613c8f92,e5f43485-c533-4878-9523-23121f50d4cc,Devops Project,Need entry devops developer.,team,small,entry,filled,devops
+9cfc5ade-5ef8-43d6-88aa-2cb2ce766fda,c710898a-094c-4523-9d5b-8330d464ced0,Fullstack Project,Need intermediate fullstack developer.,team,medium,intermediate,active,fullstack
+1704c9ce-9148-4d47-8b42-4426674c2504,0d434f57-21a3-45f6-bc4a-220490d2149a,Design Project,Need intermediate design developer.,team,large,intermediate,filled,design
+221a865f-10e3-49f1-b80f-10fc44761151,087d5ab1-051e-44d7-bc13-213464ff1df3,Backend Project,Need intermediate backend developer.,individual,medium,intermediate,filled,backend
+45a484e3-06ab-4a72-9b69-ce61381c4d45,1d1f48cc-5f82-4808-863a-2ee2bc9c6283,Frontend Project,Need expert frontend developer.,team,large,expert,active,frontend
+6e23d3f2-88cb-45ff-9d44-9d7abb79f17b,e5b6b9e6-a02d-49b2-b1f3-9ba550513e30,Design Project,Need entry design developer.,team,medium,entry,active,design
+93fcd129-59d3-474b-a975-7832fc5c794d,c1d870c2-cf0c-4f6a-b6fe-4789a5327aea,Devops Project,Need entry devops developer.,individual,large,entry,closed,devops
+dc67b3f3-4536-4c2a-9afc-efe8476ab195,9f0e5286-e8da-4a42-9f31-051dfdf44477,Devops Project,Need entry devops developer.,individual,medium,entry,active,devops
+a2338a18-9f54-4a66-ae15-de38f1a5b89b,6ccf1354-53cb-4c05-82d1-4087a1560724,Devops Project,Need intermediate devops developer.,team,small,intermediate,closed,devops
+f305fdeb-3fbe-4a52-840d-12754deb4589,11266116-c004-4e2d-9f7f-788a409baeaa,Ml Ai Project,Need intermediate ml ai developer.,individual,small,intermediate,filled,ml_ai
+1af14168-4684-4cc8-b772-3ccb4d514d9c,e113a8e9-5e2c-4f3b-942a-420e767ffbd2,Blockchain Project,Need expert blockchain developer.,team,small,expert,active,blockchain
+579cbaa0-5746-4bfb-9f04-bc13b0c866a8,af9e2faf-5946-419a-8735-7d8b96a23e69,Design Project,Need intermediate design developer.,team,medium,intermediate,active,design
+90aa10bd-7aaf-44ab-8d68-57e6df0c16f1,4264d0fe-0e48-45e7-b212-ae879bec6467,Blockchain Project,Need expert blockchain developer.,team,large,expert,closed,blockchain
+78470937-55e0-439e-a41a-d9d3cd90236a,67738a05-3a32-4d85-bb32-085ce87a9180,Mobile Project,Need intermediate mobile developer.,individual,small,intermediate,active,mobile
+fd65b80b-b85f-47ed-8245-b0304649cd00,08817b30-08af-450b-90b4-e0944977d98c,Design Project,Need entry design developer.,team,medium,entry,active,design
+9d73b09a-8b7d-47c2-911d-a93b8ad61c5a,f64aa0cc-4112-48e6-8219-083643c67e62,Devops Project,Need intermediate devops developer.,individual,large,intermediate,closed,devops
+438b7854-eafc-447a-9c73-29eb68039fc8,cac9c987-4822-4ac8-ac69-4062792fea57,Frontend Project,Need entry frontend developer.,individual,large,entry,active,frontend
+f166bd29-8630-4b43-bfbc-53f1f6bddd20,5fcae2cf-79c1-47da-9d26-8e0e82e7f1d4,Frontend Project,Need intermediate frontend developer.,individual,small,intermediate,active,frontend
+0d1347ee-19e1-4cb3-8ebd-c446f7bc4407,c852a9e6-c60b-47aa-a350-b7820a2a2aee,Devops Project,Need expert devops developer.,individual,small,expert,active,devops
+608c81c5-005e-4544-af9f-39d925912cd4,e4e811d8-3e2c-47cc-b36a-aa5175998214,Frontend Project,Need entry frontend developer.,individual,large,entry,active,frontend
+e4aa402c-eccf-421c-8610-db97d2c9adb2,764a7251-c9af-44ee-a02b-6b3c05c41da3,Mobile Project,Need intermediate mobile developer.,team,large,intermediate,active,mobile
+e888071c-5407-4b45-8dff-708373c0f858,70b2c3be-63a2-4e3d-afda-0ddc100e9411,Ml Ai Project,Need entry ml ai developer.,individual,small,entry,active,ml_ai
+cf705db4-61f8-4918-a847-f4c143e2cbe1,4d577c68-b1c3-4cc3-8ee1-2a0a3e5cd2df,Fullstack Project,Need expert fullstack developer.,individual,small,expert,active,fullstack
+bc61f20e-7216-4312-ba42-06a229846918,b11b26d3-479d-4803-a8b9-b25c22081df8,Backend Project,Need expert backend developer.,team,small,expert,active,backend
+9f55fb8d-8bd9-4e02-bdb8-50fe837aab5f,2da65b89-7968-445f-aee2-9fea3df8e96b,Design Project,Need expert design developer.,team,large,expert,closed,design
+299f2809-dddd-4250-b478-c7749faa3570,d3b432d9-0344-4184-99f6-0c4460719384,Ml Ai Project,Need intermediate ml ai developer.,team,large,intermediate,filled,ml_ai
+524c4939-c37a-48b0-b20a-cf8e21d28133,1316888a-4944-4b26-9d01-4166243f7da2,Frontend Project,Need entry frontend developer.,individual,medium,entry,filled,frontend
+d5e0220c-5491-4356-8ce3-93108fab0ff0,65a806ee-e8a2-4135-9160-02f708c4f87f,Frontend Project,Need entry frontend developer.,individual,medium,entry,closed,frontend
+8051b8fa-a226-4d12-aa15-44c149acaa2a,e3fc01a6-694f-4353-8fdd-aca3ab027be8,Backend Project,Need expert backend developer.,individual,medium,expert,active,backend
+0f22380c-7cae-4b4a-8ec9-33ec40c8f1fd,f5dff09a-11a9-4937-9cbc-dce3e55028eb,Devops Project,Need expert devops developer.,individual,medium,expert,active,devops
+aa286a34-454b-4734-8f22-6fd24f11b859,abaaa53c-f104-498f-8f42-18513402638f,Blockchain Project,Need intermediate blockchain developer.,individual,small,intermediate,closed,blockchain
+25416e31-9da2-4095-9009-d59b4503102b,9110149c-60f6-428a-bd05-098cd54eab78,Backend Project,Need intermediate backend developer.,team,medium,intermediate,closed,backend
+2bf68dc0-98fc-4636-b042-eb57ada31a51,2489eb43-0bec-4dee-83bc-5bea08112a20,Frontend Project,Need expert frontend developer.,individual,small,expert,closed,frontend
+35e0eb05-4a88-4798-8659-e37a5b9a4e73,31c05c9d-9678-438a-9f2d-56f14921c2f4,Mobile Project,Need intermediate mobile developer.,individual,medium,intermediate,active,mobile
+77448f50-97f5-455b-a191-d6a6fd01e8cc,ba27a732-502f-4ed8-afe8-ac5724b9d0f0,Design Project,Need expert design developer.,individual,medium,expert,active,design
+ca1d4170-6b85-4488-b976-ab575e008ad3,968374c3-1b24-4b18-9f1e-71709ff7b670,Ml Ai Project,Need entry ml ai developer.,individual,small,entry,filled,ml_ai
+cf820bd6-a70b-42c5-bbda-3f07dfacfad9,6a874666-423a-4d9a-b2e6-cb76a8ebc822,Ml Ai Project,Need intermediate ml ai developer.,individual,small,intermediate,active,ml_ai
+9b6ff42e-4778-4b92-854b-51dd4189414f,9850b598-6bf1-43d3-a008-c63932455c6e,Backend Project,Need intermediate backend developer.,team,small,intermediate,active,backend
+85b2d976-c41a-4303-bce0-994eed96308a,bfb3040d-30a1-45af-9dc8-31cdd777f3a0,Blockchain Project,Need intermediate blockchain developer.,individual,large,intermediate,filled,blockchain
+fba12526-ab1e-4765-800b-815aa8bba6e0,4e09c631-0864-4a46-a093-c0b021927257,Backend Project,Need expert backend developer.,team,medium,expert,filled,backend
+e0fc7bd7-ea02-46b2-aaec-20ee7085ea31,c60f2570-de69-41ff-b486-1f02ab94bd54,Blockchain Project,Need intermediate blockchain developer.,individual,large,intermediate,active,blockchain
+2d2f4776-4e14-4965-bd40-ea71bf97d824,9b537954-7d0b-407a-9175-3d7d4f2bea0c,Backend Project,Need intermediate backend developer.,individual,medium,intermediate,filled,backend
+415bc8cf-1b85-428d-9468-c0fa4a755504,f23742fd-2448-4735-aef3-f5f5299ee70d,Design Project,Need entry design developer.,individual,small,entry,active,design
+da28195e-4002-417a-a43f-44335d387f42,ffc7a930-5122-42c9-afe9-98f6ea21550b,Mobile Project,Need expert mobile developer.,team,medium,expert,filled,mobile
+1d2e094b-c180-412f-8ae9-003ce9e5edf8,65fdcafe-aec4-416d-a3d8-01e99cd1af36,Mobile Project,Need expert mobile developer.,individual,small,expert,active,mobile
+605afe8b-1251-4e59-83ae-29883c460681,71ebb94d-11ca-4036-8053-34c77057a1f1,Mobile Project,Need entry mobile developer.,individual,large,entry,active,mobile
+ceff0b90-dd2e-4fda-b930-410a4e317537,49a5b740-5f0a-4417-804a-8ecfcd2de29a,Mobile Project,Need intermediate mobile developer.,individual,large,intermediate,active,mobile
+cabeff25-a2dd-411e-90c5-a43043279231,f5d674fa-588a-4896-a033-ab5f2a31060c,Backend Project,Need entry backend developer.,individual,medium,entry,active,backend
+2d609776-af4d-4753-8d5e-f37d6e39edf1,c4e63aba-0a96-401f-8c85-68a0fc2f399a,Fullstack Project,Need entry fullstack developer.,individual,medium,entry,active,fullstack
+6599ca27-af9d-4cf9-a244-d05f7d0dbac4,3258a006-5966-4b55-a896-3b7b2d186ef1,Blockchain Project,Need intermediate blockchain developer.,team,medium,intermediate,active,blockchain
+1af423b9-9a51-49b6-a398-35434dd31934,ddda5154-4671-413f-9477-5fdb7aa48e4b,Fullstack Project,Need intermediate fullstack developer.,individual,medium,intermediate,closed,fullstack
+62db5fae-34ed-4556-9251-7004d04afc73,3e3e82a6-0121-4cef-82fb-8943a6068962,Design Project,Need intermediate design developer.,team,medium,intermediate,active,design
+1f918da2-81ce-4cdb-9ac1-f926f3870375,3e15a00c-f12f-48d6-9fe2-a8fd7e82f72f,Backend Project,Need expert backend developer.,team,small,expert,closed,backend
+af01ba71-2861-49fc-96d2-4b8dd2daa3b1,0f8ec8c9-d12f-4527-b075-9ae11e6ccaa7,Backend Project,Need expert backend developer.,individual,medium,expert,active,backend
+78eafcf9-f3a2-4161-af44-1bffd36e4fa7,e0eda678-1555-4f78-813b-2c3c10f0846c,Blockchain Project,Need intermediate blockchain developer.,individual,medium,intermediate,active,blockchain
+54204e55-5459-49b3-9a5f-38fc46780add,f4fedb33-5094-439a-a75e-ca3f3a843b8b,Frontend Project,Need expert frontend developer.,team,large,expert,active,frontend
+c264e262-8199-4bf4-ba82-77c395232d40,72971759-a9a6-4207-b2c4-8c21ee625bbb,Frontend Project,Need intermediate frontend developer.,individual,large,intermediate,active,frontend
+d4e5643a-1e1a-4005-a19f-925e0b0c8118,b4504c22-328e-4eea-847f-5eacd2f12f01,Blockchain Project,Need entry blockchain developer.,individual,large,entry,closed,blockchain
+bf777d61-b2c3-4a16-974f-77ad8a1aa9d2,c692ad9f-eaf9-4ae1-94f2-cae03e00a987,Devops Project,Need intermediate devops developer.,individual,medium,intermediate,active,devops
+bd13bffd-86ad-4531-bc07-b387f2bc5284,c12cfe42-dda7-4c2f-8948-eb3d16185959,Design Project,Need expert design developer.,individual,medium,expert,active,design
+385f1193-f97d-40b1-a2dc-bd289761058b,db0ec1bf-7350-4171-af03-69554349a770,Devops Project,Need intermediate devops developer.,individual,small,intermediate,closed,devops
+2126ed72-8c9b-4e5e-ac0b-d6b58bac50e3,f5a7c080-7989-4f13-b64a-d127f48f0cd1,Design Project,Need expert design developer.,team,medium,expert,active,design
+945952b8-ed28-41fb-9530-d943c79812ff,25db8858-bd19-4a61-9f1f-278c93f3945c,Backend Project,Need intermediate backend developer.,team,small,intermediate,active,backend
+f67662ec-0e8e-4333-8bb6-b91f0d2fb903,7fb4f3d5-074b-4935-8e05-f2a6128adfdc,Backend Project,Need entry backend developer.,individual,small,entry,active,backend
+92cfe771-0a9d-4355-9dd4-64c80a3bd8b7,bc83ee95-e133-4ba6-a61f-91a6f68ea0e3,Design Project,Need entry design developer.,team,large,entry,active,design
+9cf81edc-20d0-415a-a5f6-73bb615fafbf,7c5942f1-65d6-4caf-a3ee-5d2ebb665e39,Devops Project,Need intermediate devops developer.,individual,large,intermediate,active,devops
+68c6e1c5-a1bf-428f-a6bb-bb62ff5f7c2e,6b42610a-210f-42da-9af1-202ef5095005,Backend Project,Need intermediate backend developer.,team,small,intermediate,active,backend
+02303573-0e8f-4dc0-862a-c980937b2226,2f46f72e-0665-4fe0-a53c-496be41e9112,Mobile Project,Need expert mobile developer.,individual,medium,expert,active,mobile
+53306c1e-538e-4e6f-bcf3-b572d622496d,2c0cd3cf-a59e-4120-abbd-d8b16acddd88,Backend Project,Need entry backend developer.,individual,large,entry,active,backend
+90cccf57-5223-4590-8f2f-5323ad085ff1,10529c17-5b18-4170-9de2-c00c33286b9f,Frontend Project,Need intermediate frontend developer.,team,small,intermediate,closed,frontend
+d7711f95-0348-4111-8d98-d73b4c740b49,33552074-3e79-4648-b081-d4c7e6e41020,Devops Project,Need entry devops developer.,team,small,entry,filled,devops
+5dd07a81-7491-44d6-8251-0fb9a2bdefb7,ab816b19-c71b-4f4c-92b7-a40e27992260,Ml Ai Project,Need intermediate ml ai developer.,team,large,intermediate,active,ml_ai
+e9821856-9a4b-4679-aed3-e112aeb715fb,c0186f1a-d4f6-4cad-925e-384c14e8c51f,Mobile Project,Need entry mobile developer.,individual,large,entry,active,mobile
+a0718c03-6b68-4cc2-831e-ce1b39d0fa8b,baeb7768-fbad-4ac3-8c60-2166ef5f61a1,Design Project,Need entry design developer.,individual,small,entry,active,design
+93f5c3fd-119d-4977-bb0b-bda99171e0d8,d7a833aa-250d-427f-9723-b9f993fbde0e,Devops Project,Need expert devops developer.,individual,small,expert,filled,devops
+6e53e79c-f6bc-44dd-99cf-01aa5e456a53,e4b76a23-ea00-4d26-b427-f2032f22c401,Frontend Project,Need expert frontend developer.,individual,medium,expert,active,frontend
+44fd54a1-6fa3-42b4-a145-a7ab507c743c,64eb0558-e1e6-449a-97d1-5567794d7c89,Design Project,Need intermediate design developer.,individual,small,intermediate,active,design
+b24ebf3c-fabd-4e8c-b743-7f1f62a8b319,8ed4dceb-36dc-4573-9e99-ad13ea2683eb,Backend Project,Need intermediate backend developer.,individual,medium,intermediate,closed,backend
+0cb34d83-f3c8-4e61-9d8b-712e58809572,1a836be5-4b1d-4546-a119-b623215cb67f,Mobile Project,Need intermediate mobile developer.,team,large,intermediate,active,mobile
+cf7ca1bf-fc63-42a9-a958-14790bac65fb,275b02eb-68f0-4085-bae7-f8170180ecc5,Backend Project,Need intermediate backend developer.,individual,medium,intermediate,filled,backend
+572ab600-e5b1-4411-9f78-f4682dbe3a74,dd3f3bbf-2963-4e13-9f41-9715fad20649,Backend Project,Need entry backend developer.,team,large,entry,filled,backend
+61a68135-5265-4a33-92bc-f13781e05ff0,131da6d5-d320-494c-9ae1-d8f9c24b3abc,Backend Project,Need entry backend developer.,team,medium,entry,active,backend
+68acb79a-9516-48ea-9f6c-6d93973a1ae5,b23721ce-ac59-4f12-ae4c-ccf48fc85fd4,Mobile Project,Need entry mobile developer.,individual,large,entry,closed,mobile
+820f077d-434e-4291-8ad9-b375b3279ec2,d46eb714-1180-41bb-955d-1e3fad356ef6,Frontend Project,Need intermediate frontend developer.,individual,small,intermediate,active,frontend
+910902e3-9456-4d90-b3a7-153b7b9b8e3e,2e988e78-3332-40f8-86aa-ae19bdd81bbc,Devops Project,Need entry devops developer.,individual,large,entry,closed,devops
+219691ac-fd88-4946-8a06-676bf9d533fb,4b5b56c3-5d24-40e7-8fe3-9fb4717bae7f,Design Project,Need expert design developer.,individual,small,expert,active,design
+7b94180a-6d67-49d8-b5cf-92cd3649e57e,8d1fa660-3826-421a-8104-fc82275ec84d,Design Project,Need intermediate design developer.,individual,large,intermediate,filled,design
+fbc66e3d-2d01-4c09-a69f-891ab9a2880e,b31de4c8-658d-4bcf-9c99-bf6dd7966ba3,Design Project,Need intermediate design developer.,team,medium,intermediate,closed,design
+4b76486c-e013-4b1e-a7d9-52ef6ff6709e,484e7cbb-4e9d-47ca-b848-58b8ea07bb49,Fullstack Project,Need intermediate fullstack developer.,team,large,intermediate,filled,fullstack
+9e8a68fe-189f-45e5-9182-3a0bfc3a10dc,1f85f155-aa60-4c44-9096-ca1e02775e21,Backend Project,Need intermediate backend developer.,individual,large,intermediate,filled,backend
+8eb14726-e83e-4f8f-80b7-ed317d1fb074,b196e1d3-5fe8-4400-812c-efe3aadae7f1,Fullstack Project,Need intermediate fullstack developer.,team,large,intermediate,active,fullstack
+8e5fff07-d600-4bed-a629-119cbfe7aeef,6f5c79f2-8a32-4432-91f5-a68caaf1ba57,Mobile Project,Need intermediate mobile developer.,individual,small,intermediate,active,mobile
+52cba205-f6fe-41b6-8eba-91224182a0cf,732e85bf-1026-4ad7-8ab7-81fca4a1f148,Frontend Project,Need expert frontend developer.,individual,large,expert,active,frontend
+5de45daf-abb2-4a89-b082-8f24a2a4abc1,6ceae53b-6906-4ef0-b508-60e75fab400f,Backend Project,Need entry backend developer.,individual,medium,entry,active,backend
+a1f81391-3464-4e07-9fe9-d171b46d01ae,7b34ae7b-4f2d-4e26-b0dd-e26b530f921f,Ml Ai Project,Need entry ml ai developer.,team,small,entry,active,ml_ai
+a1330631-e1f6-4023-bf27-555f8e3cc380,d7a16172-2f1b-4ec4-af1e-c4b2100f51ae,Design Project,Need intermediate design developer.,individual,large,intermediate,active,design
+1b0a1974-ea2a-4720-8290-2aab96b8253f,63f8ad58-290e-4068-b630-8aa2eedc454b,Blockchain Project,Need intermediate blockchain developer.,individual,medium,intermediate,active,blockchain
+5b2414e2-e845-45f4-b8ce-0d12b068f7f7,129b47d7-8fe8-404c-8f74-118f68fc38a9,Blockchain Project,Need entry blockchain developer.,team,small,entry,closed,blockchain
+150c49d5-2384-488d-9821-d42fb8b52124,c2f3ff57-997a-4a41-ac63-7ba048788214,Mobile Project,Need entry mobile developer.,team,medium,entry,active,mobile
+db6fb8f3-4691-42c7-9722-268ace4b3da5,e7778976-ecaa-451d-9a91-24cf10e3ec7e,Frontend Project,Need expert frontend developer.,individual,small,expert,active,frontend
+9665b68f-2659-4d38-ad45-370fe09cbc39,5c2aae76-fc87-43bd-8430-a883d60bf79e,Ml Ai Project,Need intermediate ml ai developer.,individual,small,intermediate,closed,ml_ai
+66663016-94ef-4287-b566-42b7f40aabdb,e1a810e2-80d7-43b2-a781-ff52000ae2cc,Blockchain Project,Need intermediate blockchain developer.,individual,small,intermediate,closed,blockchain
+ed03eb62-f352-4366-9282-5838371e1816,e1d9147e-00dc-4d19-a36e-9f4cd5b1075e,Devops Project,Need entry devops developer.,team,small,entry,active,devops
+656b6083-fdff-4e99-838c-6429f3e82c90,5a87ec86-7238-410a-8d5e-ecc928c4be75,Blockchain Project,Need intermediate blockchain developer.,individual,large,intermediate,filled,blockchain
+af52abd1-04ed-4062-950d-9629736d6ff8,b6a63960-fd75-4aa8-9506-91e709381e13,Mobile Project,Need expert mobile developer.,team,large,expert,active,mobile
+1f9609e2-2279-48fd-b7c5-0b552c3bdeb6,46d06cbd-c3a5-4098-9570-4cc84ee567e1,Ml Ai Project,Need intermediate ml ai developer.,individual,medium,intermediate,active,ml_ai
+cb87939a-8a0e-4ec2-b04c-f218d40aa72b,60e02523-43cf-4a8f-92e2-1545d2b5694a,Ml Ai Project,Need intermediate ml ai developer.,team,small,intermediate,active,ml_ai
+7f9004f7-4db3-45c8-a058-98da4c29062d,aea00069-f8e6-4de4-a630-ed6427505785,Blockchain Project,Need intermediate blockchain developer.,individual,medium,intermediate,active,blockchain
+a36a64b4-9e12-4380-a6b5-f71aae4c9e00,5754bb3d-a21d-45bd-a279-15accb0f219b,Design Project,Need intermediate design developer.,individual,small,intermediate,filled,design
+605d7aec-8cea-4fd1-b170-7d0ef99eb8e2,c7ce12bb-4f05-4e6d-aacc-7c754191ee26,Mobile Project,Need entry mobile developer.,individual,medium,entry,active,mobile
+7544faa0-3012-4903-a9f7-b59cfe727ac5,a23d3b6f-b73a-48aa-b215-b114dcfa0e2c,Mobile Project,Need intermediate mobile developer.,team,large,intermediate,closed,mobile
+0e7ffa0c-b98e-4c25-90ee-f0d053c6b646,7e4b68bd-3cb8-4983-81fe-6e10c2205c86,Backend Project,Need intermediate backend developer.,team,medium,intermediate,closed,backend
+2848f906-0e1c-436c-86e3-e9b9dd0a49ef,18efd3f8-f10e-4944-8b8b-bdb059d7e1da,Frontend Project,Need intermediate frontend developer.,individual,large,intermediate,closed,frontend
+ad96489c-89c5-4e0d-bf89-b0c49f44b127,1ad6c007-73b7-4f05-acb0-98ee0982cb01,Fullstack Project,Need expert fullstack developer.,individual,large,expert,active,fullstack
+334f72cc-f014-4697-a889-55a2a5ae861c,ef243158-b950-4eed-b089-07a51d560493,Devops Project,Need intermediate devops developer.,team,small,intermediate,closed,devops
+77a8aa7a-9e55-408a-912c-f020757dac71,afb2612b-236c-435f-b918-6ccef6c85a22,Ml Ai Project,Need intermediate ml ai developer.,team,small,intermediate,active,ml_ai
+5416e63d-2e5a-4094-85d6-7904c026719d,f0b96d58-3035-41bf-be1d-fb41e94568f3,Blockchain Project,Need entry blockchain developer.,team,small,entry,filled,blockchain
+75ee2107-5fef-4c5d-bfc8-66f8e938faf5,dee7be48-81e7-4641-a856-e589c6f51b83,Frontend Project,Need intermediate frontend developer.,team,medium,intermediate,active,frontend
+21ae78c3-ca73-4a18-864c-aaf133751419,5d93e8c6-b3f7-4f2a-9fe5-7caf57732bf7,Design Project,Need intermediate design developer.,team,small,intermediate,filled,design
+d57003e2-e459-44b5-a87a-23d7106b3697,29343c62-3843-43e9-83ce-f015cc84f1bd,Blockchain Project,Need expert blockchain developer.,individual,medium,expert,active,blockchain
+6332acfc-2fb8-4cb7-8769-33b5c70c3b5f,027872f2-628f-4cb6-b441-03e55990e540,Ml Ai Project,Need intermediate ml ai developer.,individual,medium,intermediate,filled,ml_ai
+7cb4d554-0aea-496d-b987-b8b9c8bf925d,b889e5fb-ecf8-4819-9631-516d0e45723c,Frontend Project,Need intermediate frontend developer.,team,small,intermediate,closed,frontend
+e54d0916-1092-4ab1-aa2f-0839ce879723,47bbd4c8-7c3c-4d39-8284-727508f2d10b,Mobile Project,Need intermediate mobile developer.,individual,small,intermediate,active,mobile
+3aaaec21-f018-4ff2-8ee0-3ccadf6b8747,6fb09ab5-45c1-4006-98dd-f9131605b890,Design Project,Need entry design developer.,individual,small,entry,active,design
+560d11aa-8493-45c0-9b0b-c5a1f04d29e5,de12e242-7063-47d4-8ac6-50fbbd1027b7,Design Project,Need intermediate design developer.,team,medium,intermediate,active,design
+7d04dbc1-1745-432e-a818-89636c41f1a0,439f7f68-e1d7-4bd7-b871-12a630f4dfc2,Fullstack Project,Need entry fullstack developer.,team,large,entry,active,fullstack
+c6105f02-31cb-4c77-8ba4-10598fc39ed1,5418d226-6317-496d-8266-9a2bc6a91c61,Frontend Project,Need expert frontend developer.,team,medium,expert,filled,frontend
+5bc88699-a06c-4483-b159-9088b9ad08fd,406288df-4154-4898-9cba-df7a931864f8,Design Project,Need intermediate design developer.,team,medium,intermediate,filled,design
+688ac05f-dc23-45a5-b8a2-81263357e30d,99b484e9-447d-4565-bc38-378f39062caa,Frontend Project,Need expert frontend developer.,individual,medium,expert,active,frontend
+694a5f2c-b03b-45b4-b418-60250a056b5d,d6671c6f-97e4-47cf-9f15-d7a37acc1288,Devops Project,Need intermediate devops developer.,team,medium,intermediate,active,devops
+5257cba0-2cae-4135-adb7-91480cc980d5,22499b50-d836-4325-b789-1faf670cf9ca,Devops Project,Need intermediate devops developer.,team,large,intermediate,active,devops
+6c69feab-92bd-47e4-9a2f-a38b10f4c94f,e9c8360a-6417-4cdf-a73c-6d3e392ec192,Design Project,Need intermediate design developer.,individual,small,intermediate,active,design
+2650b3e6-0940-4bcf-825b-4780a688a66f,67b9cf28-d381-4931-8ed3-1bcaa25f9d6c,Design Project,Need intermediate design developer.,team,medium,intermediate,closed,design
+4526d2e0-4d24-4f56-9494-dbd1aaaf5609,77f76ee6-bc46-4477-bf3e-08a900c0fd4f,Backend Project,Need intermediate backend developer.,individual,small,intermediate,active,backend
+078e2f22-90c7-4ec4-9269-30dfaee8334f,eaefb074-48db-4696-b190-655030dc46e4,Devops Project,Need intermediate devops developer.,team,small,intermediate,closed,devops
+8f4f8910-8689-4046-bde4-89c75dc272e9,17d46e94-ca86-424d-a71b-46c92f63d3b2,Design Project,Need expert design developer.,team,medium,expert,active,design
+84e36c0a-2a4c-4e0a-856c-a6e11313ee79,ffe62aa7-c17a-4188-89f8-38ac8a968cd3,Fullstack Project,Need entry fullstack developer.,team,medium,entry,filled,fullstack
+d99f5cae-fa9b-47f2-9af6-a7b7bcda6e84,df71abdd-7bd1-4601-a1ad-13cea3335488,Mobile Project,Need expert mobile developer.,team,medium,expert,closed,mobile
+3c1a98b5-8c0e-4ec5-8de5-4572545966c7,96d5c5ab-df2b-4c97-9426-7c780c65987e,Fullstack Project,Need intermediate fullstack developer.,individual,large,intermediate,active,fullstack
+8f3a214f-84bb-4ec2-b465-729a19de427b,10abbf63-5278-404d-87e4-c18991fad089,Frontend Project,Need entry frontend developer.,team,small,entry,filled,frontend
+c33e0aea-06ad-4a23-99db-c65c15adf491,0cb9eeda-871b-409c-8e42-730cc776449d,Blockchain Project,Need entry blockchain developer.,individual,medium,entry,active,blockchain
+4b82326a-c1b1-4cdb-ab9d-62edaa915270,026b207f-93b6-4247-b2cb-f2cc5447ce18,Design Project,Need intermediate design developer.,team,medium,intermediate,filled,design
+7ae3edf8-9a86-49ac-b719-95066896f8b9,7abbd22d-145c-4f0f-ad44-8d77c9df8342,Ml Ai Project,Need intermediate ml ai developer.,team,small,intermediate,active,ml_ai
+d5244322-b5fb-4a32-807b-f55db3390c74,52cebab7-3a4b-4e14-9a86-499b43ba9de0,Blockchain Project,Need entry blockchain developer.,individual,medium,entry,filled,blockchain
+2e3ec1f9-9267-4cc9-8b7c-14a7a3027549,6f1360e2-9017-4a6c-9ec4-2df30a00e69a,Ml Ai Project,Need expert ml ai developer.,team,small,expert,closed,ml_ai
+6255e793-1f25-4f3c-bf1e-44275477997c,16bd4baa-b5bb-4cf7-bace-b1250406db03,Fullstack Project,Need intermediate fullstack developer.,individual,large,intermediate,filled,fullstack
+34fcce90-b032-4fe9-a8b3-663fdc230436,40b89ca0-6f69-4c2f-a955-92e9c3d172ed,Frontend Project,Need intermediate frontend developer.,individual,small,intermediate,active,frontend
+02d6d9e8-67d7-46ae-ac30-69d1ac64685e,821b97d6-b397-4ab3-9723-1f25278647e4,Blockchain Project,Need entry blockchain developer.,individual,small,entry,closed,blockchain
+b6011f5a-9161-40e4-a0c1-a3c51b6b31c9,4f6772b7-37bf-48ec-b036-66563ad9e0f1,Frontend Project,Need expert frontend developer.,individual,small,expert,active,frontend
+3f0fdfb7-818c-4c14-851f-ca5c681ebe24,a3d84e2f-5f68-44f1-bc7a-2ab2d3f8c8df,Backend Project,Need intermediate backend developer.,individual,large,intermediate,active,backend
+9c4a04cd-3791-43e8-a09e-5dc5d1143874,873c89b1-b6d3-4f60-8a36-743f51b7c9b0,Backend Project,Need expert backend developer.,individual,large,expert,active,backend
+97b60160-3085-400f-a44d-308e3f2179d3,ec5df50d-cd72-41af-af16-327050a0bd0f,Backend Project,Need expert backend developer.,team,medium,expert,active,backend
+e4abc2d2-1ca9-4a17-80d0-3ea70b3b8f05,a0a0ecef-ed5e-4631-955f-a87bb1e47f5c,Design Project,Need intermediate design developer.,team,medium,intermediate,filled,design
+1a82c4de-f53f-4c1d-8abf-e9c0b87be27b,39a1bd16-8ad3-49b7-9ae6-547bab816c73,Backend Project,Need intermediate backend developer.,individual,small,intermediate,active,backend
+f7d93e46-d09e-4a6e-95bb-2029ddc8c496,02256bdf-9aa5-4bfc-93e2-ee3e046e8641,Design Project,Need intermediate design developer.,individual,small,intermediate,closed,design
+18326c80-9172-4e5a-958a-b0fa117865b3,06b6f9e5-4ba2-407e-a6c0-320fcf7f5fbb,Mobile Project,Need intermediate mobile developer.,team,small,intermediate,active,mobile
+5653f62c-3542-4dd5-907d-62ddaa38d6ae,ebb47384-bf60-4453-b898-4ef6737a45b8,Blockchain Project,Need intermediate blockchain developer.,individual,large,intermediate,active,blockchain
+9c09ddd5-f500-431b-aa5d-7e95a65d502b,fc81b861-ca33-4563-8ad8-639d2e3ee1a2,Frontend Project,Need intermediate frontend developer.,individual,large,intermediate,active,frontend
+ec3c53ea-410a-45e8-b46c-0c9389fda4f8,65d637cd-5cd0-4a0a-8e61-11c4181baed9,Devops Project,Need entry devops developer.,individual,medium,entry,closed,devops
+acba47fa-02a7-4660-9c88-957d189e9d92,fc2aa30f-e167-4b71-8206-b82446a3e76b,Devops Project,Need intermediate devops developer.,individual,medium,intermediate,active,devops
+02ef2755-3bbf-4098-9b3f-cfa12d986c38,56fd3122-2371-4e57-9dfd-8d35cd8a73eb,Mobile Project,Need expert mobile developer.,individual,small,expert,closed,mobile
+1a90348e-3b91-422b-9f13-f69fc37caa4f,1ec9ec91-90ba-4c0c-8aed-f70e772900d4,Backend Project,Need expert backend developer.,individual,medium,expert,active,backend
+a93aa411-480b-4a8d-9f35-2e4783b00aa1,55fe0ec7-416f-40f3-8e5c-5d2e1349cb06,Frontend Project,Need intermediate frontend developer.,individual,large,intermediate,filled,frontend
+049ccd35-ae8e-4031-828d-63c31b6df349,649ec7ee-b6a6-4c57-9ea6-1a0a962d3bff,Mobile Project,Need entry mobile developer.,team,large,entry,closed,mobile
+09e4303f-2269-43d1-bc69-a1aecaf9e7f0,1b472edd-ae6c-45c1-8a4a-896e92dba804,Backend Project,Need entry backend developer.,individual,medium,entry,active,backend
+b0233072-eace-4b79-a23b-f312ffc316ad,06901acd-9293-4b84-a5bd-4f0b1d5075b2,Ml Ai Project,Need expert ml ai developer.,team,large,expert,active,ml_ai
+76ca477f-3d96-474f-8d42-11e90faf7ef2,89319a92-4d14-4353-ba6c-ba224acdaa01,Design Project,Need intermediate design developer.,individual,large,intermediate,closed,design
+7dbd3afc-4f4d-4787-af3d-ccb48ff518cf,38532fc2-96b4-4146-bdbd-fbf1f051a142,Backend Project,Need intermediate backend developer.,individual,small,intermediate,filled,backend
+d8007f28-dd7a-4010-803a-2627628a93b8,8071d94a-7ec1-40a0-b31f-53ac3676f1b9,Frontend Project,Need expert frontend developer.,individual,small,expert,closed,frontend
+776ec277-243f-4c49-af5b-894707c2a4b8,644ede1d-73c1-4b6f-8ed9-226dad52a6bd,Blockchain Project,Need entry blockchain developer.,team,large,entry,active,blockchain
+8ff7fbfe-2445-464e-9401-af0bc18ab0c8,5799fe37-b99f-4269-890a-f29b83e53a2f,Frontend Project,Need intermediate frontend developer.,individual,large,intermediate,filled,frontend
+19110d0d-3961-4c0a-889b-d48587f85b3b,f34eb67b-f41d-4ad8-8bf7-763403f5ae7d,Design Project,Need intermediate design developer.,team,medium,intermediate,active,design
+69abb9f5-828f-465d-8447-e70095b7c13a,d344b0f4-f54b-46c4-a6f4-3c1182523445,Ml Ai Project,Need intermediate ml ai developer.,individual,large,intermediate,closed,ml_ai
+060dcc99-7323-4eb0-a777-d92fc746e1e0,0859af64-3e43-4606-a6f1-5520d38b4d25,Frontend Project,Need intermediate frontend developer.,individual,large,intermediate,active,frontend
+1005bd0e-f556-41f6-888a-fb0e77cbe54d,51e0372d-9761-4358-a7d7-d8e3d0510c89,Mobile Project,Need entry mobile developer.,individual,medium,entry,closed,mobile
+9ccdbc34-cec4-48af-93b0-72e7209f10d6,001d4656-f45c-4a0c-88e1-7b5c5e910a7d,Blockchain Project,Need intermediate blockchain developer.,individual,small,intermediate,closed,blockchain
+684e7b17-a254-41a6-93fa-f998d4e731f7,5ab0bd0a-54cf-4e89-8cee-9d63ae42aef8,Blockchain Project,Need entry blockchain developer.,individual,medium,entry,closed,blockchain
+859ade1e-0c27-4af9-90d6-37865a1afb8c,220cd984-8f5e-4b2e-943a-1b169af793df,Blockchain Project,Need expert blockchain developer.,individual,small,expert,active,blockchain
+3bb61994-3499-4bad-8281-d40d96ffff96,f067c083-8d6c-4353-b564-816b301c935a,Blockchain Project,Need entry blockchain developer.,team,large,entry,closed,blockchain
+bf3f81e8-f34a-498e-94b1-141c0fa9a8ef,66b257eb-3480-4ec5-a399-4db4dfaf668b,Blockchain Project,Need intermediate blockchain developer.,individual,medium,intermediate,active,blockchain
+7db72d9a-9552-4bfb-bae5-a62548defdde,9ffe50e7-1155-4b06-b2ab-a3c696f7caa6,Mobile Project,Need intermediate mobile developer.,individual,large,intermediate,active,mobile
+91d0ac0a-8b06-4804-ab33-3e82e11cd2e7,403540a5-792c-4ce5-9cf7-0a4efc935168,Design Project,Need entry design developer.,team,medium,entry,filled,design
+ed1cb71d-327a-4911-bb8b-6ba7ee5db974,a3db6b3f-7e24-4b7b-b8a0-24deecf124de,Blockchain Project,Need intermediate blockchain developer.,individual,small,intermediate,active,blockchain
+8e72074e-09ea-49ed-9768-09601f7b844f,f1b4d121-bc66-4c65-9ee0-5f39c5a70cef,Backend Project,Need entry backend developer.,individual,small,entry,closed,backend
+f6304e5c-155b-442d-8b03-8dccc4c15cc8,30d06d23-ffea-41e1-a219-895cb094b214,Devops Project,Need intermediate devops developer.,individual,small,intermediate,active,devops
+8fb79bd7-c0e5-4472-aa61-5e6db415670d,9ba8b097-6fec-4366-abcb-1574f634ad5d,Blockchain Project,Need intermediate blockchain developer.,individual,large,intermediate,active,blockchain
+4d3ad409-351d-4e72-95a7-8c734205b881,56d0cbcd-bd40-4ea9-b807-da6adae75a6c,Backend Project,Need entry backend developer.,team,small,entry,closed,backend
+0d4a489c-81fd-49f8-a567-885a5fd20405,bbaa2cce-6ffc-414e-bd8e-66be09e21dd1,Blockchain Project,Need entry blockchain developer.,individual,medium,entry,active,blockchain
+18d3579c-582b-4ff4-a9b3-1822767f5ead,cd24eb99-da08-4cb6-af43-df08f8246ed9,Fullstack Project,Need entry fullstack developer.,individual,medium,entry,closed,fullstack
+0dc93c01-7d02-4aa5-ab19-ef351a31440a,5c26d01f-9e4a-415d-864b-9fa98ed40afe,Blockchain Project,Need entry blockchain developer.,individual,small,entry,active,blockchain
+96152ed7-edfb-403e-91c6-890b3d7d351b,1cb5f01a-4d54-4a1d-9060-d8e41cfebcfa,Fullstack Project,Need entry fullstack developer.,team,small,entry,filled,fullstack
+4c84f7e2-0e48-4550-8c0e-5e95bc1d0da7,a9362788-edcf-4e88-b9a2-a1d5b6984c6b,Frontend Project,Need intermediate frontend developer.,individual,small,intermediate,active,frontend
+d401f0df-06f7-4da0-bde5-25672fcec64e,9f5cb01c-f4d8-4982-a91f-7a1877914ed3,Fullstack Project,Need intermediate fullstack developer.,team,small,intermediate,closed,fullstack
+847405e7-08d0-4d26-a444-91c368e0235c,a72287ae-8575-4033-bb5d-fb47dc993e0b,Frontend Project,Need expert frontend developer.,individual,medium,expert,closed,frontend
+0c06b2f8-c8ad-4651-81db-de44fdabaceb,63db9089-cbc5-4904-b7bf-c50b02e86c0b,Fullstack Project,Need intermediate fullstack developer.,team,small,intermediate,active,fullstack
+90031297-3cef-4b3e-8ab7-1d60e0ea5ee2,81c820bd-beaf-442f-b095-95c95c7959b4,Blockchain Project,Need expert blockchain developer.,individual,medium,expert,active,blockchain
+17b862e7-76f2-4bee-a8d3-e9663bb46613,3c641900-0f42-437e-b7d8-0005564b60ea,Devops Project,Need entry devops developer.,individual,large,entry,active,devops
+e425f9d7-1821-4ee0-b8b1-4f17e51a218b,d2d72734-9bd3-47fd-bb90-3333c2c5680c,Mobile Project,Need entry mobile developer.,team,medium,entry,active,mobile
+927a1c49-c1d4-489b-89e3-03a11bc76c82,d0af8b41-02bf-43c2-9413-275dd37921a7,Frontend Project,Need entry frontend developer.,individual,small,entry,closed,frontend
+3636d6fe-dd22-408f-9ed4-39f2fda3b784,666050e0-7ec2-460a-8de0-b86cfc8d84c3,Frontend Project,Need intermediate frontend developer.,team,small,intermediate,active,frontend
+15c3f978-6ff6-45f2-bffb-394878cffc84,de8d550c-2fc2-4ce4-bffd-0b8a40e0d66e,Frontend Project,Need intermediate frontend developer.,individual,medium,intermediate,closed,frontend
+cf4a5735-147e-46a2-8ed2-8a9d7d6a8655,c2f0949d-d64b-4c15-ae3d-2792732fae95,Devops Project,Need entry devops developer.,team,large,entry,closed,devops
+85a4cdaf-6814-4178-805d-5474e0a41cbe,c4e50351-c8b7-443d-b90a-20064f261543,Devops Project,Need intermediate devops developer.,individual,medium,intermediate,closed,devops
+04ac2ce2-0d88-4866-aece-6fb7596fd69e,f2234133-1694-4881-8650-0aa24e484b15,Devops Project,Need expert devops developer.,team,small,expert,active,devops
+f8e76dca-ad07-44de-8f2c-dfc2efb501a7,8ead8633-5460-41d3-86d0-963c53a670ce,Mobile Project,Need intermediate mobile developer.,team,medium,intermediate,filled,mobile
+493a8e6a-1462-43db-8bdf-17983a5600a0,2798e047-f9be-47b0-b181-078336a1bf01,Ml Ai Project,Need expert ml ai developer.,individual,large,expert,active,ml_ai
+a7acef26-3e82-4eb9-a0b2-3502f6d88d75,0072c8ff-eaae-4b60-9eb2-6de98f673dde,Frontend Project,Need intermediate frontend developer.,individual,small,intermediate,active,frontend
+addfcea4-e375-40ad-84cd-93b2c9c7b91a,89a9d50a-932d-4e88-a589-9a6251b7b61e,Mobile Project,Need intermediate mobile developer.,team,large,intermediate,active,mobile
+202f6b76-5819-4d1c-b7b3-2ae36cc2639b,d40dc17a-0abf-4be1-a253-df8680d4ff35,Design Project,Need entry design developer.,team,large,entry,closed,design
+7d328cee-6892-45a3-84dd-3004cb2f02bc,c75df67e-0ff8-4775-9f33-7c5fedf56261,Fullstack Project,Need intermediate fullstack developer.,team,small,intermediate,active,fullstack
+74436c09-3502-40a3-a565-9c5862defd72,6f4d7fa8-ec37-4137-b934-0d58c6c21420,Mobile Project,Need intermediate mobile developer.,team,large,intermediate,active,mobile
+858d6eda-15c3-459a-9adb-57734f27d8b3,ba7a83c5-c84c-415a-9d30-c2ec6c0d76c7,Ml Ai Project,Need intermediate ml ai developer.,team,small,intermediate,active,ml_ai
+39173867-34c8-4453-b458-623cdf1222c8,f7101992-71b4-4e5a-859b-f7ee01c8735c,Ml Ai Project,Need intermediate ml ai developer.,team,medium,intermediate,active,ml_ai
+1b03ffdf-4135-4f60-a230-d92062b1f917,5beaeafe-15f3-4a43-b657-9abcc80062bd,Mobile Project,Need expert mobile developer.,team,large,expert,filled,mobile
+84221f7e-e488-4f68-b01b-812f022a14e7,6b08cfe5-d156-4fd2-8db1-38a838ab3274,Mobile Project,Need intermediate mobile developer.,team,small,intermediate,active,mobile
+b9480d6b-cc8e-42f6-b2e6-b0a1d4a58792,73b197e5-86ff-46dd-8189-1bfc813141e6,Mobile Project,Need entry mobile developer.,individual,small,entry,active,mobile
+12de3619-8321-43b6-88e2-cb9e9ac682b7,3bfcf8ba-cdae-43bc-93b5-732df00bb685,Fullstack Project,Need entry fullstack developer.,individual,large,entry,closed,fullstack
+30673551-4af5-4bdb-a390-4c87c0077c8d,f74b18d9-3c99-4b00-a960-aad48a8f9d47,Ml Ai Project,Need intermediate ml ai developer.,individual,large,intermediate,active,ml_ai
+e449c2b8-d538-4fc3-9de0-76e44d9f14ae,516f19d9-fb51-427f-97d5-ef6a58779311,Mobile Project,Need entry mobile developer.,individual,medium,entry,closed,mobile
+80cfe86b-ee0d-4990-a606-dd908ca8f2dc,960948fe-63dc-425c-8645-353d1a18c15c,Frontend Project,Need intermediate frontend developer.,individual,medium,intermediate,active,frontend
+3660b6cd-ea32-42d8-9718-1a160c6d73dc,3a8fad4b-aeca-468d-927f-93d2b5f1254f,Devops Project,Need intermediate devops developer.,team,medium,intermediate,active,devops
+d112e231-6048-4c5c-9c25-6eaa29ef4ee6,05c91b24-8aaa-4587-895b-60dc6dca63ba,Blockchain Project,Need entry blockchain developer.,individual,large,entry,active,blockchain
+fe83be1d-633c-43b2-928e-e3e123488724,6cb02758-94dd-4562-a770-98a131777142,Ml Ai Project,Need entry ml ai developer.,individual,medium,entry,filled,ml_ai
+f5d87238-9021-42d7-a14f-9a20d320f8ec,4c5a62da-5e8c-4690-9e4c-73fa887d42cb,Frontend Project,Need intermediate frontend developer.,team,small,intermediate,active,frontend
+7be47730-6a38-47fa-bcfd-3cf62f4bde40,71341a4e-b421-482f-834f-39f7fbadcefc,Devops Project,Need entry devops developer.,individual,small,entry,active,devops
+fda6df84-a517-4c03-a9cb-1cb7cb083e31,14979b51-77b8-43a3-b22b-b1427e5864f0,Fullstack Project,Need intermediate fullstack developer.,team,medium,intermediate,active,fullstack
+ce922ee8-e286-46f3-92d6-23da180e967b,3b2014ff-a0c2-4209-9d9a-6547c361e704,Devops Project,Need entry devops developer.,team,large,entry,active,devops
+d5e8e52e-ebe6-40a9-bfe9-980f39237ec0,a1baabc8-e372-452c-9f08-e68d70b25bf7,Devops Project,Need expert devops developer.,team,large,expert,active,devops
+69ed3bd8-3229-4e81-86b8-a516810fc81d,67ccb949-d732-4551-8b98-a4759f980e66,Mobile Project,Need intermediate mobile developer.,individual,large,intermediate,closed,mobile
+2ff94e0f-cfe7-416a-bfd8-f297da331eb6,49795290-69e6-4e6e-9c81-7ecf08da104b,Devops Project,Need intermediate devops developer.,team,large,intermediate,active,devops
+76eebec3-fdbb-4e2c-aeb7-4e8416754b37,a29c00f1-5e75-4b82-b709-1223c21caf2c,Devops Project,Need intermediate devops developer.,team,medium,intermediate,closed,devops
+fef54013-9f99-4bad-856e-13f5f34c798e,05b615b8-f1e2-459f-b26b-e14a5c2030cb,Ml Ai Project,Need expert ml ai developer.,individual,small,expert,filled,ml_ai
+daa7e50c-8fcb-4b21-94a0-373fff3605da,00cce935-fe13-4c8e-a17b-d1e317594ee9,Ml Ai Project,Need intermediate ml ai developer.,team,medium,intermediate,active,ml_ai
+bbcf752c-a787-4871-8e4e-44d8955e831c,bd5af519-b551-44a0-8b21-8ea611085876,Fullstack Project,Need intermediate fullstack developer.,individual,medium,intermediate,active,fullstack
+39d4a0b8-9b98-43d6-aaa8-0e0f7d5537d1,128bec16-db8b-405c-bb49-c157e8e37b95,Fullstack Project,Need entry fullstack developer.,team,medium,entry,active,fullstack
+e9ed62c8-f579-4420-b091-5614e4437ced,f8d6819a-2c50-4c06-9eba-b91634a0ac93,Ml Ai Project,Need entry ml ai developer.,individual,medium,entry,active,ml_ai
+976167c8-5028-45f6-8ae3-beda189b4632,34c42126-f5e8-4815-b349-dd7f9e81e884,Devops Project,Need expert devops developer.,team,small,expert,closed,devops
+9748c34b-4464-4785-a583-f42bc513bdda,e647933b-06f7-47cc-abe5-cadb874a950b,Fullstack Project,Need expert fullstack developer.,individual,medium,expert,closed,fullstack
+1809c360-e2b3-45f2-b6a8-677b654d0aeb,dfb75c50-2eb0-4e48-8212-1f582efcf1d1,Devops Project,Need intermediate devops developer.,individual,small,intermediate,filled,devops
+be6da473-11af-47e6-8711-0c169851aa32,e26c2bbc-18c7-4fce-af22-386d701f416c,Ml Ai Project,Need expert ml ai developer.,individual,small,expert,closed,ml_ai
+8ba75827-b651-4d01-8023-a2e908fe582e,c61faae6-9ae7-4cad-a0c4-8d9809c775f1,Design Project,Need entry design developer.,team,small,entry,active,design
+65b807dd-8f3d-446d-be46-4a1cbd479aa3,f895ed4d-2ae5-48cc-ac0d-63655ecdcaf2,Blockchain Project,Need intermediate blockchain developer.,team,large,intermediate,active,blockchain
+88ab2263-26f2-4f8a-afef-2111ad1a2f23,b47e15fb-26b2-4eb5-a925-d5ab9781790d,Frontend Project,Need intermediate frontend developer.,individual,large,intermediate,active,frontend
+6780bb59-b70a-4f5d-b3cd-744de07134bd,ec3b5d18-ca88-4036-93b5-4eca913e566b,Design Project,Need intermediate design developer.,team,large,intermediate,active,design
+8c4c94b3-41c4-44fd-a27b-9e971f7e0c33,193819f1-f060-48d7-8902-16f8fbd9771d,Ml Ai Project,Need entry ml ai developer.,team,small,entry,active,ml_ai
+573ea016-ba39-46e1-a133-e9e00a7230c0,ce5e55fb-0030-4afb-9d73-0b0cb33a5e78,Blockchain Project,Need expert blockchain developer.,team,medium,expert,active,blockchain
+60748eea-c991-483c-a626-24c2cd1fb7f6,dfebd84e-5464-4a58-9ec5-a7ad59a6de75,Ml Ai Project,Need intermediate ml ai developer.,individual,medium,intermediate,active,ml_ai
+f63ccbd9-10c0-4f4e-9b84-f6ee7a043e10,99c20800-398b-43dd-a330-a890315ed8a6,Design Project,Need expert design developer.,individual,medium,expert,active,design
+ca9efaad-1645-4f28-929d-b02f41842e7f,88011ba0-a38e-44e7-9510-bae425269eef,Mobile Project,Need entry mobile developer.,team,large,entry,filled,mobile
+e5418ee6-f0e6-44a0-9f6d-8853a0ef9818,71169afd-69cb-49b4-b93b-d0142e510e6e,Design Project,Need expert design developer.,individual,small,expert,active,design
+52c74306-53e0-4905-ba29-905378d5c9de,d7a1421c-34b4-47c8-9a3f-11d1a3b62fd3,Design Project,Need intermediate design developer.,individual,large,intermediate,closed,design
+46287524-8283-4606-af81-ad4b11057e92,6a66a5d4-7d91-42ff-9d55-2a1e4dccb3c3,Frontend Project,Need entry frontend developer.,team,small,entry,active,frontend
+1cb14d66-7801-4f40-9e42-c1beb3779079,77630d19-b45b-4f74-a4f3-b8a3b04ecb2f,Blockchain Project,Need intermediate blockchain developer.,individual,small,intermediate,closed,blockchain
+e7fdaf89-3c00-4e8e-8569-92b3ae5f4fd7,4f481916-65e3-43a6-8428-6c5b11848b5c,Blockchain Project,Need intermediate blockchain developer.,team,medium,intermediate,active,blockchain
+2a932d06-129f-4d1c-abe3-f47b8e07873c,b9bab821-d013-445d-9255-eb1d7f48549f,Ml Ai Project,Need intermediate ml ai developer.,individual,small,intermediate,active,ml_ai
+a0f7badc-bae4-4f21-ad7c-f81e8477fe4b,a12fc37a-d5f1-46ee-93f9-dc3283d8d151,Ml Ai Project,Need intermediate ml ai developer.,individual,medium,intermediate,active,ml_ai
+0e7e07d1-5869-43d3-ac7c-300e0e7d22b0,0afcef5f-40df-40db-8106-6d5d35199c6a,Ml Ai Project,Need entry ml ai developer.,individual,large,entry,active,ml_ai
+ee802867-40ad-40f1-b468-0f70565c5e58,c0836178-805a-4817-bdc5-3120198dfe56,Backend Project,Need expert backend developer.,individual,small,expert,active,backend
+a0686922-a8be-4991-8da0-44ccf1f76735,55f1cd88-45f7-4577-8dc6-219cc08997ec,Design Project,Need intermediate design developer.,individual,medium,intermediate,closed,design
+a41f9108-3fd9-4983-9951-85e611ac6536,997f39fb-ef12-4618-b53c-ab5625a5a1d1,Ml Ai Project,Need entry ml ai developer.,individual,medium,entry,active,ml_ai
+9c962452-02d7-4f49-a627-8cbcfdb710a6,5e58bbfe-4d3c-4f43-99fd-cdc99b3284bf,Ml Ai Project,Need expert ml ai developer.,individual,small,expert,closed,ml_ai
+895a7753-e280-4f3d-8033-9bc81d37664d,aa8bff8e-8fa9-4e99-a449-a10ab4f8a59d,Ml Ai Project,Need intermediate ml ai developer.,team,medium,intermediate,closed,ml_ai
+c282a97d-8953-447b-bb2c-86db906845be,8f265f2a-a934-431b-b769-04c2f7975911,Ml Ai Project,Need entry ml ai developer.,individual,small,entry,active,ml_ai
+29d57d3c-9223-4a43-bee4-654c60700289,2161c30a-3064-46da-a05a-5927ccf6f40f,Backend Project,Need intermediate backend developer.,individual,small,intermediate,active,backend
+40d52cc1-ed97-4e3a-a98b-bc88eb106087,ab683446-f667-45dc-88ab-41cd98829117,Design Project,Need intermediate design developer.,individual,small,intermediate,active,design
+87999555-a50d-450e-8fc4-02ecf8c51b64,3feedabd-b814-48b3-825b-b6a7c4b8a004,Backend Project,Need intermediate backend developer.,team,large,intermediate,filled,backend
+9be4e4e3-4c70-4478-8d66-ea0fd1cc7391,ca730e66-4ad8-4a97-afc1-0d8fadc49973,Ml Ai Project,Need intermediate ml ai developer.,team,small,intermediate,filled,ml_ai
+43df81a2-1133-42b1-adb7-4dffffb010c7,96893bec-4cea-4448-9b58-dc5b649529ef,Devops Project,Need intermediate devops developer.,team,large,intermediate,active,devops
+5652eff8-70de-4b00-b1b4-58e67b6e129b,2c1c4dfb-650a-488d-a5a2-2a616997958f,Design Project,Need entry design developer.,individual,small,entry,active,design
+d3d8abdc-1638-4a43-9ada-dc1c78daf191,dfa52f24-25b4-41ac-9d27-f0ad92df3113,Ml Ai Project,Need entry ml ai developer.,team,small,entry,closed,ml_ai
+6209e325-d45c-4660-9895-6178d5da9c23,aea8da1d-9a09-456d-90af-e9cd45e77d29,Frontend Project,Need expert frontend developer.,team,large,expert,closed,frontend
+22d1515e-a2df-4196-99e7-37c79f24198a,68b823ec-155f-4ea3-b0df-877d9b0a6de9,Frontend Project,Need expert frontend developer.,team,large,expert,active,frontend
+26ef05f7-9dbb-4951-9ed6-88c1009b95d6,bf21447c-b57a-4797-b316-fc0f29d33308,Blockchain Project,Need expert blockchain developer.,team,medium,expert,active,blockchain
+cf66981b-0f7b-46d7-93ac-1620c3537987,aeb95d9c-402a-4467-8158-a6ce73a29026,Frontend Project,Need entry frontend developer.,individual,medium,entry,filled,frontend
+086fe258-4162-4f3d-a9e1-899be2c0f706,2df7ab6e-0ee9-4d8f-8970-54d38d73ab88,Frontend Project,Need entry frontend developer.,team,medium,entry,closed,frontend
+4602a317-925f-478b-b566-72eb0e345d91,1b501484-b540-453e-bb5f-72fec2f3416e,Backend Project,Need entry backend developer.,team,small,entry,active,backend
+97f9bd49-3b8d-44f5-ae85-6a7377ec9739,09c7069e-c4c7-4a63-a0ad-7e01b02a346d,Fullstack Project,Need intermediate fullstack developer.,individual,small,intermediate,closed,fullstack
+4aefc225-e1d7-4b47-ab0d-f9cab1cfe11f,a4905887-f4c8-42dc-8d28-739add087ef2,Devops Project,Need expert devops developer.,individual,small,expert,active,devops
+45ad14ab-f47c-47fa-8d8b-325428997d9d,dcc0b49d-3be1-4fa0-8db6-51a52c9e2c63,Ml Ai Project,Need intermediate ml ai developer.,team,medium,intermediate,active,ml_ai
+3a5afeca-c41f-4139-a679-e983972fb399,f19725e7-b405-4c8c-9b64-b39e3cef68b8,Mobile Project,Need intermediate mobile developer.,individual,small,intermediate,active,mobile
+253fe287-ec0a-4f2f-8fd2-5f6fc3df299d,159fc1c5-5912-441d-bc40-322a6a542d74,Design Project,Need intermediate design developer.,team,large,intermediate,closed,design
+68945793-9d20-48e5-a89c-ea08eb747e87,f96033cd-b168-4fac-9c3c-cb98018eb809,Design Project,Need expert design developer.,individual,large,expert,active,design
+e9c00f35-dad7-48f6-8e98-ed71a3098444,77baa731-2361-4491-9bbe-2b33cee045ef,Mobile Project,Need intermediate mobile developer.,team,medium,intermediate,filled,mobile
+638b0b90-d5c3-440f-9dbd-8a75cf8210b9,d30f3132-c801-4678-9f2f-ff14cf4e1acb,Ml Ai Project,Need intermediate ml ai developer.,team,medium,intermediate,filled,ml_ai
+0516e329-65d5-4b92-9dcf-e30c8e1be950,e9043e90-73e6-47c9-8830-92a5a879e540,Fullstack Project,Need intermediate fullstack developer.,individual,medium,intermediate,active,fullstack
+d169e7c9-0bfa-461d-bae4-6781306c1be1,7d876362-f845-42b7-9dec-bd905271c18f,Fullstack Project,Need intermediate fullstack developer.,team,medium,intermediate,active,fullstack
+1e0ec73d-98e5-4424-b753-17c6afa71ebb,e3b8ccfa-0c61-45d1-9662-032f73bbd20c,Mobile Project,Need intermediate mobile developer.,individual,medium,intermediate,filled,mobile
+d6efbbcb-bca0-4c9e-9267-b1a38d3926ba,f19eb5c2-d7c2-4af3-9d5c-4df87d23749d,Design Project,Need expert design developer.,team,medium,expert,closed,design
+8b6a80c4-686d-4372-a029-fcc1bf549eed,93e7e8a5-ab3b-4f14-b287-6f6e7f909ecd,Design Project,Need intermediate design developer.,team,large,intermediate,active,design
+7de45d2f-7742-48a6-a176-6948663be6cc,e2bc538d-4cdd-407c-8353-ee396cfdc2ef,Backend Project,Need intermediate backend developer.,individual,large,intermediate,filled,backend
+a46728a8-1b8b-4c3c-adc0-2da54366c019,4df87f03-39bd-4844-b4d4-bab5e0bcb618,Design Project,Need entry design developer.,individual,small,entry,filled,design
+6f380b0a-0e6b-4328-aebe-7fa4c62bee5c,022e8581-1915-499d-920d-8cf44c6cf7bb,Devops Project,Need intermediate devops developer.,team,large,intermediate,active,devops
+41e3df78-ce73-4446-a217-be34e4efaf62,c02f2f85-49bb-416c-b353-63d3b10b9f2e,Backend Project,Need intermediate backend developer.,individual,small,intermediate,active,backend
+50e389b5-7683-42bb-995e-07e1f85cf479,eeffd8f2-b692-4392-85ac-260a930a094c,Backend Project,Need expert backend developer.,team,small,expert,filled,backend
+acc46baa-a3a2-4ec8-bf0d-1965e4bf9819,bec0a5d9-2db1-4bda-a5ed-1c0d048d0d20,Blockchain Project,Need intermediate blockchain developer.,team,medium,intermediate,filled,blockchain
+c3928c25-8343-4839-9dc1-dcab7fcd11d8,9938618e-7d92-4ae1-942b-9463e36ddf80,Mobile Project,Need expert mobile developer.,individual,medium,expert,filled,mobile
+9e27fb74-0142-4035-b8ee-0003290f79a5,098ad64f-16ff-4795-8f0d-161b63f40cb1,Design Project,Need entry design developer.,team,medium,entry,active,design
+c1223d60-0cbc-43d1-83ed-b12136e15bde,172b1a3b-64f7-4776-a788-6829971438ff,Frontend Project,Need expert frontend developer.,individual,large,expert,active,frontend
+44f9fdb0-6ad1-4550-bcce-12bcdcb5fa9f,fa52afcb-a555-400c-b839-33d256514de1,Devops Project,Need intermediate devops developer.,individual,large,intermediate,active,devops
+72b312d0-3068-4fc9-856a-4b1f7870590f,3bfda256-38eb-40df-b757-b558d1c017fd,Backend Project,Need intermediate backend developer.,team,large,intermediate,active,backend
+eb889b4e-9e36-465e-8148-1dfaa973652b,126743cd-7d10-4bd2-9495-2e4bc12f80e6,Design Project,Need intermediate design developer.,team,small,intermediate,active,design
+5961f670-ff09-4962-b5b7-97f2200ad1b4,2b837287-c51d-4fb1-ba71-3e5cd4e5b4ef,Devops Project,Need entry devops developer.,team,small,entry,filled,devops
+299d0d7d-95fa-4787-add4-08ba2ea0317c,6c627c81-5bff-4dfb-afeb-f1818af2c0fa,Backend Project,Need expert backend developer.,individual,large,expert,active,backend
+6236b0c2-4316-47db-b616-0bee154c97c7,f6a5da48-39b1-4c6b-a895-6317e4de0465,Frontend Project,Need entry frontend developer.,individual,small,entry,filled,frontend
+5340dba4-edfe-4179-a204-d3d754fcf5f3,b1420533-6ea9-4d99-8112-4c3bd4f5a178,Mobile Project,Need expert mobile developer.,individual,large,expert,filled,mobile
+635e0ba9-72ea-4edb-8a0b-1c56a9a1b798,06c8d2f3-dd0c-435a-898c-2151f8ee7512,Fullstack Project,Need intermediate fullstack developer.,team,small,intermediate,active,fullstack
+e67337b2-1902-448e-bb35-4fdc209bcd15,bde96750-d9df-4c55-a8a2-af4755efde99,Backend Project,Need entry backend developer.,team,large,entry,active,backend
+c84863f4-e680-465a-9fc9-405c463f530b,1adeebeb-c752-473b-8afe-b084804c9cd4,Backend Project,Need entry backend developer.,team,small,entry,active,backend
+b50c93d1-d580-4580-9786-dc070c0d3e0c,545526b0-4bd4-42a9-943a-51b8fc6a241f,Devops Project,Need intermediate devops developer.,individual,large,intermediate,active,devops
+6ab79fd6-d18b-4bfb-8883-5d1ccc9f81e2,ed311398-242f-4e50-bc88-ddbe89a7dc63,Ml Ai Project,Need intermediate ml ai developer.,team,large,intermediate,filled,ml_ai
+7ac08b8c-e518-45ce-8a6b-2de9323c2127,bf5126f1-31c2-4e17-8e6c-6ec5e65b6f6f,Backend Project,Need entry backend developer.,individual,medium,entry,filled,backend
+7e7abdaf-64f2-483e-8daa-16057f92d613,2f0eb8dd-c25c-4427-b5b1-4b2318cf7fe7,Blockchain Project,Need entry blockchain developer.,team,medium,entry,active,blockchain
+6b626c72-2e2b-4053-b635-50aa3a31664a,6b3283f9-37df-457d-ad18-475f376bbdc3,Mobile Project,Need intermediate mobile developer.,team,medium,intermediate,filled,mobile
+7f78bf99-9f61-449d-b187-d83c415bdd44,f955ec92-cf7e-42d6-968c-d05878750dd5,Backend Project,Need intermediate backend developer.,team,small,intermediate,closed,backend
+87d48c74-9e08-4981-9a52-aceb945cf04c,9fb45fac-00b3-4f76-8033-4786e74c297e,Ml Ai Project,Need intermediate ml ai developer.,team,medium,intermediate,closed,ml_ai
+437bac73-c8ce-41a7-96b0-c0f8f1e7198f,74342cfd-fd3c-489c-a580-a58741447472,Mobile Project,Need entry mobile developer.,team,medium,entry,closed,mobile
+fd1190ee-e8ec-4757-ab31-fd0ab7dc729b,4c0e7969-773f-4a96-a947-5cbb580b87cc,Devops Project,Need expert devops developer.,individual,medium,expert,active,devops
+a0942e73-86fc-4350-a559-c30cd591d567,9c36f5cb-55b4-4032-85ab-b6c718e09af2,Design Project,Need entry design developer.,individual,small,entry,active,design
+bac589a4-dec2-4e69-98a6-2ccc1da29fcd,5a739e97-5203-4523-b9f4-29e666d869a5,Frontend Project,Need intermediate frontend developer.,individual,large,intermediate,active,frontend
+f3329b61-c8ef-4120-aa0b-c4a4ab531f55,5a30aa41-0293-498c-994b-44c4fe9e76d1,Blockchain Project,Need intermediate blockchain developer.,individual,large,intermediate,closed,blockchain
+5291ca2b-e081-4c1f-bc77-8045b231f5c0,48543c14-fc9b-4bab-9ece-f678066c0ac1,Ml Ai Project,Need entry ml ai developer.,individual,medium,entry,closed,ml_ai
+4aa3f77b-1bf9-48bc-8de5-4540745de1e8,623b0674-bd01-4d70-a896-6f2149fafa52,Design Project,Need entry design developer.,individual,medium,entry,filled,design
+9a716667-83e9-4fc4-8781-cf8b8ce7a33a,94e42c14-9526-4a8e-93f5-aa2b75cc815c,Ml Ai Project,Need expert ml ai developer.,team,small,expert,active,ml_ai
+cf29ebbb-4e2b-4792-a5b2-fa601d0b563f,474ca5f1-d170-4620-a8d4-ea32ace503ce,Blockchain Project,Need intermediate blockchain developer.,team,large,intermediate,filled,blockchain
+06ccd3fa-7c47-4a63-ad52-754801c2dc75,8771b118-f44b-4f05-a817-4085d61a0873,Mobile Project,Need entry mobile developer.,team,medium,entry,active,mobile
+13e3635a-c957-4633-86c3-ebd0e1f42efd,eba2a03e-6a4c-4333-94ff-bf9c093d2b63,Devops Project,Need entry devops developer.,team,large,entry,filled,devops
+22e77a91-ea57-4563-8260-506421a27ae3,0acf0f60-1f6f-47e7-962d-4a0e3fbe292f,Devops Project,Need entry devops developer.,team,medium,entry,closed,devops
+d60692dc-cffb-4d2b-82c9-8216e6e58f50,1e4a793b-1ac8-4992-9808-2ae5857a4f56,Blockchain Project,Need intermediate blockchain developer.,team,large,intermediate,closed,blockchain
+a270b89d-c8d2-471f-b0ce-2a533f69fa7c,019b0056-5bc6-4974-9f72-c3b4fb26adaf,Backend Project,Need entry backend developer.,individual,medium,entry,active,backend
+79b273a5-abe5-4b51-b4a2-d59665568e7d,40e4ea42-daac-4583-9208-2e789245e038,Frontend Project,Need intermediate frontend developer.,team,medium,intermediate,active,frontend
+1cc99708-f0bf-42dc-bcf6-7898e570207f,b1a0438f-9fbe-4382-9d80-2ac39fc0ad07,Backend Project,Need intermediate backend developer.,team,small,intermediate,active,backend
+dc22af39-5d05-436b-be9d-a84a11ff94f3,91c9c9df-c8c9-4d87-a292-17fbee1d8864,Frontend Project,Need intermediate frontend developer.,team,small,intermediate,filled,frontend
+b7fc845a-264c-4cd3-be53-95b7a42d0746,f3b57e7e-74b0-436d-b0e1-d448d7ae5e30,Devops Project,Need intermediate devops developer.,individual,small,intermediate,closed,devops
+cf8bcada-a323-4b4a-b59f-8cc551ddf778,ab934a4e-8006-49a1-8e1f-06b0fdc9c515,Design Project,Need entry design developer.,team,medium,entry,closed,design
+3a647476-c772-413b-be3e-feefbc03d4a0,32e63cc3-1aa4-49fc-ae01-4687ac27128a,Frontend Project,Need intermediate frontend developer.,individual,small,intermediate,filled,frontend
+21f010c9-71ba-44fe-9e08-54d656cdaec4,415c5707-5bbe-4d54-baf8-1188b574d6fb,Mobile Project,Need intermediate mobile developer.,team,large,intermediate,active,mobile
+e0cdd0c2-c838-44ab-a52e-78c2f2dd37c2,0e5db22b-8d85-4f98-999d-7ee311d26577,Frontend Project,Need intermediate frontend developer.,team,medium,intermediate,closed,frontend
+78d6afe6-12d4-4ef1-b116-52ab2fde27e7,baaf1441-002d-4081-89cf-87dab0a7315d,Devops Project,Need intermediate devops developer.,individual,medium,intermediate,active,devops
+2586d051-2e50-41e5-98ab-1e038e1d0e1e,44da758d-c86d-4cf1-902f-c7f5d3165fbf,Fullstack Project,Need entry fullstack developer.,individual,small,entry,active,fullstack
+680a3dee-0664-452c-ad1c-e38310322214,2037accf-ba08-420f-a918-28e6f14d8ec9,Devops Project,Need expert devops developer.,individual,small,expert,filled,devops
+a6bd4279-6125-4288-853e-0d3271dece65,8819b678-3158-49df-9092-5695f4842e2c,Fullstack Project,Need expert fullstack developer.,individual,small,expert,active,fullstack
+f8e6ed9d-e11e-42ce-b3ff-fdd2ef2f3d44,95d1ba51-3b50-4b8f-988a-c402bc1ef52d,Ml Ai Project,Need entry ml ai developer.,individual,large,entry,active,ml_ai
+963c9c95-f049-41ea-b9da-835ecc29e2e1,39de1715-024c-4f31-9c10-8974ee3eeec1,Ml Ai Project,Need expert ml ai developer.,team,small,expert,active,ml_ai
+c3c333d6-5956-42ab-a92f-2c297fdfe971,97fa9776-f254-4d24-b99c-2629e01a417f,Devops Project,Need entry devops developer.,individual,medium,entry,closed,devops
+e3698cce-5877-4256-9f5b-53f32ad2d6a7,ed2edc3a-2929-4491-a64f-5d40e304f5a5,Mobile Project,Need intermediate mobile developer.,individual,small,intermediate,active,mobile
+169ec73b-1f81-43f8-bb82-972550522310,66d625f5-e4dd-40f3-984b-3c1614c34e9b,Devops Project,Need intermediate devops developer.,team,small,intermediate,active,devops
+2f7d7f8a-6c53-4dbb-97ee-df016289efea,55a93ac7-e3a0-4198-9b82-1feb2131c1d4,Backend Project,Need intermediate backend developer.,team,large,intermediate,active,backend
+36f6e1ed-dd33-4231-9b91-385739e1e8d7,fc15c667-60c2-4784-8f3e-bdb7fd960ce6,Design Project,Need entry design developer.,team,small,entry,active,design
+a254a575-2a1e-4e5d-8a25-905c2bcff3ab,1b5dd4f0-541d-40fc-8ce9-9ed554f41152,Devops Project,Need expert devops developer.,team,small,expert,active,devops
+a6d8fa9b-73b3-4def-a788-6985e52f108e,79bd1ccb-2031-4f9f-9363-6b34eafe178e,Frontend Project,Need entry frontend developer.,individual,large,entry,active,frontend
+87a08990-0937-4566-961a-90eb55dbd470,7bf89664-f40e-440b-921b-e942fd0e5ee0,Design Project,Need entry design developer.,team,small,entry,active,design
+a58be6fd-7e1f-40a2-8252-0ca8fc223173,aebacdfa-f8c8-47d9-bafb-d2fcd13a338c,Mobile Project,Need expert mobile developer.,team,large,expert,filled,mobile
+34312d2a-aa1d-4e1b-8c37-9a7098dfc3eb,f3a5b764-2d78-443e-9bda-2a42331b2c61,Frontend Project,Need intermediate frontend developer.,team,small,intermediate,active,frontend
+112a70d6-4b74-4438-82a0-2e8fe3362267,b56829b4-c9ea-4eef-b7da-ef1d081a8f99,Ml Ai Project,Need expert ml ai developer.,team,medium,expert,closed,ml_ai
+044d911d-4bec-4682-ae05-e4943c125f72,7c14df60-6352-4c12-8846-87128df83f43,Ml Ai Project,Need entry ml ai developer.,individual,medium,entry,active,ml_ai
+fb14cd9f-f85d-40d9-b317-781dc1116691,dcb654f9-2762-4501-9bfe-f7b0b8f8af61,Frontend Project,Need intermediate frontend developer.,individual,small,intermediate,active,frontend
+2c02d1dd-8c80-403a-9220-ac82e8fc8326,72c8a40e-df96-44ef-8b8e-b0e7379c63f2,Ml Ai Project,Need entry ml ai developer.,team,small,entry,active,ml_ai
+1a725690-9ab0-4cc0-a74d-ab1fb474799a,765c5a5f-92aa-4d04-9d16-010b72f058a2,Design Project,Need intermediate design developer.,individual,medium,intermediate,active,design
+b50ba80f-c8c0-4ba7-8f7e-51c7e73f3fc9,f8a33eb6-9366-4f09-9573-75fb8b7531ab,Fullstack Project,Need intermediate fullstack developer.,individual,small,intermediate,filled,fullstack
+cf3b2fa7-1b84-4db7-903b-c1bac67d15b7,3131654f-b288-41cd-b8c4-302dd8546a29,Mobile Project,Need intermediate mobile developer.,individual,small,intermediate,closed,mobile
+0e8105c4-3bcc-494d-8b86-b4d95e8a4008,871eab74-114e-4347-bc39-7f9101a8fcd8,Backend Project,Need intermediate backend developer.,team,small,intermediate,active,backend
+047950a1-cc2d-4904-8672-8bb131346dbc,f938a7ea-7543-4d6b-a26f-976ef5862e6b,Fullstack Project,Need entry fullstack developer.,individual,large,entry,active,fullstack
+d1da0581-9d9b-4e8c-b8b4-4fb7a9b156eb,126bacbb-5315-4901-979f-8389507aa1ec,Fullstack Project,Need intermediate fullstack developer.,team,large,intermediate,filled,fullstack
+296e4435-98eb-43f8-b28f-8d739bbefc61,3ed1d1a3-4b90-4e1a-8220-50b72d9e2dcc,Fullstack Project,Need intermediate fullstack developer.,team,medium,intermediate,closed,fullstack
+9ec45df5-034d-4e96-934b-a9aedfefed4f,12b8baba-4d12-44ec-acf8-e33e374cb5b4,Backend Project,Need intermediate backend developer.,individual,large,intermediate,active,backend
+63cf1e8e-7357-4967-ac3b-6a93b413134c,cc2b4f1d-73e0-4bdd-bd0d-80d0eefafc32,Blockchain Project,Need intermediate blockchain developer.,individual,medium,intermediate,active,blockchain
+e6b3485c-7e97-4899-af5e-928dca0cd953,decb53ed-658b-4806-a28c-45a449ad544c,Mobile Project,Need intermediate mobile developer.,individual,small,intermediate,active,mobile
+5fb1680f-f8dc-4966-851b-2afbcd417278,465c8821-f777-49e7-be61-6255dda14c84,Frontend Project,Need intermediate frontend developer.,team,large,intermediate,active,frontend
+8205d050-7929-4cad-93af-8e9dee594360,73f5c0b2-ee04-43ca-a069-63497dd9afe2,Ml Ai Project,Need intermediate ml ai developer.,team,medium,intermediate,closed,ml_ai
+43934d8d-73ab-492b-ae05-4777cd37a571,0c3651e6-2d89-49e0-af4d-ef5e04fb6208,Ml Ai Project,Need intermediate ml ai developer.,individual,medium,intermediate,filled,ml_ai
+1613a4cd-634b-4259-9eed-50a5ae8e0360,ea6b7fdb-52dd-44e7-bd0b-61450abb2a6f,Design Project,Need expert design developer.,individual,large,expert,active,design
+a5a01d21-9046-40e7-94f6-bfccbe94e379,4271da67-2cd2-4af7-864f-6f9bce58995a,Devops Project,Need entry devops developer.,team,small,entry,filled,devops
+143d6a96-00a9-45b5-b9d1-b5f470cf38bc,9ac27da4-dddb-4bdc-b77f-d0bf3f211e1a,Mobile Project,Need intermediate mobile developer.,team,small,intermediate,active,mobile
+19f58fbb-ce31-4f8d-90a4-202f005a6b99,8222bd00-b0f9-41f0-9f83-f0bc5a523908,Frontend Project,Need intermediate frontend developer.,individual,medium,intermediate,active,frontend
+737b74e6-70b7-4dd2-b390-55e4fca820e8,549feb0e-939b-4fdd-a7b2-a10b223c93fd,Design Project,Need entry design developer.,individual,large,entry,active,design
+9aa08cfd-0170-4351-b0a5-0fcd86d9dd36,520beffe-3025-4f41-8e0c-94b2f74fe0c0,Design Project,Need intermediate design developer.,individual,small,intermediate,closed,design
+52fc530c-e4d2-4e3f-8f56-8405fe1a4d35,640b1b30-6c15-496c-aafb-8f33cef597fd,Frontend Project,Need intermediate frontend developer.,individual,medium,intermediate,active,frontend
+b6ffcff2-7167-400c-aab4-769e7f2f5bd2,ee1c8700-e9fc-46bd-8c69-e5bbd87097a9,Fullstack Project,Need expert fullstack developer.,team,small,expert,active,fullstack
+b4c9f3f2-6d83-4dd5-a3a9-a19859ae1c6f,b6f605a0-07aa-47a5-aea8-770a8ea317ea,Frontend Project,Need intermediate frontend developer.,individual,small,intermediate,active,frontend
+c0e3ed6d-daa0-4ed6-816f-91f5ba7e4af7,7e19adbc-b92d-47a6-ac02-5842603db155,Devops Project,Need intermediate devops developer.,team,large,intermediate,active,devops
+1206365f-2e0c-4c99-83f2-20965957e3ae,a37ddd60-a2fb-45b8-a65d-5d256116a17d,Devops Project,Need expert devops developer.,individual,medium,expert,active,devops
+cba832d3-bd61-4167-9e07-afeb8185c065,4a9cdd3e-022f-4eef-90c6-a02bee341d95,Mobile Project,Need entry mobile developer.,team,small,entry,active,mobile
+8aa22103-8431-4086-8c28-7a257885912f,4b93b750-d7e8-4be8-bf40-634f12ad75d1,Blockchain Project,Need entry blockchain developer.,individual,large,entry,closed,blockchain
+49d36b19-b30c-4c00-9d47-3829a5a09154,7a16980a-6695-4a47-8cd9-3a049302f0af,Frontend Project,Need intermediate frontend developer.,individual,medium,intermediate,active,frontend
+688e4ffb-e2f2-4b11-9bca-904533de53b5,4743bb9e-06fd-49e2-a561-2b80844708d6,Devops Project,Need expert devops developer.,team,large,expert,active,devops
+d509fcfc-1ae1-4b79-bec8-fa212d61c614,7cf44a31-4fb0-4acb-90ff-81e02d280878,Fullstack Project,Need expert fullstack developer.,team,small,expert,active,fullstack
+9e2fe6f6-14f4-4d33-bf86-d5b340171666,150193f3-b3bb-4ec0-afe4-da4c279f87a4,Fullstack Project,Need intermediate fullstack developer.,team,medium,intermediate,active,fullstack
+ef0bbad9-fd13-4dba-848c-59e419848f7f,adcf0e08-75ac-4b25-a848-e58b0be4e8ee,Ml Ai Project,Need intermediate ml ai developer.,individual,medium,intermediate,active,ml_ai
+230d48c7-2acd-474c-9441-da0ebd2c9604,6c942ac1-18fa-4e91-943e-7c59abdb64b0,Mobile Project,Need intermediate mobile developer.,team,small,intermediate,filled,mobile
+a8d130f4-7760-4b42-89c3-8471f6b0163c,18388b04-ab50-4211-a21a-dec4a39ba45a,Mobile Project,Need intermediate mobile developer.,team,large,intermediate,active,mobile
+55398742-691a-45b2-a11d-19c2355f5d7b,d99f3220-33be-4f8e-9326-c5772d6dc163,Design Project,Need expert design developer.,individual,small,expert,filled,design
+21dcb71c-c19b-4ae5-a5ea-be59e9251c91,3e9e49b4-7f16-4eb6-90ff-8df63ca15e56,Ml Ai Project,Need intermediate ml ai developer.,individual,medium,intermediate,closed,ml_ai
+fc43010c-a4a8-4b54-bd66-2d4dc230edbd,77112221-3afa-4c82-8b02-037c81119444,Fullstack Project,Need intermediate fullstack developer.,team,small,intermediate,filled,fullstack
+c8f3d5bc-8024-4696-ac9e-030460767469,fa2c9180-5f13-4e2a-998d-31359cb3a712,Ml Ai Project,Need expert ml ai developer.,individual,small,expert,active,ml_ai
+90f33016-7a67-478f-b853-338ccec0b873,4a2fa5fd-603f-42f4-a7c5-aa7a33eceee8,Frontend Project,Need entry frontend developer.,team,medium,entry,closed,frontend
+7b8e9dd0-8708-4186-bf2a-6d65be1c29c1,9aa8f057-34ad-4e45-8f83-47dc0ab74429,Ml Ai Project,Need intermediate ml ai developer.,individual,large,intermediate,active,ml_ai
+cb81f743-bea5-40b1-9b06-89767977e31b,3b517d38-9850-46d3-b823-b30c860ea942,Blockchain Project,Need intermediate blockchain developer.,team,small,intermediate,active,blockchain
+93525274-e691-4b35-88ba-2e8945680af8,d47f449c-1039-4a1a-bbe8-981e1e7f9377,Devops Project,Need entry devops developer.,team,medium,entry,active,devops
+f42afd83-e03d-4e0b-bfaf-6a27fd168945,7babcfd6-c54b-4d7a-9d9f-82b93e9605c1,Backend Project,Need intermediate backend developer.,individual,medium,intermediate,closed,backend
+072d3592-9dee-4bfc-b376-10eb91c960e6,39ab7661-5129-4b49-8c4d-3b69431592d1,Design Project,Need entry design developer.,team,large,entry,active,design
+54e96a38-dc62-4e2f-95d5-3218a99d49fe,a418f974-ee51-42c8-91c9-8e7ea0204e1c,Backend Project,Need intermediate backend developer.,individual,large,intermediate,active,backend
+e15e2580-17f8-4b3d-a504-4c72e9c17e4b,91179560-47e4-4d6d-821e-ed120e03ecb7,Devops Project,Need intermediate devops developer.,team,small,intermediate,active,devops
+683a4d6d-1623-4cd6-b37a-c5e382050b07,6544cd36-8771-4725-8dfd-7a29ca8a95fe,Ml Ai Project,Need intermediate ml ai developer.,team,small,intermediate,active,ml_ai
+bb566e1a-63b8-4448-a074-b6513f882bf7,1ebca9df-80ae-4a87-a076-b07d06363faa,Design Project,Need expert design developer.,team,medium,expert,active,design
+fccf5822-564b-4ee4-ad8c-b4189b52830b,052638af-5e48-42f4-89ac-8adc2086b356,Blockchain Project,Need entry blockchain developer.,team,small,entry,active,blockchain
+fee311ec-9123-490c-a6ff-7cdeb7286491,73350176-2294-4152-8217-9ec28e4cd35e,Backend Project,Need entry backend developer.,team,small,entry,active,backend
+234e87b4-19f7-4609-b60f-859ab6c32f82,56d4081a-09d4-496e-92c3-64170a315dbb,Blockchain Project,Need entry blockchain developer.,individual,large,entry,active,blockchain
+14524bca-b2b7-429f-b013-f4a2652959b2,9c5b527a-8d36-418a-8979-3a8a2631a31f,Ml Ai Project,Need entry ml ai developer.,team,small,entry,active,ml_ai
+d06b7648-ed4a-4637-9aad-a45713fe4497,92e08004-858d-4fe3-bc2f-da222b18c0d6,Mobile Project,Need expert mobile developer.,team,large,expert,filled,mobile
+182b1640-5b24-421f-9223-e05a3278d774,1dd7963f-5ed4-4de4-ada2-33eb870869a3,Design Project,Need expert design developer.,team,small,expert,active,design
+d55d6cc7-184e-4cd6-87c0-237104f66584,20db70bd-54fc-4115-9729-ec5756109e15,Devops Project,Need entry devops developer.,team,small,entry,active,devops
+2b75cf70-852b-4fc7-9090-143267ad5d3a,709cf92b-157a-4bb5-a6f9-6f1073a610f5,Backend Project,Need entry backend developer.,team,small,entry,active,backend
+f740d673-9cfe-4eac-888e-b1a9d817b1db,b77bce28-e6d4-4e89-9883-460e74eeae8b,Design Project,Need intermediate design developer.,team,large,intermediate,filled,design
+423e57f9-9629-4729-a8d7-0d631eed4265,2723294a-c8cd-4f5b-b9f0-bfd21308d22f,Fullstack Project,Need expert fullstack developer.,team,medium,expert,active,fullstack

@@ -1,0 +1,586 @@
+portfolio_id,freelancer_id,project_title,project_description
+0e915886-ccb2-4a4e-8b79-0f49f3734d7b,068c9af0-7a1b-4ec8-adcf-965e7b3216c9,Blockchain Project,Built a blockchain application.
+ddbe5189-be98-4e0e-a6ab-bb27505fea6a,068c9af0-7a1b-4ec8-adcf-965e7b3216c9,Blockchain Project,Built a blockchain application.
+b35b90fb-d09d-4b75-8b6c-6401013cf11f,068c9af0-7a1b-4ec8-adcf-965e7b3216c9,Blockchain Project,Built a blockchain application.
+a732f9ff-2602-474c-bd41-05245895bcba,af1825e2-3879-450c-b717-2abe807aae56,Devops Project,Built a devops application.
+e6b97851-e8c0-4f9a-bc11-bd9594a8c79b,af1825e2-3879-450c-b717-2abe807aae56,Devops Project,Built a devops application.
+778a3e0d-9212-4ddd-af70-76b9dc6834e2,3e51ac71-eb1d-4ae7-8b6f-c68b2bd85db5,Fullstack Project,Built a fullstack application.
+11f3c623-64c4-4bba-a409-8c81653562e5,913c8f2d-383f-4887-a7a4-7f3927b68815,Devops Project,Built a devops application.
+bac6b3b3-6931-43ac-8a78-eb1734991a34,913c8f2d-383f-4887-a7a4-7f3927b68815,Devops Project,Built a devops application.
+b6b8d37d-5621-4e6a-a469-66f299bfaae1,913c8f2d-383f-4887-a7a4-7f3927b68815,Devops Project,Built a devops application.
+a9eeeb48-e430-4a78-8bba-e49a222d0aa6,1c437d95-87e9-458a-8bd8-4e07934bccd4,Frontend Project,Built a frontend application.
+0470d2f9-b7fc-4558-af6e-120c2ca4d94b,1e62ee30-e14b-489a-a43b-dd3784412cca,Ml Ai Project,Built a ml ai application.
+b568406b-756a-4793-939d-2ce30fe276f8,1e62ee30-e14b-489a-a43b-dd3784412cca,Ml Ai Project,Built a ml ai application.
+400d8edc-45c0-468d-9c9f-21cb454b1308,c5ea944d-ab0b-4a71-9c7d-8b72234dcf32,Fullstack Project,Built a fullstack application.
+0096c11f-b9d3-4c22-b8e7-75090f383c29,c5ea944d-ab0b-4a71-9c7d-8b72234dcf32,Fullstack Project,Built a fullstack application.
+529d07c1-c3bb-4fe7-98ef-f9921dfeac95,c5ea944d-ab0b-4a71-9c7d-8b72234dcf32,Fullstack Project,Built a fullstack application.
+1735f664-d17c-49f6-a90b-dc8135902c4a,774c22ad-7af3-4a43-875d-3226e1e3cdf1,Mobile Project,Built a mobile application.
+1b086db6-1064-4357-bfec-16fd2d4ef693,774c22ad-7af3-4a43-875d-3226e1e3cdf1,Mobile Project,Built a mobile application.
+8bc0fcbe-02d3-432d-81d1-c48a5e0ec4e4,774c22ad-7af3-4a43-875d-3226e1e3cdf1,Mobile Project,Built a mobile application.
+5fe3fef1-c1e7-4830-99de-564bc99e244f,eee57cc8-0424-4692-847a-e2fbbeb128eb,Blockchain Project,Built a blockchain application.
+8e5656ae-35ec-4061-8967-5220126ada66,eee57cc8-0424-4692-847a-e2fbbeb128eb,Blockchain Project,Built a blockchain application.
+738c5193-3c14-4f43-a6d4-ebc62b80deb9,91ddfa64-1d6e-48de-91f5-03352f4c6dd6,Devops Project,Built a devops application.
+e77b25f7-25ae-4d18-9feb-a76748506e4c,10e727f9-945f-4416-9152-43643f546c24,Ml Ai Project,Built a ml ai application.
+11205476-6792-4b2d-8732-df791ac6e0bd,10e727f9-945f-4416-9152-43643f546c24,Ml Ai Project,Built a ml ai application.
+607b5014-15b2-4d62-972e-b5dbded7acad,10e727f9-945f-4416-9152-43643f546c24,Ml Ai Project,Built a ml ai application.
+c14d8f93-231c-4aac-bb35-c3601cf48a80,b56d4e13-af27-44f7-ac0d-ff9d2799bc7b,Backend Project,Built a backend application.
+8cc7b500-4bc5-4847-ac4e-aec0ce653cc7,bbb94bde-c4c6-4bd8-8839-4e3e8600c4cf,Ml Ai Project,Built a ml ai application.
+ced751bb-4fd0-4ae2-8a2c-325da411f062,bbb94bde-c4c6-4bd8-8839-4e3e8600c4cf,Ml Ai Project,Built a ml ai application.
+832da351-3468-4498-b283-b7d3faaa25f7,59cdcd10-4b4c-4391-8eb2-fcb03d53f6d6,Backend Project,Built a backend application.
+30b8b8da-861f-438e-a23c-357548384dcf,59cdcd10-4b4c-4391-8eb2-fcb03d53f6d6,Backend Project,Built a backend application.
+3ea3e4a3-f5de-4b5c-82c6-5699dccb6f96,59cdcd10-4b4c-4391-8eb2-fcb03d53f6d6,Backend Project,Built a backend application.
+d37b7c16-2e2e-4ec8-8c36-ebbd712e113c,d3f9dc98-6426-4413-839a-181958cb3e54,Devops Project,Built a devops application.
+8565b33f-8798-4692-ac68-36d18be45fb8,d3f9dc98-6426-4413-839a-181958cb3e54,Devops Project,Built a devops application.
+bf7c0f94-7143-4c41-9f8c-90e417f50374,fd55d99e-5984-4514-8245-03c38032bdb5,Design Project,Built a design application.
+5f92b040-cd89-4b7b-bc63-3134d832948d,fd55d99e-5984-4514-8245-03c38032bdb5,Design Project,Built a design application.
+3337491d-d0bc-4f39-b958-ebc48daeb11f,e6948fb8-ee92-44fb-860e-3d249749b833,Backend Project,Built a backend application.
+b4b35855-e2b8-4bfe-a6c3-0200b45a652a,e6948fb8-ee92-44fb-860e-3d249749b833,Backend Project,Built a backend application.
+784ee293-045a-42b2-88fd-03893b42c532,e6948fb8-ee92-44fb-860e-3d249749b833,Backend Project,Built a backend application.
+94d20b95-f74d-4176-9f4e-83ec1cd7f6ea,fae635b0-e19d-4c34-be0b-97b5716d0fbd,Frontend Project,Built a frontend application.
+dfac15ee-d063-444c-bf7f-9a49383e6e70,fae635b0-e19d-4c34-be0b-97b5716d0fbd,Frontend Project,Built a frontend application.
+b92bac6a-099e-41b8-bc0e-c7712fbfda15,fae635b0-e19d-4c34-be0b-97b5716d0fbd,Frontend Project,Built a frontend application.
+f5a1e0be-b357-4e4c-9244-3802c58a1414,b0e6b519-90eb-4bc3-8d5c-934d18a15189,Design Project,Built a design application.
+3a51f548-3201-48d4-92a2-21125562ef32,b0e6b519-90eb-4bc3-8d5c-934d18a15189,Design Project,Built a design application.
+e9e3e14a-dc4a-4117-8055-94084edb51dc,b0e6b519-90eb-4bc3-8d5c-934d18a15189,Design Project,Built a design application.
+c71b8dc6-e587-43ed-b314-2ca2559397b6,79000fd1-cc2b-42f3-9b76-d52ebee1e884,Mobile Project,Built a mobile application.
+0b0e75ae-8b19-4b9b-89f2-1fe80170422d,e940aee5-f9e0-4436-bf8d-2cf77e03c612,Backend Project,Built a backend application.
+63691f63-0f4f-4394-90d3-6b58f53c52d4,e940aee5-f9e0-4436-bf8d-2cf77e03c612,Backend Project,Built a backend application.
+72c1230b-3665-4b85-8759-b4da7b3a002c,e940aee5-f9e0-4436-bf8d-2cf77e03c612,Backend Project,Built a backend application.
+58cdb044-5112-4ac5-ab0f-12f5183aca45,b6dc3a58-1e53-4f2d-8b88-f858490e3c70,Ml Ai Project,Built a ml ai application.
+9c1fa9c0-401d-414b-8138-bad36a8de524,b6dc3a58-1e53-4f2d-8b88-f858490e3c70,Ml Ai Project,Built a ml ai application.
+61506891-59cb-450f-9c10-18838be125a6,b6dc3a58-1e53-4f2d-8b88-f858490e3c70,Ml Ai Project,Built a ml ai application.
+d775801d-67bf-40cc-9abb-f8340ce3c986,92c088f2-9685-4abe-9bf9-e85a09387489,Backend Project,Built a backend application.
+5d863e48-1e07-4d77-a996-a6a57e70c41a,92c088f2-9685-4abe-9bf9-e85a09387489,Backend Project,Built a backend application.
+91a716fe-6b7a-402e-8d7a-59abcedf3a47,ff01beae-c458-49db-9bb1-1069004e42c5,Backend Project,Built a backend application.
+aa38bfdf-8d87-4c81-9de3-39194b7f2d52,ff01beae-c458-49db-9bb1-1069004e42c5,Backend Project,Built a backend application.
+64e389e0-3fd0-4053-8ce4-db7f94895e85,87d38227-d692-4576-b420-fe1cdafa91c4,Blockchain Project,Built a blockchain application.
+dfd5f11c-e10b-41d9-a648-75292b16a69a,87d38227-d692-4576-b420-fe1cdafa91c4,Blockchain Project,Built a blockchain application.
+5bf8105f-cc24-45a8-bb4e-858391942239,2c283439-b2bc-4ff6-96bc-3dbe27467169,Design Project,Built a design application.
+30dcab87-31c8-42c2-8468-57376d856a2e,2c283439-b2bc-4ff6-96bc-3dbe27467169,Design Project,Built a design application.
+903b081d-de9e-4a54-a672-71d2a553d938,11bf9149-0185-415d-aa3c-e8526c5d958a,Frontend Project,Built a frontend application.
+aeed8c98-2db8-4145-84c3-118564afd2a4,11bf9149-0185-415d-aa3c-e8526c5d958a,Frontend Project,Built a frontend application.
+1997b91c-2d5a-4e6c-b5b8-7a97bcb66a73,11bf9149-0185-415d-aa3c-e8526c5d958a,Frontend Project,Built a frontend application.
+1e0bb7df-38a7-4836-9449-77fec9537b68,a08cf8b4-7fbe-4b25-b00f-671fc4f4f860,Mobile Project,Built a mobile application.
+74b1e814-9061-48a1-9f18-b8787042bdca,a08cf8b4-7fbe-4b25-b00f-671fc4f4f860,Mobile Project,Built a mobile application.
+36c52e08-6963-4e73-8fed-854343e4c834,91360cab-dc93-4741-9eb8-192cebbae384,Devops Project,Built a devops application.
+dad02dde-8e40-4a61-84ca-908c9ab54859,91360cab-dc93-4741-9eb8-192cebbae384,Devops Project,Built a devops application.
+10eaf672-8df4-42f6-8083-833967b04969,91360cab-dc93-4741-9eb8-192cebbae384,Devops Project,Built a devops application.
+34a1344d-6663-43c8-b7bc-15806d4888ea,d703f3ab-5f66-4ea2-902b-bc78eeb359cc,Fullstack Project,Built a fullstack application.
+1b4c3840-f39f-4bb7-bf34-5c4b14b83c11,d703f3ab-5f66-4ea2-902b-bc78eeb359cc,Fullstack Project,Built a fullstack application.
+18e26dc2-8984-4e66-a6bc-94967236f2f0,d703f3ab-5f66-4ea2-902b-bc78eeb359cc,Fullstack Project,Built a fullstack application.
+7f7abe17-6515-42be-82f2-a1a8e430122f,e44791c2-e8c5-4d6c-8e32-c8c3f8fd8bd2,Design Project,Built a design application.
+40f47b96-3a29-43b1-be9e-87789e4767fd,4255cd43-96f4-4500-af3c-f2df564ee895,Mobile Project,Built a mobile application.
+6ee98a6e-66b2-478a-a504-b110b3d7b3d9,4255cd43-96f4-4500-af3c-f2df564ee895,Mobile Project,Built a mobile application.
+fef01403-75d9-4d7a-8941-5c51358380d5,4255cd43-96f4-4500-af3c-f2df564ee895,Mobile Project,Built a mobile application.
+e2ed9112-6017-4ebf-a5bf-3530710edd2b,926b7980-3d50-4b0a-b8b2-1b0c4d198cbf,Design Project,Built a design application.
+cfdc059d-176a-4906-ae65-657cfa3ee51b,926b7980-3d50-4b0a-b8b2-1b0c4d198cbf,Design Project,Built a design application.
+f9327831-126c-418d-b686-63c3c4f1867e,926b7980-3d50-4b0a-b8b2-1b0c4d198cbf,Design Project,Built a design application.
+9789feed-66c2-479b-aebb-b2bc368b30bd,1ac35812-bd37-44d1-baeb-56f5f65ef98f,Frontend Project,Built a frontend application.
+98193d7b-f80d-4052-afd5-c5146061198b,3fb997f5-9ee6-4ac1-8fe2-002efa6e2339,Mobile Project,Built a mobile application.
+49f2a183-0987-4f85-9422-368452dd8a3f,3fb997f5-9ee6-4ac1-8fe2-002efa6e2339,Mobile Project,Built a mobile application.
+8e719f6f-d14f-42e7-a576-7470cd48c85f,e1db353f-5caf-40e8-99bd-fc495d0a145f,Blockchain Project,Built a blockchain application.
+c44a130e-f4fe-4a27-8420-b7cf4326093a,e1db353f-5caf-40e8-99bd-fc495d0a145f,Blockchain Project,Built a blockchain application.
+af163bdd-4b09-4e37-ac92-b332cbdae46f,eb26f0e1-6929-4040-94e2-cba39ba229ca,Backend Project,Built a backend application.
+ecf4e16d-f63b-4594-ad00-38ba2554b5ca,92a2e8a4-d134-4c19-bc9d-871d5f8d2d35,Ml Ai Project,Built a ml ai application.
+d46d434d-24d3-4f28-93ed-4a8297b3aefb,699df42f-be28-4e64-89a3-3dfaca83a061,Design Project,Built a design application.
+68e8ed5d-9512-4a7b-885d-682394639c71,699df42f-be28-4e64-89a3-3dfaca83a061,Design Project,Built a design application.
+f28ca81d-c7c7-4dbe-848f-2646dcc7186a,699df42f-be28-4e64-89a3-3dfaca83a061,Design Project,Built a design application.
+ec0ba84a-e365-4562-aeaf-e0238989c2aa,3819f15a-b821-468f-a5a0-407474c39d0e,Frontend Project,Built a frontend application.
+b4b34bf1-8c59-4d76-91de-92278ed4ec05,3819f15a-b821-468f-a5a0-407474c39d0e,Frontend Project,Built a frontend application.
+fff4119d-127a-488f-8361-8ba43c6d84e4,3819f15a-b821-468f-a5a0-407474c39d0e,Frontend Project,Built a frontend application.
+5491cf7a-958a-4a63-b80d-c65c47e11bbd,e92b9d02-e2b9-43e7-a0df-3786314d9288,Frontend Project,Built a frontend application.
+05c307f6-e6fa-4147-a57a-8b4b4605d489,e92b9d02-e2b9-43e7-a0df-3786314d9288,Frontend Project,Built a frontend application.
+6904cc29-56a4-4a16-9452-5827e92fea7e,e92b9d02-e2b9-43e7-a0df-3786314d9288,Frontend Project,Built a frontend application.
+eacb6b91-f9e2-47b6-9743-a80b8bba2fd3,2fd03137-89be-4a49-a938-e4574bdcd230,Frontend Project,Built a frontend application.
+ecd4caaa-aee1-4172-aeff-353f68474661,2fd03137-89be-4a49-a938-e4574bdcd230,Frontend Project,Built a frontend application.
+57989d33-60ba-4114-bb7d-835f347eb084,2fd03137-89be-4a49-a938-e4574bdcd230,Frontend Project,Built a frontend application.
+0a9fdc61-4372-4065-bc40-b4656dd458be,0734073e-2287-4457-98c9-3ede81ac86be,Fullstack Project,Built a fullstack application.
+b12423e5-cb01-4a34-ad3c-521ac0c88dc2,0734073e-2287-4457-98c9-3ede81ac86be,Fullstack Project,Built a fullstack application.
+d827ea6c-cccf-4cc5-90a4-a69c43082003,0734073e-2287-4457-98c9-3ede81ac86be,Fullstack Project,Built a fullstack application.
+45146bae-170f-4fc5-8031-0c921384c091,0533f501-935d-41de-bf78-94fd12957899,Blockchain Project,Built a blockchain application.
+4e294c68-8a4d-4b5d-ba57-559d0982e2fd,0533f501-935d-41de-bf78-94fd12957899,Blockchain Project,Built a blockchain application.
+8e7cfa90-2f2d-4e09-981d-cfa7510434a4,0533f501-935d-41de-bf78-94fd12957899,Blockchain Project,Built a blockchain application.
+3933bc76-759f-427f-95ce-601d02ef801f,5d9dc26c-62f4-4762-9bfd-3e84952706b4,Design Project,Built a design application.
+13fc6c43-a4ca-4f86-9f2f-18a129995747,5d9dc26c-62f4-4762-9bfd-3e84952706b4,Design Project,Built a design application.
+c56172be-f0d4-42c5-873e-11a503d57b5d,5d9dc26c-62f4-4762-9bfd-3e84952706b4,Design Project,Built a design application.
+477d1e3a-7295-43fa-a5d5-6a7b66ec3cf8,32e8e806-0a90-4e6d-907a-cffd6b8c7230,Frontend Project,Built a frontend application.
+2decb3e3-a43b-4f7f-9411-fb73ca02428d,32e8e806-0a90-4e6d-907a-cffd6b8c7230,Frontend Project,Built a frontend application.
+f4043e58-c031-4962-8f32-79bbed333e26,32e8e806-0a90-4e6d-907a-cffd6b8c7230,Frontend Project,Built a frontend application.
+b75111e9-ae5b-4c9e-9043-4e1742a3ac15,2baca5e4-3e03-4780-bad4-adad4287b8dd,Backend Project,Built a backend application.
+4da94aa0-8eee-4e73-af9d-e67ad54fe373,a881af57-1296-461b-8434-bbe3827a4663,Backend Project,Built a backend application.
+00daeac4-602e-47e7-b8a2-db9267e4477c,caf062e4-3047-453b-8705-445743fd527f,Backend Project,Built a backend application.
+291b132b-e566-47de-9634-4440d383aa7b,caf062e4-3047-453b-8705-445743fd527f,Backend Project,Built a backend application.
+8008c323-e675-46ec-8e33-c0be1b8bf40f,caf062e4-3047-453b-8705-445743fd527f,Backend Project,Built a backend application.
+1e98ff2d-f57f-4670-8ff2-88a102b4a326,ec0ec497-4470-4e7e-a63b-979a164e6e1f,Backend Project,Built a backend application.
+99ef2d11-0377-45f4-b86b-922b2c63f5ea,d313124d-e496-4f61-92ef-c29519c127a3,Frontend Project,Built a frontend application.
+9cac2268-7b09-4611-a220-b5f3a0d5edec,d313124d-e496-4f61-92ef-c29519c127a3,Frontend Project,Built a frontend application.
+66652f18-da07-4940-8b76-f11ed633080e,aa80ca15-f237-498c-b68e-8ba77ab8fc86,Design Project,Built a design application.
+5d3221bc-e9d4-4c89-8bb9-b6b80d200466,31dcef2c-4cf8-4fcd-84bd-722dcaafd8d4,Blockchain Project,Built a blockchain application.
+83f94327-dd5c-4c97-8953-67fe419b9430,31dcef2c-4cf8-4fcd-84bd-722dcaafd8d4,Blockchain Project,Built a blockchain application.
+f3a3795e-dd54-4824-a537-2bb47ed0a005,1c4f7e28-29da-4ed9-a48d-3d16efa86e76,Devops Project,Built a devops application.
+8344249c-655e-47c3-b4e6-719fd834128d,6e8e7094-3033-443b-9f1e-f3f28815bd1f,Frontend Project,Built a frontend application.
+12a4108c-fb37-41ae-be4a-2d7cb9097375,6e8e7094-3033-443b-9f1e-f3f28815bd1f,Frontend Project,Built a frontend application.
+bb563ca4-6ce7-4525-84fa-ba9cdfe91a8a,befc5408-562e-4154-97af-0ebdd7ed66a1,Blockchain Project,Built a blockchain application.
+adff3072-262e-414d-b027-5e4745564748,820485ed-9d3b-4ae9-bbb4-980c5802991d,Design Project,Built a design application.
+6fbc47ad-546e-4c2e-9646-6fc43ca89b68,820485ed-9d3b-4ae9-bbb4-980c5802991d,Design Project,Built a design application.
+5ab36b15-48a2-42ef-9425-9a35caaa3280,4b3843a0-c075-40d7-b65e-57675d038954,Backend Project,Built a backend application.
+add7dd93-06c6-4997-b92f-0e1dc2a99412,2705a8a0-7303-490c-b2f1-850aaf3b1e36,Mobile Project,Built a mobile application.
+655f5a01-9107-4221-b6aa-0a2d44c34af2,2705a8a0-7303-490c-b2f1-850aaf3b1e36,Mobile Project,Built a mobile application.
+9a9a7809-43b4-493e-92b3-24eed93d101d,2705a8a0-7303-490c-b2f1-850aaf3b1e36,Mobile Project,Built a mobile application.
+5f8c97d8-dbec-4bdb-8cea-c51d2fa110ac,e2e109e0-f8ba-49d7-91b2-fad16910b567,Devops Project,Built a devops application.
+5e23ed17-74e1-4aa9-8383-524a6c81d92e,e2e109e0-f8ba-49d7-91b2-fad16910b567,Devops Project,Built a devops application.
+adc633c9-95ca-4d10-9ab4-30e79b3201c0,bfb5160f-a041-47af-aee4-fb126db81a5f,Design Project,Built a design application.
+5a1ded54-e31f-4efc-bf1c-0a4110888d59,bfb5160f-a041-47af-aee4-fb126db81a5f,Design Project,Built a design application.
+dcfda2f2-a241-4f63-9e45-1bd8331a6b03,989640f4-d60b-480a-ae5d-7a329c6a14a6,Devops Project,Built a devops application.
+19cd8859-65d4-4fe6-a891-a76526b67c1b,9f4c6b6d-dd15-49a0-a9e3-12e901eabd71,Fullstack Project,Built a fullstack application.
+e883a0bf-fbfa-4218-a87e-79f648b7a023,928043e7-2964-4181-9f36-e4a323997cf2,Backend Project,Built a backend application.
+99550845-a852-4604-bb53-34c3272af6d3,928043e7-2964-4181-9f36-e4a323997cf2,Backend Project,Built a backend application.
+d545f564-e458-4b82-b2e3-f679aefbd00e,89fabd8a-56c8-430d-b828-2136980461ff,Fullstack Project,Built a fullstack application.
+33d35738-d6d1-42c5-8d03-fb5065212755,66650e3a-bb7e-46f0-b6ad-d261360a6ea4,Frontend Project,Built a frontend application.
+42e2c000-63f2-461a-9539-8675217a3435,7822a4ee-7a27-423b-8f5e-f3938551c871,Ml Ai Project,Built a ml ai application.
+36d9917a-d91e-4c0f-8798-d11f4de030d1,7822a4ee-7a27-423b-8f5e-f3938551c871,Ml Ai Project,Built a ml ai application.
+539f4286-30f6-4c93-a526-efb438e49bd4,7822a4ee-7a27-423b-8f5e-f3938551c871,Ml Ai Project,Built a ml ai application.
+5969279d-ba9d-45d6-baf7-e00df64373b0,01cd646b-142d-4494-a47a-fa6dee4161f5,Fullstack Project,Built a fullstack application.
+1d95cc0b-5d1a-4be2-a39a-03e769d19390,01cd646b-142d-4494-a47a-fa6dee4161f5,Fullstack Project,Built a fullstack application.
+8f130f9b-cb2e-4a95-8ec5-4d04e49be2d7,01cd646b-142d-4494-a47a-fa6dee4161f5,Fullstack Project,Built a fullstack application.
+3ba54a81-e58e-4114-aabb-34ac0f2ec28f,24320130-2d24-467f-aa62-4c3f59e856c3,Fullstack Project,Built a fullstack application.
+9b314d98-aa39-4c68-81e3-35f6e4a1971d,24320130-2d24-467f-aa62-4c3f59e856c3,Fullstack Project,Built a fullstack application.
+3a2a4c21-b3e5-4467-a373-279956f9ec44,24320130-2d24-467f-aa62-4c3f59e856c3,Fullstack Project,Built a fullstack application.
+175868b4-e634-4e3e-8165-007327eb80a3,e7c8e4fc-1b0d-4104-95d7-3a5b3440b219,Fullstack Project,Built a fullstack application.
+840ce0fa-4492-4b4f-8409-a242a31462c7,1a682f3a-c413-4e30-9696-5e35baa64b00,Mobile Project,Built a mobile application.
+92281105-93c2-4f8b-b674-775021e6999b,1a682f3a-c413-4e30-9696-5e35baa64b00,Mobile Project,Built a mobile application.
+97abb305-81db-439c-b493-9981f66c01b1,2806eb9c-d07a-48c5-9faa-f16345cde764,Ml Ai Project,Built a ml ai application.
+9289b4c2-363a-44c2-a9ae-f79d97ad1d1b,2806eb9c-d07a-48c5-9faa-f16345cde764,Ml Ai Project,Built a ml ai application.
+dc3e1324-a626-4857-92aa-f174f0665354,a0308658-dce8-4634-a43d-5b806ff429eb,Fullstack Project,Built a fullstack application.
+8568423a-ecc8-4e90-b6f5-f5dd2e3de00d,016b144d-e0c4-4e33-9028-bf24e0a38939,Ml Ai Project,Built a ml ai application.
+902fefdb-2575-40a9-bff9-3328140f095d,016b144d-e0c4-4e33-9028-bf24e0a38939,Ml Ai Project,Built a ml ai application.
+dfb596d3-91b0-4eee-babc-066adae3bef2,016b144d-e0c4-4e33-9028-bf24e0a38939,Ml Ai Project,Built a ml ai application.
+23acc289-387c-4388-a29f-f81fc619a5b9,4f25603c-7002-4125-bf3f-bd16f37e17f7,Blockchain Project,Built a blockchain application.
+b99a3770-d692-4124-9789-4ca9b014797a,4f25603c-7002-4125-bf3f-bd16f37e17f7,Blockchain Project,Built a blockchain application.
+12cedfa6-dbbf-42f1-9704-75df6bf17b8a,42f0cea8-c564-4173-bc1c-53465daf38f8,Design Project,Built a design application.
+3698644f-7cd8-4791-a09b-b1c7ccce868d,42f0cea8-c564-4173-bc1c-53465daf38f8,Design Project,Built a design application.
+e0b7607b-b842-4750-ac99-d2ab48086055,42f0cea8-c564-4173-bc1c-53465daf38f8,Design Project,Built a design application.
+0fb8325a-475b-46d3-b50d-ba07f5ae846d,f38e839a-7faa-40fe-b9d9-aba8da64c71b,Blockchain Project,Built a blockchain application.
+6bb4adb1-471d-4862-8bbe-980fa582e921,e0a40368-9362-4f7b-a09a-e5bcda6ac9b2,Design Project,Built a design application.
+2d0452dd-e9d4-40af-a5a9-e681b01937f2,e0a40368-9362-4f7b-a09a-e5bcda6ac9b2,Design Project,Built a design application.
+5ac0e3c2-84a5-45e4-94d7-8c72740e2e57,e0a40368-9362-4f7b-a09a-e5bcda6ac9b2,Design Project,Built a design application.
+00346ce8-584e-49a9-be32-f7b18f349a84,ab061312-8142-41d7-9e37-6cbc61ae6018,Mobile Project,Built a mobile application.
+0b3be90e-0b02-479c-b3d9-d8b823d5002a,ab061312-8142-41d7-9e37-6cbc61ae6018,Mobile Project,Built a mobile application.
+a0884c99-961f-44e2-8a3e-8171463b74d4,ab061312-8142-41d7-9e37-6cbc61ae6018,Mobile Project,Built a mobile application.
+6e16bbbf-da14-4341-a28d-9782138f146f,9b8a764f-4913-4b4b-8f38-02c95127317f,Ml Ai Project,Built a ml ai application.
+c77ddef5-ffdb-4746-90d2-aa29177523d3,9b8a764f-4913-4b4b-8f38-02c95127317f,Ml Ai Project,Built a ml ai application.
+40326c71-1e46-4105-bab5-6cf3de4d5449,9b8a764f-4913-4b4b-8f38-02c95127317f,Ml Ai Project,Built a ml ai application.
+cc4ecaa3-ad39-47c7-a458-5ac007416d6e,a5936989-eac8-441b-9ec7-b945ed35e5c0,Blockchain Project,Built a blockchain application.
+8d6cf68b-507d-4b52-9b26-03a9f965885e,a5936989-eac8-441b-9ec7-b945ed35e5c0,Blockchain Project,Built a blockchain application.
+6c3cc714-acf3-4a1b-b1ed-8003c816e41f,a5936989-eac8-441b-9ec7-b945ed35e5c0,Blockchain Project,Built a blockchain application.
+68c913c7-9b8f-49da-a35d-918db1c0c5c9,2e32a344-d4dd-4185-946e-378e775a8ba2,Fullstack Project,Built a fullstack application.
+3ed3b323-44e5-4ae0-84c5-c3105ad3dc53,2e32a344-d4dd-4185-946e-378e775a8ba2,Fullstack Project,Built a fullstack application.
+23fbd138-01e3-4c12-aa6c-176412b2c112,e7c9e82d-39f4-48a6-9500-e6bb9426c951,Mobile Project,Built a mobile application.
+dbf2277a-0840-4c07-b89d-4720396a0896,e7c9e82d-39f4-48a6-9500-e6bb9426c951,Mobile Project,Built a mobile application.
+3602612d-aa58-4e67-b0fd-f2e0e995f7a3,c7fd8a00-ec6a-4f8e-8139-52538b5d6d16,Devops Project,Built a devops application.
+3ff3fa59-b76d-4cca-b7fb-9be6dca97c7d,c7fd8a00-ec6a-4f8e-8139-52538b5d6d16,Devops Project,Built a devops application.
+b1b3150c-b48b-45cc-84af-423da72abe8c,c7fd8a00-ec6a-4f8e-8139-52538b5d6d16,Devops Project,Built a devops application.
+2837f49a-d47e-42b0-8769-5ef8cf1f4471,635d010e-b74b-4de6-9d44-37cb533c2de1,Blockchain Project,Built a blockchain application.
+83d9b558-3d5f-45f5-aba6-a1a4fd23d8cb,635d010e-b74b-4de6-9d44-37cb533c2de1,Blockchain Project,Built a blockchain application.
+3e213ebb-8b7d-4b12-90e3-08bd4205a77c,1726d17b-fbbe-4b65-85a3-d4f6a969f612,Ml Ai Project,Built a ml ai application.
+c94c35fc-344b-42aa-ba45-aa80276035ad,184439d5-b58e-4a43-b104-fec393322905,Ml Ai Project,Built a ml ai application.
+f0f98d0e-dbde-4d1b-8bab-22f6596c3dff,184439d5-b58e-4a43-b104-fec393322905,Ml Ai Project,Built a ml ai application.
+b504a906-1110-4ef3-9699-15e1cdbafae7,184439d5-b58e-4a43-b104-fec393322905,Ml Ai Project,Built a ml ai application.
+d2a9b6b8-a801-48d8-a912-254aef7fa15c,a29203c7-c725-4a53-bb22-90a76ce2570e,Design Project,Built a design application.
+869d0933-8a1d-4f9a-a4d4-a8db0d8f764a,a29203c7-c725-4a53-bb22-90a76ce2570e,Design Project,Built a design application.
+9dcd3255-9faa-4430-ac5a-4599ab9aa256,a29203c7-c725-4a53-bb22-90a76ce2570e,Design Project,Built a design application.
+9900e7c1-cbf0-413b-9bda-b1109800337a,a4506eb1-884f-4a17-b6fb-9b15a046f24a,Ml Ai Project,Built a ml ai application.
+42fc3e03-76de-432d-8d3d-b083a863b86d,a4506eb1-884f-4a17-b6fb-9b15a046f24a,Ml Ai Project,Built a ml ai application.
+60ed7235-70be-4ca9-bb05-0be614df0860,b5467c3e-0131-460a-b327-363021787774,Mobile Project,Built a mobile application.
+f4cfc475-6ef4-4fc6-a344-59c1d590dca9,b5467c3e-0131-460a-b327-363021787774,Mobile Project,Built a mobile application.
+c0b0178a-55d2-4783-88aa-32f168911b4b,88efd37a-39f3-4e5c-a045-2b701347de5d,Fullstack Project,Built a fullstack application.
+0ce96975-0d25-4718-88e3-2274c7d8fcae,88efd37a-39f3-4e5c-a045-2b701347de5d,Fullstack Project,Built a fullstack application.
+70fd5afc-02d9-4426-8c0b-a94b5afaf0ad,88efd37a-39f3-4e5c-a045-2b701347de5d,Fullstack Project,Built a fullstack application.
+75ad1691-edf1-4a50-bd63-9d3ea379d365,157add59-3a41-47ac-9067-619e938d62c7,Devops Project,Built a devops application.
+99ac5d8f-205d-461d-aea2-48c562947a6a,daa14e05-008c-4921-ae1f-99f8482fe141,Ml Ai Project,Built a ml ai application.
+ec2b4674-692e-49a8-9e8a-b11c6fc240fa,bc8e3326-8c94-40a2-9a37-17ba927a2a11,Ml Ai Project,Built a ml ai application.
+ba429fbb-bf85-4134-a87c-703998ba75dc,bc8e3326-8c94-40a2-9a37-17ba927a2a11,Ml Ai Project,Built a ml ai application.
+10ad6367-6dbc-44da-a19c-bb759d3dc6b3,bc8e3326-8c94-40a2-9a37-17ba927a2a11,Ml Ai Project,Built a ml ai application.
+fd32eb08-91ee-4c95-9a73-204cd24e2691,877167d0-a7da-4734-98fa-edcb7ffc248f,Mobile Project,Built a mobile application.
+e922437b-03cc-4b94-a843-caec2e781985,5d553306-c2e9-48cc-96e5-6c1ec2505e19,Mobile Project,Built a mobile application.
+696ff116-1874-4555-9e59-5112d878f208,5d553306-c2e9-48cc-96e5-6c1ec2505e19,Mobile Project,Built a mobile application.
+b4ff409f-ab94-47bf-9593-81e19fd9c331,5d553306-c2e9-48cc-96e5-6c1ec2505e19,Mobile Project,Built a mobile application.
+a9e4ccfb-7829-4e4c-8648-6e2a3aadc8ab,53be0c68-8058-485d-aa9b-739feb3aef26,Design Project,Built a design application.
+71a8aa5e-feb3-45db-b8ad-bc5e190d545f,f2b89d44-7185-4876-8293-c85372a2c8e5,Mobile Project,Built a mobile application.
+9d6fe029-89e0-4035-8f88-3ac2cf187877,0f146989-d97a-4e45-8a22-7fdc477abf13,Ml Ai Project,Built a ml ai application.
+65c83337-4d16-4b12-83f7-eda7d062f816,0f146989-d97a-4e45-8a22-7fdc477abf13,Ml Ai Project,Built a ml ai application.
+e0cc15ab-c6b7-4e35-8412-ab7fdf3b9de4,de9fc804-2189-4750-8b3d-ea2a54941e92,Fullstack Project,Built a fullstack application.
+c475ff0c-e320-4227-8fa3-bf539378168c,de9fc804-2189-4750-8b3d-ea2a54941e92,Fullstack Project,Built a fullstack application.
+dbd931e7-582e-4a1a-872d-1f9b5a51fa3b,de9fc804-2189-4750-8b3d-ea2a54941e92,Fullstack Project,Built a fullstack application.
+84d135dd-8d6d-4408-9a92-1da4cc4d87d8,808ba693-15bf-490e-9324-b399cef9cfe3,Frontend Project,Built a frontend application.
+88bc6b21-495a-44e5-acab-d2d09df56dc4,808ba693-15bf-490e-9324-b399cef9cfe3,Frontend Project,Built a frontend application.
+da7a7702-4658-4670-a3fe-4d4ae6990bab,9ce84eb4-67b1-4f1c-bf32-7d492a6d606b,Blockchain Project,Built a blockchain application.
+232f74b7-8a2c-440d-8df4-20e4ef443a46,9ce84eb4-67b1-4f1c-bf32-7d492a6d606b,Blockchain Project,Built a blockchain application.
+62769b51-6546-452f-bdbc-9bb0ef4535c9,e7756af7-b2a1-46d3-9717-acddda1baa6a,Devops Project,Built a devops application.
+621befdb-88f5-4798-8812-5d3456d57d10,e7756af7-b2a1-46d3-9717-acddda1baa6a,Devops Project,Built a devops application.
+20a5b2d2-f19d-4dfd-a740-3f2814aab9f9,c53fa105-be54-478f-9e5c-3a330ce61061,Devops Project,Built a devops application.
+fb2ef0c3-876f-4d54-b90e-5ba0492416ca,c5493162-e026-4a4c-8bb9-5bda22829298,Backend Project,Built a backend application.
+55247afa-d45e-4b04-94e6-639511cfc132,c5493162-e026-4a4c-8bb9-5bda22829298,Backend Project,Built a backend application.
+40d8056b-e42e-4ad8-8ef8-012b669eb04a,1fc061ed-1ba1-4251-ad0e-09a21c062637,Backend Project,Built a backend application.
+a1d1f8cf-b9e5-41d7-acb7-0fc051adb9df,2b8f52e1-f52a-4d4a-8a34-6e17a709a220,Mobile Project,Built a mobile application.
+26e7ec67-1df1-440e-b295-bee642bd49b4,2b8f52e1-f52a-4d4a-8a34-6e17a709a220,Mobile Project,Built a mobile application.
+a0a808bd-41af-4649-b413-4bcd4dba1e92,0d91c474-ed1c-431a-830e-fbe6c1eb87c2,Fullstack Project,Built a fullstack application.
+45085f81-61e5-49f4-8083-0349af78202a,76acca45-16bc-4bf6-ac8f-a3316758efd4,Devops Project,Built a devops application.
+a8665134-c42c-4de1-8274-5a656e02bbb1,76acca45-16bc-4bf6-ac8f-a3316758efd4,Devops Project,Built a devops application.
+0dc0eff9-57b2-4f28-8d9c-5fec791f1e25,76acca45-16bc-4bf6-ac8f-a3316758efd4,Devops Project,Built a devops application.
+4bfe85d2-a0aa-4616-9c4e-166ef1c7ed0f,84cba348-d8f6-40da-9052-6c4f0cb07433,Devops Project,Built a devops application.
+a817992e-5fa4-4064-9941-f1392256583d,84cba348-d8f6-40da-9052-6c4f0cb07433,Devops Project,Built a devops application.
+9913640d-5101-49b5-888f-48f57e91f5d7,c3416234-0bbe-4745-a4bf-3edf1d9f64ad,Fullstack Project,Built a fullstack application.
+e534f08d-2de0-486d-a1a6-c07045d298ec,aa0e64a0-afd9-4420-a682-affb828260a4,Blockchain Project,Built a blockchain application.
+44243455-745b-498b-af25-2be4b085d5f7,aa0e64a0-afd9-4420-a682-affb828260a4,Blockchain Project,Built a blockchain application.
+124494e8-782b-4fe7-b767-577a45746599,aa0e64a0-afd9-4420-a682-affb828260a4,Blockchain Project,Built a blockchain application.
+73466b14-a010-4682-add5-27571aa84162,11a6722d-b1d7-40ee-9d86-c21ffd4f5345,Mobile Project,Built a mobile application.
+2ffc2b1a-075d-4290-b5e5-3b1cde406e5c,1ec83937-0601-4f48-984d-4e815a2a8f18,Devops Project,Built a devops application.
+fedfaec6-028b-4b8a-a122-bb08d72e3098,1ec83937-0601-4f48-984d-4e815a2a8f18,Devops Project,Built a devops application.
+6931c0a0-da2b-436f-b5f5-254798d7ffba,1ec83937-0601-4f48-984d-4e815a2a8f18,Devops Project,Built a devops application.
+0e40dc3f-1ba7-41b6-8a89-5f266dcf5b0b,102d0916-71ad-4f6f-8f8a-4054b92f57a8,Mobile Project,Built a mobile application.
+a0ece16e-1732-42c8-917f-b8ea1a2b2b1f,102d0916-71ad-4f6f-8f8a-4054b92f57a8,Mobile Project,Built a mobile application.
+9e979151-6028-408d-86dd-dffe58d95d55,f605004b-b7db-4a0d-9e75-757847d22a7a,Devops Project,Built a devops application.
+5c9215e9-7713-4192-b877-e3f5af7cf4a1,f605004b-b7db-4a0d-9e75-757847d22a7a,Devops Project,Built a devops application.
+fb75d447-204c-4ca7-880c-6af4c972c69a,b169dcfe-0176-4e96-aca2-e4d3fb71bd6e,Mobile Project,Built a mobile application.
+334ab3ae-bd49-4782-904c-d5a9d94d98be,21367f7e-90e1-4f9c-b31e-4008b44dae75,Blockchain Project,Built a blockchain application.
+c8694ad3-ecbb-4fea-b782-5ed580b77e79,21367f7e-90e1-4f9c-b31e-4008b44dae75,Blockchain Project,Built a blockchain application.
+c7e8079d-9603-4734-ab99-fea2cebd1217,21367f7e-90e1-4f9c-b31e-4008b44dae75,Blockchain Project,Built a blockchain application.
+62159f93-f6d1-4136-a9c8-60dcb3dab981,3e3d3a8f-983a-4102-885b-94a6cd4b07ac,Fullstack Project,Built a fullstack application.
+88c3f95f-0492-4ff7-92f2-2900cfb2c3e4,3e3d3a8f-983a-4102-885b-94a6cd4b07ac,Fullstack Project,Built a fullstack application.
+efb7fda8-faba-46af-9f00-e1cd96fec9fe,3e3d3a8f-983a-4102-885b-94a6cd4b07ac,Fullstack Project,Built a fullstack application.
+70a72811-c8f0-407a-93dd-b0af4d51edd4,357120e9-ef37-4910-ab77-9187ae1b52ca,Backend Project,Built a backend application.
+e78b4614-f2af-43d9-9372-79c77ace83d1,357120e9-ef37-4910-ab77-9187ae1b52ca,Backend Project,Built a backend application.
+99ed1b59-dd8f-4a49-b5f4-3923b22bd046,ecf88ead-6776-4f6e-bb19-a03bfd0b01d1,Blockchain Project,Built a blockchain application.
+2ba39cad-cda0-4ce2-b78a-ca4a0bdd0a71,ecf88ead-6776-4f6e-bb19-a03bfd0b01d1,Blockchain Project,Built a blockchain application.
+91d859bd-71cb-4606-92b9-a1c07373ff0a,b90ab983-8167-4785-8259-66c3c9bcf31d,Backend Project,Built a backend application.
+05e2945a-b664-426b-919c-0a5b99cdedb2,b90ab983-8167-4785-8259-66c3c9bcf31d,Backend Project,Built a backend application.
+fe422bb5-ee56-4312-832b-e69fa6400f82,3e10de60-f09e-4edb-a1e2-42b033aca1eb,Blockchain Project,Built a blockchain application.
+d12f8586-6de5-462b-aca5-3f3443985521,3e10de60-f09e-4edb-a1e2-42b033aca1eb,Blockchain Project,Built a blockchain application.
+1acad2f0-fe80-4238-8fac-f25d128528f2,3e10de60-f09e-4edb-a1e2-42b033aca1eb,Blockchain Project,Built a blockchain application.
+79c32055-80f2-49fb-9252-2b1339cc9744,b3c35c0a-8371-4246-95e0-b189272942bb,Backend Project,Built a backend application.
+e3b6a48c-fcaf-479e-8dcb-1340b9d47d06,b3c35c0a-8371-4246-95e0-b189272942bb,Backend Project,Built a backend application.
+00b37895-abc8-493a-8ee8-17a2d422e17a,372fc4fd-3269-4d1c-bb21-6f3b381cf56e,Backend Project,Built a backend application.
+86c0da89-ed38-4972-a1d5-4f08941c60cb,19a96817-9f36-4e19-b811-ec94e32770c8,Design Project,Built a design application.
+a26257fd-2dc9-4821-a5cc-6fe5907343a7,19a96817-9f36-4e19-b811-ec94e32770c8,Design Project,Built a design application.
+4e7f21f7-7f1d-41ae-8b83-212b017e23f6,19a96817-9f36-4e19-b811-ec94e32770c8,Design Project,Built a design application.
+8297fdef-280c-47bd-94ed-027d8b415ecc,b44f658d-75f1-4215-8d0d-f12e6f07ca74,Blockchain Project,Built a blockchain application.
+2b6555c9-1fc8-48df-92d2-32bcd1528ca3,b44f658d-75f1-4215-8d0d-f12e6f07ca74,Blockchain Project,Built a blockchain application.
+44ee8fea-4e7b-4719-aa97-46d5708a0e89,e7906ea7-c951-42d9-9fcb-335538ee18b4,Devops Project,Built a devops application.
+c42bab56-4ba4-4ca0-86f4-90a7db139962,e7906ea7-c951-42d9-9fcb-335538ee18b4,Devops Project,Built a devops application.
+297556a2-a4a5-48aa-9ecd-e44ccc4a1572,e7906ea7-c951-42d9-9fcb-335538ee18b4,Devops Project,Built a devops application.
+9da941c5-5986-400c-9725-44656560b963,ba34cf08-d7e0-4c8d-b63b-7bb74daaf74d,Devops Project,Built a devops application.
+5e6a7458-f4d1-463a-a268-05fcd2b5e697,ba34cf08-d7e0-4c8d-b63b-7bb74daaf74d,Devops Project,Built a devops application.
+632cc5e2-7e15-4051-bbd5-29df3363bb8b,7eed0f3c-f392-4491-bb2e-e66b107fd34e,Frontend Project,Built a frontend application.
+754be05d-c3d4-4892-ab58-10397a071986,d67daa87-1e68-4b34-b8af-9c596393ba7d,Ml Ai Project,Built a ml ai application.
+31ed31e6-939d-4a8d-b2c2-5835edc648be,d67daa87-1e68-4b34-b8af-9c596393ba7d,Ml Ai Project,Built a ml ai application.
+493c3191-a9de-4aaa-8365-751a4bc354e8,c21884fa-0f19-479e-b844-25c19d962939,Ml Ai Project,Built a ml ai application.
+348cbc54-286f-4585-a1f1-c8d38366de1c,c21884fa-0f19-479e-b844-25c19d962939,Ml Ai Project,Built a ml ai application.
+5a810be7-f819-4dbb-9483-b617cb90fd8a,9189876b-0325-461f-aa8c-3374485151cf,Blockchain Project,Built a blockchain application.
+6ef6a963-f803-418f-9788-d58d4c1e6434,9189876b-0325-461f-aa8c-3374485151cf,Blockchain Project,Built a blockchain application.
+36d9e03a-b73f-491d-a4d3-d1ef8226a3f2,530c1c7f-effe-4cae-b7be-4f1e6bc897c7,Devops Project,Built a devops application.
+87e0bddf-8d27-4b1f-ba22-6c0b4352c037,530c1c7f-effe-4cae-b7be-4f1e6bc897c7,Devops Project,Built a devops application.
+39c15775-6bb2-44b0-a7b0-1e5560bc1801,530c1c7f-effe-4cae-b7be-4f1e6bc897c7,Devops Project,Built a devops application.
+70637e1a-faac-4af9-b8ee-c4aff7d62d05,879aa9f5-1f97-4d22-aa80-01f5c2dd3b6c,Fullstack Project,Built a fullstack application.
+33378b8d-2908-4b96-91eb-ddbe3bc5fd0a,879aa9f5-1f97-4d22-aa80-01f5c2dd3b6c,Fullstack Project,Built a fullstack application.
+a5eeca96-f607-4052-8849-de3cf3bede54,879aa9f5-1f97-4d22-aa80-01f5c2dd3b6c,Fullstack Project,Built a fullstack application.
+c40cb17c-07fc-425c-81f6-745a31e39390,b7c9d289-1244-4328-8029-5c9a09b88196,Design Project,Built a design application.
+4b9f5a4e-3323-46d4-9ac1-6d2e6f56524f,b7c9d289-1244-4328-8029-5c9a09b88196,Design Project,Built a design application.
+b6a97cf2-3223-40ce-ae07-4991491ef8e8,7301526c-dd77-46b3-9b3d-1a2e3bc6caeb,Design Project,Built a design application.
+a5f62e1d-3610-46db-b92d-e53106cf8797,7301526c-dd77-46b3-9b3d-1a2e3bc6caeb,Design Project,Built a design application.
+2de1bd1e-1eba-49d7-84ad-063442a56a70,7301526c-dd77-46b3-9b3d-1a2e3bc6caeb,Design Project,Built a design application.
+a3f2e411-00fc-4345-874a-bff138f00a2d,bab0783f-f1ba-401e-bf6f-2ed67bf4ab0b,Ml Ai Project,Built a ml ai application.
+f5888bcd-5342-405d-a332-f0bea5a5109a,5709918f-22fd-47d9-8cd1-f751c2e75945,Devops Project,Built a devops application.
+078d4ddd-60c2-4d81-93b6-63938093525d,bde0b58d-07e4-4fce-b4cb-0efe7b786edd,Frontend Project,Built a frontend application.
+f4916eaa-ddb7-4b43-89ed-69eefa91bb3c,bde0b58d-07e4-4fce-b4cb-0efe7b786edd,Frontend Project,Built a frontend application.
+1aba5e65-c4c5-4257-b68d-222089ae85e8,bde0b58d-07e4-4fce-b4cb-0efe7b786edd,Frontend Project,Built a frontend application.
+bbbf754e-b90b-4965-abb1-4c246e07b009,073d21c7-ae33-4132-a1d1-1e8a6dc83f1b,Devops Project,Built a devops application.
+95925d13-0049-44b6-8e88-1dbbd99bba66,50a65e51-7284-4cbc-a172-28f79f72bf96,Mobile Project,Built a mobile application.
+b4527696-6a2e-47ec-bdc2-c861ca00da77,50a65e51-7284-4cbc-a172-28f79f72bf96,Mobile Project,Built a mobile application.
+6f2e442e-bcfd-4ded-b5b2-bc85fb2a126b,50a65e51-7284-4cbc-a172-28f79f72bf96,Mobile Project,Built a mobile application.
+609a7cda-2e05-4dda-adca-f6fd63d7212d,03b45056-ac20-4d47-bf3f-689a8bd1dfa2,Frontend Project,Built a frontend application.
+a7c391fa-d67c-45a9-a85c-fb004c1d079e,03b45056-ac20-4d47-bf3f-689a8bd1dfa2,Frontend Project,Built a frontend application.
+2e6255f1-2a34-4662-ad23-1da5ceade552,03b45056-ac20-4d47-bf3f-689a8bd1dfa2,Frontend Project,Built a frontend application.
+d3da3b05-8aca-4d9e-8752-5442698e613e,1a4ff3e1-93f7-413f-bab4-36ccf9f65606,Blockchain Project,Built a blockchain application.
+5afba2a5-45f0-4bf9-a65e-84534d8175f0,1a4ff3e1-93f7-413f-bab4-36ccf9f65606,Blockchain Project,Built a blockchain application.
+75996796-7285-43ae-aee3-fa5788d622ee,f161b450-608f-46f7-8aa5-620a9a1bf07e,Frontend Project,Built a frontend application.
+586684f8-30c7-45b6-97c7-93841a6537cb,f161b450-608f-46f7-8aa5-620a9a1bf07e,Frontend Project,Built a frontend application.
+977ccede-8a1a-49ff-a6c0-f5a3e7fe7bf6,f161b450-608f-46f7-8aa5-620a9a1bf07e,Frontend Project,Built a frontend application.
+2d210e7d-4b12-4458-9132-e4063bd9f732,4b07b91d-3f39-4307-b60f-82cccb6f5be2,Fullstack Project,Built a fullstack application.
+1b110e39-1bb6-4088-a7f2-173061072b72,74bf7f0c-5f84-48c5-bc06-22d8fee830b0,Devops Project,Built a devops application.
+7568f40d-df35-4674-a17d-d3884a6b97f5,884cb898-3f8a-4e21-814c-5140c498b164,Backend Project,Built a backend application.
+4d2b64e1-b31e-4490-97ea-d73d3aac4eb7,b097361d-f7c7-47e0-94ef-22036de6360c,Frontend Project,Built a frontend application.
+cb5a93dd-5216-40de-9c18-32292e3f0243,b097361d-f7c7-47e0-94ef-22036de6360c,Frontend Project,Built a frontend application.
+4a5c7cd8-85c1-491e-95d4-657b48bf0b7e,b097361d-f7c7-47e0-94ef-22036de6360c,Frontend Project,Built a frontend application.
+5d7e3298-bedf-43a1-8a3f-f505aff830f3,2d36949e-edf8-4b5b-91a7-5f8bfce72db9,Fullstack Project,Built a fullstack application.
+566c6676-679a-4b3b-8945-a6264b673041,2d36949e-edf8-4b5b-91a7-5f8bfce72db9,Fullstack Project,Built a fullstack application.
+8e7b5ca8-08d6-4056-ad9d-22f2f3fa1927,84b9b6c3-dda5-4692-b3de-ccc5263a8152,Devops Project,Built a devops application.
+1b55b5b5-531d-47dd-a7ba-909a3041e800,7fea8264-0280-47b9-8096-91315ae90638,Blockchain Project,Built a blockchain application.
+d5c94f5b-0eb8-470b-9037-fc4bdbd39ba0,7fea8264-0280-47b9-8096-91315ae90638,Blockchain Project,Built a blockchain application.
+c23669b5-68ca-4a1d-99a6-bc920282150a,7fea8264-0280-47b9-8096-91315ae90638,Blockchain Project,Built a blockchain application.
+b62be44f-32fb-44fe-b8b6-76b688533f4a,6db0e38e-58ed-4e77-8234-94d63b94a70b,Devops Project,Built a devops application.
+64bb03d6-ee54-43d0-abcb-d85ee763dfff,6db0e38e-58ed-4e77-8234-94d63b94a70b,Devops Project,Built a devops application.
+0967b8cb-93aa-4d63-aaff-6cd73f57a78d,9fc87c2b-20d2-4dc1-86e5-cb1cf4bf0088,Mobile Project,Built a mobile application.
+52126d67-72cd-4a6d-a595-5d14ce1be0c9,3bbff999-1e17-4c3d-b165-6e650c4b10a2,Blockchain Project,Built a blockchain application.
+41f397ff-69e9-402f-b69a-154e4fe911e4,3bbff999-1e17-4c3d-b165-6e650c4b10a2,Blockchain Project,Built a blockchain application.
+8a95a2f6-8998-45a4-b412-5b18cd3914ec,792984a3-84a9-4213-93c8-2bae8d94468c,Design Project,Built a design application.
+29011cac-db8c-4b25-a314-e7a9eb3790ed,792984a3-84a9-4213-93c8-2bae8d94468c,Design Project,Built a design application.
+47f5f901-5048-40f4-ab6a-188cb611ceb0,792984a3-84a9-4213-93c8-2bae8d94468c,Design Project,Built a design application.
+2cd29680-a514-4502-a108-36e2eb4a90e5,1d4ade34-5bb4-4ab0-91b5-dc4b46a15550,Fullstack Project,Built a fullstack application.
+0b32894f-759c-43da-aec0-278684975f78,1d4ade34-5bb4-4ab0-91b5-dc4b46a15550,Fullstack Project,Built a fullstack application.
+5b0431a1-9cdc-4032-b566-a5b4c536dbb6,1d4ade34-5bb4-4ab0-91b5-dc4b46a15550,Fullstack Project,Built a fullstack application.
+1dd672cb-2aaf-452d-9198-20406015fd45,2ca9ea39-5732-43cb-8636-0dfd3d8449d2,Frontend Project,Built a frontend application.
+e86d749e-4f6f-45b9-9191-04ac7d77a3b6,2ca9ea39-5732-43cb-8636-0dfd3d8449d2,Frontend Project,Built a frontend application.
+66a6466a-dafb-4787-ab4e-f65c2bdfb5ac,d2a2fa17-f4f9-4158-b6e2-d047bd4684a2,Blockchain Project,Built a blockchain application.
+86426661-0d71-41e7-92b2-66d83534bfd0,d2a2fa17-f4f9-4158-b6e2-d047bd4684a2,Blockchain Project,Built a blockchain application.
+09f543b1-9379-4b80-bee4-bdddc68612cb,d2a2fa17-f4f9-4158-b6e2-d047bd4684a2,Blockchain Project,Built a blockchain application.
+f382eea9-ca80-4e8b-bc77-03309bc79553,683e99c1-87f4-41a6-aad3-119ec3a87594,Devops Project,Built a devops application.
+708eb2e3-db9a-41ac-b6e7-c6d7b67afc3d,683e99c1-87f4-41a6-aad3-119ec3a87594,Devops Project,Built a devops application.
+c688ab06-04d8-4803-9c42-7c6d8279f5ef,d383baef-32e9-41e8-baa5-42a8ac98bb25,Design Project,Built a design application.
+76320799-fc84-4e75-a2f7-9dd1e150682f,c571b8d1-7bdd-46c7-88e1-14453915bc99,Fullstack Project,Built a fullstack application.
+8abcddc3-cfa1-4e07-8f69-7fa6d1591d77,68e40bbc-de8e-4ead-9a8e-fc83a8008ebe,Fullstack Project,Built a fullstack application.
+c13cdf50-5e03-4126-b04d-ad52e7ebb9dc,68e40bbc-de8e-4ead-9a8e-fc83a8008ebe,Fullstack Project,Built a fullstack application.
+7a526588-f325-4447-8a24-0e247f41dc18,68e40bbc-de8e-4ead-9a8e-fc83a8008ebe,Fullstack Project,Built a fullstack application.
+d160eff7-35b2-46e4-b749-2d314c5dfb67,dcfe345a-c673-41d0-93fd-db7f4ab5394a,Mobile Project,Built a mobile application.
+0430b5f9-f034-4464-8585-2924811e2352,0fc873c3-9f77-4bdf-be4f-1b8d831b6394,Mobile Project,Built a mobile application.
+59c6ce53-5c96-4201-99ac-e426846cc981,0fc873c3-9f77-4bdf-be4f-1b8d831b6394,Mobile Project,Built a mobile application.
+7cce581a-71b9-4fd4-9685-9128203dcd5d,dcc32055-5d59-43c2-bd2f-bc07b62dccdc,Backend Project,Built a backend application.
+57e8d71a-4a6a-427f-9765-b3024134e807,dcc32055-5d59-43c2-bd2f-bc07b62dccdc,Backend Project,Built a backend application.
+23c3e241-6c3a-4175-ab64-96003148c981,0f20c4e9-9692-49c0-aaf1-3374f908ee1c,Blockchain Project,Built a blockchain application.
+4bb3a442-2725-4ea7-b79c-6585a8798d94,37b9f781-7979-418b-a3a1-7cc1635543eb,Design Project,Built a design application.
+220cc238-3ed8-44ea-922e-7709bdb472d3,37b9f781-7979-418b-a3a1-7cc1635543eb,Design Project,Built a design application.
+d066d23c-e76a-4e7f-855b-bd83a9932a96,37b9f781-7979-418b-a3a1-7cc1635543eb,Design Project,Built a design application.
+6db90c4d-8e63-43c2-b03e-4c8660c2c9c9,9c952905-2797-4cf9-84c9-5b666fff4f4a,Design Project,Built a design application.
+4b9911c3-0148-46a1-8063-795194a262fb,12adda37-2abf-4625-8903-d2efe01b8fca,Devops Project,Built a devops application.
+b0373f49-52d4-4835-a5eb-e71fc7059668,12adda37-2abf-4625-8903-d2efe01b8fca,Devops Project,Built a devops application.
+1fa8cd07-4dcd-40bb-89eb-d1549dc2e5f7,4e06dd10-470a-4f16-bbc6-06142c4f6e3b,Mobile Project,Built a mobile application.
+dba8a4d9-a323-4fae-a92c-a75d26a7a04f,9b16bce1-839e-41a7-b13d-58f23e9e3f47,Design Project,Built a design application.
+3503ea66-65c9-4c6f-900e-5d2bbb986e4d,ec64a2f8-ea32-47b5-9a01-68a55cff20b8,Frontend Project,Built a frontend application.
+137a2220-ac54-4173-be86-dbc524e004fa,ec64a2f8-ea32-47b5-9a01-68a55cff20b8,Frontend Project,Built a frontend application.
+93b01a28-3f8f-43e0-b499-8d51bfe92636,ec64a2f8-ea32-47b5-9a01-68a55cff20b8,Frontend Project,Built a frontend application.
+4f3b9b51-8289-4bf4-972b-508c92d83f93,b28ac1b9-75e4-476a-855d-3dfc0d403928,Frontend Project,Built a frontend application.
+24cee5fc-844a-41c9-9d05-7a95545728cd,b28ac1b9-75e4-476a-855d-3dfc0d403928,Frontend Project,Built a frontend application.
+c5cd70ad-6088-4c1c-b921-904bce8b24b6,b28ac1b9-75e4-476a-855d-3dfc0d403928,Frontend Project,Built a frontend application.
+f261a767-76bd-439a-8e70-7d3b164ae625,2905c20c-f594-4fc7-90de-b96983bfe229,Design Project,Built a design application.
+94080cb0-cedd-41b9-9020-19890f7616d4,2905c20c-f594-4fc7-90de-b96983bfe229,Design Project,Built a design application.
+8a21475c-860b-4592-a18b-bf8fbbf6bb26,5e746d8f-ec1e-4508-8c2f-e9554fef99d6,Backend Project,Built a backend application.
+e31fd6f3-10fc-4956-a361-66d3c6300dad,b34fb2b2-e025-4443-bee8-66a832ed7323,Blockchain Project,Built a blockchain application.
+eeae9408-c0e8-4f86-a0ab-b4da975e639e,b34fb2b2-e025-4443-bee8-66a832ed7323,Blockchain Project,Built a blockchain application.
+60ca5527-8c82-4321-9cb7-e8090351b1aa,7926fce2-0944-4f45-ac98-b6ab8c9af4b2,Mobile Project,Built a mobile application.
+922826a5-0810-431a-a255-94454ae8f9fe,7926fce2-0944-4f45-ac98-b6ab8c9af4b2,Mobile Project,Built a mobile application.
+1d2a7a29-d8f8-4f78-a98c-a0d653abb10c,3a04fd30-be90-4d84-ae50-83de4fcf58d3,Backend Project,Built a backend application.
+4a245c6e-fcb2-4907-ae3a-ffd84156e58c,3a04fd30-be90-4d84-ae50-83de4fcf58d3,Backend Project,Built a backend application.
+2e6d1840-b272-4471-9df0-e09a2aceeae7,3a04fd30-be90-4d84-ae50-83de4fcf58d3,Backend Project,Built a backend application.
+38f70038-1f65-448b-8325-6d4bb5e93cf2,a7b4f22f-496a-447f-b194-e5dfd14aedfa,Mobile Project,Built a mobile application.
+9960506b-8b75-4812-bd7c-1c93bf46a189,82009ff7-342e-4a94-a5ba-d2f66ff088d0,Mobile Project,Built a mobile application.
+b903efce-4f1c-4912-980b-539c885c944d,82009ff7-342e-4a94-a5ba-d2f66ff088d0,Mobile Project,Built a mobile application.
+bceb26b3-4949-4c70-8135-da9e81ade11b,82009ff7-342e-4a94-a5ba-d2f66ff088d0,Mobile Project,Built a mobile application.
+3e784ce6-4408-449e-aa17-c4f654eae3af,ae43c8fb-8f8b-473e-b61a-b1260f9d677b,Devops Project,Built a devops application.
+e5aab4e3-f416-471e-8bfa-99056381f1c1,ae43c8fb-8f8b-473e-b61a-b1260f9d677b,Devops Project,Built a devops application.
+67f4aa36-7d92-4913-9c45-97acecbd28cc,ae43c8fb-8f8b-473e-b61a-b1260f9d677b,Devops Project,Built a devops application.
+4054c2ee-74cd-4f4c-925a-ec97037fdad2,b2af5334-544a-4da5-9ecc-87ee1ba7156b,Ml Ai Project,Built a ml ai application.
+ff766091-7597-4422-824b-9bda89587313,b2af5334-544a-4da5-9ecc-87ee1ba7156b,Ml Ai Project,Built a ml ai application.
+264ea653-a523-46c7-bbad-a28e594b1e6b,6d052a5f-2373-46a0-b737-33fe52b8df5c,Devops Project,Built a devops application.
+4398f0d7-aa37-4bdc-997e-36a4ad638c88,6d052a5f-2373-46a0-b737-33fe52b8df5c,Devops Project,Built a devops application.
+fb7a28ec-27e3-4f73-83ea-c1998bb52848,6d052a5f-2373-46a0-b737-33fe52b8df5c,Devops Project,Built a devops application.
+fce9b5c5-e37e-4803-bdaf-e8199c9e0503,3d921c5b-9191-4a5b-b7cd-835ba52b265d,Frontend Project,Built a frontend application.
+9a281385-3cf7-49d6-ad1b-72da21eabb30,3d921c5b-9191-4a5b-b7cd-835ba52b265d,Frontend Project,Built a frontend application.
+8b888df1-414e-44d9-91b1-d0a20874269a,0737f992-fbc6-47fb-8f30-771d476c2a44,Mobile Project,Built a mobile application.
+7dee4597-85f2-4eea-9184-8aa7570ba267,0737f992-fbc6-47fb-8f30-771d476c2a44,Mobile Project,Built a mobile application.
+cc443b47-90d9-4a11-b9bf-41474bef5d80,3cb042e5-73f2-4fc8-8648-d0bc212516f4,Fullstack Project,Built a fullstack application.
+a7d36baa-2ec6-485a-8ab2-e4b413e677b0,3cb042e5-73f2-4fc8-8648-d0bc212516f4,Fullstack Project,Built a fullstack application.
+1caade02-a6f0-4557-893a-e000fc2621a3,3cb042e5-73f2-4fc8-8648-d0bc212516f4,Fullstack Project,Built a fullstack application.
+21ead6de-fec1-40f9-ba57-a9b00419e4d1,4dfd4026-4f34-4230-900d-7a170fca313d,Backend Project,Built a backend application.
+f5c8c457-e836-4791-84fe-9222bc40f755,94a0c605-ca9d-4bee-8c7f-2f299aff1413,Design Project,Built a design application.
+61dcd5d7-2f1c-45e7-9653-7cefd9423fd6,eafd1606-bb0c-44b9-9d98-e08d213b10e4,Ml Ai Project,Built a ml ai application.
+5c76042d-aeff-4f78-8710-a04a6a0015f4,eafd1606-bb0c-44b9-9d98-e08d213b10e4,Ml Ai Project,Built a ml ai application.
+1ff1cf4f-81e8-45b9-862d-8e4d0f0d74ba,0df0cd1f-6fb6-43a1-ae0d-e6198086c914,Backend Project,Built a backend application.
+6c5f5265-3d70-4e14-b924-0f16c40d0827,a48c70aa-99d2-4665-99ce-cab3bbfd79be,Backend Project,Built a backend application.
+f95da52d-b966-4b5a-8020-be102bfed7fe,a48c70aa-99d2-4665-99ce-cab3bbfd79be,Backend Project,Built a backend application.
+feee6e4c-f849-4eff-a240-df24a7c73733,c40df368-2c79-4cc4-be2d-17fe007e7ec1,Mobile Project,Built a mobile application.
+a8c9d554-61d7-4f0f-8788-c8f2b080917d,dc071ffd-6f1b-4792-8dd7-144d23376e34,Frontend Project,Built a frontend application.
+5b769663-3feb-4222-b1af-42890c6dd4a5,dc071ffd-6f1b-4792-8dd7-144d23376e34,Frontend Project,Built a frontend application.
+ec5f3354-6fa9-48a2-80e0-8643a49e4f31,7f2dc283-e5c5-4430-9b42-a0bbfb8632e0,Devops Project,Built a devops application.
+690f4d13-a487-4ee9-8b7e-2dad3c3e5b41,7f2dc283-e5c5-4430-9b42-a0bbfb8632e0,Devops Project,Built a devops application.
+b156f634-ec88-4a03-b90a-6f1e5fcbcbe5,2fc0f09d-466d-4e76-9d47-81370149ca9b,Design Project,Built a design application.
+b6e2dfd3-7f72-4667-a149-44b18458ac75,2fc0f09d-466d-4e76-9d47-81370149ca9b,Design Project,Built a design application.
+3b651baa-d988-497d-b962-8b36e2f70486,2fc0f09d-466d-4e76-9d47-81370149ca9b,Design Project,Built a design application.
+eced1cd4-a2d5-472d-8821-440cb5b967f0,44873e67-c80f-4755-a82f-698920d23bcf,Ml Ai Project,Built a ml ai application.
+e7cca8c6-17f8-4b34-8b3a-caafe7dde820,2ad24c8b-0eb1-4d5d-a5aa-0e405aedd634,Backend Project,Built a backend application.
+b2f7147e-1a79-4fad-9a72-c013ad147bb5,2ad24c8b-0eb1-4d5d-a5aa-0e405aedd634,Backend Project,Built a backend application.
+44ff59da-fd44-42cc-a8af-bc543f27241d,2ad24c8b-0eb1-4d5d-a5aa-0e405aedd634,Backend Project,Built a backend application.
+26f77ded-7e20-4950-87a0-9abea0078f5a,6a92faec-3154-49c7-9888-3a3c82fb67f8,Frontend Project,Built a frontend application.
+9cf245df-5ef6-45c8-a882-82b8145176ee,04e36126-bc71-41b5-9fce-448120185d1b,Ml Ai Project,Built a ml ai application.
+3c087d8d-5f5d-45a0-ae23-df51b1e1e9af,85af672c-5c1a-4e64-839f-ec117fdd22ec,Backend Project,Built a backend application.
+3599732d-cdaa-4fc8-bf40-45703a8eb626,85af672c-5c1a-4e64-839f-ec117fdd22ec,Backend Project,Built a backend application.
+7379f70e-2e7a-465d-b935-fde3dd50387a,f8e8f063-dd98-4fba-8ad9-ad1a852f34de,Devops Project,Built a devops application.
+cde8fa9f-3c4f-491e-b5bc-d1356ba8b66d,f8e8f063-dd98-4fba-8ad9-ad1a852f34de,Devops Project,Built a devops application.
+6afa7c7f-2582-4eae-aad9-05225926ca1e,ba8430b7-1bcc-48dc-86df-962c265dbf99,Mobile Project,Built a mobile application.
+6e86f518-030e-409a-b2ce-c563d9dfa454,ba8430b7-1bcc-48dc-86df-962c265dbf99,Mobile Project,Built a mobile application.
+1c75dd02-12c5-41f6-9052-6e5402ee8367,c548ec61-18e5-400a-a6d2-c99c0c36350a,Frontend Project,Built a frontend application.
+5f94d3c9-3777-461b-bd9c-7cab870de3af,c548ec61-18e5-400a-a6d2-c99c0c36350a,Frontend Project,Built a frontend application.
+3edbd985-de90-47a7-a83f-7dbc858e735b,c548ec61-18e5-400a-a6d2-c99c0c36350a,Frontend Project,Built a frontend application.
+848ce54f-0540-423a-8b8f-7d4a50626271,77275936-3937-4c2e-99d1-9a7e893e4a30,Frontend Project,Built a frontend application.
+94d4d88b-2856-43fd-957a-10cd260b6f9b,77275936-3937-4c2e-99d1-9a7e893e4a30,Frontend Project,Built a frontend application.
+8c82cb2c-1cdd-4301-b88f-78dc049609e7,77275936-3937-4c2e-99d1-9a7e893e4a30,Frontend Project,Built a frontend application.
+279106a2-bc5f-4bc8-a5c3-02b98f81b223,7129a758-f3d2-4009-9a0a-ba36778d7521,Ml Ai Project,Built a ml ai application.
+373d6c77-7bc7-4304-91ad-7cf095c7e9fb,7129a758-f3d2-4009-9a0a-ba36778d7521,Ml Ai Project,Built a ml ai application.
+c1bb8974-caba-4f36-b2e5-365a36f6f805,7129a758-f3d2-4009-9a0a-ba36778d7521,Ml Ai Project,Built a ml ai application.
+60030595-29a7-4f80-a7eb-dfc950a851b5,f1e72511-2d5c-4962-9d7c-9319b3543ad7,Blockchain Project,Built a blockchain application.
+c7547e53-70cb-45b9-a7a3-137ba3f55b9e,f1e72511-2d5c-4962-9d7c-9319b3543ad7,Blockchain Project,Built a blockchain application.
+99f9327e-f4d4-49fc-b4bf-0968c9a53961,068143f0-0dc3-462b-8870-5422535ee345,Frontend Project,Built a frontend application.
+30a90ecb-475e-45dc-ad2a-7236164c6787,068143f0-0dc3-462b-8870-5422535ee345,Frontend Project,Built a frontend application.
+74d1ffaa-9601-4ea8-a69f-e77c7d03a652,ba249ab4-2a16-485f-b72b-02a95cc00040,Ml Ai Project,Built a ml ai application.
+673e63f3-3157-4e85-a345-41def9f8fb9d,ba249ab4-2a16-485f-b72b-02a95cc00040,Ml Ai Project,Built a ml ai application.
+7a358818-d1d2-4a44-b48e-d6a36f591638,ba249ab4-2a16-485f-b72b-02a95cc00040,Ml Ai Project,Built a ml ai application.
+69d640da-c027-4212-9348-96f4a762e36d,2dc32538-68fb-41b3-ba2f-e01b559266ff,Design Project,Built a design application.
+77e93c17-2f79-41f6-aeb8-c30be3345e3b,2dc32538-68fb-41b3-ba2f-e01b559266ff,Design Project,Built a design application.
+a2aac11d-ed0f-44b6-b38c-1a72a0c43679,2dc32538-68fb-41b3-ba2f-e01b559266ff,Design Project,Built a design application.
+a8217d2c-0308-4b3e-900d-8478c6a3eb5a,6bf6d84c-31c4-42c9-a4ae-2df5ff051fa1,Mobile Project,Built a mobile application.
+b0f2e4d0-9600-4f06-ba88-b1ba77d0727c,6bf6d84c-31c4-42c9-a4ae-2df5ff051fa1,Mobile Project,Built a mobile application.
+f5008155-0da3-4024-9426-0837b1ab04e7,6bf6d84c-31c4-42c9-a4ae-2df5ff051fa1,Mobile Project,Built a mobile application.
+1c79b834-7518-43db-8675-62e7087cd245,e9134477-43d7-4bb6-a1e2-a4c7783ea732,Fullstack Project,Built a fullstack application.
+6f967f32-8749-4dcc-95b4-afa31293ac3b,5b3a6a66-128a-42ec-8a90-16aaed671cf3,Frontend Project,Built a frontend application.
+28653e0e-a06e-4e9a-8e85-0c603ba12fd4,5b3a6a66-128a-42ec-8a90-16aaed671cf3,Frontend Project,Built a frontend application.
+0dd769d5-86fa-40a4-b8de-d708dd4f2a20,5b3a6a66-128a-42ec-8a90-16aaed671cf3,Frontend Project,Built a frontend application.
+a37ba8b1-ddfa-4b15-9022-cd2cf3d73211,f3372b50-bfde-41da-8a77-d7d0373d86c2,Design Project,Built a design application.
+6fbfb404-dc58-472d-9f19-be834103c02f,f3372b50-bfde-41da-8a77-d7d0373d86c2,Design Project,Built a design application.
+a56eeb21-29d7-40ea-af20-6bce4fac4af1,f3372b50-bfde-41da-8a77-d7d0373d86c2,Design Project,Built a design application.
+55d8f09a-0b14-49e7-8b95-c50cd4b3059d,e1adc6b6-2182-4481-aa6e-723c5840de19,Blockchain Project,Built a blockchain application.
+93b694a5-d837-4033-a2d8-07389507f1d7,e1adc6b6-2182-4481-aa6e-723c5840de19,Blockchain Project,Built a blockchain application.
+ac4ee4eb-afdf-40e4-888f-118008ebae6b,e1adc6b6-2182-4481-aa6e-723c5840de19,Blockchain Project,Built a blockchain application.
+62dcb3ab-545b-45f9-aedb-fb1b6fab6ad4,ca3838a9-5751-406b-a648-c67f59df8688,Devops Project,Built a devops application.
+fd4cc69a-a4cc-4d04-ab62-4730129fbacd,f0b41640-106a-4c44-8eaa-2ccb2ab56197,Ml Ai Project,Built a ml ai application.
+628d52e7-8e03-44b5-a160-42fc9ac3d46f,f0b41640-106a-4c44-8eaa-2ccb2ab56197,Ml Ai Project,Built a ml ai application.
+552fd3f3-4a2c-4f22-a2ce-c01b7d4225b9,babf4f0d-1d8e-4cc0-a71c-5947b57cd2a2,Ml Ai Project,Built a ml ai application.
+dbc1c568-eb6b-438e-9cc2-c05c68225a14,2a1468ed-9c21-49d3-8fd6-446283205791,Blockchain Project,Built a blockchain application.
+801e795e-3c1e-4495-abf2-1086aa0775ef,2a1468ed-9c21-49d3-8fd6-446283205791,Blockchain Project,Built a blockchain application.
+c518d93c-a30c-48ce-a35e-2ccb00ce1682,2a1468ed-9c21-49d3-8fd6-446283205791,Blockchain Project,Built a blockchain application.
+20cf82b1-e08c-4939-a20b-6f5f7a09767e,f9fef66c-c06e-429d-93f3-157660984f72,Design Project,Built a design application.
+f5466649-303f-4e00-b9e0-df5629573737,f9fef66c-c06e-429d-93f3-157660984f72,Design Project,Built a design application.
+806fcaae-115d-4284-922e-1b4a91dbab3e,9d6da1ac-c39a-41b5-964a-c4ae88c57c78,Devops Project,Built a devops application.
+0ddf6a69-f871-43ca-8c43-e673cba69561,9d6da1ac-c39a-41b5-964a-c4ae88c57c78,Devops Project,Built a devops application.
+59b179ed-9312-45b9-9a95-4025dbb9712e,4e60c551-eac9-435a-a1ca-4840baa55c2a,Mobile Project,Built a mobile application.
+160e35ef-3cd2-4396-8923-a0a7ebe438d6,4e60c551-eac9-435a-a1ca-4840baa55c2a,Mobile Project,Built a mobile application.
+3d9b6fc9-e967-4395-b03b-f96a3759a1c1,4e60c551-eac9-435a-a1ca-4840baa55c2a,Mobile Project,Built a mobile application.
+629856e0-c490-4899-a3c2-395681b3a950,d3c6b065-bdf6-4ad1-877b-fafd3e243371,Backend Project,Built a backend application.
+d4bc812a-a020-425c-8d54-9d0d2c757c84,d3c6b065-bdf6-4ad1-877b-fafd3e243371,Backend Project,Built a backend application.
+d69194e2-c484-4279-817e-d51449d5911e,6a52700a-533e-42e6-a541-b0818baa0e99,Blockchain Project,Built a blockchain application.
+11c648c8-a4c0-4ec0-8ec1-e750a94f2f9b,6a52700a-533e-42e6-a541-b0818baa0e99,Blockchain Project,Built a blockchain application.
+a9749800-a1b6-4406-8fed-683a9c895129,e723dfe0-bffd-4949-8a96-11317c7cd38f,Backend Project,Built a backend application.
+b709b58f-4904-4591-9226-dca10e19fcc8,e723dfe0-bffd-4949-8a96-11317c7cd38f,Backend Project,Built a backend application.
+ea1a7395-8000-4ace-91b5-4aa8eecfe69f,7a898e8b-590d-4c02-8d2e-79dfd759ddc1,Devops Project,Built a devops application.
+d6e459ee-c123-4447-9bec-1c93bf15ebaf,7a898e8b-590d-4c02-8d2e-79dfd759ddc1,Devops Project,Built a devops application.
+7cfe228f-1f8b-4c24-9b06-c4771642724a,7a898e8b-590d-4c02-8d2e-79dfd759ddc1,Devops Project,Built a devops application.
+c540b9b2-010a-47f3-b4cc-908a21a7b49b,bb3418a8-f994-4d1c-a993-4625008c237f,Design Project,Built a design application.
+a72fa418-a2ce-4831-b0b2-a1515dcf40c6,bb3418a8-f994-4d1c-a993-4625008c237f,Design Project,Built a design application.
+ba497b8a-3a5b-4322-9a06-52149a28f2c0,bb3418a8-f994-4d1c-a993-4625008c237f,Design Project,Built a design application.
+37fb5b2b-c03c-490d-bbdc-03ae4174fdfd,b671cb09-34b6-47a8-91de-5424d2431928,Ml Ai Project,Built a ml ai application.
+387d1f05-fe7b-4b23-a17e-51488278a1c0,b671cb09-34b6-47a8-91de-5424d2431928,Ml Ai Project,Built a ml ai application.
+e068715d-358c-4887-9f0e-69eda8631088,b671cb09-34b6-47a8-91de-5424d2431928,Ml Ai Project,Built a ml ai application.
+29d6a520-5dd7-4582-9ec0-f962759ea257,8a3edd80-2f90-408f-9a3e-2b43a485b782,Design Project,Built a design application.
+c0d0488d-3d5d-4230-8d44-4dc3a4a1eec6,1cc84af0-8db0-487b-804a-c2c057c7c014,Frontend Project,Built a frontend application.
+4aa57280-dce0-4587-b21d-0fbb364a2cc2,1cc84af0-8db0-487b-804a-c2c057c7c014,Frontend Project,Built a frontend application.
+2d9db066-3638-4973-9355-7a92d64fedff,1cc84af0-8db0-487b-804a-c2c057c7c014,Frontend Project,Built a frontend application.
+1d1db58d-0924-4ae9-b2db-0825f2a7cd75,37582ce2-56c9-491e-a9e2-6b8cf47ddaa1,Frontend Project,Built a frontend application.
+11f5e348-e3ec-41a7-8e0c-47b744ea8da0,8ba2b41c-d283-4395-9919-a14e2e7ba9bf,Ml Ai Project,Built a ml ai application.
+161f1f52-baf7-42e3-976d-a559c1084deb,8ba2b41c-d283-4395-9919-a14e2e7ba9bf,Ml Ai Project,Built a ml ai application.
+39d5ffe2-1871-4581-bfb3-60d6728b67cc,8ba2b41c-d283-4395-9919-a14e2e7ba9bf,Ml Ai Project,Built a ml ai application.
+08a93dea-ccfb-445b-8210-4627d35413ec,99b27421-efb4-4e02-ae22-aaef2e6cf69f,Blockchain Project,Built a blockchain application.
+1c3d9575-3a4b-4235-9cec-5085a9fb5e3d,99b27421-efb4-4e02-ae22-aaef2e6cf69f,Blockchain Project,Built a blockchain application.
+0d778eb2-8561-44bc-88d3-a2bfcfccaf0b,3ca06348-6e24-48f9-b3c2-fe82998bdec3,Devops Project,Built a devops application.
+56c17986-2752-4d9a-be24-376005d2ce10,7ed5bd02-7edf-44b1-a030-578e2ed86a95,Design Project,Built a design application.
+1a8caea0-9dd4-4c2c-b3e2-1eec2fb4ef60,7ed5bd02-7edf-44b1-a030-578e2ed86a95,Design Project,Built a design application.
+ed4dc9ca-5321-4db8-998c-efdc23537ce1,7ed5bd02-7edf-44b1-a030-578e2ed86a95,Design Project,Built a design application.
+6bbe377d-b755-4592-9de3-fbc5b732d9bc,7147be97-e902-41ed-9398-eaec3611bd6b,Mobile Project,Built a mobile application.
+00f6df6b-f598-4c59-a50b-c43f248f18e5,7147be97-e902-41ed-9398-eaec3611bd6b,Mobile Project,Built a mobile application.
+a2bf51e4-0d5a-4168-94bf-ce49222ce934,9b1ab468-996b-48f7-826f-7551a186d66b,Ml Ai Project,Built a ml ai application.
+432b9c71-3668-4ba4-8b4c-5e3b3176d8a4,9b1ab468-996b-48f7-826f-7551a186d66b,Ml Ai Project,Built a ml ai application.
+07c92ad7-496f-4df1-ae4f-5f7b6a264b98,9b1ab468-996b-48f7-826f-7551a186d66b,Ml Ai Project,Built a ml ai application.
+286163c3-958c-49c2-a48d-c4998969bba8,33f5743a-c341-4c03-9cc2-b08e2352e674,Design Project,Built a design application.
+1e518e6f-efbc-429a-bdcd-3608deade303,54a28fe5-32c5-4cea-ae58-f312087cb7d2,Mobile Project,Built a mobile application.
+57aab0db-f9d8-4095-ba87-849da5208de6,54a28fe5-32c5-4cea-ae58-f312087cb7d2,Mobile Project,Built a mobile application.
+43bf9794-db38-4fd0-9ef4-f60d02df6b75,54a28fe5-32c5-4cea-ae58-f312087cb7d2,Mobile Project,Built a mobile application.
+2d1cceb8-76ae-42aa-a26e-d1b12385915b,52c96214-eb4f-4879-94b8-b48c56b8a2aa,Backend Project,Built a backend application.
+b3b0d1a3-dbea-4204-b1cf-ec65bcf55c14,17154193-1071-49dc-829c-0038c9182c29,Backend Project,Built a backend application.
+d6fc207a-a6b5-404f-a61f-64eda40342bb,83853f80-a853-4ef9-ad2e-2b816eae164b,Mobile Project,Built a mobile application.
+79358fe7-7b10-4e77-ae8f-c52d634b1690,12e31f13-569a-47d6-b27e-2e820349e947,Frontend Project,Built a frontend application.
+56fb29d6-2c04-4281-ab3f-9d590f8f37f0,12e31f13-569a-47d6-b27e-2e820349e947,Frontend Project,Built a frontend application.
+bb9e4e2f-261d-43e3-a11a-c5b9902dae18,12e31f13-569a-47d6-b27e-2e820349e947,Frontend Project,Built a frontend application.
+83e5b18c-ff3f-4cd9-85e0-c4d4d9000750,4ed5c776-e060-4252-b20d-65083f978cb5,Frontend Project,Built a frontend application.
+f8f0db27-d14f-4298-8b39-a8f2372ff502,3b1d06df-02ff-4793-a6ea-8d90d4e3b7f2,Ml Ai Project,Built a ml ai application.
+7455892e-e705-4f29-9c4b-b52d94203855,3b1d06df-02ff-4793-a6ea-8d90d4e3b7f2,Ml Ai Project,Built a ml ai application.
+79589bdb-3dbf-49f7-b80d-edea94b5364f,3b1d06df-02ff-4793-a6ea-8d90d4e3b7f2,Ml Ai Project,Built a ml ai application.
+a613807b-aa16-47bc-9fb0-31986d57cd05,4877cf9a-8fb5-412c-85e6-79cfdee7cebf,Ml Ai Project,Built a ml ai application.
+4a90f76b-8542-4d60-a5a2-67da14f8dac4,4877cf9a-8fb5-412c-85e6-79cfdee7cebf,Ml Ai Project,Built a ml ai application.
+9f1cc47d-feee-4911-89fe-d662f2e1955f,bdeb78df-9f6f-4306-965e-014b3a153150,Backend Project,Built a backend application.
+cb0ad44e-81e0-45f2-b649-a74aa2c7b746,0ae55ff3-4c43-4eb2-ac34-061a69af7172,Devops Project,Built a devops application.
+a05729cf-7576-4b92-9f0e-383381f07593,0ae55ff3-4c43-4eb2-ac34-061a69af7172,Devops Project,Built a devops application.
+ac743563-b9d0-4bfa-8aa6-b6a64cc410d2,20731ee2-b665-44fd-a85f-129028ddee73,Devops Project,Built a devops application.
+7eb9cd27-2826-4270-95da-a4b41ee6b684,20731ee2-b665-44fd-a85f-129028ddee73,Devops Project,Built a devops application.
+e0699782-0c61-421d-a741-def37b0ffe73,20731ee2-b665-44fd-a85f-129028ddee73,Devops Project,Built a devops application.
+d41473f3-9fda-4d50-a8d5-b788330f87e2,7adde36e-23d0-4be9-9c77-c28683a75507,Fullstack Project,Built a fullstack application.
+e8a66b30-86ed-4d43-bac1-bebbac646dc9,484c8be0-ef3c-4f24-a9be-475871feaa5c,Mobile Project,Built a mobile application.
+3dd4fab0-5994-4600-9f64-4e08c7208053,484c8be0-ef3c-4f24-a9be-475871feaa5c,Mobile Project,Built a mobile application.
+2da95849-870f-4d1e-9241-ff92b694cbe3,23c5df91-b045-43b8-93e2-e6a1839086b8,Blockchain Project,Built a blockchain application.
+bfe2b43a-f214-4673-9afa-47180cae4a0f,41f1dd3a-b5cc-4421-aadf-c5fbe73fe22a,Devops Project,Built a devops application.
+947d085d-f69b-495d-b89e-586cc0176bf7,353aa968-1c4b-4d71-a011-3734cdb998a9,Blockchain Project,Built a blockchain application.
+a8738d89-7ff5-42da-beba-cdb9024ebe12,353aa968-1c4b-4d71-a011-3734cdb998a9,Blockchain Project,Built a blockchain application.
+cd792ec7-ae27-4fef-96b0-fdc887485feb,353aa968-1c4b-4d71-a011-3734cdb998a9,Blockchain Project,Built a blockchain application.
+6f28b297-43a5-4149-970f-a20d565d7be7,8d2229f4-4313-4b5d-b9eb-d84cfa2d4faf,Design Project,Built a design application.
+8223246c-71c5-40ed-b9e3-58d0d4bb5bdf,8d2229f4-4313-4b5d-b9eb-d84cfa2d4faf,Design Project,Built a design application.
+4ffaeea6-8aec-4479-9d6c-bd420fc39b84,16d506cc-902d-47b5-9d29-5b08a65bdf84,Fullstack Project,Built a fullstack application.
+10d4211d-f6ca-4625-b669-b1c81ee39c60,16d506cc-902d-47b5-9d29-5b08a65bdf84,Fullstack Project,Built a fullstack application.
+488546d2-cc33-4a5d-ba97-9279e114708c,16d506cc-902d-47b5-9d29-5b08a65bdf84,Fullstack Project,Built a fullstack application.
+e63ba931-e539-4c3d-bdd7-c49a61493986,d752f740-d00e-42e3-933c-b5c1a0398447,Fullstack Project,Built a fullstack application.
+28330245-5871-468c-bae4-e68b5b073646,d752f740-d00e-42e3-933c-b5c1a0398447,Fullstack Project,Built a fullstack application.
+193d6abc-4ee9-40b7-a165-e6b31c9b0d56,b5f81280-7e57-4697-9313-18b7c9c06836,Devops Project,Built a devops application.
+89920b89-892f-46c8-b19a-6fbe6f4a6ee3,b5f81280-7e57-4697-9313-18b7c9c06836,Devops Project,Built a devops application.
+ac898d26-9e4d-4a59-9245-e4673688886a,6d478e9a-3e47-4964-b44e-1a2afbc43037,Ml Ai Project,Built a ml ai application.
+3f73e5af-8b5c-4a8c-8777-4737fba455f8,6d478e9a-3e47-4964-b44e-1a2afbc43037,Ml Ai Project,Built a ml ai application.
+55edc553-0784-4404-9b50-a278544ac716,cb9bf1de-8305-43f0-a5cf-dc4bf0eb6bb5,Ml Ai Project,Built a ml ai application.
+fbe3a6ce-cbc0-4ae0-8549-273650d98485,cb9bf1de-8305-43f0-a5cf-dc4bf0eb6bb5,Ml Ai Project,Built a ml ai application.
+1f270da7-438f-44a0-9afa-453a6ffb92a4,dbfd251a-c3c8-49f8-bb9b-eba19b6456d3,Mobile Project,Built a mobile application.
+5624cbc3-2715-4499-aa68-ebb32ef3db13,dbfd251a-c3c8-49f8-bb9b-eba19b6456d3,Mobile Project,Built a mobile application.
+fd3c2988-e18e-4d22-b481-0297350f82b2,dbfd251a-c3c8-49f8-bb9b-eba19b6456d3,Mobile Project,Built a mobile application.
+248f82e0-d598-4540-9a80-7c3acffdbdef,c1068bcc-d315-43a9-ae19-c4a392a7bed8,Fullstack Project,Built a fullstack application.
+3a0f32ac-e9b0-4958-af98-63510e03b3a6,df0172fc-e648-4c41-8ba3-82161f83f82d,Devops Project,Built a devops application.
+c774933b-bfd5-4ca5-9b6d-3179b635d911,df0172fc-e648-4c41-8ba3-82161f83f82d,Devops Project,Built a devops application.
+7a447063-a63e-4226-b56a-282131c2eed6,df0172fc-e648-4c41-8ba3-82161f83f82d,Devops Project,Built a devops application.
+0df29c2c-ac38-46b3-987a-e8ab6870adb2,6260c277-62cd-41f0-adae-d409f4d59073,Backend Project,Built a backend application.
+7baa5c99-92dd-4daf-8b4a-dbf78a5c8dfd,6260c277-62cd-41f0-adae-d409f4d59073,Backend Project,Built a backend application.
+b9fe7350-aaef-417e-a65e-867ab53dae0b,6260c277-62cd-41f0-adae-d409f4d59073,Backend Project,Built a backend application.
+fb619ccd-4128-47ff-9e85-20d37bfc4013,00b61a80-507b-4636-a69f-7072024eaef8,Fullstack Project,Built a fullstack application.
+e2aba1a1-e247-43f5-aa01-95befd9e54f4,00b61a80-507b-4636-a69f-7072024eaef8,Fullstack Project,Built a fullstack application.
+6511f1e8-a419-4161-a518-ee257a89cf19,f18ae44d-1636-4432-b923-4f5b277bfacb,Ml Ai Project,Built a ml ai application.
+6333c075-636d-43bb-aeb0-98c35b6955d4,f18ae44d-1636-4432-b923-4f5b277bfacb,Ml Ai Project,Built a ml ai application.
+40b427a2-d8e9-49c2-840a-3cf926697250,f18ae44d-1636-4432-b923-4f5b277bfacb,Ml Ai Project,Built a ml ai application.
+178524c3-e5b7-4e15-92d3-c069d7ce7ab6,cce1fbbb-2bd5-4c5a-99f9-386b03799b06,Mobile Project,Built a mobile application.
+0628764c-e360-423f-9d67-852b0bdf1bd1,cce1fbbb-2bd5-4c5a-99f9-386b03799b06,Mobile Project,Built a mobile application.
+45692d5e-cd68-482b-8850-c0dcccbbfeb4,b422aa20-6ad6-495d-84ea-6319d4a97539,Design Project,Built a design application.
+c82e5cc5-3f2c-45a6-8f80-b6320c2d1b18,ce71adfc-de90-4849-9da5-e0c992556bf5,Blockchain Project,Built a blockchain application.
+95c07b9d-a4ce-409f-afd1-85fc42e93962,02123b02-eddb-410b-8000-8320c6ad1a11,Mobile Project,Built a mobile application.
+92b14824-91ed-446f-b1df-5a8b869223cb,02123b02-eddb-410b-8000-8320c6ad1a11,Mobile Project,Built a mobile application.
+5c07028a-9a09-4061-86b7-93eff3a43c06,9692e062-44fb-47df-affc-0d9c14541151,Fullstack Project,Built a fullstack application.
+f7e4578f-9103-403f-a246-9da8a5cda0bc,baa3f9c4-a49d-4cc8-8abc-7db3860616ca,Ml Ai Project,Built a ml ai application.
+e12aad61-695d-4fc2-b69e-a5a4c48686c3,baa3f9c4-a49d-4cc8-8abc-7db3860616ca,Ml Ai Project,Built a ml ai application.
+80ff4d0d-1af2-4baf-8e18-fc9a617d4d1b,baa3f9c4-a49d-4cc8-8abc-7db3860616ca,Ml Ai Project,Built a ml ai application.
+de8d5816-9644-45ee-ba8b-46b65abb5c7a,84ee8db6-0376-492f-a520-323107b5e244,Devops Project,Built a devops application.
+7c422fe6-d492-4e5d-8724-aef3d0d466fb,18e6bb96-2561-45ef-9548-6f9938c5040f,Ml Ai Project,Built a ml ai application.
+70e1a11c-b344-4998-8394-50a8f8369ce6,18e6bb96-2561-45ef-9548-6f9938c5040f,Ml Ai Project,Built a ml ai application.
+86147533-51cc-4e6f-831f-f72d077f1879,2cb0abfc-77c6-4389-a263-5e1e98aa467e,Mobile Project,Built a mobile application.
+5510e2d6-546a-4e20-baa5-19d14d4e860e,2cb0abfc-77c6-4389-a263-5e1e98aa467e,Mobile Project,Built a mobile application.
+7cda759b-af48-43e8-9f44-513f0f272dba,e3b83294-0110-4cc3-bc96-c67aab36e922,Devops Project,Built a devops application.
+64c978ae-0125-491f-a13e-13eddb30b0ed,f50bad1d-c2eb-48bb-a4fa-115c6e86cbed,Design Project,Built a design application.
+6f09c1d6-d4c7-4628-b77f-6466fbd8c4c2,f50bad1d-c2eb-48bb-a4fa-115c6e86cbed,Design Project,Built a design application.
+31011903-0648-44da-8059-95207aa37f80,f50bad1d-c2eb-48bb-a4fa-115c6e86cbed,Design Project,Built a design application.
+f7b4b5ec-d6dc-4842-8fe5-7fa99722467d,84a752ed-2a2f-4e6c-8232-3b82f9b527fe,Devops Project,Built a devops application.
+fb8da889-a69e-4e5e-af5f-2ee4faf5926c,ad0170e5-2ee1-4bc6-ba1a-fd7dd1330887,Frontend Project,Built a frontend application.
+8381789a-642b-4ef3-9a90-3955d0e155ed,97c171ac-0584-4469-94d8-63c79e79e470,Mobile Project,Built a mobile application.
+c73122ea-e2ad-44dd-82d7-9694d0f670bb,97c171ac-0584-4469-94d8-63c79e79e470,Mobile Project,Built a mobile application.
+5f3b4c4e-503a-44d4-b388-d832c0937b03,97c171ac-0584-4469-94d8-63c79e79e470,Mobile Project,Built a mobile application.
+4bf1e166-f5af-4f8a-89c7-f15b0f0326ce,8fa92f8d-05a5-451b-a57c-83aa3e9ef531,Design Project,Built a design application.
+d95a01b6-8ee0-4acc-96a0-338728841217,bff08a43-8f7a-4acf-9346-480449c403d0,Frontend Project,Built a frontend application.
+ef798170-f3f5-40f3-af2e-73c117215acf,bff08a43-8f7a-4acf-9346-480449c403d0,Frontend Project,Built a frontend application.
+e1496545-efba-45c3-a732-d6890a0865ce,1fa52f1a-a9c8-4c50-9cbe-c25d41362d8d,Devops Project,Built a devops application.
+74ae83c8-7280-4ae7-b82f-5d64acecfa3a,2cfe2be0-5d2a-47ba-9c54-b50ec28e7949,Design Project,Built a design application.
