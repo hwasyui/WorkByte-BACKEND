@@ -109,14 +109,14 @@ class ContractFunctions:
     @staticmethod
     def create_contract(job_post_id: str, job_role_id: str, proposal_id: str, freelancer_id: str,
                         client_id: str, contract_title: str, agreed_budget: float, payment_structure: str,
-                        start_date, role_title: Optional[str] = None, budget_currency: Optional[str] = "USD",
-                        agreed_duration: Optional[str] = None, status: Optional[str] = "active",
-                        end_date=None, actual_completion_date=None, total_hours_worked: Optional[float] = None,
-                        total_paid: Optional[float] = 0) -> Dict:
+                        start_date, contract_id: Optional[str] = None, role_title: Optional[str] = None,
+                        budget_currency: Optional[str] = "USD", agreed_duration: Optional[str] = None,
+                        status: Optional[str] = "active", end_date=None, actual_completion_date=None,
+                        total_hours_worked: Optional[float] = None, total_paid: Optional[float] = 0) -> Dict:
         """Create a new contract"""
         try:
             db = get_db()
-            contract_id = str(uuid.uuid4())
+            contract_id = contract_id or str(uuid.uuid4())
             
             contract_data = {
                 "contract_id": contract_id,

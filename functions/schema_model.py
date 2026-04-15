@@ -618,8 +618,35 @@ class ContractResponse(BaseModel):
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
+    contract_pdf_url: Optional[str] = None
+    contract_pdf_generated_at: Optional[datetime] = None
+
     class Config:
         from_attributes = True
+
+
+# ==================== CONTRACT GENERATION ====================
+class ContractMilestoneTermCreate(BaseModel):
+    milestone_title: str
+    milestone_description: Optional[str] = None
+    milestone_amount: float
+    milestone_percentage: float
+    milestone_order: int
+    due_date: Optional[date] = None
+
+
+class ContractGenerateRequest(BaseModel):
+    end_date: Optional[date] = None
+    agreed_duration: Optional[str] = None
+    termination_notice: Optional[int] = 30
+    governing_law: Optional[str] = None
+    confidentiality: Optional[bool] = False
+    confidentiality_text: Optional[str] = None
+    late_payment_penalty: Optional[float] = None
+    dispute_resolution: Optional[str] = "negotiation"
+    revision_rounds: Optional[int] = 0
+    additional_clauses: Optional[str] = None
+    milestones: Optional[List[ContractMilestoneTermCreate]] = None
 
 
 # ==================== CONTRACT MILESTONES ====================
@@ -627,50 +654,42 @@ class ContractMilestoneCreate(BaseModel):
     milestone_id: Optional[str] = None
     contract_id: str
     milestone_title: str
-    description: Optional[str] = None
-    milestone_budget: Optional[float] = None
+    milestone_description: Optional[str] = None
+    milestone_amount: Optional[float] = None
+    milestone_percentage: Optional[float] = 0.0
+    milestone_order: Optional[int] = 0
     due_date: Optional[date] = None
-    status: Optional[str] = "pending"  # pending, in_progress, completed, paid
-    payment_released: Optional[bool] = False
-    client_approved: Optional[bool] = False
-    payment_requested: Optional[bool] = False
+    status: Optional[str] = "pending"
 
 class ContractMilestoneUpdate(BaseModel):
     milestone_title: Optional[str] = None
-    description: Optional[str] = None
-    milestone_budget: Optional[float] = None
+    milestone_description: Optional[str] = None
+    milestone_amount: Optional[float] = None
+    milestone_percentage: Optional[float] = None
+    milestone_order: Optional[int] = None
     due_date: Optional[date] = None
     status: Optional[str] = None
-    payment_released: Optional[bool] = None
     client_approved: Optional[bool] = None
-    freelancer_confirmed_paid: Optional[bool] = None
     payment_requested: Optional[bool] = None
+    payment_released: Optional[bool] = None
+    freelancer_confirmed_paid: Optional[bool] = None
 
 class ContractMilestoneResponse(BaseModel):
     milestone_id: str
     contract_id: str
     milestone_title: str
-    description: Optional[str] = None
-    milestone_budget: Optional[float] = None
+    milestone_description: Optional[str] = None
+    milestone_amount: Optional[float] = None
+    milestone_percentage: Optional[float] = None
+    milestone_order: Optional[int] = None
     due_date: Optional[date] = None
     status: str
-    payment_released: Optional[bool] = False
+    completed_at: Optional[datetime] = None
+    paid_at: Optional[datetime] = None
     client_approved: Optional[bool] = False
-    freelancer_confirmed_paid: Optional[bool] = False
     payment_requested: Optional[bool] = False
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
-    milestone_id: str
-    contract_id: str
-    milestone_title: str
-    description: Optional[str] = None
-    milestone_budget: Optional[float] = None
-    due_date: Optional[date] = None
-    status: str
     payment_released: Optional[bool] = False
+    freelancer_confirmed_paid: Optional[bool] = False
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 

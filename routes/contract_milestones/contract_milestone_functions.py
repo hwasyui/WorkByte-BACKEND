@@ -88,26 +88,27 @@ class ContractMilestoneFunctions:
 
     @staticmethod
     def create_contract_milestone(contract_id: str, milestone_title: str, milestone_percentage: float,
-                                  milestone_amount: float, milestone_order: int, description: Optional[str] = None,
+                                  milestone_amount: float, milestone_order: int, milestone_description: Optional[str] = None,
                                   due_date=None, status: Optional[str] = "pending") -> Dict:
         """Create a new contract milestone"""
         try:
             db = get_db()
             milestone_id = str(uuid.uuid4())
-            
+
             contract_milestone_data = {
                 "milestone_id": milestone_id,
                 "contract_id": contract_id,
                 "milestone_title": milestone_title,
-                "milestone_description": description,
+                "milestone_description": milestone_description,
                 "milestone_percentage": milestone_percentage,
                 "milestone_amount": milestone_amount,
                 "milestone_order": milestone_order,
                 "due_date": due_date,
                 "status": status,
                 "client_approved": False,
+                "payment_requested": False,
+                "payment_released": False,
                 "freelancer_confirmed_paid": False,
-                "payment_requested": False
             }
             
             db.insert_data(table_name="contract_milestone", data=contract_milestone_data)
