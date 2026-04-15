@@ -143,7 +143,7 @@ class ContractGenerationFunctions:
                         milestone_percentage=item.get("milestone_percentage", 0),
                         milestone_amount=item.get("milestone_amount", 0),
                         milestone_order=item.get("milestone_order", 0),
-                        description=item.get("milestone_description"),
+                        milestone_description=item.get("milestone_description"),
                         due_date=item.get("due_date"),
                         status="pending"
                     )

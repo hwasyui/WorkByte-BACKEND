@@ -17,11 +17,12 @@ from routes.contracts.contract_functions import ContractFunctions
 contract_milestone_router = APIRouter(prefix="/contract-milestones", tags=["Contract Milestones"])
 
 
+# ── GET /contract-milestones ──────────────────────────────────────────────────
+
 @contract_milestone_router.get("", response_model=List[ContractMilestoneResponse])
 async def get_all_contract_milestones(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch all contract milestones - Authenticated users only - JSON response"""
+    """Fetch all contract milestones visible to the current user."""
     try:
-        # Limit milestone list to contracts involving the current user.
         if current_user.type == "client":
             client_contracts = ContractFunctions.get_contracts_by_client_id(current_user.user_id)
             contract_ids = [c["contract_id"] for c in client_contracts]
@@ -42,9 +43,29 @@ async def get_all_contract_milestones(limit: Optional[int] = None, current_user:
         return ResponseSchema.error(error_msg, 500)
 
 
+# ── Literal sub-path BEFORE generic /{milestone_id} ──────────────────────────
+
+@contract_milestone_router.get("/contract/{contract_id}", response_model=List[ContractMilestoneResponse])
+async def get_contract_milestones_by_contract(contract_id: str, current_user: UserInDB = Depends(get_current_user)):
+    """Fetch all milestones for a specific contract."""
+    try:
+        contract = ContractFunctions.get_contract_by_id(contract_id)
+        assert_current_user_is_contract_party(current_user, contract)
+        milestones = ContractMilestoneFunctions.get_contract_milestones_by_contract_id(contract_id)
+        success_msg = f"Retrieved {len(milestones)} milestones for contract {contract_id}"
+        logger("CONTRACT_MILESTONE", success_msg, "GET /contract-milestones/contract/{contract_id}", "INFO")
+        return ResponseSchema.success(milestones, 200)
+    except Exception as e:
+        error_msg = f"Failed to fetch milestones for contract {contract_id}: {str(e)}"
+        logger("CONTRACT_MILESTONE", error_msg, "GET /contract-milestones/contract/{contract_id}", "ERROR")
+        return ResponseSchema.error(error_msg, 500)
+
+
+# ── Generic /{milestone_id} GET — must come AFTER all literal sub-paths ───────
+
 @contract_milestone_router.get("/{milestone_id}", response_model=ContractMilestoneResponse)
 async def get_contract_milestone(milestone_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch a single contract milestone by ID - Authenticated users only - JSON response"""
+    """Fetch a single contract milestone by ID."""
     try:
         milestone = ContractMilestoneFunctions.get_contract_milestone_by_id(milestone_id)
         if not milestone:
@@ -62,41 +83,27 @@ async def get_contract_milestone(milestone_id: str, current_user: UserInDB = Dep
         return ResponseSchema.error(error_msg, 500)
 
 
-@contract_milestone_router.get("/contract/{contract_id}", response_model=List[ContractMilestoneResponse])
-async def get_contract_milestones_by_contract(contract_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch all milestones for a specific contract - Authenticated users only - JSON response"""
-    try:
-        contract = ContractFunctions.get_contract_by_id(contract_id)
-        assert_current_user_is_contract_party(current_user, contract)
-        milestones = ContractMilestoneFunctions.get_contract_milestones_by_contract_id(contract_id)
-        success_msg = f"Retrieved {len(milestones)} milestones for contract {contract_id}"
-        logger("CONTRACT_MILESTONE", success_msg, "GET /contract-milestones/contract/{contract_id}", "INFO")
-        return ResponseSchema.success(milestones, 200)
-    except Exception as e:
-        error_msg = f"Failed to fetch milestones for contract {contract_id}: {str(e)}"
-        logger("CONTRACT_MILESTONE", error_msg, "GET /contract-milestones/contract/{contract_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
-
+# ── Mutations ─────────────────────────────────────────────────────────────────
 
 @contract_milestone_router.post("", response_model=ContractMilestoneResponse, status_code=201)
 async def create_contract_milestone(milestone: ContractMilestoneCreate, current_user: UserInDB = Depends(get_current_user)):
-    """Create a new contract milestone - Authenticated users only - JSON body accepted"""
+    """Create a new contract milestone."""
     try:
         milestone_id = milestone.milestone_id or str(uuid.uuid4())
         contract = ContractFunctions.get_contract_by_id(milestone.contract_id)
         assert_current_user_is_contract_party(current_user, contract)
-        
+
         new_milestone = ContractMilestoneFunctions.create_contract_milestone(
             contract_id=milestone.contract_id,
             milestone_title=milestone.milestone_title,
-            milestone_percentage=milestone.milestone_budget or 0,
-            milestone_amount=milestone.milestone_budget or 0,
-            milestone_order=0,
-            description=milestone.description,
+            milestone_percentage=milestone.milestone_percentage or 0.0,
+            milestone_amount=milestone.milestone_amount or 0.0,
+            milestone_order=milestone.milestone_order or 0,
+            milestone_description=milestone.milestone_description,
             due_date=milestone.due_date,
-            status=milestone.status
+            status=milestone.status,
         )
-        
+
         success_msg = f"Created contract milestone {milestone_id} for contract {milestone.contract_id}"
         logger("CONTRACT_MILESTONE", success_msg, "POST /contract-milestones", "INFO")
         return ResponseSchema.success(new_milestone, 201)
@@ -112,7 +119,7 @@ async def create_contract_milestone(milestone: ContractMilestoneCreate, current_
 
 @contract_milestone_router.put("/{milestone_id}", response_model=ContractMilestoneResponse)
 async def update_contract_milestone(milestone_id: str, milestone_update: ContractMilestoneUpdate, current_user: UserInDB = Depends(get_current_user)):
-    """Update contract milestone information with role-based approval flows"""
+    """Update contract milestone information with role-based approval flows."""
     try:
         existing_milestone = ContractMilestoneFunctions.get_contract_milestone_by_id(milestone_id)
         if not existing_milestone:
@@ -128,7 +135,6 @@ async def update_contract_milestone(milestone_id: str, milestone_update: Contrac
         if current_user.type == "freelancer":
             if "status" in update_data and update_data.get("status") not in [None, "pending"]:
                 return ResponseSchema.error("Freelancers can only leave milestone in pending state for approval", 403)
-
             update_data["status"] = "pending"
             update_data["client_approved"] = False
             update_data["payment_requested"] = False
@@ -139,16 +145,13 @@ async def update_contract_milestone(milestone_id: str, milestone_update: Contrac
             desired_status = update_data.get("status")
             if desired_status and desired_status not in ["pending", "in_progress", "completed", "paid"]:
                 return ResponseSchema.error("Invalid status update value", 400)
-
             if desired_status in ["in_progress", "completed"]:
                 update_data["client_approved"] = True
             if desired_status == "paid":
                 update_data["payment_requested"] = True
                 update_data["client_approved"] = True
-                # We require freelancer confirmation via separate endpoint.
                 update_data["freelancer_confirmed_paid"] = False
 
-        # If non-client/freelancer, disallow
         if current_user.type not in ["client", "freelancer"]:
             return ResponseSchema.error("Only client or freelancer can update milestones", 403)
 
@@ -165,7 +168,7 @@ async def update_contract_milestone(milestone_id: str, milestone_update: Contrac
 
 @contract_milestone_router.delete("/{milestone_id}", status_code=200)
 async def delete_contract_milestone(milestone_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Delete a contract milestone - Authenticated users only"""
+    """Delete a contract milestone."""
     try:
         existing_milestone = ContractMilestoneFunctions.get_contract_milestone_by_id(milestone_id)
         if not existing_milestone:
@@ -174,9 +177,9 @@ async def delete_contract_milestone(milestone_id: str, current_user: UserInDB = 
             return ResponseSchema.error(error_msg, 404)
         contract = ContractFunctions.get_contract_by_id(existing_milestone["contract_id"])
         assert_current_user_is_contract_party(current_user, contract)
-        
+
         ContractMilestoneFunctions.delete_contract_milestone(milestone_id)
-        
+
         success_msg = f"Deleted contract milestone {milestone_id}"
         logger("CONTRACT_MILESTONE", success_msg, "DELETE /contract-milestones/{milestone_id}", "INFO")
         return ResponseSchema.success("Deleted successfully", 200)
@@ -188,7 +191,7 @@ async def delete_contract_milestone(milestone_id: str, current_user: UserInDB = 
 
 @contract_milestone_router.post("/{milestone_id}/confirm-payment", response_model=ContractMilestoneResponse)
 async def confirm_milestone_payment(milestone_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Freelancer confirms a client-requested milestone payment"""
+    """Freelancer confirms a client-requested milestone payment."""
     try:
         if current_user.type != "freelancer":
             return ResponseSchema.error("Only freelancers can confirm payment", 403)
@@ -205,14 +208,15 @@ async def confirm_milestone_payment(milestone_id: str, current_user: UserInDB = 
         update_data = {
             "status": "paid",
             "freelancer_confirmed_paid": True,
-            "payment_released": True
+            "payment_released": True,
         }
 
         updated_milestone = ContractMilestoneFunctions.update_contract_milestone(milestone_id, update_data)
         if not updated_milestone:
             return ResponseSchema.error("Failed to confirm payment", 500)
 
-        logger("CONTRACT_MILESTONE", f"Freelancer confirmed payment for milestone {milestone_id}", "POST /contract-milestones/{milestone_id}/confirm-payment", "INFO")
+        logger("CONTRACT_MILESTONE", f"Freelancer confirmed payment for milestone {milestone_id}",
+               "POST /contract-milestones/{milestone_id}/confirm-payment", "INFO")
         return ResponseSchema.success(updated_milestone, 200)
 
     except Exception as e:

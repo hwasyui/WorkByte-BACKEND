@@ -29,7 +29,7 @@ def upload_file(bucket: str, path: str, file_bytes: bytes, content_type: str = "
     except Exception:
         pass
 
-    response = storage.upload(path, file_bytes, content_type=content_type)
+    response = storage.upload(path, file_bytes, file_options={"content-type": content_type})
     if getattr(response, "error", None):
         raise RuntimeError(f"Supabase upload failed: {response.error}")
     return response
