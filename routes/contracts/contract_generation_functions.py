@@ -8,7 +8,6 @@ from functions.db_manager import get_db
 from functions.logger import logger
 from functions.supabase_client import upload_file, create_signed_url
 from routes.contracts.contract_functions import ContractFunctions
-from routes.contract_milestones.contract_milestone_functions import ContractMilestoneFunctions
 from routes.clients.client_functions import ClientFunctions
 from routes.freelancers.freelancer_functions import FreelancerFunctions
 from routes.job_posts.job_post_functions import JobPostFunctions
@@ -52,11 +51,11 @@ class ContractGenerationFunctions:
                 INSERT INTO contract_terms (
                     contract_terms_id, contract_id, termination_notice, governing_law,
                     confidentiality, confidentiality_text, late_payment_penalty,
-                    dispute_resolution, revision_rounds, additional_clauses
+                    dispute_resolution, revision_rounds, additional_clauses, payment_schedule
                 ) VALUES (
                     :contract_terms_id, :contract_id, :termination_notice, :governing_law,
                     :confidentiality, :confidentiality_text, :late_payment_penalty,
-                    :dispute_resolution, :revision_rounds, :additional_clauses
+                    :dispute_resolution, :revision_rounds, :additional_clauses, :payment_schedule
                 )
                 ON CONFLICT (contract_id) DO UPDATE SET
                     termination_notice = EXCLUDED.termination_notice,
@@ -66,7 +65,8 @@ class ContractGenerationFunctions:
                     late_payment_penalty = EXCLUDED.late_payment_penalty,
                     dispute_resolution = EXCLUDED.dispute_resolution,
                     revision_rounds = EXCLUDED.revision_rounds,
-                    additional_clauses = EXCLUDED.additional_clauses
+                    additional_clauses = EXCLUDED.additional_clauses,
+                    payment_schedule = EXCLUDED.payment_schedule
                 RETURNING *
             """
             payload = {
@@ -79,7 +79,8 @@ class ContractGenerationFunctions:
                 "late_payment_penalty": terms.get("late_payment_penalty"),
                 "dispute_resolution": terms.get("dispute_resolution"),
                 "revision_rounds": terms.get("revision_rounds"),
-                "additional_clauses": terms.get("additional_clauses")
+                "additional_clauses": terms.get("additional_clauses"),
+                "payment_schedule": terms.get("payment_schedule"),
             }
             rows = db.execute_query(query, payload)
             if rows:
@@ -98,7 +99,6 @@ class ContractGenerationFunctions:
                 return None
 
             contract_terms = ContractGenerationFunctions.get_contract_terms(contract_id) or {}
-            milestones = ContractMilestoneFunctions.get_contract_milestones_by_contract_id(contract_id)
             proposal = ProposalFunctions.get_proposal_by_id(contract["proposal_id"]) or {}
             job_post = JobPostFunctions.get_job_post_by_id(contract["job_post_id"]) or {}
             job_role = JobRoleFunctions.get_job_role_by_id(contract["job_role_id"]) or {}
@@ -108,7 +108,6 @@ class ContractGenerationFunctions:
             return {
                 "contract": contract,
                 "contract_terms": contract_terms,
-                "milestones": _convert_rows_to_dicts(milestones),
                 "proposal": proposal,
                 "job_post": job_post,
                 "job_role": job_role,
@@ -120,7 +119,7 @@ class ContractGenerationFunctions:
             raise
 
     @staticmethod
-    def save_generation_data(contract_id: str, update_data: Dict, terms: Dict, milestones: Optional[List[Dict]] = None) -> Dict:
+    def save_generation_data(contract_id: str, update_data: Dict, terms: Dict) -> Dict:
         try:
             db = get_db()
             contract = ContractFunctions.get_contract_by_id(contract_id)
@@ -132,21 +131,7 @@ class ContractGenerationFunctions:
                 conditions = [("contract_id", "=", contract_id)]
                 db.update_data(table_name="contract", data=update_fields, conditions=conditions)
 
-            saved_terms = ContractGenerationFunctions.upsert_contract_terms(contract_id, terms)
-
-            if contract.get("payment_structure") == "milestone_based" and milestones is not None:
-                db.execute_query("DELETE FROM contract_milestone WHERE contract_id = :cid", {"cid": contract_id})
-                for item in milestones:
-                    ContractMilestoneFunctions.create_contract_milestone(
-                        contract_id=contract_id,
-                        milestone_title=item.get("milestone_title"),
-                        milestone_percentage=item.get("milestone_percentage", 0),
-                        milestone_amount=item.get("milestone_amount", 0),
-                        milestone_order=item.get("milestone_order", 0),
-                        milestone_description=item.get("milestone_description"),
-                        due_date=item.get("due_date"),
-                        status="pending"
-                    )
+            ContractGenerationFunctions.upsert_contract_terms(contract_id, terms)
 
             return ContractFunctions.get_contract_by_id(contract_id)
         except Exception as e:
@@ -195,5 +180,4 @@ class ContractGenerationFunctions:
                 "client": context["client"]
             },
             context["contract_terms"],
-            context["milestones"]
         )

@@ -404,83 +404,6 @@ class JobPostResponse(BaseModel):
     class Config:
         from_attributes = True
 
-# ==================== JOB PAYMENT ====================
-
-class JobPaymentCreate(BaseModel):
-    job_post_id: str
-    payment_type: str                   # 'full' or 'milestone'
-    payment_option: str                 # e.g. '2 milestones', 'full'
-
-
-class JobPaymentUpdate(BaseModel):
-    payment_type: Optional[str] = None
-    payment_option: Optional[str] = None
-    status: Optional[str] = None
-
-
-class JobPaymentResponse(BaseModel):
-    job_payment_id: str
-    job_post_id: str
-    payment_type: str
-    payment_option: str
-    status: str
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
-
-# ==================== JOB MILESTONE ====================
-
-class JobMilestoneItem(BaseModel):
-    milestone_order: int
-    work_progress: str                  # e.g. '25%'
-    payment_percentage: str             # e.g. '25%'
-
-
-class JobMilestoneCreate(BaseModel):
-    job_payment_id: str
-    milestone_order: int
-    work_progress: str
-    payment_percentage: str
-
-
-class JobMilestoneBulkCreate(BaseModel):
-    job_payment_id: str
-    milestones: List[JobMilestoneItem]
-
-
-class JobMilestoneUpdate(BaseModel):
-    work_progress: Optional[str] = None
-    payment_percentage: Optional[str] = None
-    milestone_order: Optional[int] = None
-
-
-class JobMilestoneResponse(BaseModel):
-    milestone_id: str
-    job_payment_id: str
-    milestone_order: int
-    work_progress: str
-    payment_percentage: str
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
-
-
-# ==================== COMBINED (used by Flutter summary POST) ====================
-
-class JobPaymentWithMilestonesCreate(BaseModel):
-    """
-    Single payload from Flutter — creates job_payment + all job_milestones in one request.
-    Only used when payment_type is 'milestone'. For 'full', milestones list is empty.
-    """
-    job_post_id: str
-    payment_type: str
-    payment_option: str
-    milestones: Optional[List[JobMilestoneItem]] = []
-
 # ==================== JOB ROLES ====================
 class JobRoleCreate(BaseModel):
     job_role_id: Optional[str] = None
@@ -702,15 +625,6 @@ class ContractResponse(BaseModel):
 
 
 # ==================== CONTRACT GENERATION ====================
-class ContractMilestoneTermCreate(BaseModel):
-    milestone_title: str
-    milestone_description: Optional[str] = None
-    milestone_amount: float
-    milestone_percentage: float
-    milestone_order: int
-    due_date: Optional[date] = None
-
-
 class ContractGenerateRequest(BaseModel):
     end_date: Optional[date] = None
     agreed_duration: Optional[str] = None
@@ -722,55 +636,7 @@ class ContractGenerateRequest(BaseModel):
     dispute_resolution: Optional[str] = "negotiation"
     revision_rounds: Optional[int] = 0
     additional_clauses: Optional[str] = None
-    milestones: Optional[List[ContractMilestoneTermCreate]] = None
-
-
-# ==================== CONTRACT MILESTONES ====================
-class ContractMilestoneCreate(BaseModel):
-    milestone_id: Optional[str] = None
-    contract_id: str
-    milestone_title: str
-    milestone_description: Optional[str] = None
-    milestone_amount: Optional[float] = None
-    milestone_percentage: Optional[float] = 0.0
-    milestone_order: Optional[int] = 0
-    due_date: Optional[date] = None
-    status: Optional[str] = "pending"
-
-class ContractMilestoneUpdate(BaseModel):
-    milestone_title: Optional[str] = None
-    milestone_description: Optional[str] = None
-    milestone_amount: Optional[float] = None
-    milestone_percentage: Optional[float] = None
-    milestone_order: Optional[int] = None
-    due_date: Optional[date] = None
-    status: Optional[str] = None
-    client_approved: Optional[bool] = None
-    payment_requested: Optional[bool] = None
-    payment_released: Optional[bool] = None
-    freelancer_confirmed_paid: Optional[bool] = None
-
-class ContractMilestoneResponse(BaseModel):
-    milestone_id: str
-    contract_id: str
-    milestone_title: str
-    milestone_description: Optional[str] = None
-    milestone_amount: Optional[float] = None
-    milestone_percentage: Optional[float] = None
-    milestone_order: Optional[int] = None
-    due_date: Optional[date] = None
-    status: str
-    completed_at: Optional[datetime] = None
-    paid_at: Optional[datetime] = None
-    client_approved: Optional[bool] = False
-    payment_requested: Optional[bool] = False
-    payment_released: Optional[bool] = False
-    freelancer_confirmed_paid: Optional[bool] = False
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
+    payment_schedule: Optional[str] = None
 
 
 # ==================== PORTFOLIO ====================
