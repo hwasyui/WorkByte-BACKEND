@@ -234,11 +234,8 @@ async def generate_contract_pdf(contract_id: str, generation_data: ContractGener
                 "dispute_resolution": generation_data.dispute_resolution,
                 "revision_rounds": generation_data.revision_rounds,
                 "additional_clauses": generation_data.additional_clauses,
+                "payment_schedule": generation_data.payment_schedule,
             },
-            milestones=(
-                [m.model_dump() for m in generation_data.milestones]
-                if generation_data.milestones else None
-            ),
         )
 
         pdf_bytes = ContractGenerationFunctions.render_contract_pdf(contract_id)

@@ -27,7 +27,6 @@ from routes.job_files.job_file_routes import job_file_router
 from routes.proposals.proposal_routes import proposal_router
 from routes.proposal_files.proposal_file_routes import proposal_file_router
 from routes.contracts.contract_routes import contract_router
-from routes.contract_milestones.contract_milestone_routes import contract_milestone_router
 from routes.portfolio.portfolio_routes import portfolio_router
 from routes.saved_jobs.saved_job_routes import saved_job_router
 from routes.ratings.rating_routes import rating_router
@@ -36,7 +35,6 @@ from routes.client_trust_scores.client_trust_score_routes import client_trust_sc
 from routes.freelancer_embeddings.freelancer_embedding_routes import freelancer_embedding_router
 from routes.job_embeddings.job_embedding_routes import job_embedding_router
 from routes.messages.message_routes import message_router
-from routes.job_payments.job_payment_routes import job_payment_router, job_milestone_router
 
 
 @asynccontextmanager
@@ -91,7 +89,6 @@ app.include_router(job_file_router)
 app.include_router(proposal_router)
 app.include_router(proposal_file_router)
 app.include_router(contract_router)
-app.include_router(contract_milestone_router)
 app.include_router(portfolio_router)
 app.include_router(saved_job_router)
 app.include_router(rating_router)
@@ -100,8 +97,6 @@ app.include_router(client_trust_score_router)
 app.include_router(freelancer_embedding_router)
 app.include_router(job_embedding_router)
 app.include_router(message_router)
-app.include_router(job_payment_router)
-app.include_router(job_milestone_router)
 
 
 # Custom exception handler for validation errors

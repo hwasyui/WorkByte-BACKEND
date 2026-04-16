@@ -2,7 +2,7 @@ import io
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib import colors
 
 
@@ -16,32 +16,7 @@ def _format_currency(amount, currency):
         return str(amount)
 
 
-def _render_milestones_table(milestones):
-    if not milestones:
-        return []
-
-    data = [["#", "Title", "Amount", "%", "Due Date"]]
-    for milestone in milestones:
-        data.append([
-            milestone.get("milestone_order", ""),
-            milestone.get("milestone_title", ""),
-            _format_currency(milestone.get("milestone_amount"), milestone.get("currency", "USD")),
-            f"{milestone.get('milestone_percentage', 0)}%",
-            milestone.get("due_date") or "TBD"
-        ])
-
-    style = TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#F2F2F2")),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor("#333333")),
-        ("ALIGN", (0, 0), (-1, -1), "LEFT"),
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-    ])
-    return [Table(data, style=style, hAlign="LEFT")]
-
-
-def generate_contract_pdf(contract_context: dict, contract_terms: dict, milestones: list) -> bytes:
+def generate_contract_pdf(contract_context: dict, contract_terms: dict) -> bytes:
     """Create a PDF document from contract context and contract terms."""
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=40, rightMargin=40, topMargin=40, bottomMargin=40)
@@ -75,12 +50,11 @@ def generate_contract_pdf(contract_context: dict, contract_terms: dict, mileston
     story.append(Paragraph(f"Start Date: {contract_context.get('start_date', 'N/A')}", normal))
     story.append(Paragraph(f"End Date: {contract_context.get('end_date', 'N/A')}", normal))
     story.append(Paragraph(f"Agreed Duration: {contract_context.get('agreed_duration', 'N/A')}", normal))
+    if contract_terms.get("payment_schedule"):
+        story.append(Spacer(1, 6))
+        story.append(Paragraph("Payment Schedule:", normal))
+        story.append(Paragraph(contract_terms.get("payment_schedule"), normal))
     story.append(Spacer(1, 12))
-
-    if contract_context.get("payment_structure") == "milestone_based" and milestones:
-        story.append(Paragraph("Milestones", header_style))
-        story.extend(_render_milestones_table(milestones))
-        story.append(Spacer(1, 12))
 
     story.append(Paragraph("Legal Clauses", header_style))
     story.append(Paragraph(f"Termination Notice: {contract_terms.get('termination_notice', 'N/A')} days", normal))
