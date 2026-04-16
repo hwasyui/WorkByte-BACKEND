@@ -8,6 +8,7 @@ import uuid
 from functions.schema_model import RatingCreate, RatingUpdate, RatingResponse
 from functions.schema_model import UserInDB
 from functions.authentication import get_current_user
+from functions.access_control import get_client_profile_for_user
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.ratings.rating_functions import RatingFunctions
@@ -83,11 +84,12 @@ async def create_rating(rating: RatingCreate, current_user: UserInDB = Depends(g
         if current_user.type != "client":
             return ResponseSchema.error("Only clients can create ratings", 403)
 
+        client = get_client_profile_for_user(current_user)
         contract = ContractFunctions.get_contract_by_id(rating.contract_id)
         if not contract:
             return ResponseSchema.error("Contract not found", 404)
 
-        if str(contract["client_id"]) != str(current_user.user_id):
+        if str(contract["client_id"]) != str(client["client_id"]):
             return ResponseSchema.error("Client does not own this contract", 403)
 
         if str(contract["freelancer_id"]) != str(rating.freelancer_id):
@@ -98,7 +100,7 @@ async def create_rating(rating: RatingCreate, current_user: UserInDB = Depends(g
 
         new_rating = RatingFunctions.create_rating(
             contract_id=rating.contract_id,
-            client_id=current_user.user_id,
+            client_id=client["client_id"],
             freelancer_id=rating.freelancer_id,
             communication_score=rating.communication_score,
             result_quality_score=rating.result_quality_score,
@@ -136,7 +138,10 @@ async def update_rating(rating_id: str, rating_update: RatingUpdate, current_use
         if not contract:
             return ResponseSchema.error("Associated contract not found", 404)
 
-        if current_user.type != "client" or str(contract["client_id"]) != str(current_user.user_id):
+        if current_user.type != "client":
+            return ResponseSchema.error("Only contract owner client can update rating", 403)
+        client = get_client_profile_for_user(current_user)
+        if str(contract["client_id"]) != str(client["client_id"]):
             return ResponseSchema.error("Only contract owner client can update rating", 403)
 
         update_data = rating_update.model_dump(exclude_unset=True)

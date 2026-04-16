@@ -678,9 +678,13 @@ def run():
     step("Rate the completed contracts — removes cold-start flag from ML ranker")
     post("/ratings", {
         "contract_id": hist_contract1_id,
-        "rater_id": cid1,
-        "ratee_id": fid,
-        "rating_score": 5.0,
+        "client_id": cid1,
+        "freelancer_id": fid,
+        "communication_score": 5,
+        "result_quality_score": 5,
+        "professionalism_score": 5,
+        "timeline_compliance_score": 5,
+        "overall_rating": 5.0,
         "review_text": (
             "Excellent backend developer. Built a clean, well-documented REST API "
             "using FastAPI and PostgreSQL. Delivered on time, handled edge cases well, "
@@ -689,9 +693,13 @@ def run():
     }, tok_client1)
     post("/ratings", {
         "contract_id": hist_contract2_id,
-        "rater_id": cid2,
-        "ratee_id": fid,
-        "rating_score": 4.0,
+        "client_id": cid2,
+        "freelancer_id": fid,
+        "communication_score": 4,
+        "result_quality_score": 4,
+        "professionalism_score": 4,
+        "timeline_compliance_score": 4,
+        "overall_rating": 4.0,
         "review_text": (
             "Strong Python developer with solid data engineering skills. "
             "Built a reliable ETL pipeline that processes our data efficiently. "
@@ -702,11 +710,15 @@ def run():
     step("Create performance rating — sets total_ratings_received so ML ranker is not cold-start")
     post("/performance-ratings", {
         "freelancer_id": fid,
-        "total_contracts": 2,
-        "completed_contracts": 2,
-        "average_rating": 4.5,
-        "on_time_delivery_rate": 100.0,
-        "total_earnings": 2700.0
+        "overall_performance_score": 82.5,
+        "confidence_score": 75.0,
+        "total_ratings_received": 2,
+        "average_communication": 4.5,
+        "average_result_quality": 4.5,
+        "average_professionalism": 4.5,
+        "average_scope_compliance": 4.5,
+        "average_timeline_compliance": 4.5,
+        "success_rate": 100.0
     }, tok_client1)
 
     step("Verify Budi's history is in place")
@@ -916,7 +928,7 @@ def run():
     gen_data1 = extract(get(f"/contracts/{live_contract1_id}/generation-data", tok_client1))
     print(f"  Contract title     : {gen_data1['contract']['contract_title']}")
     print(f"  Freelancer name    : {gen_data1['freelancer'].get('full_name', '?')}")
-    print(f"  Client name        : {gen_data1['client'].get('full_name', gen_data1['client'].get('company_name', '?'))}")
+    print(f"  Client name        : {gen_data1['client'].get('full_name', '?')}")
     print(f"  Job post title     : {gen_data1['job_post'].get('job_title', '?')}")
     print(f"  Role               : {gen_data1['job_role'].get('role_title', '?')}")
     print(f"  Existing terms     : {bool(gen_data1['contract_terms'])}")
@@ -1057,7 +1069,7 @@ def run():
         print(
             f"    [{ms.get('status', '?').upper():10}] "
             f"{ms.get('milestone_title', '?'):<40} "
-            f"${ms.get('milestone_budget', '?')}  due {ms.get('due_date', '?')}"
+            f"${ms.get('milestone_amount', '?')}  due {ms.get('due_date', '?')}"
         )
     milestone1_id = milestones[0]["milestone_id"] if milestones else None
 

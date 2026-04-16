@@ -7,3 +7,5 @@ python-jose[cryptography]
 argon2-cffi
 python-dotenv
 pydantic[email]
+reportlab
+supabase

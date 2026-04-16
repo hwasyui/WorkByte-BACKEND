@@ -7,6 +7,7 @@ from typing import List, Optional
 from functions.schema_model import PerformanceRatingCreate, PerformanceRatingUpdate, PerformanceRatingResponse
 from functions.schema_model import UserInDB
 from functions.authentication import get_current_user
+from functions.access_control import get_client_profile_for_user
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.performance_ratings.performance_rating_functions import PerformanceRatingFunctions
@@ -54,8 +55,9 @@ async def create_performance_rating(rating: PerformanceRatingCreate, current_use
         if current_user.type != "client":
             return ResponseSchema.error("Only clients can create performance ratings", 403)
 
+        client = get_client_profile_for_user(current_user)
         contracts = ContractFunctions.get_contracts_by_freelancer_id(rating.freelancer_id)
-        completed_contracts = [c for c in contracts if c.get("client_id") == current_user.user_id and c.get("status") in ["completed", "cancelled", "disputed"]]
+        completed_contracts = [c for c in contracts if str(c.get("client_id")) == str(client["client_id"]) and c.get("status") in ["completed", "cancelled", "disputed"]]
 
         if not completed_contracts:
             return ResponseSchema.error("No completed contract exists between this client and freelancer", 400)
@@ -93,8 +95,9 @@ async def update_performance_rating(freelancer_id: str, rating_update: Performan
             logger("PERFORMANCE_RATING", error_msg, "PUT /performance-ratings/freelancer/{freelancer_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
 
+        client = get_client_profile_for_user(current_user)
         contracts = ContractFunctions.get_contracts_by_freelancer_id(freelancer_id)
-        has_completed = any(c for c in contracts if c.get("client_id") == current_user.user_id and c.get("status") in ["completed", "cancelled", "disputed"])
+        has_completed = any(c for c in contracts if str(c.get("client_id")) == str(client["client_id"]) and c.get("status") in ["completed", "cancelled", "disputed"])
         if not has_completed:
             return ResponseSchema.error("No completed contract exists between this client and freelancer", 403)
 
