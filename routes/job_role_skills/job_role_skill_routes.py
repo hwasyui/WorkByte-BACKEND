@@ -57,9 +57,6 @@ async def get_job_role_skill(job_role_skill_id: str, current_user: UserInDB = De
 async def get_job_role_skills_by_job_role(job_role_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Fetch all skills for a specific job role - Authenticated users only - JSON response"""
     try:
-        job_role = JobRoleFunctions.get_job_role_by_id(job_role_id)
-        job_post = JobPostFunctions.get_job_post_by_id(job_role["job_post_id"])
-        assert_client_owns(current_user, job_post["client_id"])
         job_role_skills = JobRoleSkillFunctions.get_job_role_skills_by_job_role_id(job_role_id)
         success_msg = f"Retrieved {len(job_role_skills)} skills for job role {job_role_id}"
         logger("JOB_ROLE_SKILL", success_msg, "GET /job-role-skills/job-role/{job_role_id}", "INFO")
@@ -68,7 +65,6 @@ async def get_job_role_skills_by_job_role(job_role_id: str, current_user: UserIn
         error_msg = f"Failed to fetch skills for job role {job_role_id}: {str(e)}"
         logger("JOB_ROLE_SKILL", error_msg, "GET /job-role-skills/job-role/{job_role_id}", "ERROR")
         return ResponseSchema.error(error_msg, 500)
-
 
 @job_role_skill_router.post("", response_model=JobRoleSkillResponse, status_code=201)
 async def create_job_role_skill(job_role_skill: JobRoleSkillCreate, current_user: UserInDB = Depends(get_current_user)):
