@@ -35,6 +35,7 @@ from routes.client_trust_scores.client_trust_score_routes import client_trust_sc
 from routes.freelancer_embeddings.freelancer_embedding_routes import freelancer_embedding_router
 from routes.job_embeddings.job_embedding_routes import job_embedding_router
 from routes.messages.message_routes import message_router
+from routes.upload.upload_route import upload_router
 
 
 @asynccontextmanager
@@ -97,6 +98,7 @@ app.include_router(client_trust_score_router)
 app.include_router(freelancer_embedding_router)
 app.include_router(job_embedding_router)
 app.include_router(message_router)
+app.include_router(upload_router)
 
 
 # Custom exception handler for validation errors

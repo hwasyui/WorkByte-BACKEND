@@ -56,8 +56,6 @@ async def get_job_role(job_role_id: str, current_user: UserInDB = Depends(get_cu
 async def get_job_roles_by_job_post(job_post_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Fetch all job roles for a specific job post - Authenticated users only - JSON response"""
     try:
-        job_post = JobPostFunctions.get_job_post_by_id(job_post_id)
-        assert_client_owns(current_user, job_post["client_id"])
         job_roles = JobRoleFunctions.get_job_roles_by_job_post_id(job_post_id)
         success_msg = f"Retrieved {len(job_roles)} job roles for job post {job_post_id}"
         logger("JOB_ROLE", success_msg, "GET /job-roles/job-post/{job_post_id}", "INFO")

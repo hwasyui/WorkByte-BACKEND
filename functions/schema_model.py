@@ -396,6 +396,7 @@ class JobPostResponse(BaseModel):
     is_ai_generated: Optional[bool] = False
     view_count: Optional[int] = 0
     proposal_count: Optional[int] = 0
+    role_count: int = 0
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     posted_at: Optional[datetime] = None
