@@ -2,9 +2,9 @@ import io
 import os
 import re
 import math
-import httpx
 from typing import List, Optional
 from fastapi import UploadFile
+from groq import Groq
 from functions.db_manager import get_db
 from functions.logger import logger
 from ai_related.job_matching.embedding_service import get_embedding
@@ -174,8 +174,7 @@ async def _call_groq_for_cv_advice(
     if not api_key:
         return None
 
-    model = os.getenv("GROQ_MODEL", "llama3-8b-8192")
-    endpoint = "https://api.groq.com/openai/v1/chat/completions"
+    client = Groq(api_key=api_key)
 
     prompt = (
         "You are an AI assistant that helps improve CVs. "
@@ -186,29 +185,22 @@ async def _call_groq_for_cv_advice(
         "CV:\n" + cv_text[:2000] + "\n\nPROFILE:\n" + profile_text[:2000]
     )
 
-    payload = {
-        "model": model,
-        "messages": [
-            {"role": "user", "content": prompt}
-        ],
-        "max_tokens": 120,
-        "temperature": 0.7
-    }
-
-    async with httpx.AsyncClient(timeout=40.0) as client:
-        response = await client.post(
-            endpoint,
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-            },
-            json=payload,
+    try:
+        completion = client.chat.completions.create(
+            model="openai/gpt-oss-20b",
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            max_tokens=120,
+            temperature=0.7
         )
-        response.raise_for_status()
-        data = response.json()
 
-    if "choices" in data and data["choices"]:
-        content = data["choices"][0].get("message", {}).get("content")
-        if content:
-            return content.strip()
+        if completion.choices and completion.choices[0].message:
+            return completion.choices[0].message.content.strip()
+    except Exception as e:
+        logger("CV_ANALYSIS", f"Groq API error: {e}", level="WARNING")
+
     return None

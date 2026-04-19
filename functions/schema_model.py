@@ -488,12 +488,10 @@ class JobRoleSkillResponse(BaseModel):
 
 # ==================== JOB FILES ====================
 class JobFileCreate(BaseModel):
-    job_file_id: Optional[str] = None
-    job_post_id: str
-    file_url: str
-    file_type: str
-    file_name: str
-    file_size: Optional[int] = None
+    job_post_id: str = Form(...)
+    files: List[UploadFile] = File(...)
+
+    model_config = {"extra": "forbid"}
 
 class JobFileUpdate(BaseModel):
     file_url: Optional[str] = None
@@ -550,12 +548,10 @@ class ProposalResponse(BaseModel):
 
 # ==================== PROPOSAL FILES ====================
 class ProposalFileCreate(BaseModel):
-    proposal_file_id: Optional[str] = None
-    proposal_id: str
-    file_url: str
-    file_type: str
-    file_name: str
-    file_size: Optional[int] = None
+    proposal_id: str = Form(...)
+    files: List[UploadFile] = File(...)
+
+    model_config = {"extra": "forbid"}
 
 class ProposalFileUpdate(BaseModel):
     file_url: Optional[str] = None

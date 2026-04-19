@@ -1,0 +1,17 @@
+Sample CV Content
+John Doe
+Software Developer
+
+Experience:
+- Python Developer at Tech Corp (2020-Present)
+- Web Developer at Startup Inc (2018-2020)
+
+Skills:
+- Python
+- JavaScript
+- React
+- Node.js
+- SQL
+
+Education:
+- Bachelor of Computer Science, University of Tech (2014-2018)
