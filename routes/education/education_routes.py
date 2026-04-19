@@ -12,6 +12,7 @@ from functions.access_control import assert_freelancer_owns, get_freelancer_prof
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.education.education_functions import EducationFunctions
+from ai_related.job_matching.embedding_manager import mark_freelancer_dirty
 
 education_router = APIRouter(prefix="/educations", tags=["Educations"])
 
@@ -81,6 +82,7 @@ async def create_education(education: EducationCreate, current_user: UserInDB = 
             description=education.description
         )
         
+        mark_freelancer_dirty(str(education.freelancer_id))
         success_msg = f"Created education {education_id} for freelancer {education.freelancer_id}"
         logger("EDUCATION", success_msg, "POST /educations", "INFO")
         return ResponseSchema.success(new_education, 201)
@@ -108,6 +110,7 @@ async def update_education(education_id: str, education_update: EducationUpdate,
         update_data = education_update.model_dump(exclude_unset=True)
         updated_education = EducationFunctions.update_education(education_id, update_data)
         
+        mark_freelancer_dirty(str(existing_education["freelancer_id"]))
         success_msg = f"Updated education {education_id}"
         logger("EDUCATION", success_msg, "PUT /educations/{education_id}", "INFO")
         return ResponseSchema.success(updated_education, 200)
@@ -128,8 +131,9 @@ async def delete_education(education_id: str, current_user: UserInDB = Depends(g
             return ResponseSchema.error(error_msg, 404)
         assert_freelancer_owns(current_user, existing_education["freelancer_id"])
         
+        fid = str(existing_education["freelancer_id"])
         EducationFunctions.delete_education(education_id)
-        
+        mark_freelancer_dirty(fid)
         success_msg = f"Deleted education {education_id}"
         logger("EDUCATION", success_msg, "DELETE /educations/{education_id}", "INFO")
         return ResponseSchema.success("Deleted successfully", 200)

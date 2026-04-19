@@ -7,10 +7,11 @@ connectivity test.
 """
 
 import os
+import re
 import time
 import uuid
 import httpx
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Form, File, UploadFile
 from typing import Optional
 
 from functions.schema_model import UserInDB
@@ -22,6 +23,15 @@ from functions.db_manager import get_db
 from ai_related.job_matching.sweep_worker import run_sweep_once
 from ai_related.job_matching.ml_ranker import rank_jobs_with_ml
 from ai_related.job_matching.rag_analyser import analyse_job_match
+from ai_related.job_matching.embedding_service import get_embedding
+from ai_related.cv_analysis import (
+    extract_cv_text,
+    build_freelancer_profile_text,
+    get_profile_skill_names,
+    cosine_similarity,
+    classify_cv_quality,
+    build_cv_recommendations,
+)
 
 # Stage 2 minimum skill overlap — jobs below this threshold are pre-filtered
 # before reaching the ML ranker. Set conservatively so ML still has candidates.
@@ -368,6 +378,94 @@ async def analyse_job(
     except Exception as e:
         total_ms = (time.perf_counter() - t_request) * 1000
         logger("JOB_MATCHING", f"Error in RAG analysis after {total_ms:.0f}ms | error={e}", level="ERROR")
+        return ResponseSchema.error(str(e), 500)
+
+
+@router.post("/analyse/cv")
+async def analyse_cv(
+    cv_text: Optional[str] = Form(None),
+    cv_file: Optional[UploadFile] = File(None),
+    current_user: UserInDB = Depends(get_freelancer_user),
+):
+    """
+    Analyze an uploaded CV or raw CV text against the authenticated freelancer's profile.
+    Returns a semantic similarity score, category (good/enough/bad), matched/missing skills,
+    and actionable recommendations for improving the CV.
+    """
+    t_request = time.perf_counter()
+    try:
+        freelancer = get_freelancer_profile_for_user(current_user)
+        fid = str(freelancer["freelancer_id"])
+        db = get_db()
+
+        logger(
+            "JOB_MATCHING",
+            f"analyse/cv request started | freelancer_id={fid} | file_present={cv_file is not None}",
+            level="INFO",
+        )
+
+        if not cv_text and not cv_file:
+            return ResponseSchema.error(
+                "Please provide `cv_text` or upload a CV file with `cv_file`.", 400
+            )
+
+        if cv_file:
+            cv_text = await extract_cv_text(cv_file)
+
+        if not cv_text or not cv_text.strip():
+            return ResponseSchema.error("CV text is empty after parsing.", 400)
+
+        profile_text = build_freelancer_profile_text(fid)
+        if not profile_text:
+            return ResponseSchema.error(
+                "Freelancer profile is not available for analysis.", 404
+            )
+
+        skill_names = get_profile_skill_names(fid)
+        normalized_cv = re.sub(r"\s+", " ", cv_text.strip()).lower()
+        found_skills = [
+            skill for skill in skill_names
+            if re.search(r"\b" + re.escape(skill.lower()) + r"\b", normalized_cv)
+        ]
+        missing_skills = [skill for skill in skill_names if skill not in found_skills]
+        skill_coverage = None
+        if skill_names:
+            skill_coverage = len(found_skills) / len(skill_names)
+
+        cv_vector = await get_embedding(cv_text)
+        profile_vector = await get_embedding(profile_text)
+        similarity = cosine_similarity(cv_vector, profile_vector)
+        category = classify_cv_quality(similarity, skill_coverage)
+
+        recommendations = await build_cv_recommendations(
+            cv_text=cv_text,
+            profile_text=profile_text,
+            similarity=similarity,
+            skill_coverage=skill_coverage,
+            matched_skills=found_skills,
+            missing_skills=missing_skills,
+        )
+
+        payload = {
+            "cv_similarity_score": round(similarity, 4),
+            "cv_quality": category,
+            "skills_in_cv": found_skills,
+            "missing_profile_skills": missing_skills,
+            "skill_coverage_pct": round(skill_coverage, 4) if skill_coverage is not None else None,
+            "recommendations": recommendations,
+        }
+
+        total_ms = (time.perf_counter() - t_request) * 1000
+        logger(
+            "JOB_MATCHING",
+            f"analyse/cv complete | freelancer_id={fid} | category={category} | similarity={similarity:.4f} | time={total_ms:.0f}ms",
+            level="INFO",
+        )
+        return ResponseSchema.success(payload, 200)
+
+    except Exception as e:
+        total_ms = (time.perf_counter() - t_request) * 1000
+        logger("JOB_MATCHING", f"Error in CV analysis after {total_ms:.0f}ms | error={e}", level="ERROR")
         return ResponseSchema.error(str(e), 500)
 
 

@@ -1,3 +1,4 @@
+import asyncio
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -12,6 +13,7 @@ from functions.access_control import assert_client_owns, get_client_profile_for_
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.job_posts.job_post_functions import JobPostFunctions
+from ai_related.job_matching.embedding_manager import upsert_job_embedding, mark_job_dirty
 
 job_post_router = APIRouter(prefix="/job-posts", tags=["Job Posts"])
 
@@ -85,6 +87,7 @@ async def create_job_post(job_post: JobPostCreate, current_user: UserInDB = Depe
             is_ai_generated=job_post.is_ai_generated
         )
         
+        asyncio.create_task(upsert_job_embedding(str(new_job_post["job_post_id"])))
         success_msg = f"Created job post {job_post_id} for client {job_post.client_id}"
         logger("JOB_POST", success_msg, "POST /job-posts", "INFO")
         return ResponseSchema.success(new_job_post, 201)
@@ -112,6 +115,7 @@ async def update_job_post(job_post_id: str, job_post_update: JobPostUpdate, curr
         update_data = job_post_update.model_dump(exclude_unset=True)
         updated_job_post = JobPostFunctions.update_job_post(job_post_id, update_data)
         
+        mark_job_dirty(job_post_id)
         success_msg = f"Updated job post {job_post_id}"
         logger("JOB_POST", success_msg, "PUT /job-posts/{job_post_id}", "INFO")
         return ResponseSchema.success(updated_job_post, 200)

@@ -12,6 +12,7 @@ from functions.access_control import assert_freelancer_owns, get_freelancer_prof
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.freelancer_languages.freelancer_language_functions import FreelancerLanguageFunctions
+from ai_related.job_matching.embedding_manager import mark_freelancer_dirty
 
 freelancer_language_router = APIRouter(prefix="/freelancer-languages", tags=["Freelancer Languages"])
 
@@ -75,6 +76,7 @@ async def create_freelancer_language(freelancer_language: FreelancerLanguageCrea
             proficiency_level=freelancer_language.proficiency_level
         )
         
+        mark_freelancer_dirty(str(freelancer_language.freelancer_id))
         success_msg = f"Created freelancer language {freelancer_language_id} for freelancer {freelancer_language.freelancer_id}"
         logger("FREELANCER_LANGUAGE", success_msg, "POST /freelancer-languages", "INFO")
         return ResponseSchema.success(new_language, 201)
@@ -102,6 +104,7 @@ async def update_freelancer_language(freelancer_language_id: str, freelancer_lan
         update_data = freelancer_language_update.model_dump(exclude_unset=True)
         updated_language = FreelancerLanguageFunctions.update_freelancer_language(freelancer_language_id, update_data)
         
+        mark_freelancer_dirty(str(existing_language["freelancer_id"]))
         success_msg = f"Updated freelancer language {freelancer_language_id}"
         logger("FREELANCER_LANGUAGE", success_msg, "PUT /freelancer-languages/{freelancer_language_id}", "INFO")
         return ResponseSchema.success(updated_language, 200)
@@ -122,8 +125,9 @@ async def delete_freelancer_language(freelancer_language_id: str, current_user: 
             return ResponseSchema.error(error_msg, 404)
         assert_freelancer_owns(current_user, existing_language["freelancer_id"])
         
+        fid = str(existing_language["freelancer_id"])
         FreelancerLanguageFunctions.delete_freelancer_language(freelancer_language_id)
-        
+        mark_freelancer_dirty(fid)
         success_msg = f"Deleted freelancer language {freelancer_language_id}"
         logger("FREELANCER_LANGUAGE", success_msg, "DELETE /freelancer-languages/{freelancer_language_id}", "INFO")
         return ResponseSchema.success("Deleted successfully", 200)

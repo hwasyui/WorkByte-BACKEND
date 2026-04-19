@@ -112,7 +112,8 @@ class ContractGenerationFunctions:
                 "job_post": job_post,
                 "job_role": job_role,
                 "freelancer": freelancer,
-                "client": client
+                "client": client,
+                "milestones": [],
             }
         except Exception as e:
             logger("CONTRACT_GENERATION", f"Error building generation context: {str(e)}", level="ERROR")

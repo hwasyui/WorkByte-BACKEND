@@ -1,3 +1,4 @@
+import asyncio
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -11,7 +12,8 @@ from functions.authentication import get_current_user, get_freelancer_user
 from functions.access_control import assert_freelancer_owns, get_freelancer_profile_for_user
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
-from routes.freelancers.freelancer_functions import FreelancerFunctions, EmbeddingFunctions, get_comprehensive_freelancer_profile
+from routes.freelancers.freelancer_functions import FreelancerFunctions, get_comprehensive_freelancer_profile
+from ai_related.job_matching.embedding_manager import upsert_freelancer_embedding, mark_freelancer_dirty
 
 freelancer_router = APIRouter(prefix="/freelancers", tags=["Freelancers"])
 
@@ -49,6 +51,7 @@ async def create_freelancer(freelancer: FreelancerCreate, current_user: UserInDB
             rate_currency=freelancer.rate_currency,
             create_embedding=True
         )
+        asyncio.create_task(upsert_freelancer_embedding(str(new_freelancer["freelancer_id"])))
         logger("FREELANCER", f"Created freelancer {freelancer_id}", "POST /freelancers", "INFO")
         return ResponseSchema.success(new_freelancer, 201)
     except Exception as e:
@@ -67,6 +70,7 @@ async def update_freelancer(identifier: str, freelancer_update: FreelancerUpdate
         assert_freelancer_owns(current_user, freelancer_id)
         update_data = {k: v for k, v in freelancer_update.dict().items() if k in freelancer_update.__fields_set__}
         updated_freelancer = FreelancerFunctions.update_freelancer(freelancer_id=freelancer_id, update_data=update_data)
+        mark_freelancer_dirty(freelancer_id)
         logger("FREELANCER", f"Updated freelancer {freelancer_id}", "PUT /freelancers/{identifier}", "INFO")
         return ResponseSchema.success(updated_freelancer, 200)
     except Exception as e:

@@ -12,6 +12,7 @@ from functions.access_control import assert_freelancer_owns, get_freelancer_prof
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.freelancer_specialities.freelancer_speciality_functions import FreelancerSpecialityFunctions
+from ai_related.job_matching.embedding_manager import mark_freelancer_dirty
 
 freelancer_speciality_router = APIRouter(prefix="/freelancer-specialities", tags=["Freelancer Specialities"])
 
@@ -74,6 +75,7 @@ async def create_freelancer_speciality(freelancer_speciality: FreelancerSpeciali
             is_primary=freelancer_speciality.is_primary
         )
         
+        mark_freelancer_dirty(str(freelancer_speciality.freelancer_id))
         success_msg = f"Created freelancer speciality {freelancer_speciality_id} for freelancer {freelancer_speciality.freelancer_id}"
         logger("FREELANCER_SPECIALITY", success_msg, "POST /freelancer-specialities", "INFO")
         return ResponseSchema.success(new_speciality, 201)
@@ -101,6 +103,7 @@ async def update_freelancer_speciality(freelancer_speciality_id: str, freelancer
         update_data = freelancer_speciality_update.model_dump(exclude_unset=True)
         updated_speciality = FreelancerSpecialityFunctions.update_freelancer_speciality(freelancer_speciality_id, update_data)
         
+        mark_freelancer_dirty(str(existing_speciality["freelancer_id"]))
         success_msg = f"Updated freelancer speciality {freelancer_speciality_id}"
         logger("FREELANCER_SPECIALITY", success_msg, "PUT /freelancer-specialities/{freelancer_speciality_id}", "INFO")
         return ResponseSchema.success(updated_speciality, 200)
@@ -120,8 +123,9 @@ async def delete_freelancer_speciality(freelancer_speciality_id: str, current_us
             return ResponseSchema.error(error_msg, 404)
         assert_freelancer_owns(current_user, existing_speciality["freelancer_id"])
         
+        fid = str(existing_speciality["freelancer_id"])
         FreelancerSpecialityFunctions.delete_freelancer_speciality(freelancer_speciality_id)
-        
+        mark_freelancer_dirty(fid)
         success_msg = f"Deleted freelancer speciality {freelancer_speciality_id}"
         logger("FREELANCER_SPECIALITY", success_msg, "DELETE /freelancer-specialities/{freelancer_speciality_id}", "INFO")
         return ResponseSchema.success("Deleted successfully", 200)
@@ -136,7 +140,7 @@ async def delete_freelancer_speciality_by_ids(freelancer_id: str, speciality_id:
     try:
         assert_freelancer_owns(current_user, freelancer_id)
         FreelancerSpecialityFunctions.delete_freelancer_speciality_by_freelancer_and_speciality(freelancer_id, speciality_id)
-        
+        mark_freelancer_dirty(freelancer_id)
         success_msg = f"Deleted speciality {speciality_id} from freelancer {freelancer_id}"
         logger("FREELANCER_SPECIALITY", success_msg, "DELETE /freelancer-specialities/freelancer/{freelancer_id}/speciality/{speciality_id}", "INFO")
         return ResponseSchema.success("Deleted successfully", 200)

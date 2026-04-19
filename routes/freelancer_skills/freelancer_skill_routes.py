@@ -12,6 +12,7 @@ from functions.access_control import assert_freelancer_owns, get_freelancer_prof
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.freelancer_skills.freelancer_skill_functions import FreelancerSkillFunctions
+from ai_related.job_matching.embedding_manager import mark_freelancer_dirty
 
 freelancer_skill_router = APIRouter(prefix="/freelancer-skills", tags=["Freelancer Skills"])
 
@@ -76,6 +77,7 @@ async def create_freelancer_skill(freelancer_skill: FreelancerSkillCreate, curre
             proficiency_level=freelancer_skill.proficiency_level
         )
         
+        mark_freelancer_dirty(str(freelancer_skill.freelancer_id))
         success_msg = f"Created freelancer skill {freelancer_skill_id} for freelancer {freelancer_skill.freelancer_id}"
         logger("FREELANCER_SKILL", success_msg, "POST /freelancer-skills", "INFO")
         return ResponseSchema.success(new_skill, 201)
@@ -103,6 +105,7 @@ async def update_freelancer_skill(freelancer_skill_id: str, freelancer_skill_upd
         update_data = freelancer_skill_update.model_dump(exclude_unset=True)
         updated_skill = FreelancerSkillFunctions.update_freelancer_skill(freelancer_skill_id, update_data)
         
+        mark_freelancer_dirty(str(existing_skill["freelancer_id"]))
         success_msg = f"Updated freelancer skill {freelancer_skill_id}"
         logger("FREELANCER_SKILL", success_msg, "PUT /freelancer-skills/{freelancer_skill_id}", "INFO")
         return ResponseSchema.success(updated_skill, 200)
@@ -123,8 +126,9 @@ async def delete_freelancer_skill(freelancer_skill_id: str, current_user: UserIn
             return ResponseSchema.error(error_msg, 404)
         assert_freelancer_owns(current_user, existing_skill["freelancer_id"])
         
+        fid = str(existing_skill["freelancer_id"])
         FreelancerSkillFunctions.delete_freelancer_skill(freelancer_skill_id)
-        
+        mark_freelancer_dirty(fid)
         success_msg = f"Deleted freelancer skill {freelancer_skill_id}"
         logger("FREELANCER_SKILL", success_msg, "DELETE /freelancer-skills/{freelancer_skill_id}", "INFO")
         return ResponseSchema.success("Deleted successfully", 200)
@@ -140,7 +144,7 @@ async def delete_freelancer_skill_by_ids(freelancer_id: str, skill_id: str, curr
     try:
         assert_freelancer_owns(current_user, freelancer_id)
         FreelancerSkillFunctions.delete_freelancer_skill_by_freelancer_and_skill(freelancer_id, skill_id)
-        
+        mark_freelancer_dirty(freelancer_id)
         success_msg = f"Deleted skill {skill_id} from freelancer {freelancer_id}"
         logger("FREELANCER_SKILL", success_msg, "DELETE /freelancer-skills/freelancer/{freelancer_id}/skill/{skill_id}", "INFO")
         return ResponseSchema.success("Deleted successfully", 200)
