@@ -2,7 +2,7 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, File, Form, UploadFile
 from typing import List, Optional, Dict
 from functions.schema_model import JobFileCreate, JobFileUpdate, JobFileResponse
 from functions.schema_model import UserInDB
@@ -10,6 +10,7 @@ from functions.authentication import get_current_user
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.job_files.job_file_functions import JobFileFunctions
+from routes.job_posts.job_post_functions import JobPostFunctions
 from functions.supabase_client import upload_job_file
 from mimetypes import guess_type as guess_mime
 
@@ -63,36 +64,54 @@ async def get_job_files_by_job_post(job_post_id: str, current_user: UserInDB = D
 
 
 @job_file_router.post("", response_model=List[JobFileResponse], status_code=201)
-async def create_job_file(job_file: JobFileCreate = Depends(), current_user: UserInDB = Depends(get_current_user)):
+async def create_job_file(
+    job_post_id: str = Form(...),
+    files: List[UploadFile] = File(...),
+    current_user: UserInDB = Depends(get_current_user),
+):
     """Upload one or more files for a job post - Authenticated users only"""
     try:
-        if not job_file.files:
+        existing_job_post = JobPostFunctions.get_job_post_by_id(job_post_id)
+        if not existing_job_post:
+            return ResponseSchema.error(f"Job post {job_post_id} not found", 404)
+
+        if not files:
             return ResponseSchema.error("At least one file must be uploaded", 400)
 
-        created_files = []
-        for upload in job_file.files:
+        prepared_files = []
+        for upload in files:
             contents = await upload.read()
             if not contents:
                 return ResponseSchema.error(f"Uploaded file '{upload.filename or 'unnamed'}' must not be empty", 400)
 
             mime_type = upload.content_type or guess_mime(upload.filename or "attachment.bin")[0]
+            mime_type = mime_type or "application/octet-stream"
+            prepared_files.append({
+                "file_name": upload.filename or "attachment.bin",
+                "file_bytes": contents,
+                "file_type": mime_type,
+                "file_size": len(contents),
+            })
+
+        created_files = []
+        for upload in prepared_files:
             file_url = upload_job_file(
-                job_post_id=job_file.job_post_id,
-                file_name=upload.filename or "attachment.bin",
-                file_bytes=contents,
-                content_type=mime_type,
+                job_post_id=job_post_id,
+                file_name=upload["file_name"],
+                file_bytes=upload["file_bytes"],
+                content_type=upload["file_type"],
             )
             created_files.append(
                 JobFileFunctions.create_job_file(
-                    job_post_id=job_file.job_post_id,
+                    job_post_id=job_post_id,
                     file_url=file_url,
-                    file_type=mime_type or "application/octet-stream",
-                    file_name=upload.filename or "attachment.bin",
-                    file_size=len(contents),
+                    file_type=upload["file_type"],
+                    file_name=upload["file_name"],
+                    file_size=upload["file_size"],
                 )
             )
 
-        success_msg = f"Created {len(created_files)} job file(s) for job post {job_file.job_post_id}"
+        success_msg = f"Created {len(created_files)} job file(s) for job post {job_post_id}"
         logger("JOB_FILE", success_msg, "POST /job-files", "INFO")
         return ResponseSchema.success(created_files, 201)
     except ValueError as e:

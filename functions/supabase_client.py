@@ -84,7 +84,7 @@ def create_signed_url(bucket: str, path: str, expires_in: int = 3600) -> str:
 def upload_proposal_file(proposal_id: str, file_name: str, file_bytes: bytes, content_type: str = None) -> str:
     return upload_file(
         bucket=BUCKET_PROPOSAL_FILES,
-        path=f"{proposal_id}/files/{file_name}",
+        path=f"{proposal_id}/{file_name}",
         file_bytes=file_bytes,
         content_type=content_type or guess_mime(file_name),
     )
@@ -93,7 +93,7 @@ def upload_proposal_file(proposal_id: str, file_name: str, file_bytes: bytes, co
 def upload_job_file(job_post_id: str, file_name: str, file_bytes: bytes, content_type: str = None) -> str:
     return upload_file(
         bucket=BUCKET_JOB_FILES,
-        path=f"{job_post_id}/files/{file_name}",
+        path=f"{job_post_id}/{file_name}",
         file_bytes=file_bytes,
         content_type=content_type or guess_mime(file_name),
     )
