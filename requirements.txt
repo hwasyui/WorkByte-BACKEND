@@ -1,6 +1,7 @@
 fastapi
 psycopg2-binary
 python-multipart
+PyPDF2
 sqlalchemy
 uvicorn
 python-jose[cryptography]
@@ -9,3 +10,10 @@ python-dotenv
 pydantic[email]
 reportlab
 supabase
+numpy
+pandas
+joblib
+lightgbm
+scikit-learn
+httpx
+google-genai

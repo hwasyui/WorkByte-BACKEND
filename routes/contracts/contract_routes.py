@@ -1,3 +1,4 @@
+import asyncio
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -20,6 +21,7 @@ from functions.response_utils import ResponseSchema
 from functions.db_manager import get_db
 from routes.contracts.contract_functions import ContractFunctions
 from routes.contracts.contract_generation_functions import ContractGenerationFunctions
+from ai_related.job_matching.embedding_manager import upsert_contract_embedding
 
 contract_router = APIRouter(prefix="/contracts", tags=["Contracts"])
 
@@ -277,6 +279,18 @@ async def update_contract(contract_id: str, contract_update: ContractUpdate, cur
 
         update_data = contract_update.model_dump(exclude_unset=True)
         updated_contract = ContractFunctions.update_contract(contract_id, update_data)
+
+        if update_data.get("status") == "completed" and existing_contract.get("status") != "completed":
+            asyncio.create_task(upsert_contract_embedding(contract_id))
+            db = get_db()
+            db.execute_query(
+                "UPDATE freelancer SET total_jobs = total_jobs + 1 WHERE freelancer_id = :fid",
+                {"fid": existing_contract["freelancer_id"]},
+            )
+            db.execute_query(
+                "UPDATE client SET total_jobs_completed = total_jobs_completed + 1 WHERE client_id = :cid",
+                {"cid": existing_contract["client_id"]},
+            )
 
         success_msg = f"Updated contract {contract_id}"
         logger("CONTRACT", success_msg, "PUT /contracts/{contract_id}", "INFO")

@@ -13,6 +13,7 @@ from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.job_posts.job_post_functions import JobPostFunctions
 from routes.job_roles.job_role_functions import JobRoleFunctions
+from ai_related.job_matching.embedding_manager import mark_job_dirty
 
 job_role_router = APIRouter(prefix="/job-roles", tags=["Job Roles"])
 
@@ -86,6 +87,7 @@ async def create_job_role(job_role: JobRoleCreate, current_user: UserInDB = Depe
             display_order=job_role.display_order
         )
         
+        mark_job_dirty(str(job_role.job_post_id))
         success_msg = f"Created job role {job_role_id} for job post {job_role.job_post_id}"
         logger("JOB_ROLE", success_msg, "POST /job-roles", "INFO")
         return ResponseSchema.success(new_job_role, 201)
@@ -114,6 +116,7 @@ async def update_job_role(job_role_id: str, job_role_update: JobRoleUpdate, curr
         update_data = job_role_update.model_dump(exclude_unset=True)
         updated_job_role = JobRoleFunctions.update_job_role(job_role_id, update_data)
         
+        mark_job_dirty(str(existing_job_role["job_post_id"]))
         success_msg = f"Updated job role {job_role_id}"
         logger("JOB_ROLE", success_msg, "PUT /job-roles/{job_role_id}", "INFO")
         return ResponseSchema.success(updated_job_role, 200)
@@ -135,8 +138,9 @@ async def delete_job_role(job_role_id: str, current_user: UserInDB = Depends(get
         job_post = JobPostFunctions.get_job_post_by_id(existing_job_role["job_post_id"])
         assert_client_owns(current_user, job_post["client_id"])
         
+        jpid = str(existing_job_role["job_post_id"])
         JobRoleFunctions.delete_job_role(job_role_id)
-        
+        mark_job_dirty(jpid)
         success_msg = f"Deleted job role {job_role_id}"
         logger("JOB_ROLE", success_msg, "DELETE /job-roles/{job_role_id}", "INFO")
         return ResponseSchema.success("Deleted successfully", 200)

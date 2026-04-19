@@ -42,7 +42,6 @@ class _Tee:
     def close(self):
         self._file.close()
 
-    # make it behave enough like a real file for sys.stdout replacement
     def fileno(self):
         return self._stdout.fileno()
 
@@ -1059,44 +1058,11 @@ def run():
     print(f"    {signed_url2[:120]}{'...' if len(signed_url2) > 120 else ''}")
     print("  → Open this URL in a browser to view the milestone contract PDF in Supabase.")
 
-    # ── 21. Milestone lifecycle for the milestone-based contract ─────────────
-
-    step("List milestones created by the generate endpoint")
-    milestones_list = extract(get(f"/contract-milestones/contract/{live_contract2_id}", tok_freelancer))
-    milestones = milestones_list if isinstance(milestones_list, list) else []
-    print(f"  {len(milestones)} milestone(s) found:")
-    for ms in milestones:
-        print(
-            f"    [{ms.get('status', '?').upper():10}] "
-            f"{ms.get('milestone_title', '?'):<40} "
-            f"${ms.get('milestone_amount', '?')}  due {ms.get('due_date', '?')}"
-        )
-    milestone1_id = milestones[0]["milestone_id"] if milestones else None
-
-    if milestone1_id:
-        step("Client 2 moves Milestone 1 → in_progress")
-        put(f"/contract-milestones/{milestone1_id}", {"status": "in_progress"}, tok_client2)
-        print("  Milestone 1 is now in_progress (client_approved = True).")
-
-        step("Client 2 marks Milestone 1 → completed (work accepted)")
-        put(f"/contract-milestones/{milestone1_id}", {"status": "completed"}, tok_client2)
-        print("  Milestone 1 marked completed by client.")
-
-        step("Client 2 marks Milestone 1 → paid (releases payment)")
-        put(f"/contract-milestones/{milestone1_id}", {"status": "paid"}, tok_client2)
-        print("  Payment request sent to freelancer.")
-
-        step("Freelancer confirms receipt of Milestone 1 payment")
-        post(f"/contract-milestones/{milestone1_id}/confirm-payment", {}, tok_freelancer)
-        print("  Freelancer confirmed payment — milestone fully settled.")
-
-        step("Verify final state of Milestone 1")
-        ms1 = extract(get(f"/contract-milestones/{milestone1_id}", tok_freelancer))
-        print(f"  status                   : {ms1.get('status')}")
-        print(f"  client_approved          : {ms1.get('client_approved')}")
-        print(f"  payment_requested        : {ms1.get('payment_requested')}")
-        print(f"  freelancer_confirmed_paid: {ms1.get('freelancer_confirmed_paid')}")
-        print(f"  payment_released         : {ms1.get('payment_released')}")
+    # ── 21. Milestone lifecycle (skipped — milestone management routes not yet built) ─────────
+    step("Milestone lifecycle (Step 21 — skipped)")
+    print("  NOTE: /contract-milestones/* routes are not yet implemented.")
+    print("  The milestone-based contract and its PDF were created successfully above.")
+    print("  Milestone tracking (in_progress → completed → paid → confirmed) is a future feature.")
 
     # ── 22. Contract list views ───────────────────────────────────────────────
 

@@ -11,3 +11,5 @@ __pycache__/
 notes.txt
 *.json
 venv
+ai_related/job_matching/machine_learning/*.ipynb
+walkthrough/*.md

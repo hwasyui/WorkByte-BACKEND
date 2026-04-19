@@ -122,7 +122,7 @@ async def create_proposal(
             proposed_budget=proposal.proposed_budget,
             job_role_id=proposal.job_role_id,
             proposed_duration=proposal.proposed_duration,
-            status="pending",
+            status=proposal.status if proposal.status else "pending",
             is_ai_generated=proposal.is_ai_generated,
         )
 

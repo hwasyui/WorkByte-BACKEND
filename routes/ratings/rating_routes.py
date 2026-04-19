@@ -13,6 +13,7 @@ from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.ratings.rating_functions import RatingFunctions
 from routes.contracts.contract_functions import ContractFunctions
+from ai_related.job_matching.embedding_manager import mark_contract_dirty
 
 rating_router = APIRouter(prefix="/ratings", tags=["Ratings"])
 
@@ -110,6 +111,7 @@ async def create_rating(rating: RatingCreate, current_user: UserInDB = Depends(g
             review_text=rating.review_text
         )
 
+        mark_contract_dirty(str(rating.contract_id))
         success_msg = f"Created rating {new_rating.get('rating_id')}"
         logger("RATING", success_msg, "POST /ratings", "INFO")
         return ResponseSchema.success(new_rating, 201)
@@ -147,6 +149,7 @@ async def update_rating(rating_id: str, rating_update: RatingUpdate, current_use
         update_data = rating_update.model_dump(exclude_unset=True)
         updated_rating = RatingFunctions.update_rating(rating_id, update_data)
 
+        mark_contract_dirty(str(existing_rating["contract_id"]))
         success_msg = f"Updated rating {rating_id}"
         logger("RATING", success_msg, "PUT /ratings/{rating_id}", "INFO")
         return ResponseSchema.success(updated_rating, 200)

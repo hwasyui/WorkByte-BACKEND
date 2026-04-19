@@ -12,6 +12,7 @@ from functions.access_control import assert_freelancer_owns, get_freelancer_prof
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.work_experience.work_experience_functions import WorkExperienceFunctions
+from ai_related.job_matching.embedding_manager import mark_freelancer_dirty
 
 work_experience_router = APIRouter(prefix="/work-experiences", tags=["Work Experiences"])
 
@@ -80,6 +81,7 @@ async def create_work_experience(work_experience: WorkExperienceCreate, current_
             description=work_experience.description
         )
         
+        mark_freelancer_dirty(str(work_experience.freelancer_id))
         success_msg = f"Created work experience {work_experience_id} for freelancer {work_experience.freelancer_id}"
         logger("WORK_EXPERIENCE", success_msg, "POST /work-experiences", "INFO")
         return ResponseSchema.success(new_experience, 201)
@@ -107,6 +109,7 @@ async def update_work_experience(work_experience_id: str, work_experience_update
         update_data = work_experience_update.model_dump(exclude_unset=True)
         updated_experience = WorkExperienceFunctions.update_work_experience(work_experience_id, update_data)
         
+        mark_freelancer_dirty(str(existing_experience["freelancer_id"]))
         success_msg = f"Updated work experience {work_experience_id}"
         logger("WORK_EXPERIENCE", success_msg, "PUT /work-experiences/{work_experience_id}", "INFO")
         return ResponseSchema.success(updated_experience, 200)
@@ -127,8 +130,9 @@ async def delete_work_experience(work_experience_id: str, current_user: UserInDB
             return ResponseSchema.error(error_msg, 404)
         assert_freelancer_owns(current_user, existing_experience["freelancer_id"])
         
+        fid = str(existing_experience["freelancer_id"])
         WorkExperienceFunctions.delete_work_experience(work_experience_id)
-        
+        mark_freelancer_dirty(fid)
         success_msg = f"Deleted work experience {work_experience_id}"
         logger("WORK_EXPERIENCE", success_msg, "DELETE /work-experiences/{work_experience_id}", "INFO")
         return ResponseSchema.success("Deleted successfully", 200)

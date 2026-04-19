@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
+import asyncio
 import sys, os, uvicorn, json, re
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from functions.functions import get_table_testing
@@ -9,6 +10,8 @@ from functions.logger import logger
 from functions.db_manager import init_db, close_db
 from functions.response_utils import ResponseSchema
 from routes.auth_router import auth_router
+from ai_related.job_matching.job_matching_routes import router as job_matching_router
+from ai_related.job_matching.sweep_worker import embedding_sweep_loop
 from routes.users.users_routes import users_router
 from routes.freelancers.freelancer_routes import freelancer_router
 from routes.clients.client_routes import client_router
@@ -48,10 +51,19 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger("LIFESPAN", f"Failed to initialize database on startup: {str(e)}", level="ERROR")
         raise
-    
+
+    sweep_task = asyncio.create_task(embedding_sweep_loop())
+    logger("LIFESPAN", "Embedding sweep worker started", level="INFO")
+
     yield
+
+    sweep_task.cancel()
+    try:
+        await sweep_task
+    except asyncio.CancelledError:
+        pass
+    logger("LIFESPAN", "Embedding sweep worker stopped", level="INFO")
     
-    # Shutdown: Close database connections
     try:
         close_db()
         logger("LIFESPAN", "Application shutdown complete - database connections closed", level="INFO")
@@ -99,6 +111,7 @@ app.include_router(freelancer_embedding_router)
 app.include_router(job_embedding_router)
 app.include_router(message_router)
 app.include_router(upload_router)
+app.include_router(job_matching_router, prefix="/ai/job_matching")
 
 
 # Custom exception handler for validation errors

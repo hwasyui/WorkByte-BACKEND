@@ -14,6 +14,7 @@ from functions.response_utils import ResponseSchema
 from routes.job_posts.job_post_functions import JobPostFunctions
 from routes.job_role_skills.job_role_skill_functions import JobRoleSkillFunctions
 from routes.job_roles.job_role_functions import JobRoleFunctions
+from ai_related.job_matching.embedding_manager import mark_job_dirty
 
 job_role_skill_router = APIRouter(prefix="/job-role-skills", tags=["Job Role Skills"])
 
@@ -82,6 +83,7 @@ async def create_job_role_skill(job_role_skill: JobRoleSkillCreate, current_user
             importance_level=job_role_skill.importance_level
         )
         
+        mark_job_dirty(str(job_post["job_post_id"]))
         success_msg = f"Created job role skill {job_role_skill_id} for job role {job_role_skill.job_role_id}"
         logger("JOB_ROLE_SKILL", success_msg, "POST /job-role-skills", "INFO")
         return ResponseSchema.success(new_job_role_skill, 201)
@@ -111,6 +113,7 @@ async def update_job_role_skill(job_role_skill_id: str, job_role_skill_update: J
         update_data = job_role_skill_update.model_dump(exclude_unset=True)
         updated_job_role_skill = JobRoleSkillFunctions.update_job_role_skill(job_role_skill_id, update_data)
         
+        mark_job_dirty(str(job_post["job_post_id"]))
         success_msg = f"Updated job role skill {job_role_skill_id}"
         logger("JOB_ROLE_SKILL", success_msg, "PUT /job-role-skills/{job_role_skill_id}", "INFO")
         return ResponseSchema.success(updated_job_role_skill, 200)
@@ -133,8 +136,9 @@ async def delete_job_role_skill(job_role_skill_id: str, current_user: UserInDB =
         job_post = JobPostFunctions.get_job_post_by_id(job_role["job_post_id"])
         assert_client_owns(current_user, job_post["client_id"])
         
+        jpid = str(job_post["job_post_id"])
         JobRoleSkillFunctions.delete_job_role_skill(job_role_skill_id)
-        
+        mark_job_dirty(jpid)
         success_msg = f"Deleted job role skill {job_role_skill_id}"
         logger("JOB_ROLE_SKILL", success_msg, "DELETE /job-role-skills/{job_role_skill_id}", "INFO")
         return ResponseSchema.success("Deleted successfully", 200)
