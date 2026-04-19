@@ -2,15 +2,16 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends
 from typing import List, Optional, Dict
-import uuid
 from functions.schema_model import JobFileCreate, JobFileUpdate, JobFileResponse
 from functions.schema_model import UserInDB
 from functions.authentication import get_current_user
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.job_files.job_file_functions import JobFileFunctions
+from functions.supabase_client import upload_job_file
+from mimetypes import guess_type as guess_mime
 
 job_file_router = APIRouter(prefix="/job-files", tags=["Job Files"])
 
@@ -61,23 +62,39 @@ async def get_job_files_by_job_post(job_post_id: str, current_user: UserInDB = D
         return ResponseSchema.error(error_msg, 500)
 
 
-@job_file_router.post("", response_model=JobFileResponse, status_code=201)
-async def create_job_file(job_file: JobFileCreate, current_user: UserInDB = Depends(get_current_user)):
-    """Create a new job file - Authenticated users only - JSON body accepted"""
+@job_file_router.post("", response_model=List[JobFileResponse], status_code=201)
+async def create_job_file(job_file: JobFileCreate = Depends(), current_user: UserInDB = Depends(get_current_user)):
+    """Upload one or more files for a job post - Authenticated users only"""
     try:
-        job_file_id = job_file.job_file_id or str(uuid.uuid4())
-        
-        new_job_file = JobFileFunctions.create_job_file(
-            job_post_id=job_file.job_post_id,
-            file_url=job_file.file_url,
-            file_type=job_file.file_type,
-            file_name=job_file.file_name,
-            file_size=job_file.file_size
-        )
-        
-        success_msg = f"Created job file {job_file_id} for job post {job_file.job_post_id}"
+        if not job_file.files:
+            return ResponseSchema.error("At least one file must be uploaded", 400)
+
+        created_files = []
+        for upload in job_file.files:
+            contents = await upload.read()
+            if not contents:
+                return ResponseSchema.error(f"Uploaded file '{upload.filename or 'unnamed'}' must not be empty", 400)
+
+            mime_type = upload.content_type or guess_mime(upload.filename or "attachment.bin")[0]
+            file_url = upload_job_file(
+                job_post_id=job_file.job_post_id,
+                file_name=upload.filename or "attachment.bin",
+                file_bytes=contents,
+                content_type=mime_type,
+            )
+            created_files.append(
+                JobFileFunctions.create_job_file(
+                    job_post_id=job_file.job_post_id,
+                    file_url=file_url,
+                    file_type=mime_type or "application/octet-stream",
+                    file_name=upload.filename or "attachment.bin",
+                    file_size=len(contents),
+                )
+            )
+
+        success_msg = f"Created {len(created_files)} job file(s) for job post {job_file.job_post_id}"
         logger("JOB_FILE", success_msg, "POST /job-files", "INFO")
-        return ResponseSchema.success(new_job_file, 201)
+        return ResponseSchema.success(created_files, 201)
     except ValueError as e:
         error_msg = f"Validation error: {str(e)}"
         logger("JOB_FILE", error_msg, "POST /job-files", "WARNING")
