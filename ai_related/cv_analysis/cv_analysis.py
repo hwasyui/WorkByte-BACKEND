@@ -36,11 +36,11 @@ async def extract_cv_text(cv_file: UploadFile) -> str:
         pages = [page.extract_text() or "" for page in reader.pages]
         extracted = "\n".join(pages).strip()
         if not extracted:
-            raise ValueError("Tidak dapat mengekstrak teks dari PDF. Pastikan file PDF berisi teks bukan gambar.")
+            raise ValueError("Unable to extract text from the PDF. Ensure the PDF contains selectable text, not scanned images.")
         return extracted
 
     raise ValueError(
-        "Tipe file CV tidak didukung. Gunakan teks (.txt) atau PDF (.pdf), atau kirim `cv_text` langsung."
+        "Unsupported CV file type. Use text (.txt) or PDF (.pdf), or submit `cv_text` directly."
     )
 
 
@@ -56,6 +56,19 @@ def get_profile_skill_names(freelancer_id: str) -> List[str]:
         {"fid": freelancer_id},
     )
     return [row["skill_name"] for row in rows] if rows else []
+
+
+def extract_skills_from_text(text: str, skills: List[str]) -> List[str]:
+    normalized_text = _normalize_text(text)
+    matched = []
+    for skill in skills:
+        normalized_skill = _normalize_text(skill)
+        if not normalized_skill:
+            continue
+        pattern = r"\b" + re.escape(normalized_skill) + r"\b"
+        if re.search(pattern, normalized_text):
+            matched.append(skill)
+    return matched
 
 
 def build_freelancer_profile_text(freelancer_id: str) -> Optional[str]:
@@ -98,37 +111,37 @@ async def build_cv_recommendations(
     recommendations = []
     if similarity < 0.82:
         recommendations.append(
-            "Perkuat kesesuaian antara CV dan profil Anda dengan mencantumkan ringkasan profesional yang jelas, pencapaian kuantitatif, dan kata kunci utama dari profil."
+            "Improve CV alignment with your profile by adding a clear professional summary, quantifiable achievements, and the profile's key skills."
         )
     else:
         recommendations.append(
-            "CV Anda sudah cukup selaras dengan profil. Perkuat dengan menyorot hasil konkret dan capaian proyek yang relevan."
+            "Your CV is reasonably aligned with your profile. Strengthen it by highlighting concrete results and relevant project achievements."
         )
 
     if missing_skills:
         recommendations.append(
-            "Tambahkan atau tonjolkan keahlian berikut pada CV Anda: "
+            "Add or emphasize the following skills in your CV: "
             + ", ".join(missing_skills[:8])
         )
     elif matched_skills:
         recommendations.append(
-            "Pertahankan keahlian yang sudah cocok dengan profil Anda: "
+            "Keep highlighting skills that already match your profile: "
             + ", ".join(matched_skills[:8])
         )
 
     if skill_coverage is not None and skill_coverage < 0.5:
         recommendations.append(
-            "CV saat ini hanya mencakup sebagian kecil keahlian profil Anda. Pastikan skill penting ditampilkan dalam bagian ringkasan dan pengalaman kerja."
+            "This CV currently covers only a small portion of your profile skills. Make sure key skills appear in the summary and work experience sections."
         )
 
     if len(_normalize_text(cv_text)) > len(_normalize_text(profile_text)) * 1.5:
         recommendations.append(
-            "CV Anda tampak lebih panjang dari profil. Fokuskan pada ringkasan pengalaman paling relevan dan hilangkan redundansi."
+            "Your CV appears longer than your profile. Focus on the most relevant experience and remove redundancy."
         )
 
     if len(_normalize_text(cv_text)) < len(_normalize_text(profile_text)) * 0.5:
         recommendations.append(
-            "CV Anda relatif singkat. Tambahkan detail pengalaman, hasil, dan keahlian yang mendukung profil Anda."
+            "Your CV is relatively short. Add more detail on experience, results, and skills that support your profile."
         )
 
     if os.getenv("GROQ_API_KEY"):
@@ -161,21 +174,25 @@ async def _call_groq_for_cv_advice(
     if not api_key:
         return None
 
-    model = os.getenv("GROQ_MODEL", "groq-1.0")
-    endpoint = os.getenv("GROQ_API_URL", f"https://api.groq.com/v1/models/{model}/outputs")
+    model = os.getenv("GROQ_MODEL", "llama3-8b-8192")
+    endpoint = "https://api.groq.com/openai/v1/chat/completions"
 
     prompt = (
-        "Anda adalah asisten AI yang membantu memperbaiki CV. "
-        "Bandingkan teks CV dengan profil freelancer dan berikan satu saran singkat untuk meningkatkan kecocokan. "
-        f"Nilai kesesuaian semantik {similarity:.3f} dan cakupan skill {skill_coverage if skill_coverage is not None else 'n/a'}. "
-        "Jika skill profil hilang di CV, sebutkan secara singkat. "
-        "Berikan jawaban dalam bahasa Indonesia. "
-        "CV:\n" + cv_text[:2000] + "\n\nPROFIL:\n" + profile_text[:2000]
+        "You are an AI assistant that helps improve CVs. "
+        "Compare the CV text with the freelancer profile and give one brief recommendation to improve the match. "
+        f"Assess semantic similarity {similarity:.3f} and skill coverage {skill_coverage if skill_coverage is not None else 'n/a'}. "
+        "If profile skills are missing from the CV, mention them briefly. "
+        "Provide the answer in English. "
+        "CV:\n" + cv_text[:2000] + "\n\nPROFILE:\n" + profile_text[:2000]
     )
 
     payload = {
-        "input": prompt,
-        "max_output_tokens": 120,
+        "model": model,
+        "messages": [
+            {"role": "user", "content": prompt}
+        ],
+        "max_tokens": 120,
+        "temperature": 0.7
     }
 
     async with httpx.AsyncClient(timeout=40.0) as client:
@@ -190,10 +207,8 @@ async def _call_groq_for_cv_advice(
         response.raise_for_status()
         data = response.json()
 
-    if isinstance(data, dict):
-        text = data.get("output") or data.get("text") or data.get("response")
-        if isinstance(text, list):
-            text = "\n".join(str(x) for x in text)
-        if isinstance(text, str):
-            return text.strip()
+    if "choices" in data and data["choices"]:
+        content = data["choices"][0].get("message", {}).get("content")
+        if content:
+            return content.strip()
     return None

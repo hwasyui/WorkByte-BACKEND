@@ -160,8 +160,50 @@ class ContractFunctions:
                 logger("CONTRACT_FUNCTIONS", "No data to update", level="WARNING")
                 return ContractFunctions.get_contract_by_id(contract_id)
             
+            existing_contract = ContractFunctions.get_contract_by_id(contract_id)
             conditions = [("contract_id", "=", contract_id)]
             db.update_data(table_name="contract", data=update_data, conditions=conditions)
+
+            # If the contract transitions into a completed/closed state, update counts
+            status_transition = False
+            new_status = update_data.get("status")
+            if new_status and existing_contract:
+                old_status = existing_contract.get("status")
+                completed_states = {"completed"}
+                if new_status in completed_states and old_status not in completed_states:
+                    status_transition = True
+
+            if status_transition and existing_contract:
+                client_id = existing_contract.get("client_id")
+                freelancer_id = existing_contract.get("freelancer_id")
+
+                if client_id:
+                    client_rows = db.fetch_data(
+                        table_name="client",
+                        conditions=[("client_id", "=", client_id)],
+                        limit=1
+                    )
+                    if client_rows:
+                        current_completed = client_rows[0].get("total_jobs_completed") or 0
+                        db.update_data(
+                            table_name="client",
+                            data={"total_jobs_completed": current_completed + 1},
+                            conditions=[("client_id", "=", client_id)]
+                        )
+
+                if freelancer_id:
+                    freelancer_rows = db.fetch_data(
+                        table_name="freelancer",
+                        conditions=[("freelancer_id", "=", freelancer_id)],
+                        limit=1
+                    )
+                    if freelancer_rows:
+                        current_total = freelancer_rows[0].get("total_jobs") or 0
+                        db.update_data(
+                            table_name="freelancer",
+                            data={"total_jobs": current_total + 1},
+                            conditions=[("freelancer_id", "=", freelancer_id)]
+                        )
             
             logger("CONTRACT_FUNCTIONS", f"Contract {contract_id} updated", level="INFO")
             return ContractFunctions.get_contract_by_id(contract_id)

@@ -13,3 +13,7 @@ notes.txt
 venv
 ai_related/job_matching/machine_learning/*.ipynb
 walkthrough/*.md
+walkthrough/*.pdf
+walkthrough/*.jpeg
+walkthrough/*.png
+walkthrough/*.jpg

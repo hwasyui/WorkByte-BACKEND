@@ -2,6 +2,9 @@ fastapi
 psycopg2-binary
 python-multipart
 PyPDF2
+Pillow
+pytesseract
+google-cloud-vision
 sqlalchemy
 uvicorn
 python-jose[cryptography]
@@ -17,3 +20,7 @@ lightgbm
 scikit-learn
 httpx
 google-genai
+groq
+pdfplumber
+python-docx
+PyPDF2

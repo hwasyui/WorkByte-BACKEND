@@ -143,6 +143,20 @@ class JobPostFunctions:
 
             db.insert_data(table_name="job_post", data=job_post_data)
 
+            # Increment the client's total jobs posted count
+            client_rows = db.fetch_data(
+                table_name="client",
+                conditions=[("client_id", "=", client_id)],
+                limit=1
+            )
+            if client_rows:
+                current_count = client_rows[0].get("total_jobs_posted") or 0
+                db.update_data(
+                    table_name="client",
+                    data={"total_jobs_posted": current_count + 1},
+                    conditions=[("client_id", "=", client_id)]
+                )
+
             logger("JOB_POST_FUNCTIONS", f"Job post {job_post_id} created", level="INFO")
             return {**convert_uuids_to_str(job_post_data), "role_count": 0, "client_name": None}
 
