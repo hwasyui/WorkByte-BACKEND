@@ -21,26 +21,66 @@ def convert_uuids_to_str(data: Dict) -> Dict:
     return result
 
 
+# ── Shared SELECT columns ─────────────────────────────────────────────────────
+_JOB_POST_SELECT = """
+    SELECT
+        jp.job_post_id, jp.client_id, jp.job_title, jp.job_description,
+        jp.project_type, jp.project_scope, jp.estimated_duration,
+        jp.working_days, jp.deadline, jp.experience_level, jp.status,
+        jp.is_ai_generated, jp.view_count,
+        jp.created_at, jp.updated_at, jp.posted_at, jp.closed_at,
+        COUNT(DISTINCT jr.job_role_id) AS role_count,
+        c.full_name AS client_name,
+        (
+            SELECT COUNT(*)
+            FROM proposal p
+            WHERE p.job_post_id = jp.job_post_id
+        ) AS proposal_count
+    FROM job_post jp
+    LEFT JOIN job_role jr ON jr.job_post_id = jp.job_post_id
+    LEFT JOIN client c ON c.client_id = jp.client_id
+"""
+
+
 class JobPostFunctions:
     """Handle all job post-related database operations"""
 
+    # ── Internal helper ───────────────────────────────────────────────────────
+
     @staticmethod
-    def get_all_job_posts(limit: Optional[int] = None) -> List[Dict]:
-        """Fetch all job posts with role_count and client_name"""
+    def _sync_proposal_count(job_post_id: str) -> None:
+        """
+        Recalculate and update the stored proposal_count column
+        on job_post to match the actual count in the proposal table.
+        Call this after any proposal insert, delete, or status change.
+        """
         try:
             db = get_db()
             query = """
-                SELECT
-                    jp.job_post_id, jp.client_id, jp.job_title, jp.job_description,
-                    jp.project_type, jp.project_scope, jp.estimated_duration,
-                    jp.working_days, jp.deadline, jp.experience_level, jp.status,
-                    jp.is_ai_generated, jp.view_count, jp.proposal_count,
-                    jp.created_at, jp.updated_at, jp.posted_at, jp.closed_at,
-                    COUNT(jr.job_role_id) AS role_count,
-                    c.full_name AS client_name
-                FROM job_post jp
-                LEFT JOIN job_role jr ON jr.job_post_id = jp.job_post_id
-                LEFT JOIN client c ON c.client_id = jp.client_id
+                UPDATE job_post
+                SET proposal_count = (
+                    SELECT COUNT(*)
+                    FROM proposal
+                    WHERE job_post_id = :job_post_id
+                )
+                WHERE job_post_id = :job_post_id
+            """
+            db.execute_query(query, {"job_post_id": job_post_id})
+            logger("JOB_POST_FUNCTIONS",
+                   f"Synced proposal_count for job_post {job_post_id}", level="INFO")
+        except Exception as e:
+            # Non-fatal — live subquery still works even if sync fails
+            logger("JOB_POST_FUNCTIONS",
+                   f"Failed to sync proposal_count for {job_post_id}: {str(e)}", level="WARNING")
+
+    # ── Fetch operations ──────────────────────────────────────────────────────
+
+    @staticmethod
+    def get_all_job_posts(limit: Optional[int] = None) -> List[Dict]:
+        """Fetch all job posts with role_count, client_name, and live proposal_count"""
+        try:
+            db = get_db()
+            query = _JOB_POST_SELECT + """
                 GROUP BY jp.job_post_id, c.full_name
                 ORDER BY jp.created_at DESC
                 {limit_clause}
@@ -56,21 +96,10 @@ class JobPostFunctions:
 
     @staticmethod
     def get_job_post_by_id(job_post_id: str) -> Optional[Dict]:
-        """Fetch a job post by ID with role_count and client_name"""
+        """Fetch a job post by ID with role_count, client_name, and live proposal_count"""
         try:
             db = get_db()
-            query = """
-                SELECT
-                    jp.job_post_id, jp.client_id, jp.job_title, jp.job_description,
-                    jp.project_type, jp.project_scope, jp.estimated_duration,
-                    jp.working_days, jp.deadline, jp.experience_level, jp.status,
-                    jp.is_ai_generated, jp.view_count, jp.proposal_count,
-                    jp.created_at, jp.updated_at, jp.posted_at, jp.closed_at,
-                    COUNT(jr.job_role_id) AS role_count,
-                    c.full_name AS client_name
-                FROM job_post jp
-                LEFT JOIN job_role jr ON jr.job_post_id = jp.job_post_id
-                LEFT JOIN client c ON c.client_id = jp.client_id
+            query = _JOB_POST_SELECT + """
                 WHERE jp.job_post_id = :job_post_id
                 GROUP BY jp.job_post_id, c.full_name
             """
@@ -88,57 +117,54 @@ class JobPostFunctions:
 
     @staticmethod
     def get_job_posts_by_client_id(client_id: str) -> List[Dict]:
-        """Fetch all job posts for a client with role_count and client_name"""
+        """Fetch all job posts for a client with role_count, client_name, and live proposal_count"""
         try:
             db = get_db()
-            query = """
-                SELECT
-                    jp.job_post_id, jp.client_id, jp.job_title, jp.job_description,
-                    jp.project_type, jp.project_scope, jp.estimated_duration,
-                    jp.working_days, jp.deadline, jp.experience_level, jp.status,
-                    jp.is_ai_generated, jp.view_count, jp.proposal_count,
-                    jp.created_at, jp.updated_at, jp.posted_at, jp.closed_at,
-                    COUNT(jr.job_role_id) AS role_count,
-                    c.full_name AS client_name
-                FROM job_post jp
-                LEFT JOIN job_role jr ON jr.job_post_id = jp.job_post_id
-                LEFT JOIN client c ON c.client_id = jp.client_id
+            query = _JOB_POST_SELECT + """
                 WHERE jp.client_id = :client_id
                 GROUP BY jp.job_post_id, c.full_name
                 ORDER BY jp.created_at DESC
             """
             rows = db.execute_query(query, {"client_id": client_id})
 
-            logger("JOB_POST_FUNCTIONS", f"Fetched {len(rows)} job posts for client {client_id}", level="INFO")
+            logger("JOB_POST_FUNCTIONS",
+                   f"Fetched {len(rows)} job posts for client {client_id}", level="INFO")
             return [convert_uuids_to_str(dict(row)) for row in rows]
 
         except Exception as e:
             logger("JOB_POST_FUNCTIONS", f"Error fetching job posts: {str(e)}", level="ERROR")
             raise
 
+    # ── Write operations ──────────────────────────────────────────────────────
+
     @staticmethod
     def create_job_post(client_id: str, job_title: str, job_description: str,
-                        project_type: str, project_scope: str, estimated_duration: Optional[str] = None,
-                        working_days: Optional[int] = None, deadline=None, experience_level: Optional[str] = None,
-                        status: Optional[str] = "draft", is_ai_generated: Optional[bool] = False) -> Dict:
+                        project_type: str, project_scope: str,
+                        estimated_duration: Optional[str] = None,
+                        working_days: Optional[int] = None,
+                        deadline=None,
+                        experience_level: Optional[str] = None,
+                        status: Optional[str] = "draft",
+                        is_ai_generated: Optional[bool] = False) -> Dict:
         """Create a new job post"""
         try:
             db = get_db()
             job_post_id = str(uuid.uuid4())
 
             job_post_data = {
-                "job_post_id": job_post_id,
-                "client_id": client_id,
-                "job_title": job_title,
-                "job_description": job_description,
-                "project_type": project_type,
-                "project_scope": project_scope,
+                "job_post_id":        job_post_id,
+                "client_id":          client_id,
+                "job_title":          job_title,
+                "job_description":    job_description,
+                "project_type":       project_type,
+                "project_scope":      project_scope,
                 "estimated_duration": estimated_duration,
-                "working_days": working_days,
-                "deadline": deadline,
-                "experience_level": experience_level,
-                "status": status,
-                "is_ai_generated": is_ai_generated
+                "working_days":       working_days,
+                "deadline":           deadline,
+                "experience_level":   experience_level,
+                "status":             status,
+                "is_ai_generated":    is_ai_generated,
+                "proposal_count":     0,
             }
 
             db.insert_data(table_name="job_post", data=job_post_data)
@@ -158,7 +184,11 @@ class JobPostFunctions:
                 )
 
             logger("JOB_POST_FUNCTIONS", f"Job post {job_post_id} created", level="INFO")
-            return {**convert_uuids_to_str(job_post_data), "role_count": 0, "client_name": None}
+            return {
+                **convert_uuids_to_str(job_post_data),
+                "role_count":  0,
+                "client_name": None,
+            }
 
         except Exception as e:
             logger("JOB_POST_FUNCTIONS", f"Error creating job post: {str(e)}", level="ERROR")
