@@ -1,0 +1,117 @@
+import os
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
+from functions.db_manager import get_db
+from functions.logger import logger
+from typing import List, Optional, Dict
+import uuid
+
+
+def convert_uuids_to_str(data: Dict) -> Dict:
+    """Convert all UUID objects in dict to strings"""
+    if not data:
+        return data
+    result = {}
+    for key, value in data.items():
+        if hasattr(value, '__class__') and 'UUID' in value.__class__.__name__:
+            result[key] = str(value)
+        else:
+            result[key] = value
+    return result
+
+
+class JobPostFunctions:
+    """Handle all job post-related database operations"""
+
+    @staticmethod
+    def get_all_job_posts(limit: Optional[int] = None) -> List[Dict]:
+        """Fetch all job posts with role_count and client_name"""
+        try:
+            db = get_db()
+            query = """
+                SELECT
+                    jp.job_post_id, jp.client_id, jp.job_title, jp.job_description,
+                    jp.project_type, jp.project_scope, jp.estimated_duration,
+                    jp.working_days, jp.deadline, jp.experience_level, jp.status,
+                    jp.is_ai_generated, jp.view_count, jp.proposal_count,
+                    jp.created_at, jp.updated_at, jp.posted_at, jp.closed_at,
+                    COUNT(jr.job_role_id) AS role_count,
+                    c.full_name AS client_name
+                FROM job_post jp
+                LEFT JOIN job_role jr ON jr.job_post_id = jp.job_post_id
+                LEFT JOIN client c ON c.client_id = jp.client_id
+                GROUP BY jp.job_post_id, c.full_name
+                ORDER BY jp.created_at DESC
+                {limit_clause}
+            """.format(limit_clause=f"LIMIT {limit}" if limit else "")
+
+            rows = db.execute_query(query)
+            logger("JOB_POST_FUNCTIONS", f"Fetched {len(rows)} job posts", level="INFO")
+            return [convert_uuids_to_str(dict(row)) for row in rows]
+
+        except Exception as e:
+            logger("JOB_POST_FUNCTIONS", f"Error fetching job posts: {str(e)}", level="ERROR")
+            raise
+
+    @staticmethod
+    def get_job_post_by_id(job_post_id: str) -> Optional[Dict]:
+        """Fetch a job post by ID with role_count and client_name"""
+        try:
+            db = get_db()
+            query = """
+                SELECT
+                    jp.job_post_id, jp.client_id, jp.job_title, jp.job_description,
+                    jp.project_type, jp.project_scope, jp.estimated_duration,
+                    jp.working_days, jp.deadline, jp.experience_level, jp.status,
+                    jp.is_ai_generated, jp.view_count, jp.proposal_count,
+                    jp.created_at, jp.updated_at, jp.posted_at, jp.closed_at,
+                    COUNT(jr.job_role_id) AS role_count,
+                    c.full_name AS client_name
+                FROM job_post jp
+                LEFT JOIN job_role jr ON jr.job_post_id = jp.job_post_id
+                LEFT JOIN client c ON c.client_id = jp.client_id
+                WHERE jp.job_post_id = :job_post_id
+                GROUP BY jp.job_post_id, c.full_name
+            """
+            rows = db.execute_query(query, {"job_post_id": job_post_id})
+
+            if rows:
+                logger("JOB_POST_FUNCTIONS", f"Job post {job_post_id} found", level="INFO")
+                return convert_uuids_to_str(dict(rows[0]))
+
+            return None
+
+        except Exception as e:
+            logger("JOB_POST_FUNCTIONS", f"Error fetching job post: {str(e)}", level="ERROR")
+            raise
+
+    @staticmethod
+    def get_job_posts_by_client_id(client_id: str) -> List[Dict]:
+        """Fetch all job posts for a client with role_count and client_name"""
+        try:
+            db = get_db()
+            query = """
+                SELECT
+                    jp.job_post_id, jp.client_id, jp.job_title, jp.job_description,
+                    jp.project_type, jp.project_scope, jp.estimated_duration,
+                    jp.working_days, jp.deadline, jp.experience_level, jp.status,
+                    jp.is_ai_generated, jp.view_count, jp.proposal_count,
+                    jp.created_at, jp.updated_at, jp.posted_at, jp.closed_at,
+                    COUNT(jr.job_role_id) AS role_count,
+                    c.full_name AS client_name
+                FROM job_post jp
+                LEFT JOIN job_role jr ON jr.job_post_id = jp.job_post_id
+                LEFT JOIN client c ON c.client_id = jp.client_id
+                WHERE jp.client_id = :client_id
+                GROUP BY jp.job_post_id, c.full_name
+                ORDER BY jp.created_at DESC
+            """
+            rows = db.execute_query(query, {"client_id": 
+                conditions=[("client_id", "=", client_id)],
+                limit=1
+            )
+            if client_rows:
+                current_count = client_rows[0].get("total_jobs_posted") or 0
+                db.update_data(
+                    table_name="client"
