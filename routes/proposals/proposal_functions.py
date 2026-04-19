@@ -86,6 +86,34 @@ class ProposalFunctions:
             raise
 
     @staticmethod
+    def get_proposals_by_job_post_id_enriched(job_post_id: str) -> List[Dict]:
+        """Fetch all proposals for a job post with freelancer info joined"""
+        try:
+            db = get_db()
+            query = """
+                SELECT 
+                    p.proposal_id, p.job_post_id, p.job_role_id, p.freelancer_id,
+                    p.cover_letter, p.proposed_budget, p.proposed_duration,
+                    p.status, p.is_ai_generated, p.submitted_at,
+                    f.full_name      AS freelancer_name,
+                    f.profile_picture_url,
+                    f.estimated_rate,
+                    f.rate_currency,
+                    f.rate_time,
+                    f.total_jobs
+                FROM proposal p
+                JOIN freelancer f ON p.freelancer_id = f.freelancer_id
+                WHERE p.job_post_id = :job_post_id
+                ORDER BY p.submitted_at DESC
+            """
+            rows = db.execute_query(query, {"job_post_id": job_post_id})
+            logger("PROPOSAL_FUNCTIONS", f"Fetched {len(rows)} enriched proposals for job post {job_post_id}", level="INFO")
+            return [convert_uuids_to_str(dict(row)) for row in rows]
+        except Exception as e:
+            logger("PROPOSAL_FUNCTIONS", f"Error fetching enriched proposals: {str(e)}", level="ERROR")
+        raise
+
+    @staticmethod
     def get_proposals_by_freelancer_id(freelancer_id: str) -> List[Dict]:
         """Fetch all proposals from a freelancer"""
         try:

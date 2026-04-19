@@ -384,6 +384,7 @@ class JobPostUpdate(BaseModel):
 class JobPostResponse(BaseModel):
     job_post_id: str
     client_id: str
+    client_name: Optional[str] = None
     job_title: str
     job_description: str
     project_type: str
@@ -504,7 +505,6 @@ class ProposalCreate(BaseModel):
     proposal_id: Optional[str] = None
     job_post_id: str
     job_role_id: Optional[str] = None
-    freelancer_id: str
     cover_letter: str
     proposed_budget: float
     proposed_duration: Optional[str] = None
