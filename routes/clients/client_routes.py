@@ -2,7 +2,7 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, UploadFile, File
 from typing import List, Optional, Dict
 import uuid
 from functions.schema_model import ClientCreate, ClientUpdate, ClientResponse
@@ -12,6 +12,8 @@ from functions.access_control import assert_client_owns, get_client_profile_for_
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.clients.client_functions import ClientFunctions
+from functions.supabase_client import upload_client_profile_picture
+from mimetypes import guess_type as guess_mime
 
 client_router = APIRouter(prefix="/clients", tags=["Clients"])
 
@@ -63,7 +65,10 @@ async def get_client(identifier: str, current_user: UserInDB = Depends(get_curre
         return ResponseSchema.error(error_msg, 500)
 
 @client_router.post("", response_model=ClientResponse, status_code=201)
-async def create_client(client: ClientCreate, current_user: UserInDB = Depends(get_client_user)):
+async def create_client(
+    client: ClientCreate = Depends(),
+    current_user: UserInDB = Depends(get_client_user),
+):
     """Create a new client profile - Clients only - JSON body accepted"""
     try:
         # The client profile must be created for the authenticated user only
@@ -75,13 +80,31 @@ async def create_client(client: ClientCreate, current_user: UserInDB = Depends(g
             error_msg = f"Client profile already exists for user {current_user.user_id}"
             logger("CLIENT", error_msg, "POST /clients", "WARNING")
             return ResponseSchema.error(error_msg, 400)
+
+        profile_picture_url = None
+        if client.profile_picture is not None:
+            contents = await client.profile_picture.read()
+            if not contents:
+                return ResponseSchema.error("Profile picture file must not be empty", 400)
+            mime_type = client.profile_picture.content_type or guess_mime(client.profile_picture.filename or "avatar.jpg")[0]
+            if not mime_type.startswith("image/"):
+                return ResponseSchema.error("Only image files are allowed for profile pictures", 400)
+            logger("CLIENT", f"Uploading client avatar for user {current_user.user_id}: filename={client.profile_picture.filename}, size={len(contents)} bytes, mime={mime_type}", level="DEBUG")
+            profile_picture_url = upload_client_profile_picture(
+                client_id=current_user.user_id,
+                file_name=client.profile_picture.filename or "avatar.jpg",
+                file_bytes=contents,
+                content_type=mime_type,
+            )
+            logger("CLIENT", f"Client avatar uploaded: {profile_picture_url}", level="DEBUG")
+
         new_client = ClientFunctions.create_client(
             client_id=client_id,
             user_id=current_user.user_id,
             full_name=client.full_name,
             bio=client.bio,
             website_url=client.website_url,
-            profile_picture_url=client.profile_picture_url
+            profile_picture_url=profile_picture_url
         )
 
         success_msg = f"Created client {client_id} for user {client.user_id} with full name '{client.full_name}'"
@@ -94,7 +117,11 @@ async def create_client(client: ClientCreate, current_user: UserInDB = Depends(g
 
 
 @client_router.put("/{identifier}", response_model=ClientResponse)
-async def update_client(identifier: str, client_update: ClientUpdate, current_user: UserInDB = Depends(get_client_user)):
+async def update_client(
+    identifier: str,
+    client_update: ClientUpdate = Depends(),
+    current_user: UserInDB = Depends(get_client_user),
+):
     """Update client information (supports both client_id and user_id) - Clients only"""
     try:
         # Check if client exists and get actual client_id if user_id was provided
@@ -105,7 +132,27 @@ async def update_client(identifier: str, client_update: ClientUpdate, current_us
             return ResponseSchema.error(error_msg, 404)
         client_id = existing["client_id"]
         assert_client_owns(current_user, client_id)
-        update_data = {k: v for k, v in client_update.dict().items() if v is not None}
+        update_data = {
+            k: v for k, v in client_update.dict().items()
+            if v is not None and k != "profile_picture"
+        }
+
+        if client_update.profile_picture is not None:
+            contents = await client_update.profile_picture.read()
+            if not contents:
+                return ResponseSchema.error("Profile picture file must not be empty", 400)
+            mime_type = client_update.profile_picture.content_type or guess_mime(client_update.profile_picture.filename or "avatar.jpg")[0]
+            if not mime_type.startswith("image/"):
+                return ResponseSchema.error("Only image files are allowed for profile pictures", 400)
+            logger("CLIENT", f"Uploading client avatar for user {current_user.user_id}: filename={client_update.profile_picture.filename}, size={len(contents)} bytes, mime={mime_type}", level="DEBUG")
+            update_data["profile_picture_url"] = upload_client_profile_picture(
+                client_id=current_user.user_id,
+                file_name=client_update.profile_picture.filename or "avatar.jpg",
+                file_bytes=contents,
+                content_type=mime_type,
+            )
+            logger("CLIENT", f"Client avatar uploaded: {update_data['profile_picture_url']}", level="DEBUG")
+
         updated_client = ClientFunctions.update_client(client_id, update_data)
         
         success_msg = f"Updated client {client_id} with fields: {', '.join(update_data.keys())}"
@@ -136,4 +183,45 @@ async def delete_client(identifier: str, current_user: UserInDB = Depends(get_cl
     except Exception as e:
         error_msg = f"Failed to delete client {identifier}: {str(e)}"
         logger("CLIENT", error_msg, "DELETE /clients/{identifier}", "ERROR")
+        return ResponseSchema.error(error_msg, 500)
+
+
+@client_router.post("/{client_id}/profile-picture", response_model=ClientResponse)
+async def upload_client_profile_picture_endpoint(
+    client_id: str,
+    file: UploadFile = File(...),
+    current_user: UserInDB = Depends(get_client_user),
+):
+    try:
+        existing = ClientFunctions.get_client_by_id_or_user_id(client_id)
+        if not existing:
+            error_msg = f"Client {client_id} not found"
+            logger("CLIENT", error_msg, f"POST /clients/{client_id}/profile-picture", "WARNING")
+            return ResponseSchema.error(error_msg, 404)
+
+        assert_client_owns(current_user, existing["client_id"])
+
+        contents = await file.read()
+        if not contents:
+            return ResponseSchema.error("Profile picture file must not be empty", 400)
+
+        mime_type = file.content_type or guess_mime(file.filename or "avatar.jpg")[0]
+        if not mime_type or not mime_type.startswith("image/"):
+            return ResponseSchema.error("Only image files are allowed for profile pictures", 400)
+
+        profile_picture_url = upload_client_profile_picture(
+            client_id=current_user.user_id,
+            file_name=file.filename or "avatar.jpg",
+            file_bytes=contents,
+            content_type=mime_type,
+        )
+        updated_client = ClientFunctions.update_client(
+            existing["client_id"],
+            {"profile_picture_url": profile_picture_url},
+        )
+        logger("CLIENT", f"Profile picture updated for client {client_id}", f"POST /clients/{client_id}/profile-picture", "INFO")
+        return ResponseSchema.success(updated_client, 200)
+    except Exception as e:
+        error_msg = f"Failed to upload profile picture for client {client_id}: {str(e)}"
+        logger("CLIENT", error_msg, f"POST /clients/{client_id}/profile-picture", "ERROR")
         return ResponseSchema.error(error_msg, 500)
