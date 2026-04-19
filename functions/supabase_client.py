@@ -23,10 +23,12 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 # ── Bucket names ──────────────────────────────────────────────────────────────
 BUCKET_JOB_FILES       = os.getenv("SUPABASE_STORAGE_BUCKET", "job-files")
 BUCKET_PROPOSAL_FILES  = "proposal-files"
+BUCKET_USER_ASSETS     = "user-assets"
 
 BUCKET_MAP = {
     "job-files":       BUCKET_JOB_FILES,
     "proposal-files":  BUCKET_PROPOSAL_FILES,
+    "user-assets":     BUCKET_USER_ASSETS,
 }
 
 
@@ -92,6 +94,37 @@ def upload_job_file(job_post_id: str, file_name: str, file_bytes: bytes, content
     return upload_file(
         bucket=BUCKET_JOB_FILES,
         path=f"uploads/{job_post_id}/{file_name}",
+        file_bytes=file_bytes,
+        content_type=content_type or guess_mime(file_name),
+    )
+
+
+def upload_cv_file(path: str, file_bytes: bytes, content_type: str = None) -> str:
+    return upload_file(
+        bucket=BUCKET_USER_ASSETS,
+        path=path,
+        file_bytes=file_bytes,
+        content_type=content_type or guess_mime(path),
+    )
+
+
+def upload_freelancer_profile_picture(freelancer_id: str, file_name: str, file_bytes: bytes, content_type: str = None) -> str:
+    ext = file_name.split('.')[-1] if '.' in file_name else 'jpg'
+    path = f"avatars/{freelancer_id}.{ext}"
+    return upload_file(
+        bucket=BUCKET_USER_ASSETS,
+        path=path,
+        file_bytes=file_bytes,
+        content_type=content_type or guess_mime(file_name),
+    )
+
+
+def upload_client_profile_picture(client_id: str, file_name: str, file_bytes: bytes, content_type: str = None) -> str:
+    ext = file_name.split('.')[-1] if '.' in file_name else 'jpg'
+    path = f"avatars/{client_id}.{ext}"
+    return upload_file(
+        bucket=BUCKET_USER_ASSETS,
+        path=path,
         file_bytes=file_bytes,
         content_type=content_type or guess_mime(file_name),
     )
