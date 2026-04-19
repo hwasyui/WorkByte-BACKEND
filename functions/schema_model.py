@@ -1,3 +1,4 @@
+from fastapi import File, Form, UploadFile
 from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional, List
 from datetime import date, datetime
@@ -55,6 +56,13 @@ class ClientProfileCreate(BaseModel):
     company_description: Optional[str] = None
 
 
+class CVParseRequest(BaseModel):
+    file: UploadFile = File(...)
+    use_llm: bool = Form(False)
+
+    model_config = {"extra": "forbid"}
+
+
 # ==================== USERS ====================
 class UserCreate(BaseModel):
     user_id: Optional[str] = None  # Auto-generated if not provided
@@ -80,24 +88,26 @@ class UserResponseDetail(BaseModel):
 
 # ==================== FREELANCERS ====================
 class FreelancerCreate(BaseModel):
-    freelancer_id: Optional[str] = None  # Auto-generated if not provided
-    user_id: str
-    full_name: str
-    bio: Optional[str] = None
-    cv_file_url: Optional[str] = None
-    profile_picture_url: Optional[str] = None
-    estimated_rate: Optional[float] = None
-    rate_time: Optional[str] = "hourly"
-    rate_currency: Optional[str] = "USD"
+    freelancer_id: Optional[str] = Form(None)
+    user_id: str = Form(...)
+    full_name: str = Form(...)
+    bio: Optional[str] = Form(None)
+    profile_picture: Optional[UploadFile] = File(None)
+    estimated_rate: Optional[float] = Form(None)
+    rate_time: Optional[str] = Form("hourly")
+    rate_currency: Optional[str] = Form("USD")
+
+    model_config = {"extra": "forbid"}
 
 class FreelancerUpdate(BaseModel):
-    full_name: Optional[str] = None
-    bio: Optional[str] = None
-    cv_file_url: Optional[str] = None
-    profile_picture_url: Optional[str] = None
-    estimated_rate: Optional[float] = None
-    rate_time: Optional[str] = None
-    rate_currency: Optional[str] = None
+    full_name: Optional[str] = Form(None)
+    bio: Optional[str] = Form(None)
+    profile_picture: Optional[UploadFile] = File(None)
+    estimated_rate: Optional[float] = Form(None)
+    rate_time: Optional[str] = Form(None)
+    rate_currency: Optional[str] = Form(None)
+
+    model_config = {"extra": "forbid"}
 
 class FreelancerResponse(BaseModel):
     freelancer_id: str
@@ -119,18 +129,22 @@ class FreelancerResponse(BaseModel):
 
 # ==================== CLIENTS ====================
 class ClientCreate(BaseModel):
-    client_id: Optional[str] = None
-    user_id: str
-    full_name: Optional[str] = None
-    bio: Optional[str] = None
-    website_url: Optional[str] = None
-    profile_picture_url: Optional[str] = None
+    client_id: Optional[str] = Form(None)
+    user_id: str = Form(...)
+    full_name: Optional[str] = Form(None)
+    bio: Optional[str] = Form(None)
+    website_url: Optional[str] = Form(None)
+    profile_picture: Optional[UploadFile] = File(None)
+
+    model_config = {"extra": "forbid"}
 
 class ClientUpdate(BaseModel):
-    full_name: Optional[str] = None
-    bio: Optional[str] = None
-    website_url: Optional[str] = None
-    profile_picture_url: Optional[str] = None
+    full_name: Optional[str] = Form(None)
+    bio: Optional[str] = Form(None)
+    website_url: Optional[str] = Form(None)
+    profile_picture: Optional[UploadFile] = File(None)
+
+    model_config = {"extra": "forbid"}
 
 class ClientResponse(BaseModel):
     client_id: str
