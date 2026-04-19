@@ -21,6 +21,7 @@ from functions.response_utils import ResponseSchema
 from functions.db_manager import get_db
 from routes.contracts.contract_functions import ContractFunctions
 from routes.contracts.contract_generation_functions import ContractGenerationFunctions
+from routes.proposals.proposal_functions import ProposalFunctions
 from ai_related.job_matching.embedding_manager import upsert_contract_embedding
 
 contract_router = APIRouter(prefix="/contracts", tags=["Contracts"])
@@ -159,6 +160,9 @@ async def get_contract(contract_id: str, current_user: UserInDB = Depends(get_cu
 async def create_contract(contract: ContractCreate, current_user: UserInDB = Depends(get_current_user)):
     """Create a new contract."""
     try:
+        # Debug logging
+        logger("CONTRACT", f"Received contract creation request: job_post_id={contract.job_post_id}, job_role_id={contract.job_role_id}, proposal_id={contract.proposal_id}, client_id={contract.client_id}, freelancer_id={contract.freelancer_id}, start_date={contract.start_date}", "POST /contracts", "INFO")
+        
         contract_id = contract.contract_id or str(uuid.uuid4())
         if current_user.type == "client":
             client = get_client_profile_for_user(current_user)
@@ -239,9 +243,15 @@ async def generate_contract_pdf(contract_id: str, generation_data: ContractGener
                 "payment_schedule": generation_data.payment_schedule,
             },
         )
+        logger("CONTRACT", f"Saved generation data for contract {contract_id}", "POST /contracts/{contract_id}/generate", "INFO")
 
+        logger("CONTRACT", f"Starting PDF render for contract {contract_id}", "POST /contracts/{contract_id}/generate", "INFO")
         pdf_bytes = ContractGenerationFunctions.render_contract_pdf(contract_id)
+        logger("CONTRACT", f"PDF rendered successfully for contract {contract_id}, size: {len(pdf_bytes)} bytes", "POST /contracts/{contract_id}/generate", "INFO")
+        
+        logger("CONTRACT", f"Starting PDF upload to Supabase for contract {contract_id}", "POST /contracts/{contract_id}/generate", "INFO")
         storage_path = ContractGenerationFunctions.upload_contract_pdf(contract_id, pdf_bytes)
+        logger("CONTRACT", f"PDF uploaded successfully for contract {contract_id}, path: {storage_path}", "POST /contracts/{contract_id}/generate", "INFO")
 
         db = get_db()
         db.execute_query(
@@ -251,6 +261,7 @@ async def generate_contract_pdf(contract_id: str, generation_data: ContractGener
                WHERE contract_id = :cid""",
             {"url": storage_path, "cid": contract_id},
         )
+        logger("CONTRACT", f"Updated contract table with PDF URL for {contract_id}", "POST /contracts/{contract_id}/generate", "INFO")
 
         refreshed = ContractFunctions.get_contract_by_id(contract_id)
         success_msg = f"Generated contract PDF for {contract_id}"
@@ -279,6 +290,17 @@ async def update_contract(contract_id: str, contract_update: ContractUpdate, cur
 
         update_data = contract_update.model_dump(exclude_unset=True)
         updated_contract = ContractFunctions.update_contract(contract_id, update_data)
+
+        # When contract is accepted, also update the linked proposal status to 'accepted'
+        if update_data.get("status") == "accepted" and existing_contract.get("proposal_id"):
+            try:
+                ProposalFunctions.update_proposal(
+                    existing_contract["proposal_id"],
+                    {"status": "accepted"}
+                )
+                logger("CONTRACT", f"Updated linked proposal {existing_contract['proposal_id']} status to accepted", "PUT /contracts/{contract_id}", "INFO")
+            except Exception as e:
+                logger("CONTRACT", f"Warning: Could not update proposal status: {str(e)}", "PUT /contracts/{contract_id}", "WARNING")
 
         if update_data.get("status") == "completed" and existing_contract.get("status") != "completed":
             asyncio.create_task(upsert_contract_embedding(contract_id))

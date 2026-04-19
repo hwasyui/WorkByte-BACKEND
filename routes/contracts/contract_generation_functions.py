@@ -143,7 +143,9 @@ class ContractGenerationFunctions:
     def upload_contract_pdf(contract_id: str, pdf_bytes: bytes) -> str:
         try:
             storage_path = f"{contract_id}/contract.pdf"
+            logger("CONTRACT_GENERATION", f"Uploading PDF to Supabase: bucket={CONTRACT_BUCKET}, path={storage_path}, size={len(pdf_bytes)} bytes", level="INFO")
             upload_file(CONTRACT_BUCKET, storage_path, pdf_bytes)
+            logger("CONTRACT_GENERATION", f"PDF uploaded successfully to {storage_path}", level="INFO")
             return storage_path
         except Exception as e:
             logger("CONTRACT_GENERATION", f"Error uploading contract PDF: {str(e)}", level="ERROR")
@@ -159,26 +161,34 @@ class ContractGenerationFunctions:
 
     @staticmethod
     def render_contract_pdf(contract_id: str) -> bytes:
-        context = ContractGenerationFunctions.build_generation_context(contract_id)
-        if context is None:
-            raise ValueError("Contract not found")
-
-        contract = context["contract"]
-        return generate_contract_pdf(
-            {
-                "contract_id": contract.get("contract_id"),
-                "contract_title": contract.get("contract_title"),
-                "agreed_budget": contract.get("agreed_budget"),
-                "budget_currency": contract.get("budget_currency"),
-                "payment_structure": contract.get("payment_structure"),
-                "start_date": contract.get("start_date"),
-                "end_date": contract.get("end_date"),
-                "agreed_duration": contract.get("agreed_duration"),
-                "generated_at": contract.get("updated_at") or "",
-                "job_post": context["job_post"],
-                "job_role": context["job_role"],
-                "freelancer": context["freelancer"],
-                "client": context["client"]
-            },
-            context["contract_terms"],
-        )
+        try:
+            logger("CONTRACT_GENERATION", f"Building generation context for contract {contract_id}", level="INFO")
+            context = ContractGenerationFunctions.build_generation_context(contract_id)
+            if context is None:
+                raise ValueError("Contract not found")
+            
+            logger("CONTRACT_GENERATION", f"Context built successfully. Rendering PDF...", level="INFO")
+            contract = context["contract"]
+            pdf_bytes = generate_contract_pdf(
+                {
+                    "contract_id": contract.get("contract_id"),
+                    "contract_title": contract.get("contract_title"),
+                    "agreed_budget": contract.get("agreed_budget"),
+                    "budget_currency": contract.get("budget_currency"),
+                    "payment_structure": contract.get("payment_structure"),
+                    "start_date": contract.get("start_date"),
+                    "end_date": contract.get("end_date"),
+                    "agreed_duration": contract.get("agreed_duration"),
+                    "generated_at": contract.get("updated_at") or "",
+                    "job_post": context["job_post"],
+                    "job_role": context["job_role"],
+                    "freelancer": context["freelancer"],
+                    "client": context["client"]
+                },
+                context["contract_terms"],
+            )
+            logger("CONTRACT_GENERATION", f"PDF rendered successfully, size: {len(pdf_bytes)} bytes", level="INFO")
+            return pdf_bytes
+        except Exception as e:
+            logger("CONTRACT_GENERATION", f"Error rendering contract PDF: {str(e)}", level="ERROR")
+            raise
