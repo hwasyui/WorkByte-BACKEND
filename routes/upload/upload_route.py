@@ -2,57 +2,48 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from dotenv import load_dotenv
-load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
-
-from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
+from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, Query
 from functions.authentication import get_current_user
 from functions.schema_model import UserInDB
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
-from supabase import create_client
+from functions.supabase_client import upload_file, BUCKET_MAP, BUCKET_JOB_FILES, guess_mime
 import uuid
-import mimetypes
+
 
 upload_router = APIRouter(prefix="/upload", tags=["Upload"])
 
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_KEY")
-SUPABASE_STORAGE_BUCKET = os.getenv("SUPABASE_STORAGE_BUCKET", "job-files")
-
-
-def get_supabase():
-    if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
-        raise HTTPException(status_code=500, detail="Supabase not configured")
-    return create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-
 
 @upload_router.post("")
-async def upload_file(
+async def upload_file_endpoint(
     file: UploadFile = File(...),
+    bucket: str = Query(...),
     current_user: UserInDB = Depends(get_current_user),
 ):
-    """Upload a file to Supabase Storage — returns public URL, file_type, file_size"""
+    """
+    Upload a file to Supabase Storage.
+    Optional ?bucket= query param to select target bucket.
+    Returns: { file_url, file_name, file_type, file_size }
+    """
     try:
         contents = await file.read()
         file_size = len(contents)
 
         original_name = file.filename or "file"
         ext = original_name.rsplit(".", 1)[-1].lower() if "." in original_name else "bin"
-        mime = file.content_type or mimetypes.guess_type(original_name)[0] or "application/octet-stream"
-
+        mime = file.content_type or guess_mime(original_name)
         storage_path = f"uploads/{current_user.user_id}/{uuid.uuid4()}.{ext}"
 
-        supabase = get_supabase()
-        supabase.storage.from_(SUPABASE_STORAGE_BUCKET).upload(
+        selected_bucket = BUCKET_MAP.get(bucket, BUCKET_JOB_FILES)
+
+        public_url = upload_file(
+            bucket=selected_bucket,
             path=storage_path,
-            file=contents,
-            file_options={"content-type": mime},
+            file_bytes=contents,
+            content_type=mime,
         )
 
-        public_url = supabase.storage.from_(SUPABASE_STORAGE_BUCKET).get_public_url(storage_path)
-
-        logger("UPLOAD", f"File uploaded: {storage_path} ({file_size} bytes)", level="INFO")
+        logger("UPLOAD", f"File uploaded to [{selected_bucket}]: {storage_path} ({file_size} bytes)", level="INFO")
 
         return ResponseSchema.success({
             "file_url": public_url,
@@ -64,6 +55,5 @@ async def upload_file(
     except HTTPException:
         raise
     except Exception as e:
-        error_msg = f"Upload failed: {str(e)}"
-        logger("UPLOAD", error_msg, level="ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        logger("UPLOAD", f"Upload failed: {str(e)}", level="ERROR")
+        return ResponseSchema.error(f"Upload failed: {str(e)}", 500)

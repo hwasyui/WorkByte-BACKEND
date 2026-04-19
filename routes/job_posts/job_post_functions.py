@@ -26,7 +26,7 @@ class JobPostFunctions:
 
     @staticmethod
     def get_all_job_posts(limit: Optional[int] = None) -> List[Dict]:
-        """Fetch all job posts with role_count"""
+        """Fetch all job posts with role_count and client_name"""
         try:
             db = get_db()
             query = """
@@ -36,10 +36,12 @@ class JobPostFunctions:
                     jp.working_days, jp.deadline, jp.experience_level, jp.status,
                     jp.is_ai_generated, jp.view_count, jp.proposal_count,
                     jp.created_at, jp.updated_at, jp.posted_at, jp.closed_at,
-                    COUNT(jr.job_role_id) AS role_count
+                    COUNT(jr.job_role_id) AS role_count,
+                    c.full_name AS client_name
                 FROM job_post jp
                 LEFT JOIN job_role jr ON jr.job_post_id = jp.job_post_id
-                GROUP BY jp.job_post_id
+                LEFT JOIN client c ON c.client_id = jp.client_id
+                GROUP BY jp.job_post_id, c.full_name
                 ORDER BY jp.created_at DESC
                 {limit_clause}
             """.format(limit_clause=f"LIMIT {limit}" if limit else "")
@@ -54,7 +56,7 @@ class JobPostFunctions:
 
     @staticmethod
     def get_job_post_by_id(job_post_id: str) -> Optional[Dict]:
-        """Fetch a job post by ID with role_count"""
+        """Fetch a job post by ID with role_count and client_name"""
         try:
             db = get_db()
             query = """
@@ -64,11 +66,13 @@ class JobPostFunctions:
                     jp.working_days, jp.deadline, jp.experience_level, jp.status,
                     jp.is_ai_generated, jp.view_count, jp.proposal_count,
                     jp.created_at, jp.updated_at, jp.posted_at, jp.closed_at,
-                    COUNT(jr.job_role_id) AS role_count
+                    COUNT(jr.job_role_id) AS role_count,
+                    c.full_name AS client_name
                 FROM job_post jp
                 LEFT JOIN job_role jr ON jr.job_post_id = jp.job_post_id
+                LEFT JOIN client c ON c.client_id = jp.client_id
                 WHERE jp.job_post_id = :job_post_id
-                GROUP BY jp.job_post_id
+                GROUP BY jp.job_post_id, c.full_name
             """
             rows = db.execute_query(query, {"job_post_id": job_post_id})
 
@@ -84,7 +88,7 @@ class JobPostFunctions:
 
     @staticmethod
     def get_job_posts_by_client_id(client_id: str) -> List[Dict]:
-        """Fetch all job posts for a client with role_count"""
+        """Fetch all job posts for a client with role_count and client_name"""
         try:
             db = get_db()
             query = """
@@ -94,11 +98,13 @@ class JobPostFunctions:
                     jp.working_days, jp.deadline, jp.experience_level, jp.status,
                     jp.is_ai_generated, jp.view_count, jp.proposal_count,
                     jp.created_at, jp.updated_at, jp.posted_at, jp.closed_at,
-                    COUNT(jr.job_role_id) AS role_count
+                    COUNT(jr.job_role_id) AS role_count,
+                    c.full_name AS client_name
                 FROM job_post jp
                 LEFT JOIN job_role jr ON jr.job_post_id = jp.job_post_id
+                LEFT JOIN client c ON c.client_id = jp.client_id
                 WHERE jp.client_id = :client_id
-                GROUP BY jp.job_post_id
+                GROUP BY jp.job_post_id, c.full_name
                 ORDER BY jp.created_at DESC
             """
             rows = db.execute_query(query, {"client_id": client_id})
@@ -138,7 +144,7 @@ class JobPostFunctions:
             db.insert_data(table_name="job_post", data=job_post_data)
 
             logger("JOB_POST_FUNCTIONS", f"Job post {job_post_id} created", level="INFO")
-            return {**convert_uuids_to_str(job_post_data), "role_count": 0}
+            return {**convert_uuids_to_str(job_post_data), "role_count": 0, "client_name": None}
 
         except Exception as e:
             logger("JOB_POST_FUNCTIONS", f"Error creating job post: {str(e)}", level="ERROR")
