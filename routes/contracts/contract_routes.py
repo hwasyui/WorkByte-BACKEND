@@ -4,10 +4,10 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Body, Depends, Response
 from typing import List, Optional
 import uuid
-from functions.schema_model import ContractCreate, ContractUpdate, ContractResponse, ContractGenerateRequest
+from functions.schema_model import CancelContractRequest, ContractCreate, ContractUpdate, ContractResponse, ContractGenerateRequest
 from functions.schema_model import UserInDB
 from functions.authentication import get_current_user
 from functions.access_control import (
@@ -307,6 +307,7 @@ async def update_contract(contract_id: str, contract_update: ContractUpdate, cur
 @contract_router.put("/{contract_id}/cancel")
 async def cancel_contract(
     contract_id: str,
+    payload: CancelContractRequest = Body(default=CancelContractRequest()),
     current_user: UserInDB = Depends(get_current_user),
 ):
     """
@@ -331,6 +332,7 @@ async def cancel_contract(
         cancelled_contract = ContractFunctions.cancel_contract(
             contract_id=contract_id,
             cancelled_by=str(current_user.user_id),
+            reason=payload.reason,
         )
 
         logger("CONTRACT", f"Contract {contract_id} cancelled by user {current_user.user_id}", "PUT /contracts/{contract_id}/cancel", "INFO")

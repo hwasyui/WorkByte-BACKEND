@@ -119,7 +119,6 @@ class ContractFunctions:
         total_hours_worked: Optional[float] = None,
         total_paid: Optional[float] = 0,
     ) -> Dict:
-        """Create a new contract"""
         try:
             db = get_db()
             contract_id = contract_id or str(uuid.uuid4())
@@ -147,13 +146,23 @@ class ContractFunctions:
 
             db.insert_data(table_name="contract", data=contract_data)
 
-            # CONTRACT STARTED: system message after successful insert
+            # Resolve actual user_id from client profile
+            client_rows = db.fetch_data(
+                table_name="client",
+                conditions=[("client_id", "=", client_id)],
+                limit=1,
+            )
+            if not client_rows:
+                raise Exception(f"Client profile not found for client_id: {client_id}")
+
+            actor_user_id = str(client_rows[0]["user_id"])
+
             MessageFunctions.create_system_message(
-                actor_user_id=client_id,
+                actor_user_id=actor_user_id,  # ← user_id, not client_id
                 contract_id=contract_id,
                 message_text="Contract started.",
                 event_type="contract_started",
-                metadata={"started_by": client_id},
+                metadata={"started_by": actor_user_id},
             )
 
             logger("CONTRACT_FUNCTIONS", f"Contract {contract_id} created", level="INFO")

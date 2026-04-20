@@ -793,6 +793,12 @@ async def analyse_job_match(db, freelancer_id: str, job_post_id: str) -> dict:
                 "apply" if s >= 65 else ("consider" if s >= 40 else "skip")
             )
 
+            # Guarantee all fields the frontend expects are always present
+            role_result.setdefault("recommendation_reason", "")
+            role_result.setdefault("strengths", [])
+            role_result.setdefault("gaps", [])
+            role_result.setdefault("skill_tips", [])
+
     # Overall = best role score (the freelancer applies for the role they fit)
     role_scores = [r.get("match_score", 0) for r in result.get("roles", [])]
     if role_scores:
@@ -805,6 +811,10 @@ async def analyse_job_match(db, freelancer_id: str, job_post_id: str) -> dict:
     # Top-level aliases for the route logger and any flat consumers
     result["match_score"]    = result.get("overall_match_score",    result.get("match_score"))
     result["recommendation"] = result.get("overall_recommendation", result.get("recommendation"))
+    result.setdefault("overall_match_score", 0)
+    result.setdefault("overall_recommendation", "skip")
+    result.setdefault("overall_recommendation_reason", "")
+    result.setdefault("roles", [])
 
     result["job_post_id"]   = job_post_id
     result["freelancer_id"] = freelancer_id

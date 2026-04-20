@@ -925,6 +925,9 @@ class MessageResponse(BaseModel):
 class RevisionRequest(BaseModel):
     note: Optional[str] = None
 
+class CancelContractRequest(BaseModel):
+    reason: Optional[str] = None
+    
 # ==================== COMPREHENSIVE FREELANCER PROFILE ====================
 class FreelancerSkillWithDetails(BaseModel):
     freelancer_skill_id: str
