@@ -18,10 +18,17 @@ Or from outside:
 import sys
 import json
 import os
+import random
 import datetime
 import requests
 
 BASE_URL = "http://localhost:8000"
+
+_RUN_ID         = random.randint(1000, 9999)
+_EMAIL_FREELANCER = f"contract.freelancer.{_RUN_ID}@walkthrough.dev"
+_EMAIL_CLIENT1    = f"contract.client1.{_RUN_ID}@walkthrough.dev"
+_EMAIL_CLIENT2    = f"contract.client2.{_RUN_ID}@walkthrough.dev"
+_PASSWORD         = "SecurePass123"
 
 # ── output tee ────────────────────────────────────────────────────────────────
 
@@ -131,16 +138,34 @@ def run():
     print("="*60)
     print(f"  Target : {BASE_URL}")
     print(f"  Output : {out_path}")
-    print()
-    print("  Prerequisite: walkthrough.py must have been run at least once")
-    print("  so that Budi Santoso, TechStartup Inc., and DataCorp Solutions exist.")
+    print(f"  Run ID : {_RUN_ID}")
 
-    # ── 1. Log in as existing walkthrough users ───────────────────────────────
+    # ── 1. Register and log in fresh users ────────────────────────────────────
 
-    step("Log in as existing walkthrough users")
-    tok_freelancer = token_from_login("budi.santoso@walkthrough.dev", "SecurePass123")
-    tok_client1    = token_from_login("techstartup@walkthrough.dev",  "SecurePass123")
-    tok_client2    = token_from_login("datacorp@walkthrough.dev",     "SecurePass123")
+    step(f"Register fresh users for this run (id={_RUN_ID})")
+    post("/auth/register", {
+        "email": _EMAIL_FREELANCER,
+        "password": _PASSWORD,
+        "user_type": "freelancer",
+        "full_name": "Contract Freelancer"
+    })
+    post("/auth/register", {
+        "email": _EMAIL_CLIENT1,
+        "password": _PASSWORD,
+        "user_type": "client",
+        "full_name": "Contract Client 1"
+    })
+    post("/auth/register", {
+        "email": _EMAIL_CLIENT2,
+        "password": _PASSWORD,
+        "user_type": "client",
+        "full_name": "Contract Client 2"
+    })
+
+    step("Log in all three users")
+    tok_freelancer = token_from_login(_EMAIL_FREELANCER, _PASSWORD)
+    tok_client1    = token_from_login(_EMAIL_CLIENT1,    _PASSWORD)
+    tok_client2    = token_from_login(_EMAIL_CLIENT2,    _PASSWORD)
     print("  All tokens obtained.")
 
     # ── 2. Resolve profile IDs ────────────────────────────────────────────────

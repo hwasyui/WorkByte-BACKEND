@@ -3,7 +3,9 @@ Handles embedding lifecycle — marking records dirty after profile/job mutation
 and upserting new vectors into the DB (called by route handlers and the sweep worker).
 """
 
+import asyncio
 import json
+import time
 import uuid
 from typing import Optional
 
@@ -17,13 +19,81 @@ from ai_related.job_matching.source_text_builder import (
 )
 
 
+_THRESHOLD_FREELANCER  = 500
+_THRESHOLD_JOB         = 1000
+_THRESHOLD_CONTRACT    = 2000
+_THRESHOLD_TTL_SECONDS = 7200  # re-check every 2 hours
+
+_cached_immediate: bool | None = None
+_cache_loaded_at: float = 0.0  # epoch seconds; 0 means never loaded
+
+
+def _should_embed_immediately() -> bool:
+    """
+    Return True when all entity counts are below their thresholds.
+    Result is cached for 2 hours so the DB is queried at most once per TTL window,
+    starting from the first call after backend startup.
+    """
+    global _cached_immediate, _cache_loaded_at
+
+    now = time.monotonic()
+    if _cached_immediate is not None and (now - _cache_loaded_at) < _THRESHOLD_TTL_SECONDS:
+        return _cached_immediate
+
+    try:
+        db = get_db()
+        result = db.execute_query(
+            """SELECT
+                 (SELECT COUNT(*) FROM freelancer) AS freelancer_count,
+                 (SELECT COUNT(*) FROM job_post)   AS job_count,
+                 (SELECT COUNT(*) FROM contract)   AS contract_count"""
+        )
+        if not result:
+            _cached_immediate = False
+            _cache_loaded_at = now
+            return False
+        row = result[0]
+        below = (
+            int(row["freelancer_count"]) < _THRESHOLD_FREELANCER
+            and int(row["job_count"]) < _THRESHOLD_JOB
+            and int(row["contract_count"]) < _THRESHOLD_CONTRACT
+        )
+        _cached_immediate = below
+        _cache_loaded_at = now
+        logger(
+            "EMBEDDING_MANAGER",
+            f"Threshold cache refreshed | freelancers={row['freelancer_count']}/{_THRESHOLD_FREELANCER} "
+            f"| jobs={row['job_count']}/{_THRESHOLD_JOB} "
+            f"| contracts={row['contract_count']}/{_THRESHOLD_CONTRACT} "
+            f"| mode={'immediate' if below else 'sweep'} | next_check_in=2h",
+            level="INFO",
+        )
+        return below
+    except Exception as e:
+        logger("EMBEDDING_MANAGER", f"Threshold check failed — defaulting to sweep mode | error={e}", level="WARNING")
+        return False
+
+
+def _schedule_immediate(coro) -> None:
+    """Fire-and-forget a coroutine on the running event loop. Falls back gracefully if no loop is available."""
+    try:
+        loop = asyncio.get_running_loop()
+        loop.create_task(coro)
+    except RuntimeError:
+        logger("EMBEDDING_MANAGER", "No running event loop — cannot schedule immediate embedding, will rely on sweep", level="WARNING")
+        coro.close()
+
+
 def mark_freelancer_dirty(freelancer_id: str) -> None:
     """
-    Flag a freelancer's embedding as stale so the sweep worker picks it up.
-    No-op if no embedding row exists yet. Swallows exceptions so a dirty-flag
-    failure never breaks the calling mutation.
+    Flag a freelancer's embedding as stale, or embed immediately if below the size threshold.
+    Swallows exceptions so a dirty-flag failure never breaks the calling mutation.
     """
     try:
+        if _should_embed_immediately():
+            logger("EMBEDDING_MANAGER", f"Immediate embed scheduled | freelancer_id={freelancer_id}", level="INFO")
+            _schedule_immediate(upsert_freelancer_embedding(freelancer_id))
+            return
         db = get_db()
         db.execute_query(
             "UPDATE freelancer_embedding SET embedding_dirty = TRUE WHERE freelancer_id = :fid",
@@ -36,10 +106,14 @@ def mark_freelancer_dirty(freelancer_id: str) -> None:
 
 def mark_job_dirty(job_post_id: str) -> None:
     """
-    Flag a job's embedding as stale so the sweep worker picks it up.
-    No-op if no embedding row exists yet. Swallows exceptions.
+    Flag a job's embedding as stale, or embed immediately if below the size threshold.
+    Swallows exceptions.
     """
     try:
+        if _should_embed_immediately():
+            logger("EMBEDDING_MANAGER", f"Immediate embed scheduled | job_post_id={job_post_id}", level="INFO")
+            _schedule_immediate(upsert_job_embedding(job_post_id))
+            return
         db = get_db()
         db.execute_query(
             "UPDATE job_embedding SET embedding_dirty = TRUE WHERE job_post_id = :jpid",
@@ -93,12 +167,15 @@ def mark_job_dirty_by_role(job_role_id: str) -> None:
 
 def mark_contract_dirty(contract_id: str) -> None:
     """
-    Flag a contract's embedding as stale so the sweep worker picks it up.
-    Called when a contract is completed or when a rating is added/updated
-    (review text feeds into the contract source text).
-    No-op if no embedding row exists yet. Swallows exceptions.
+    Flag a contract's embedding as stale, or embed immediately if below the size threshold.
+    Called when a contract is completed or when a rating is added/updated.
+    Swallows exceptions.
     """
     try:
+        if _should_embed_immediately():
+            logger("EMBEDDING_MANAGER", f"Immediate embed scheduled | contract_id={contract_id}", level="INFO")
+            _schedule_immediate(upsert_contract_embedding(contract_id))
+            return
         db = get_db()
         db.execute_query(
             "UPDATE contract_embedding SET embedding_dirty = TRUE WHERE contract_id = :cid",

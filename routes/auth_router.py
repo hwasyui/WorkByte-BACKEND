@@ -17,7 +17,6 @@ from functions.authentication import (
 )
 from functions.database import Database
 from functions.logger import logger
-from functions.functions import db
 from functions.response_utils import ResponseSchema
 from functions.schema_model import UserRegister, UserLogin, Token, UserResponse
 from typing import Dict

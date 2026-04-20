@@ -21,13 +21,15 @@ Set BASE_URL below if your backend runs on a different host/port.
 import sys
 import json
 import os
+import random
 import datetime
 import requests
 
-BASE_URL = "http://localhost:8000"
-FREELANCER_EMAIL = "photo.freelancer@walkthrough3.dev"
-CLIENT_EMAIL = "photo.client@walkthrough3.dev"
-PASSWORD = "SecurePass123"
+BASE_URL         = "http://localhost:8000"
+_RUN_ID          = random.randint(1000, 9999)
+FREELANCER_EMAIL = f"photo.freelancer.{_RUN_ID}@walkthrough.dev"
+CLIENT_EMAIL     = f"photo.client.{_RUN_ID}@walkthrough.dev"
+PASSWORD         = "SecurePass123"
 
 # ── output tee (terminal + markdown file) ─────────────────────────────────────
 

@@ -15,12 +15,17 @@ Set BASE_URL below if your backend runs on a different host/port.
 
 import os
 import sys
+import random
 import datetime
 import requests
 
 # ── configuration ─────────────────────────────────────────────────────────────
 
 BASE_URL = "http://localhost:8000"
+
+_RUN_ID      = random.randint(1000, 9999)
+_EMAIL       = f"angelica.{_RUN_ID}@testcv.com"
+_PASSWORD    = "SecurePass123"
 
 # ── output tee (terminal + markdown file) ─────────────────────────────────────
 
@@ -150,10 +155,10 @@ def run():
 
     # ── 1. Register freelancer ─────────────────────────────────────────────────
 
-    step("Register freelancer (Angelica Suti Whiharto)")
+    step(f"Register freelancer (Angelica Suti Whiharto) — run id: {_RUN_ID}")
     post("/auth/register", {
-        "email": "angelica@testcv.com",
-        "password": "SecurePass123",
+        "email": _EMAIL,
+        "password": _PASSWORD,
         "user_type": "freelancer",
         "full_name": "Angelica Suti Whiharto"
     })
@@ -161,7 +166,7 @@ def run():
     # ── 2. Log in ─────────────────────────────────────────────────────────────
 
     step("Log in as freelancer")
-    tok_freelancer = token_from_login("angelica@testcv.com", "SecurePass123")
+    tok_freelancer = token_from_login(_EMAIL, _PASSWORD)
     print("  Token obtained.")
 
     # ── 3. Get freelancer profile ─────────────────────────────────────────────

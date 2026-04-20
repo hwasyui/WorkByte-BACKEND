@@ -8,6 +8,16 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from functions.logger import logger
 
 
+def _sanitize_log_params(params) -> dict:
+    """Replace embedding vector values in params before logging to avoid huge log lines."""
+    if not params:
+        return params
+    return {
+        k: f"<vector>" if k == "vec" else v
+        for k, v in (params.items() if isinstance(params, dict) else {})
+    }
+
+
 class Database:
 
     def __init__(self, db_user, db_password, db_host, db_port, db_name):
@@ -61,7 +71,7 @@ class Database:
             if limit:
                 query += f" LIMIT {limit}"
 
-            logger("DATABASE", f"Executing query: {query} | params={params}", level="DEBUG")
+            logger("DATABASE", f"Executing query: {query} | params={_sanitize_log_params(params)}", level="DEBUG")
 
             result = conn.execute(text(query), params)
 
@@ -142,7 +152,7 @@ class Database:
 
             query = f"UPDATE {table_name} SET {set_clauses} WHERE {' AND '.join(where_clauses)}"
 
-            logger("DATABASE", f"Executing update: {query} | params={params}", level="DEBUG")
+            logger("DATABASE", f"Executing update: {query} | params={_sanitize_log_params(params)}", level="DEBUG")
 
             conn.execute(text(query), params)
             conn.commit()
@@ -176,7 +186,7 @@ class Database:
 
             query = f"DELETE FROM {table_name} WHERE {' AND '.join(where_clauses)}"
 
-            logger("DATABASE", f"Executing delete: {query} | params={params}", level="DEBUG")
+            logger("DATABASE", f"Executing delete: {query} | params={_sanitize_log_params(params)}", level="DEBUG")
 
             conn.execute(text(query), params)
             conn.commit()
@@ -200,7 +210,7 @@ class Database:
         try:
             conn = self.get_connection()
 
-            logger("DATABASE", f"Executing query: {query} | params={params}", level="DEBUG")
+            logger("DATABASE", f"Executing query: {query} | params={_sanitize_log_params(params)}", level="DEBUG")
 
             result = conn.execute(text(query), params or {})
 

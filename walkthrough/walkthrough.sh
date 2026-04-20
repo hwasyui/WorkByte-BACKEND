@@ -519,7 +519,7 @@ EOF
 
   run_step "Get all performance ratings" "GET" "/performance_ratings" "" ""
   run_step "Get performance rating by freelancer" "GET" "/performance_ratings/freelancer/$freelancer_id" "" ""
-  if [ -n "$per_five_id" ]; then
+  if [ -n "$perf_id" ]; then
     run_step "Update performance rating" "PUT" "/performance_ratings/freelancer/$freelancer_id" '{"total_contracts":4}' ""
     run_step "Delete performance rating" "DELETE" "/performance_ratings/freelancer/$freelancer_id" "" ""
   fi

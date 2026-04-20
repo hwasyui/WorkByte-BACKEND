@@ -9,6 +9,7 @@ from functions.functions import get_table_testing
 from functions.logger import logger
 from functions.db_manager import init_db, close_db
 from functions.response_utils import ResponseSchema
+from ai_related.job_matching.embedding_manager import _should_embed_immediately
 from routes.auth_router import auth_router
 from ai_related.job_matching.job_matching_routes import router as job_matching_router
 from ai_related.job_matching.sweep_worker import embedding_sweep_loop
@@ -54,8 +55,15 @@ async def lifespan(app: FastAPI):
         logger("LIFESPAN", f"Failed to initialize database on startup: {str(e)}", level="ERROR")
         raise
 
+    immediate = _should_embed_immediately()
+    logger(
+        "LIFESPAN",
+        f"Embedding mode: {'immediate — embeddings fire on each mutation (below threshold)' if immediate else 'sweep — dirty records processed by background worker (above threshold)'}",
+        level="INFO",
+    )
+
     sweep_task = asyncio.create_task(embedding_sweep_loop())
-    logger("LIFESPAN", "Embedding sweep worker started", level="INFO")
+    logger("LIFESPAN", "Embedding sweep worker started (handles dirty records and manual /embed/ calls regardless of mode)", level="INFO")
 
     yield
 

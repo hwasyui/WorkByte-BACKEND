@@ -17,10 +17,17 @@ Set BASE_URL below if your backend runs on a different host/port.
 import sys
 import json
 import os
+import random
 import datetime
 import requests
 
 BASE_URL = "http://localhost:8000"
+
+_RUN_ID         = random.randint(1000, 9999)
+_EMAIL_FREELANCER = f"budi.{_RUN_ID}@walkthrough.dev"
+_EMAIL_CLIENT1    = f"techstartup.{_RUN_ID}@walkthrough.dev"
+_EMAIL_CLIENT2    = f"datacorp.{_RUN_ID}@walkthrough.dev"
+_PASSWORD         = "SecurePass123"
 
 # ── output tee (terminal + markdown file) ─────────────────────────────────────
 
@@ -132,6 +139,48 @@ def token_from_login(email: str, password: str) -> str:
     return extract(resp)["access_token"]
 
 
+def get_or_create_skill(name: str, category: str, description: str, token: str) -> str:
+    r = requests.get(f"{BASE_URL}/skills/search/{name}",
+                     headers={"Authorization": f"Bearer {token}"}, timeout=30)
+    if r.ok:
+        for item in r.json().get("details", {}).get("results", []):
+            if item["skill_name"].lower() == name.lower():
+                print(f"    {name} → {item['skill_id']} (existing)")
+                return item["skill_id"]
+    sid = extract(post("/skills", {"skill_name": name, "skill_category": category,
+                                   "description": description}, token))["skill_id"]
+    print(f"    {name} → {sid} (created)")
+    return sid
+
+
+def get_or_create_speciality(name: str, description: str, token: str) -> str:
+    r = requests.get(f"{BASE_URL}/specialities/search/{name}",
+                     headers={"Authorization": f"Bearer {token}"}, timeout=30)
+    if r.ok:
+        for item in r.json().get("details", {}).get("results", []):
+            if item["speciality_name"].lower() == name.lower():
+                print(f"    {name} → {item['speciality_id']} (existing)")
+                return item["speciality_id"]
+    sid = extract(post("/specialities", {"speciality_name": name, "description": description},
+                       token))["speciality_id"]
+    print(f"    {name} → {sid} (created)")
+    return sid
+
+
+def get_or_create_language(name: str, iso_code: str, token: str) -> str:
+    r = requests.get(f"{BASE_URL}/languages/search/{name}",
+                     headers={"Authorization": f"Bearer {token}"}, timeout=30)
+    if r.ok:
+        for item in r.json().get("details", {}).get("results", []):
+            if item["language_name"].lower() == name.lower():
+                print(f"    {name} → {item['language_id']} (existing)")
+                return item["language_id"]
+    lid = extract(post("/languages", {"language_name": name, "iso_code": iso_code},
+                       token))["language_id"]
+    print(f"    {name} → {lid} (created)")
+    return lid
+
+
 # ── main walkthrough ──────────────────────────────────────────────────────────
 
 def run():
@@ -145,26 +194,26 @@ def run():
 
     # ── 1. Register users ─────────────────────────────────────────────────────
 
-    step("Register freelancer (Budi Santoso)")
+    step(f"Register freelancer (Budi Santoso) — run id: {_RUN_ID}")
     post("/auth/register", {
-        "email": "budi.santoso@walkthrough.dev",
-        "password": "SecurePass123",
+        "email": _EMAIL_FREELANCER,
+        "password": _PASSWORD,
         "user_type": "freelancer",
         "full_name": "Budi Santoso"
     })
 
     step("Register client 1 (TechStartup Inc.)")
     post("/auth/register", {
-        "email": "techstartup@walkthrough.dev",
-        "password": "SecurePass123",
+        "email": _EMAIL_CLIENT1,
+        "password": _PASSWORD,
         "user_type": "client",
         "full_name": "TechStartup Inc."
     })
 
     step("Register client 2 (DataCorp Solutions)")
     post("/auth/register", {
-        "email": "datacorp@walkthrough.dev",
-        "password": "SecurePass123",
+        "email": _EMAIL_CLIENT2,
+        "password": _PASSWORD,
         "user_type": "client",
         "full_name": "DataCorp Solutions"
     })
@@ -172,9 +221,9 @@ def run():
     # ── 2. Log in all users ───────────────────────────────────────────────────
 
     step("Log in all three users and grab tokens")
-    tok_freelancer = token_from_login("budi.santoso@walkthrough.dev", "SecurePass123")
-    tok_client1    = token_from_login("techstartup@walkthrough.dev",  "SecurePass123")
-    tok_client2    = token_from_login("datacorp@walkthrough.dev",     "SecurePass123")
+    tok_freelancer = token_from_login(_EMAIL_FREELANCER, _PASSWORD)
+    tok_client1    = token_from_login(_EMAIL_CLIENT1,    _PASSWORD)
+    tok_client2    = token_from_login(_EMAIL_CLIENT2,    _PASSWORD)
     print("  All tokens obtained.")
 
     # ── 3. Fetch profile IDs ──────────────────────────────────────────────────
@@ -211,69 +260,83 @@ def run():
 
     # ── 5. Create shared skills ───────────────────────────────────────────────
 
-    step("Create skills (shared across freelancer + jobs)")
+    step("Create skills (shared across freelancer + jobs) — reuses existing if already present")
     skills_to_create = [
-        {"skill_name": "Python",         "skill_category": "hard_skill", "description": "Python programming language"},
-        {"skill_name": "PostgreSQL",      "skill_category": "hard_skill", "description": "Relational database"},
-        {"skill_name": "REST API",        "skill_category": "hard_skill", "description": "RESTful API design"},
-        {"skill_name": "Docker",          "skill_category": "tool",       "description": "Container platform"},
-        {"skill_name": "Redis",           "skill_category": "tool",       "description": "In-memory data store"},
-        {"skill_name": "React",           "skill_category": "hard_skill", "description": "Frontend JS framework"},
-        {"skill_name": "Apache Spark",    "skill_category": "hard_skill", "description": "Distributed data processing"},
-        {"skill_name": "Kubernetes",      "skill_category": "tool",       "description": "Container orchestration"},
-        {"skill_name": "AWS",             "skill_category": "tool",       "description": "Amazon Web Services"},
-        {"skill_name": "FastAPI",         "skill_category": "hard_skill", "description": "Python web framework"},
-        {"skill_name": "Data Modeling",   "skill_category": "hard_skill", "description": "Database schema design"},
-        {"skill_name": "Git",             "skill_category": "tool",       "description": "Version control"},
+        # Core backend
+        ("Python",           "hard_skill", "Python programming language"),
+        ("PostgreSQL",        "hard_skill", "Relational database"),
+        ("REST API",          "hard_skill", "RESTful API design"),
+        ("FastAPI",           "hard_skill", "Python async web framework"),
+        ("Node.js",           "hard_skill", "JavaScript server-side runtime"),
+        ("GraphQL",           "hard_skill", "Query language for APIs"),
+        # Frontend
+        ("React",             "hard_skill", "Frontend JavaScript framework"),
+        ("TypeScript",        "hard_skill", "Typed superset of JavaScript"),
+        ("Vue.js",            "hard_skill", "Progressive JavaScript framework"),
+        # Data / ML
+        ("Apache Spark",      "hard_skill", "Distributed data processing"),
+        ("Data Modeling",     "hard_skill", "Database schema design"),
+        ("Machine Learning",  "hard_skill", "ML model development"),
+        ("Pandas",            "hard_skill", "Python data analysis library"),
+        # Infrastructure / tools
+        ("Docker",            "tool",       "Container platform"),
+        ("Kubernetes",        "tool",       "Container orchestration"),
+        ("AWS",               "tool",       "Amazon Web Services"),
+        ("Terraform",         "tool",       "Infrastructure as code"),
+        ("CI/CD",             "tool",       "Continuous integration and delivery"),
+        ("Git",               "tool",       "Version control"),
+        # Storage
+        ("Redis",             "tool",       "In-memory data store"),
+        ("MongoDB",           "hard_skill", "NoSQL document database"),
+        ("Elasticsearch",     "tool",       "Distributed search engine"),
     ]
     skill_ids = {}
-    for s in skills_to_create:
-        resp = post("/skills", s, tok_client1)
-        sid = extract(resp)["skill_id"]
-        skill_ids[s["skill_name"]] = sid
-        print(f"    {s['skill_name']} → {sid}")
+    for name, category, description in skills_to_create:
+        skill_ids[name] = get_or_create_skill(name, category, description, tok_client1)
 
     # ── 6. Create specialities ────────────────────────────────────────────────
 
-    step("Create specialities")
+    step("Create specialities — reuses existing if already present")
     specs_to_create = [
-        {"speciality_name": "Backend Development", "description": "Server-side development"},
-        {"speciality_name": "Data Engineering",    "description": "Data pipelines and warehousing"},
-        {"speciality_name": "DevOps",              "description": "Infrastructure and CI/CD"},
+        ("Backend Development",  "Server-side API and service development"),
+        ("Frontend Development", "Client-side UI and web development"),
+        ("Data Engineering",     "Data pipelines, warehousing and ETL"),
+        ("DevOps",               "Infrastructure, CI/CD and platform engineering"),
+        ("Machine Learning",     "ML model training, evaluation and deployment"),
+        ("Mobile Development",   "iOS and Android application development"),
+        ("Cloud Architecture",   "Cloud infrastructure design and migration"),
     ]
     spec_ids = {}
-    for s in specs_to_create:
-        resp = post("/specialities", s, tok_client1)
-        sid = extract(resp)["speciality_id"]
-        spec_ids[s["speciality_name"]] = sid
-        print(f"    {s['speciality_name']} → {sid}")
+    for name, description in specs_to_create:
+        spec_ids[name] = get_or_create_speciality(name, description, tok_client1)
 
     # ── 7. Create languages ───────────────────────────────────────────────────
 
-    step("Create languages")
+    step("Create languages — reuses existing if already present")
     langs_to_create = [
-        {"language_name": "English",    "iso_code": "en"},
-        {"language_name": "Indonesian", "iso_code": "id"},
+        ("English",    "en"),
+        ("Indonesian", "id"),
+        ("Mandarin",   "zh"),
+        ("Japanese",   "ja"),
     ]
     lang_ids = {}
-    for l in langs_to_create:
-        resp = post("/languages", l, tok_client1)
-        lid = extract(resp)["language_id"]
-        lang_ids[l["language_name"]] = lid
-        print(f"    {l['language_name']} → {lid}")
+    for name, iso in langs_to_create:
+        lang_ids[name] = get_or_create_language(name, iso, tok_client1)
 
     # ── 8. Build the freelancer's profile ────────────────────────────────────
 
     step("Assign skills to freelancer")
     freelancer_skills = [
-        ("Python",      "advanced"),
-        ("PostgreSQL",  "advanced"),
-        ("REST API",    "advanced"),
-        ("FastAPI",     "intermediate"),
-        ("Docker",      "intermediate"),
-        ("Redis",       "beginner"),
-        ("Git",         "advanced"),
+        ("Python",        "expert"),
+        ("PostgreSQL",    "advanced"),
+        ("REST API",      "advanced"),
+        ("FastAPI",       "advanced"),
+        ("Docker",        "intermediate"),
+        ("Redis",         "intermediate"),
+        ("Git",           "advanced"),
         ("Data Modeling", "intermediate"),
+        ("CI/CD",         "beginner"),
+        ("Elasticsearch", "beginner"),
     ]
     for skill_name, level in freelancer_skills:
         post("/freelancer-skills", {

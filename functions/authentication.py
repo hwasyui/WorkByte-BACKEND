@@ -11,7 +11,7 @@ from fastapi.security import OAuth2PasswordBearer
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from functions.database import Database
 from functions.logger import logger
-from functions.functions import db
+from functions.db_manager import get_db
 from functions.schema_model import Token, TokenData, UserInDB
 
 from dotenv import load_dotenv
@@ -74,7 +74,7 @@ def authenticate_user(email: str, password: str):
     """Authenticate user with email and password."""
     try:
         query = "SELECT user_id, email, password, type FROM users WHERE email = :email"
-        result = db.execute_query(query, params={"email": email})
+        result = get_db().execute_query(query, params={"email": email})
         if not result or len(result) == 0:
             return False
         user = result[0]
@@ -89,7 +89,7 @@ def get_user(email: str):
     """Get user from database by email."""
     try:
         query = "SELECT user_id, email, password, type FROM users WHERE email = :email"
-        result = db.execute_query(query, params={"email": email})
+        result = get_db().execute_query(query, params={"email": email})
         if result and len(result) > 0:
             user = result[0]
             return UserInDB(user_id=str(user['user_id']), email=user['email'], password=user['password'], type=user['type'])
@@ -116,7 +116,7 @@ def register_user(email: str, password: str, user_type: str = "freelancer", full
         VALUES (:email, :password, :user_type)
         RETURNING user_id
         """
-        user_result = db.execute_query(user_query, params={"email": email, "password": hashed_password, "user_type": user_type})
+        user_result = get_db().execute_query(user_query, params={"email": email, "password": hashed_password, "user_type": user_type})
         
         if not user_result or len(user_result) == 0:
             raise HTTPException(status_code=500, detail="Failed to create user record")
@@ -130,7 +130,7 @@ def register_user(email: str, password: str, user_type: str = "freelancer", full
             VALUES (:user_id, :full_name)
             RETURNING freelancer_id
             """
-            profile_result = db.execute_query(profile_query, params={"user_id": user_id, "full_name": full_name})
+            profile_result = get_db().execute_query(profile_query, params={"user_id": user_id, "full_name": full_name})
             if not profile_result:
                 raise HTTPException(status_code=500, detail="Failed to create freelancer profile")
         elif user_type == "client":
@@ -141,7 +141,7 @@ def register_user(email: str, password: str, user_type: str = "freelancer", full
             VALUES (:user_id, :full_name)
             RETURNING client_id
             """
-            profile_result = db.execute_query(profile_query, params={"user_id": user_id, "full_name": full_name_value})
+            profile_result = get_db().execute_query(profile_query, params={"user_id": user_id, "full_name": full_name_value})
             if not profile_result:
                 raise HTTPException(status_code=500, detail="Failed to create client profile")
         

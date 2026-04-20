@@ -14,7 +14,7 @@ from ai_related.job_matching.embedding_manager import (
 )
 
 SWEEP_INTERVAL_SECONDS = 300   # 5 minutes
-BATCH_SIZE = 50                # max records processed per sweep cycle
+BATCH_SIZE = 100               # max records processed per sweep cycle
 
 
 async def _sweep_freelancers() -> int:
