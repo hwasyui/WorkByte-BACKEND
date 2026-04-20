@@ -17,22 +17,19 @@ except ImportError as exc:
         "The supabase package is required. Install it with: pip install supabase"
     ) from exc
 
-# ── Single shared client ──────────────────────────────────────────────────────
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# ── Bucket names ──────────────────────────────────────────────────────────────
 BUCKET_JOB_FILES       = os.getenv("SUPABASE_STORAGE_BUCKET", "job-files")
 BUCKET_PROPOSAL_FILES  = "proposal-files"
 BUCKET_USER_ASSETS     = "user-assets"
+BUCKET_CONTRACT_SUBMISSIONS = "contract-submissions"
 
 BUCKET_MAP = {
     "job-files":       BUCKET_JOB_FILES,
     "proposal-files":  BUCKET_PROPOSAL_FILES,
     "user-assets":     BUCKET_USER_ASSETS,
+    "contract-submissions": BUCKET_CONTRACT_SUBMISSIONS,
 }
-
-
-# ── Core helpers ──────────────────────────────────────────────────────────────
 
 def guess_mime(filename: str, fallback: str = "application/octet-stream") -> str:
     """Guess MIME type from filename."""
@@ -53,7 +50,7 @@ def upload_file(
         try:
             storage.remove([path])
         except Exception:
-            pass  # file didn't exist yet, that's fine
+            pass 
 
     response = storage.upload(path, file_bytes, file_options={"content-type": content_type})
     if getattr(response, "error", None):
@@ -67,6 +64,15 @@ def delete_file(bucket: str, path: str) -> None:
     supabase.storage.from_(bucket).remove([path])
 
 
+def download_file(bucket: str, path: str) -> bytes:
+    """Download bytes from any bucket."""
+    storage = supabase.storage.from_(bucket)
+    response = storage.download(path)
+    if getattr(response, "error", None):
+        raise RuntimeError(f"Supabase download failed [{bucket}/{path}]: {response.error}")
+    return response
+
+
 def create_signed_url(bucket: str, path: str, expires_in: int = 3600) -> str:
     """Create a signed temporary URL for a private storage object."""
     storage = supabase.storage.from_(bucket)
@@ -78,8 +84,6 @@ def create_signed_url(bucket: str, path: str, expires_in: int = 3600) -> str:
         raise RuntimeError("Signed URL response did not contain a URL")
     return signed_url
 
-
-# ── Per-bucket upload helpers ─────────────────────────────────────────────────
 
 def upload_proposal_file(proposal_id: str, file_name: str, file_bytes: bytes, content_type: str = None) -> str:
     return upload_file(
@@ -125,6 +129,14 @@ def upload_client_profile_picture(client_id: str, file_name: str, file_bytes: by
     return upload_file(
         bucket=BUCKET_USER_ASSETS,
         path=path,
+        file_bytes=file_bytes,
+        content_type=content_type or guess_mime(file_name),
+    )
+
+def upload_contract_submission_file(contract_id: str, submission_id: str, file_name: str, file_bytes: bytes, content_type: str = None) -> str:
+    return upload_file(
+        bucket=BUCKET_CONTRACT_SUBMISSIONS,
+        path=f"{contract_id}/{submission_id}/{file_name}",
         file_bytes=file_bytes,
         content_type=content_type or guess_mime(file_name),
     )

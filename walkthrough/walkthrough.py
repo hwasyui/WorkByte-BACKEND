@@ -283,7 +283,6 @@ def run():
         ("Kubernetes",        "tool",       "Container orchestration"),
         ("AWS",               "tool",       "Amazon Web Services"),
         ("Terraform",         "tool",       "Infrastructure as code"),
-        ("CI/CD",             "tool",       "Continuous integration and delivery"),
         ("Git",               "tool",       "Version control"),
         # Storage
         ("Redis",             "tool",       "In-memory data store"),
@@ -335,7 +334,6 @@ def run():
         ("Redis",         "intermediate"),
         ("Git",           "advanced"),
         ("Data Modeling", "intermediate"),
-        ("CI/CD",         "beginner"),
         ("Elasticsearch", "beginner"),
     ]
     for skill_name, level in freelancer_skills:

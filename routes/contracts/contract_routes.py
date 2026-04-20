@@ -3,7 +3,8 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from fastapi import APIRouter, Depends
+
+from fastapi import APIRouter, Depends, Response
 from typing import List, Optional
 import uuid
 from functions.schema_model import ContractCreate, ContractUpdate, ContractResponse, ContractGenerateRequest
@@ -23,10 +24,12 @@ from routes.contracts.contract_functions import ContractFunctions
 from routes.contracts.contract_generation_functions import ContractGenerationFunctions
 from ai_related.job_matching.embedding_manager import upsert_contract_embedding
 
+
 contract_router = APIRouter(prefix="/contracts", tags=["Contracts"])
 
 
 # ── GET /contracts ────────────────────────────────────────────────────────────
+
 
 @contract_router.get("", response_model=List[ContractResponse])
 async def get_all_contracts(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
@@ -40,16 +43,15 @@ async def get_all_contracts(limit: Optional[int] = None, current_user: UserInDB 
             contracts = ContractFunctions.get_contracts_by_freelancer_id(freelancer["freelancer_id"])
         else:
             return ResponseSchema.error("Only clients and freelancers can access contracts", 403)
-        success_msg = f"Retrieved {len(contracts)} contracts for user {current_user.user_id}"
-        logger("CONTRACT", success_msg, "GET /contracts", "INFO")
+        logger("CONTRACT", f"Retrieved {len(contracts)} contracts for user {current_user.user_id}", "GET /contracts", "INFO")
         return ResponseSchema.success(contracts, 200)
     except Exception as e:
-        error_msg = f"Failed to fetch contracts: {str(e)}"
-        logger("CONTRACT", error_msg, "GET /contracts", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        logger("CONTRACT", f"Failed to fetch contracts: {str(e)}", "GET /contracts", "ERROR")
+        return ResponseSchema.error(f"Failed to fetch contracts: {str(e)}", 500)
 
 
 # ── Specific sub-paths BEFORE /{contract_id} so they are not shadowed ─────────
+
 
 @contract_router.get("/freelancer/{freelancer_id}", response_model=List[ContractResponse])
 async def get_contracts_by_freelancer(freelancer_id: str, current_user: UserInDB = Depends(get_current_user)):
@@ -57,13 +59,11 @@ async def get_contracts_by_freelancer(freelancer_id: str, current_user: UserInDB
     try:
         assert_freelancer_owns(current_user, freelancer_id)
         contracts = ContractFunctions.get_contracts_by_freelancer_id(freelancer_id)
-        success_msg = f"Retrieved {len(contracts)} contracts for freelancer {freelancer_id}"
-        logger("CONTRACT", success_msg, "GET /contracts/freelancer/{freelancer_id}", "INFO")
+        logger("CONTRACT", f"Retrieved {len(contracts)} contracts for freelancer {freelancer_id}", "GET /contracts/freelancer/{freelancer_id}", "INFO")
         return ResponseSchema.success(contracts, 200)
     except Exception as e:
-        error_msg = f"Failed to fetch contracts for freelancer {freelancer_id}: {str(e)}"
-        logger("CONTRACT", error_msg, "GET /contracts/freelancer/{freelancer_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        logger("CONTRACT", f"Failed to fetch contracts for freelancer {freelancer_id}: {str(e)}", "GET /contracts/freelancer/{freelancer_id}", "ERROR")
+        return ResponseSchema.error(f"Failed to fetch contracts for freelancer {freelancer_id}: {str(e)}", 500)
 
 
 @contract_router.get("/client/{client_id}", response_model=List[ContractResponse])
@@ -72,13 +72,11 @@ async def get_contracts_by_client(client_id: str, current_user: UserInDB = Depen
     try:
         assert_client_owns(current_user, client_id)
         contracts = ContractFunctions.get_contracts_by_client_id(client_id)
-        success_msg = f"Retrieved {len(contracts)} contracts for client {client_id}"
-        logger("CONTRACT", success_msg, "GET /contracts/client/{client_id}", "INFO")
+        logger("CONTRACT", f"Retrieved {len(contracts)} contracts for client {client_id}", "GET /contracts/client/{client_id}", "INFO")
         return ResponseSchema.success(contracts, 200)
     except Exception as e:
-        error_msg = f"Failed to fetch contracts for client {client_id}: {str(e)}"
-        logger("CONTRACT", error_msg, "GET /contracts/client/{client_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        logger("CONTRACT", f"Failed to fetch contracts for client {client_id}: {str(e)}", "GET /contracts/client/{client_id}", "ERROR")
+        return ResponseSchema.error(f"Failed to fetch contracts for client {client_id}: {str(e)}", 500)
 
 
 @contract_router.get("/{contract_id}/generation-data")
@@ -87,24 +85,18 @@ async def get_contract_generation_data(contract_id: str, current_user: UserInDB 
     try:
         contract = ContractFunctions.get_contract_by_id(contract_id)
         if not contract:
-            error_msg = f"Contract {contract_id} not found"
-            logger("CONTRACT", error_msg, "GET /contracts/{contract_id}/generation-data", "WARNING")
-            return ResponseSchema.error(error_msg, 404)
+            return ResponseSchema.error(f"Contract {contract_id} not found", 404)
         assert_current_user_is_contract_party(current_user, contract)
 
         context = ContractGenerationFunctions.build_generation_context(contract_id)
         if not context:
-            error_msg = f"Failed to build generation context for contract {contract_id}"
-            logger("CONTRACT", error_msg, "GET /contracts/{contract_id}/generation-data", "ERROR")
-            return ResponseSchema.error(error_msg, 500)
+            return ResponseSchema.error(f"Failed to build generation context for contract {contract_id}", 500)
 
-        success_msg = f"Retrieved generation data for contract {contract_id}"
-        logger("CONTRACT", success_msg, "GET /contracts/{contract_id}/generation-data", "INFO")
+        logger("CONTRACT", f"Retrieved generation data for contract {contract_id}", "GET /contracts/{contract_id}/generation-data", "INFO")
         return ResponseSchema.success(context, 200)
     except Exception as e:
-        error_msg = f"Failed to fetch generation data for contract {contract_id}: {str(e)}"
-        logger("CONTRACT", error_msg, "GET /contracts/{contract_id}/generation-data", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        logger("CONTRACT", f"Failed to fetch generation data for contract {contract_id}: {str(e)}", "GET /contracts/{contract_id}/generation-data", "ERROR")
+        return ResponseSchema.error(f"Failed to fetch generation data for contract {contract_id}: {str(e)}", 500)
 
 
 @contract_router.get("/{contract_id}/pdf-url")
@@ -113,9 +105,7 @@ async def get_contract_pdf_url(contract_id: str, current_user: UserInDB = Depend
     try:
         contract = ContractFunctions.get_contract_by_id(contract_id)
         if not contract:
-            error_msg = f"Contract {contract_id} not found"
-            logger("CONTRACT", error_msg, "GET /contracts/{contract_id}/pdf-url", "WARNING")
-            return ResponseSchema.error(error_msg, 404)
+            return ResponseSchema.error(f"Contract {contract_id} not found", 404)
         assert_current_user_is_contract_party(current_user, contract)
 
         pdf_path = contract.get("contract_pdf_url")
@@ -123,16 +113,41 @@ async def get_contract_pdf_url(contract_id: str, current_user: UserInDB = Depend
             return ResponseSchema.error("Contract PDF has not been generated yet", 404)
 
         signed_url = ContractGenerationFunctions.get_signed_contract_url(pdf_path)
-        success_msg = f"Created signed PDF URL for contract {contract_id}"
-        logger("CONTRACT", success_msg, "GET /contracts/{contract_id}/pdf-url", "INFO")
+        logger("CONTRACT", f"Created signed PDF URL for contract {contract_id}", "GET /contracts/{contract_id}/pdf-url", "INFO")
         return ResponseSchema.success({"pdf_url": signed_url}, 200)
     except Exception as e:
-        error_msg = f"Failed to create PDF URL for contract {contract_id}: {str(e)}"
-        logger("CONTRACT", error_msg, "GET /contracts/{contract_id}/pdf-url", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        logger("CONTRACT", f"Failed to create PDF URL for contract {contract_id}: {str(e)}", "GET /contracts/{contract_id}/pdf-url", "ERROR")
+        return ResponseSchema.error(f"Failed to create PDF URL for contract {contract_id}: {str(e)}", 500)
+
+
+@contract_router.get("/{contract_id}/pdf-download")
+async def download_contract_pdf(contract_id: str, current_user: UserInDB = Depends(get_current_user)):
+    """Download the generated contract PDF directly."""
+    try:
+        contract = ContractFunctions.get_contract_by_id(contract_id)
+        if not contract:
+            return ResponseSchema.error(f"Contract {contract_id} not found", 404)
+        assert_current_user_is_contract_party(current_user, contract)
+
+        pdf_path = contract.get("contract_pdf_url")
+        if not pdf_path:
+            return ResponseSchema.error("Contract PDF has not been generated yet", 404)
+
+        from functions.supabase_client import download_file
+        pdf_bytes = download_file("contract-assets", pdf_path)
+
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename=contract_{contract_id}.pdf"},
+        )
+    except Exception as e:
+        logger("CONTRACT", f"Failed to download PDF for contract {contract_id}: {str(e)}", "GET /contracts/{contract_id}/pdf-download", "ERROR")
+        return ResponseSchema.error(f"Failed to download PDF for contract {contract_id}: {str(e)}", 500)
 
 
 # ── Generic /{contract_id} GET — must come AFTER all literal sub-paths ────────
+
 
 @contract_router.get("/{contract_id}", response_model=ContractResponse)
 async def get_contract(contract_id: str, current_user: UserInDB = Depends(get_current_user)):
@@ -140,20 +155,17 @@ async def get_contract(contract_id: str, current_user: UserInDB = Depends(get_cu
     try:
         contract = ContractFunctions.get_contract_by_id(contract_id)
         if not contract:
-            error_msg = f"Contract {contract_id} not found"
-            logger("CONTRACT", error_msg, "GET /contracts/{contract_id}", "WARNING")
-            return ResponseSchema.error(error_msg, 404)
+            return ResponseSchema.error(f"Contract {contract_id} not found", 404)
         assert_current_user_is_contract_party(current_user, contract)
-        success_msg = f"Retrieved contract {contract_id}"
-        logger("CONTRACT", success_msg, "GET /contracts/{contract_id}", "INFO")
+        logger("CONTRACT", f"Retrieved contract {contract_id}", "GET /contracts/{contract_id}", "INFO")
         return ResponseSchema.success(contract, 200)
     except Exception as e:
-        error_msg = f"Failed to fetch contract {contract_id}: {str(e)}"
-        logger("CONTRACT", error_msg, "GET /contracts/{contract_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        logger("CONTRACT", f"Failed to fetch contract {contract_id}: {str(e)}", "GET /contracts/{contract_id}", "ERROR")
+        return ResponseSchema.error(f"Failed to fetch contract {contract_id}: {str(e)}", 500)
 
 
 # ── Mutations ─────────────────────────────────────────────────────────────────
+
 
 @contract_router.post("", response_model=ContractResponse, status_code=201)
 async def create_contract(contract: ContractCreate, current_user: UserInDB = Depends(get_current_user)):
@@ -189,20 +201,17 @@ async def create_contract(contract: ContractCreate, current_user: UserInDB = Dep
             end_date=contract.end_date,
             actual_completion_date=contract.actual_completion_date,
             total_hours_worked=contract.total_hours_worked,
-            total_paid=contract.total_paid
+            total_paid=contract.total_paid,
         )
 
-        success_msg = f"Created contract {contract_id}"
-        logger("CONTRACT", success_msg, "POST /contracts", "INFO")
+        logger("CONTRACT", f"Created contract {contract_id}", "POST /contracts", "INFO")
         return ResponseSchema.success(new_contract, 201)
     except ValueError as e:
-        error_msg = f"Validation error: {str(e)}"
-        logger("CONTRACT", error_msg, "POST /contracts", "WARNING")
-        return ResponseSchema.error(error_msg, 400)
+        logger("CONTRACT", f"Validation error: {str(e)}", "POST /contracts", "WARNING")
+        return ResponseSchema.error(f"Validation error: {str(e)}", 400)
     except Exception as e:
-        error_msg = f"Failed to create contract: {str(e)}"
-        logger("CONTRACT", error_msg, "POST /contracts", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        logger("CONTRACT", f"Failed to create contract: {str(e)}", "POST /contracts", "ERROR")
+        return ResponseSchema.error(f"Failed to create contract: {str(e)}", 500)
 
 
 @contract_router.post("/{contract_id}/generate", response_model=ContractResponse)
@@ -211,9 +220,7 @@ async def generate_contract_pdf(contract_id: str, generation_data: ContractGener
     try:
         contract = ContractFunctions.get_contract_by_id(contract_id)
         if not contract:
-            error_msg = f"Contract {contract_id} not found"
-            logger("CONTRACT", error_msg, "POST /contracts/{contract_id}/generate", "WARNING")
-            return ResponseSchema.error(error_msg, 404)
+            return ResponseSchema.error(f"Contract {contract_id} not found", 404)
         assert_current_user_is_contract_party(current_user, contract)
 
         if generation_data.termination_notice not in {7, 14, 30}:
@@ -253,17 +260,14 @@ async def generate_contract_pdf(contract_id: str, generation_data: ContractGener
         )
 
         refreshed = ContractFunctions.get_contract_by_id(contract_id)
-        success_msg = f"Generated contract PDF for {contract_id}"
-        logger("CONTRACT", success_msg, "POST /contracts/{contract_id}/generate", "INFO")
+        logger("CONTRACT", f"Generated contract PDF for {contract_id}", "POST /contracts/{contract_id}/generate", "INFO")
         return ResponseSchema.success(refreshed, 200)
     except ValueError as e:
-        error_msg = f"Validation error: {str(e)}"
-        logger("CONTRACT", error_msg, "POST /contracts/{contract_id}/generate", "WARNING")
-        return ResponseSchema.error(error_msg, 400)
+        logger("CONTRACT", f"Validation error: {str(e)}", "POST /contracts/{contract_id}/generate", "WARNING")
+        return ResponseSchema.error(f"Validation error: {str(e)}", 400)
     except Exception as e:
-        error_msg = f"Failed to generate contract PDF for {contract_id}: {str(e)}"
-        logger("CONTRACT", error_msg, "POST /contracts/{contract_id}/generate", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        logger("CONTRACT", f"Failed to generate contract PDF for {contract_id}: {str(e)}", "POST /contracts/{contract_id}/generate", "ERROR")
+        return ResponseSchema.error(f"Failed to generate contract PDF for {contract_id}: {str(e)}", 500)
 
 
 @contract_router.put("/{contract_id}", response_model=ContractResponse)
@@ -272,9 +276,7 @@ async def update_contract(contract_id: str, contract_update: ContractUpdate, cur
     try:
         existing_contract = ContractFunctions.get_contract_by_id(contract_id)
         if not existing_contract:
-            error_msg = f"Contract {contract_id} not found"
-            logger("CONTRACT", error_msg, "PUT /contracts/{contract_id}", "WARNING")
-            return ResponseSchema.error(error_msg, 404)
+            return ResponseSchema.error(f"Contract {contract_id} not found", 404)
         assert_current_user_is_contract_party(current_user, existing_contract)
 
         update_data = contract_update.model_dump(exclude_unset=True)
@@ -292,13 +294,54 @@ async def update_contract(contract_id: str, contract_update: ContractUpdate, cur
                 {"cid": existing_contract["client_id"]},
             )
 
-        success_msg = f"Updated contract {contract_id}"
-        logger("CONTRACT", success_msg, "PUT /contracts/{contract_id}", "INFO")
+        logger("CONTRACT", f"Updated contract {contract_id}", "PUT /contracts/{contract_id}", "INFO")
         return ResponseSchema.success(updated_contract, 200)
     except Exception as e:
-        error_msg = f"Failed to update contract {contract_id}: {str(e)}"
-        logger("CONTRACT", error_msg, "PUT /contracts/{contract_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        logger("CONTRACT", f"Failed to update contract {contract_id}: {str(e)}", "PUT /contracts/{contract_id}", "ERROR")
+        return ResponseSchema.error(f"Failed to update contract {contract_id}: {str(e)}", 500)
+
+
+# ── NEW: Cancel endpoint ───────────────────────────────────────────────────────
+
+
+@contract_router.put("/{contract_id}/cancel")
+async def cancel_contract(
+    contract_id: str,
+    current_user: UserInDB = Depends(get_current_user),
+):
+    """
+    Cancel an active contract.
+    Only the client or freelancer who is a party to the contract can cancel it.
+    Only contracts with status 'active' or 'revision_requested' can be cancelled.
+    """
+    try:
+        contract = ContractFunctions.get_contract_by_id(contract_id)
+        if not contract:
+            return ResponseSchema.error(f"Contract {contract_id} not found", 404)
+
+        assert_current_user_is_contract_party(current_user, contract)
+
+        cancellable_statuses = {"active", "under_review", "revision_requested"}
+        if contract["status"] not in cancellable_statuses:
+            return ResponseSchema.error(
+                f"Cannot cancel a contract with status '{contract['status']}'",
+                400,
+            )
+
+        cancelled_contract = ContractFunctions.cancel_contract(
+            contract_id=contract_id,
+            cancelled_by=str(current_user.user_id),
+        )
+
+        logger("CONTRACT", f"Contract {contract_id} cancelled by user {current_user.user_id}", "PUT /contracts/{contract_id}/cancel", "INFO")
+        return ResponseSchema.success(cancelled_contract, 200)
+
+    except Exception as e:
+        logger("CONTRACT", f"Failed to cancel contract {contract_id}: {str(e)}", "PUT /contracts/{contract_id}/cancel", "ERROR")
+        return ResponseSchema.error(f"Failed to cancel contract {contract_id}: {str(e)}", 500)
+
+
+# ── DELETE ────────────────────────────────────────────────────────────────────
 
 
 @contract_router.delete("/{contract_id}", status_code=200)
@@ -307,17 +350,13 @@ async def delete_contract(contract_id: str, current_user: UserInDB = Depends(get
     try:
         existing_contract = ContractFunctions.get_contract_by_id(contract_id)
         if not existing_contract:
-            error_msg = f"Contract {contract_id} not found"
-            logger("CONTRACT", error_msg, "DELETE /contracts/{contract_id}", "WARNING")
-            return ResponseSchema.error(error_msg, 404)
+            return ResponseSchema.error(f"Contract {contract_id} not found", 404)
         assert_current_user_is_contract_party(current_user, existing_contract)
 
         ContractFunctions.delete_contract(contract_id)
 
-        success_msg = f"Deleted contract {contract_id}"
-        logger("CONTRACT", success_msg, "DELETE /contracts/{contract_id}", "INFO")
+        logger("CONTRACT", f"Deleted contract {contract_id}", "DELETE /contracts/{contract_id}", "INFO")
         return ResponseSchema.success("Deleted successfully", 200)
     except Exception as e:
-        error_msg = f"Failed to delete contract {contract_id}: {str(e)}"
-        logger("CONTRACT", error_msg, "DELETE /contracts/{contract_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        logger("CONTRACT", f"Failed to delete contract {contract_id}: {str(e)}", "DELETE /contracts/{contract_id}", "ERROR")
+        return ResponseSchema.error(f"Failed to delete contract {contract_id}: {str(e)}", 500)

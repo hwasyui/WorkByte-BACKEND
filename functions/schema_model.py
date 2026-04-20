@@ -1,6 +1,6 @@
 from fastapi import File, Form, UploadFile
 from pydantic import BaseModel, EmailStr, field_validator
-from typing import Optional, List
+from typing import Optional, Any, Dict, List
 from datetime import date, datetime
 
 # ==================== AUTHENTICATION ====================
@@ -649,6 +649,35 @@ class ContractGenerateRequest(BaseModel):
     additional_clauses: Optional[str] = None
     payment_schedule: Optional[str] = None
 
+# ==================== CONTRACT SUBMISSIONS ====================
+class ContractSubmissionFileResponse(BaseModel):
+    file_id: str
+    submission_id: str
+    file_url: str
+    file_name: str
+    file_size_bytes: Optional[int] = None
+    mime_type: Optional[str] = None
+    uploaded_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ContractSubmissionResponse(BaseModel):
+    submission_id: str
+    contract_id: str
+    submitted_by: str
+    note: Optional[str] = None
+    status: str
+    submitted_at: Optional[datetime] = None
+    reviewed_at: Optional[datetime] = None
+    revision_note: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    files: List[ContractSubmissionFileResponse] = []
+
+    class Config:
+        from_attributes = True
 
 # ==================== PORTFOLIO ====================
 class PortfolioCreate(BaseModel):
@@ -871,29 +900,30 @@ class JobEmbeddingResponse(BaseModel):
 
 # ==================== MESSAGES ====================
 class MessageCreate(BaseModel):
-    message_id: Optional[str] = None
-    contract_id: Optional[str] = None
-    sender_id: str
-    receiver_id: str
+    contract_id: str
     message_text: str
-    is_read: Optional[bool] = False
 
-class MessageUpdate(BaseModel):
-    message_text: Optional[str] = None
-    is_read: Optional[bool] = None
+class MessageMarkRead(BaseModel):
+    contract_id: str
 
 class MessageResponse(BaseModel):
     message_id: str
-    contract_id: Optional[str] = None
     sender_id: str
     receiver_id: str
+    contract_id: Optional[str] = None
     message_text: str
+    message_type: str = "user"
+    event_type: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
     is_read: Optional[bool] = False
-    created_at: Optional[datetime] = None
+    read_at: Optional[datetime] = None
+    sent_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
 
+class RevisionRequest(BaseModel):
+    note: Optional[str] = None
 
 # ==================== COMPREHENSIVE FREELANCER PROFILE ====================
 class FreelancerSkillWithDetails(BaseModel):

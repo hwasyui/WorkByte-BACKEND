@@ -41,6 +41,7 @@ from routes.job_embeddings.job_embedding_routes import job_embedding_router
 from routes.messages.message_routes import message_router
 from routes.upload.upload_route import upload_router
 from routes.cv_upload.cv_upload_routes import cv_upload_router
+from routes.contract_submissions.contract_submission_routes import contract_submission_router
 from ai_related.cv_analysis.cv_analysis_routes import cv_analysis_router
 
 
@@ -123,6 +124,7 @@ app.include_router(message_router)
 app.include_router(upload_router)
 app.include_router(cv_upload_router)
 app.include_router(cv_analysis_router)
+app.include_router(contract_submission_router)
 app.include_router(job_matching_router, prefix="/ai/job_matching")
 
 

@@ -603,7 +603,7 @@ async def _call_ollama(prompt: str) -> str:
     logger("RAG_ANALYSER", f"Ollama response received | chars={len(raw)}", level="INFO")
     if not raw:
         raise RuntimeError("Ollama returned empty response — falling back to Gemini")
-    logger("RAG_ANALYSER", f"Ollama raw preview | {raw[:200]}", level="DEBUG")
+    logger("RAG_ANALYSER", f"Ollama raw response (full) |\n{raw}", level="DEBUG")
     return raw
 
 
@@ -632,11 +632,15 @@ async def _call_google(prompt: str) -> str:
     response = await client.aio.models.generate_content(
         model=model,
         contents=prompt,
-        config={"temperature": 0.15, "max_output_tokens": 4096},
+        config={
+            "temperature": 0.15,
+            "max_output_tokens": 8192,
+            "response_mime_type": "application/json",
+        },
     )
     raw = response.text.strip()
     logger("RAG_ANALYSER", f"Gemini response received | chars={len(raw)}", level="INFO")
-    logger("RAG_ANALYSER", f"Gemini raw preview | {raw[:200]}", level="DEBUG")
+    logger("RAG_ANALYSER", f"Gemini raw response (full) |\n{raw}", level="DEBUG")
     return raw
 
 
@@ -680,11 +684,15 @@ async def _call_llm(prompt: str) -> dict:
         logger(
             "RAG_ANALYSER",
             f"LLM JSON parsed | source={source} | time={llm_ms:.0f}ms "
-            f"| match_score={result.get('match_score')} "
-            f"| recommendation={result.get('recommendation')} "
-            f"| strengths={len(result.get('strengths', []))} "
-            f"| gaps={len(result.get('gaps', []))}",
+            f"| overall_match_score={result.get('overall_match_score', result.get('match_score'))} "
+            f"| overall_recommendation={result.get('overall_recommendation', result.get('recommendation'))} "
+            f"| roles={len(result.get('roles', []))}",
             level="INFO",
+        )
+        logger(
+            "RAG_ANALYSER",
+            f"LLM result (full JSON) | source={source} |\n{json.dumps(result, indent=2, default=str)}",
+            level="DEBUG",
         )
         return result
 

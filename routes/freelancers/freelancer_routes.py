@@ -14,7 +14,7 @@ from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.freelancers.freelancer_functions import FreelancerFunctions, get_comprehensive_freelancer_profile
 from ai_related.job_matching.embedding_manager import upsert_freelancer_embedding, mark_freelancer_dirty
-from functions.supabase_client import upload_freelancer_profile_picture
+from functions.supabase_client import upload_freelancer_profile_picture, delete_file, BUCKET_USER_ASSETS
 from mimetypes import guess_type as guess_mime
 
 freelancer_router = APIRouter(prefix="/freelancers", tags=["Freelancers"])
@@ -249,6 +249,49 @@ async def upload_freelancer_profile_picture_endpoint(
     except Exception as e:
         error_msg = f"Failed to upload profile picture for freelancer {freelancer_id}: {str(e)}"
         logger("FREELANCER", error_msg, f"POST /freelancers/{freelancer_id}/profile-picture", "ERROR")
+        return ResponseSchema.error(error_msg, 500)
+
+
+@freelancer_router.delete("/{freelancer_id}/profile-picture", status_code=200)
+async def delete_freelancer_profile_picture(
+    freelancer_id: str,
+    current_user: UserInDB = Depends(get_freelancer_user),
+):
+    try:
+        existing = FreelancerFunctions.get_freelancer_by_id_or_user_id(freelancer_id)
+        if not existing:
+            return ResponseSchema.error(f"Freelancer {freelancer_id} not found", 404)
+        assert_freelancer_owns(current_user, existing["freelancer_id"])
+
+        profile_picture_url = existing.get("profile_picture_url")
+        if not profile_picture_url:
+            return ResponseSchema.error("No profile picture to delete", 400)
+
+        # Extract path from URL or assume path
+        # Since URL is public URL, path is after bucket
+        # e.g., https://xxx.supabase.co/storage/v1/object/public/user-assets/avatars/123.jpg
+        # path = avatars/123.jpg
+        if "user-assets/" in profile_picture_url:
+            path = profile_picture_url.split("user-assets/")[-1]
+        else:
+            # Fallback, assume path from upload function
+            path = f"avatars/{current_user.user_id}.jpg"  # or whatever ext, but since delete, maybe try common exts
+
+        try:
+            delete_file(BUCKET_USER_ASSETS, path)
+        except Exception as e:
+            logger("FREELANCER", f"Failed to delete file from storage: {str(e)}", level="WARNING")
+            # Continue to update DB
+
+        updated = FreelancerFunctions.update_freelancer(
+            freelancer_id=existing["freelancer_id"],
+            update_data={"profile_picture_url": None},
+        )
+        logger("FREELANCER", f"Profile picture deleted for freelancer {freelancer_id}", f"DELETE /freelancers/{freelancer_id}/profile-picture", "INFO")
+        return ResponseSchema.success({"message": "Profile picture deleted successfully", "freelancer": updated}, 200)
+    except Exception as e:
+        error_msg = f"Failed to delete profile picture for freelancer {freelancer_id}: {str(e)}"
+        logger("FREELANCER", error_msg, f"DELETE /freelancers/{freelancer_id}/profile-picture", "ERROR")
         return ResponseSchema.error(error_msg, 500)
 
 

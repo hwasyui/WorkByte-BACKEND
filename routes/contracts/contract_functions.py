@@ -1,11 +1,14 @@
 import os
 import sys
+
+from routes.messages.message_functions import MessageFunctions
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from functions.db_manager import get_db
 from functions.logger import logger
 from typing import List, Optional, Dict
 import uuid
+
 
 def convert_uuids_to_str(data: Dict) -> Dict:
     """Convert all UUID objects in dict to strings"""
@@ -30,19 +33,20 @@ class ContractFunctions:
             db = get_db()
             rows = db.fetch_data(
                 table_name="contract",
-                columns=["contract_id", "job_post_id", "job_role_id", "proposal_id", "freelancer_id", "client_id",
-                        "contract_title", "role_title", "agreed_budget", "budget_currency", "payment_structure",
-                        "agreed_duration", "status", "start_date", "end_date", "actual_completion_date",
-                        "total_hours_worked", "total_paid", "contract_pdf_url", "contract_pdf_generated_at",
-                        "created_at", "updated_at"],
+                columns=[
+                    "contract_id", "job_post_id", "job_role_id", "proposal_id",
+                    "freelancer_id", "client_id", "contract_title", "role_title",
+                    "agreed_budget", "budget_currency", "payment_structure",
+                    "agreed_duration", "status", "start_date", "end_date",
+                    "actual_completion_date", "total_hours_worked", "total_paid",
+                    "contract_pdf_url", "contract_pdf_generated_at", "created_at", "updated_at",
+                ],
                 order_by="created_at DESC",
                 limit=limit,
-                offset=offset
+                offset=offset,
             )
-            
             logger("CONTRACT_FUNCTIONS", f"Fetched {len(rows)} contracts", level="INFO")
             return [convert_uuids_to_str(dict(row)) for row in rows]
-        
         except Exception as e:
             logger("CONTRACT_FUNCTIONS", f"Error fetching contracts: {str(e)}", level="ERROR")
             raise
@@ -53,18 +57,11 @@ class ContractFunctions:
         try:
             db = get_db()
             conditions = [("contract_id", "=", contract_id)]
-            rows = db.fetch_data(
-                table_name="contract",
-                conditions=conditions,
-                limit=1
-            )
-            
+            rows = db.fetch_data(table_name="contract", conditions=conditions, limit=1)
             if rows:
                 logger("CONTRACT_FUNCTIONS", f"Contract {contract_id} found", level="INFO")
                 return convert_uuids_to_str(dict(rows[0]))
-            
             return None
-        
         except Exception as e:
             logger("CONTRACT_FUNCTIONS", f"Error fetching contract: {str(e)}", level="ERROR")
             raise
@@ -74,16 +71,13 @@ class ContractFunctions:
         """Fetch all contracts for a freelancer"""
         try:
             db = get_db()
-            conditions = [("freelancer_id", "=", freelancer_id)]
             rows = db.fetch_data(
                 table_name="contract",
-                conditions=conditions,
-                order_by="created_at DESC"
+                conditions=[("freelancer_id", "=", freelancer_id)],
+                order_by="created_at DESC",
             )
-            
             logger("CONTRACT_FUNCTIONS", f"Fetched {len(rows)} contracts for freelancer {freelancer_id}", level="INFO")
             return [convert_uuids_to_str(dict(row)) for row in rows]
-        
         except Exception as e:
             logger("CONTRACT_FUNCTIONS", f"Error fetching contracts: {str(e)}", level="ERROR")
             raise
@@ -93,32 +87,43 @@ class ContractFunctions:
         """Fetch all contracts for a client"""
         try:
             db = get_db()
-            conditions = [("client_id", "=", client_id)]
             rows = db.fetch_data(
                 table_name="contract",
-                conditions=conditions,
-                order_by="created_at DESC"
+                conditions=[("client_id", "=", client_id)],
+                order_by="created_at DESC",
             )
-            
             logger("CONTRACT_FUNCTIONS", f"Fetched {len(rows)} contracts for client {client_id}", level="INFO")
             return [convert_uuids_to_str(dict(row)) for row in rows]
-        
         except Exception as e:
             logger("CONTRACT_FUNCTIONS", f"Error fetching contracts: {str(e)}", level="ERROR")
             raise
 
     @staticmethod
-    def create_contract(job_post_id: str, job_role_id: str, proposal_id: str, freelancer_id: str,
-                        client_id: str, contract_title: str, agreed_budget: float, payment_structure: str,
-                        start_date, contract_id: Optional[str] = None, role_title: Optional[str] = None,
-                        budget_currency: Optional[str] = "USD", agreed_duration: Optional[str] = None,
-                        status: Optional[str] = "active", end_date=None, actual_completion_date=None,
-                        total_hours_worked: Optional[float] = None, total_paid: Optional[float] = 0) -> Dict:
+    def create_contract(
+        job_post_id: str,
+        job_role_id: str,
+        proposal_id: str,
+        freelancer_id: str,
+        client_id: str,
+        contract_title: str,
+        agreed_budget: float,
+        payment_structure: str,
+        start_date,
+        contract_id: Optional[str] = None,
+        role_title: Optional[str] = None,
+        budget_currency: Optional[str] = "USD",
+        agreed_duration: Optional[str] = None,
+        status: Optional[str] = "active",
+        end_date=None,
+        actual_completion_date=None,
+        total_hours_worked: Optional[float] = None,
+        total_paid: Optional[float] = 0,
+    ) -> Dict:
         """Create a new contract"""
         try:
             db = get_db()
             contract_id = contract_id or str(uuid.uuid4())
-            
+
             contract_data = {
                 "contract_id": contract_id,
                 "job_post_id": job_post_id,
@@ -137,14 +142,22 @@ class ContractFunctions:
                 "end_date": end_date,
                 "actual_completion_date": actual_completion_date,
                 "total_hours_worked": total_hours_worked,
-                "total_paid": total_paid
+                "total_paid": total_paid,
             }
-            
+
             db.insert_data(table_name="contract", data=contract_data)
-            
+
+            # CONTRACT STARTED: system message after successful insert
+            MessageFunctions.create_system_message(
+                actor_user_id=client_id,
+                contract_id=contract_id,
+                message_text="Contract started.",
+                event_type="contract_started",
+                metadata={"started_by": client_id},
+            )
+
             logger("CONTRACT_FUNCTIONS", f"Contract {contract_id} created", level="INFO")
             return convert_uuids_to_str(contract_data)
-        
         except Exception as e:
             logger("CONTRACT_FUNCTIONS", f"Error creating contract: {str(e)}", level="ERROR")
             raise
@@ -155,22 +168,21 @@ class ContractFunctions:
         try:
             db = get_db()
             update_data = {k: v for k, v in update_data.items() if v is not None}
-            
+
             if not update_data:
                 logger("CONTRACT_FUNCTIONS", "No data to update", level="WARNING")
                 return ContractFunctions.get_contract_by_id(contract_id)
-            
+
             existing_contract = ContractFunctions.get_contract_by_id(contract_id)
             conditions = [("contract_id", "=", contract_id)]
             db.update_data(table_name="contract", data=update_data, conditions=conditions)
 
-            # If the contract transitions into a completed/closed state, update counts
+            # If the contract transitions into completed, update counters
             status_transition = False
             new_status = update_data.get("status")
             if new_status and existing_contract:
                 old_status = existing_contract.get("status")
-                completed_states = {"completed"}
-                if new_status in completed_states and old_status not in completed_states:
+                if new_status in {"completed"} and old_status not in {"completed"}:
                     status_transition = True
 
             if status_transition and existing_contract:
@@ -181,33 +193,32 @@ class ContractFunctions:
                     client_rows = db.fetch_data(
                         table_name="client",
                         conditions=[("client_id", "=", client_id)],
-                        limit=1
+                        limit=1,
                     )
                     if client_rows:
                         current_completed = client_rows[0].get("total_jobs_completed") or 0
                         db.update_data(
                             table_name="client",
                             data={"total_jobs_completed": current_completed + 1},
-                            conditions=[("client_id", "=", client_id)]
+                            conditions=[("client_id", "=", client_id)],
                         )
 
                 if freelancer_id:
                     freelancer_rows = db.fetch_data(
                         table_name="freelancer",
                         conditions=[("freelancer_id", "=", freelancer_id)],
-                        limit=1
+                        limit=1,
                     )
                     if freelancer_rows:
                         current_total = freelancer_rows[0].get("total_jobs") or 0
                         db.update_data(
                             table_name="freelancer",
                             data={"total_jobs": current_total + 1},
-                            conditions=[("freelancer_id", "=", freelancer_id)]
+                            conditions=[("freelancer_id", "=", freelancer_id)],
                         )
-            
+
             logger("CONTRACT_FUNCTIONS", f"Contract {contract_id} updated", level="INFO")
             return ContractFunctions.get_contract_by_id(contract_id)
-        
         except Exception as e:
             logger("CONTRACT_FUNCTIONS", f"Error updating contract: {str(e)}", level="ERROR")
             raise
@@ -217,12 +228,45 @@ class ContractFunctions:
         """Delete a contract"""
         try:
             db = get_db()
-            conditions = [("contract_id", "=", contract_id)]
-            db.delete_data(table_name="contract", conditions=conditions)
-            
+            db.delete_data(table_name="contract", conditions=[("contract_id", "=", contract_id)])
             logger("CONTRACT_FUNCTIONS", f"Contract {contract_id} deleted", level="INFO")
             return True
-        
         except Exception as e:
             logger("CONTRACT_FUNCTIONS", f"Error deleting contract: {str(e)}", level="ERROR")
+            raise
+
+    @staticmethod
+    def cancel_contract(
+        contract_id: str,
+        cancelled_by: str,
+        reason: Optional[str] = None,
+    ) -> Optional[Dict]:
+        """Cancel a contract"""
+        try:
+            contract = ContractFunctions.get_contract_by_id(contract_id)
+            if not contract:
+                raise Exception("Contract not found")
+
+            update_data = {"status": "cancelled", "end_date": "NOW()"}
+            if reason:
+                update_data["cancellation_reason"] = reason
+
+            updated_contract = ContractFunctions.update_contract(contract_id, update_data)
+
+            # CONTRACT CANCELLED: system message after successful status update
+            MessageFunctions.create_system_message(
+                actor_user_id=cancelled_by,
+                contract_id=contract_id,
+                message_text="Contract cancelled.",
+                event_type="contract_cancelled",
+                metadata={
+                    "cancelled_by": cancelled_by,
+                    "reason": reason,
+                },
+            )
+
+            logger("CONTRACT_FUNCTIONS", f"Contract {contract_id} cancelled by {cancelled_by}", level="INFO")
+            return updated_contract
+        except Exception as e:
+            logger("CONTRACT_FUNCTIONS", f"Error cancelling contract: {str(e)}", level="ERROR")
             raise

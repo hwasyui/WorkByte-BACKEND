@@ -12,7 +12,7 @@ from functions.access_control import assert_client_owns, get_client_profile_for_
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.clients.client_functions import ClientFunctions
-from functions.supabase_client import upload_client_profile_picture
+from functions.supabase_client import upload_client_profile_picture, delete_file, BUCKET_USER_ASSETS
 from mimetypes import guess_type as guess_mime
 
 client_router = APIRouter(prefix="/clients", tags=["Clients"])
@@ -224,4 +224,42 @@ async def upload_client_profile_picture_endpoint(
     except Exception as e:
         error_msg = f"Failed to upload profile picture for client {client_id}: {str(e)}"
         logger("CLIENT", error_msg, f"POST /clients/{client_id}/profile-picture", "ERROR")
+        return ResponseSchema.error(error_msg, 500)
+
+
+@client_router.delete("/{client_id}/profile-picture", status_code=200)
+async def delete_client_profile_picture(
+    client_id: str,
+    current_user: UserInDB = Depends(get_client_user),
+):
+    try:
+        existing = ClientFunctions.get_client_by_id_or_user_id(client_id)
+        if not existing:
+            return ResponseSchema.error(f"Client {client_id} not found", 404)
+        assert_client_owns(current_user, existing["client_id"])
+
+        profile_picture_url = existing.get("profile_picture_url")
+        if not profile_picture_url:
+            return ResponseSchema.error("No profile picture to delete", 400)
+
+        # Extract path from URL
+        if "user-assets/" in profile_picture_url:
+            path = profile_picture_url.split("user-assets/")[-1]
+        else:
+            path = f"avatars/{current_user.user_id}.jpg"
+
+        try:
+            delete_file(BUCKET_USER_ASSETS, path)
+        except Exception as e:
+            logger("CLIENT", f"Failed to delete file from storage: {str(e)}", level="WARNING")
+
+        updated = ClientFunctions.update_client(
+            existing["client_id"],
+            {"profile_picture_url": None},
+        )
+        logger("CLIENT", f"Profile picture deleted for client {client_id}", f"DELETE /clients/{client_id}/profile-picture", "INFO")
+        return ResponseSchema.success({"message": "Profile picture deleted successfully", "client": updated}, 200)
+    except Exception as e:
+        error_msg = f"Failed to delete profile picture for client {client_id}: {str(e)}"
+        logger("CLIENT", error_msg, f"DELETE /clients/{client_id}/profile-picture", "ERROR")
         return ResponseSchema.error(error_msg, 500)

@@ -427,5 +427,9 @@ def rank_jobs_with_ml(
             f"ML ranking failed after {total_ms:.1f}ms — falling back to cosine ordering | error={e}",
             level="WARNING",
         )
-        # Graceful fallback — return cosine-ordered results unchanged
-        return sorted(job_rows, key=lambda j: j.get("similarity_score", 0), reverse=True)[:top_n]
+        # Graceful fallback — return cosine-ordered results with synthesised scores
+        sorted_rows = sorted(job_rows, key=lambda j: j.get("similarity_score", 0), reverse=True)[:top_n]
+        for job in sorted_rows:
+            job.setdefault("match_probability", round(float(job.get("similarity_score", 0)) * 100, 1))
+            job.setdefault("skill_overlap_pct", 0.0)
+        return sorted_rows
