@@ -99,6 +99,16 @@ class FreelancerCreate(BaseModel):
 
     model_config = {"extra": "forbid"}
 
+    @field_validator("rate_time")
+    @classmethod
+    def validate_rate_time(cls, v):
+        if v is None:
+            return v
+        allowed = {"hourly", "weekly", "monthly", "annually"}
+        if v not in allowed:
+            raise ValueError("rate_time must be one of: hourly, weekly, monthly, annually")
+        return v
+
 class FreelancerUpdate(BaseModel):
     full_name: Optional[str] = Form(None)
     bio: Optional[str] = Form(None)
@@ -108,6 +118,35 @@ class FreelancerUpdate(BaseModel):
     rate_currency: Optional[str] = Form(None)
 
     model_config = {"extra": "forbid"}
+
+    @field_validator("rate_time")
+    @classmethod
+    def validate_rate_time(cls, v):
+        if v is None:
+            return v
+        allowed = {"hourly", "weekly", "monthly", "annually"}
+        if v not in allowed:
+            raise ValueError("rate_time must be one of: hourly, weekly, monthly, annually")
+        return v
+
+    @classmethod
+    def as_form(
+        cls,
+        full_name: Optional[str] = Form(None),
+        bio: Optional[str] = Form(None),
+        profile_picture: Optional[UploadFile] = File(None),
+        estimated_rate: Optional[float] = Form(None),
+        rate_time: Optional[str] = Form(None),
+        rate_currency: Optional[str] = Form(None),
+    ) -> "FreelancerUpdate":
+        return cls(
+            full_name=full_name,
+            bio=bio,
+            profile_picture=profile_picture,
+            estimated_rate=estimated_rate,
+            rate_time=rate_time,
+            rate_currency=rate_currency,
+        )
 
 class FreelancerResponse(BaseModel):
     freelancer_id: str
@@ -145,6 +184,21 @@ class ClientUpdate(BaseModel):
     profile_picture: Optional[UploadFile] = File(None)
 
     model_config = {"extra": "forbid"}
+
+    @classmethod
+    def as_form(
+        cls,
+        full_name: Optional[str] = Form(None),
+        bio: Optional[str] = Form(None),
+        website_url: Optional[str] = Form(None),
+        profile_picture: Optional[UploadFile] = File(None),
+    ) -> "ClientUpdate":
+        return cls(
+            full_name=full_name,
+            bio=bio,
+            website_url=website_url,
+            profile_picture=profile_picture,
+        )
 
 class ClientResponse(BaseModel):
     client_id: str
@@ -630,12 +684,22 @@ class ContractResponse(BaseModel):
 
     contract_pdf_url: Optional[str] = None
     contract_pdf_generated_at: Optional[datetime] = None
+    cancelled_by: Optional[str] = None
+    cancellation_reason: Optional[str] = None
 
     class Config:
         from_attributes = True
 
 
 # ==================== CONTRACT GENERATION ====================
+class PaymentScheduleItem(BaseModel):
+    phase: str
+    description: Optional[str] = None
+    amount: Optional[float] = None
+    percentage: Optional[float] = None
+    due_date: Optional[date] = None
+
+
 class ContractGenerateRequest(BaseModel):
     end_date: Optional[date] = None
     agreed_duration: Optional[str] = None
@@ -647,7 +711,7 @@ class ContractGenerateRequest(BaseModel):
     dispute_resolution: Optional[str] = "negotiation"
     revision_rounds: Optional[int] = 0
     additional_clauses: Optional[str] = None
-    payment_schedule: Optional[str] = None
+    payment_schedule: Optional[List[PaymentScheduleItem]] = None
 
 # ==================== CONTRACT SUBMISSIONS ====================
 class ContractSubmissionFileResponse(BaseModel):
@@ -970,3 +1034,73 @@ class FreelancerProfileComplete(BaseModel):
 
     class Config:
         from_attributes = True
+
+# ==================== REVIEWS ====================
+
+class ReviewRatingInput(BaseModel):
+    category: str  # communication | quality | professionalism | value_for_money
+    score: float   # 1.0 – 5.0
+
+
+class SubmitReviewRequest(BaseModel):
+    ratings: List[ReviewRatingInput]        # must contain all 4 categories
+    client_answer: str                      # answer to the AI-generated targeted question
+    overall_comment: str                    # free-form written review
+    extra_skill_tags: Optional[List[str]] = []  # client can add extra tags manually
+
+
+class ReviewResponse(BaseModel):
+    id: str
+    contract_id: str
+    reviewer_id: str
+    freelancer_id: str
+    inferred_category: str
+    status: str
+    is_anonymous: bool
+    created_at: Optional[datetime] = None
+    published_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ReviewDetailResponse(ReviewResponse):
+    ratings: Optional[List[dict]] = []
+    written_content: Optional[dict] = None
+    skill_tags: Optional[List[dict]] = []
+    ai_analysis: Optional[dict] = None
+    suggested_skill_tags: Optional[List[str]] = []
+
+
+class TrustScoreResponse(BaseModel):
+    freelancer_id: str
+    overall_score: float
+    weighted_review_avg: Optional[float] = None
+    work_quality_score: Optional[float] = None
+    revision_rate_score: Optional[float] = None
+    responsiveness_score: Optional[float] = None
+    communication_sentiment: Optional[float] = None
+    total_reviews: int
+    category: Optional[str] = None
+    category_rank_pct: Optional[float] = None
+    last_updated: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class RedFlagAlertResponse(BaseModel):
+    id: str
+    freelancer_id: str
+    alert_type: str
+    severity: str
+    message: str
+    is_resolved: bool
+    triggered_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class InitiateReviewPayload(BaseModel):
+    contract_id: str

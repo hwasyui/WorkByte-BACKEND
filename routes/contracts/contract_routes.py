@@ -4,7 +4,9 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 
-from fastapi import APIRouter, Body, Depends, Response
+import json
+from fastapi import APIRouter, Body, Depends, Response, BackgroundTasks
+from routes.reviews.review_routes import trigger_review_pipeline_on_completion
 from typing import List, Optional
 import uuid
 from functions.schema_model import CancelContractRequest, ContractCreate, ContractUpdate, ContractResponse, ContractGenerateRequest
@@ -243,7 +245,9 @@ async def generate_contract_pdf(contract_id: str, generation_data: ContractGener
                 "dispute_resolution": generation_data.dispute_resolution,
                 "revision_rounds": generation_data.revision_rounds,
                 "additional_clauses": generation_data.additional_clauses,
-                "payment_schedule": generation_data.payment_schedule,
+                "payment_schedule": json.dumps(
+                    [item.model_dump(mode="json") for item in generation_data.payment_schedule]
+                ) if generation_data.payment_schedule else None,
             },
         )
 
@@ -271,7 +275,7 @@ async def generate_contract_pdf(contract_id: str, generation_data: ContractGener
 
 
 @contract_router.put("/{contract_id}", response_model=ContractResponse)
-async def update_contract(contract_id: str, contract_update: ContractUpdate, current_user: UserInDB = Depends(get_current_user)):
+async def update_contract(contract_id: str, contract_update: ContractUpdate, background_tasks: BackgroundTasks, current_user: UserInDB = Depends(get_current_user)):
     """Update an existing contract."""
     try:
         existing_contract = ContractFunctions.get_contract_by_id(contract_id)
@@ -293,6 +297,8 @@ async def update_contract(contract_id: str, contract_update: ContractUpdate, cur
                 "UPDATE client SET total_jobs_completed = total_jobs_completed + 1 WHERE client_id = :cid",
                 {"cid": existing_contract["client_id"]},
             )
+
+            await trigger_review_pipeline_on_completion(contract_id, background_tasks)
 
         logger("CONTRACT", f"Updated contract {contract_id}", "PUT /contracts/{contract_id}", "INFO")
         return ResponseSchema.success(updated_contract, 200)

@@ -4,7 +4,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 
 from functions.db_manager import get_db
 from functions.logger import logger
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
+import math
 import uuid
 from datetime import datetime
 
@@ -25,6 +26,59 @@ def convert_uuids_to_str(data: Dict) -> Dict:
 class ClientFunctions:
     """Handle all client-related database operations"""
 
+    _CLIENT_SORT_FIELDS = {
+        "created_at":          "created_at",
+        "updated_at":          "updated_at",
+        "full_name":           "full_name",
+        "total_jobs_posted":   "total_jobs_posted",
+        "total_jobs_completed":"total_jobs_completed",
+    }
+
+    @staticmethod
+    def browse_clients(
+        order_by: str = "created_at",
+        order_dir: str = "desc",
+        page: int = 1,
+        page_size: int = 20,
+    ) -> Dict[str, Any]:
+        """Paginated + sorted client browse."""
+        try:
+            db = get_db()
+
+            sort_col = ClientFunctions._CLIENT_SORT_FIELDS.get(order_by, "created_at")
+            direction = "DESC" if order_dir.lower() == "desc" else "ASC"
+            offset = (page - 1) * page_size
+
+            count_rows = db.execute_query("SELECT COUNT(*) AS total FROM client")
+            total = int(count_rows[0]["total"]) if count_rows else 0
+
+            data_rows = db.execute_query(
+                f"""
+                SELECT client_id, user_id, full_name, bio, website_url, profile_picture_url,
+                       total_jobs_posted, total_jobs_completed, average_rating_given,
+                       created_at, updated_at
+                FROM client
+                ORDER BY {sort_col} {direction} NULLS LAST
+                LIMIT :limit OFFSET :offset
+                """,
+                {"limit": page_size, "offset": offset},
+            )
+            items = [convert_uuids_to_str(dict(row)) for row in data_rows]
+
+            logger("CLIENT_FUNCTIONS", f"browse_clients: {total} total, page {page}", level="INFO")
+            return {
+                "items": items,
+                "pagination": {
+                    "page":        page,
+                    "page_size":   page_size,
+                    "total":       total,
+                    "total_pages": math.ceil(total / page_size) if total else 0,
+                },
+            }
+        except Exception as e:
+            logger("CLIENT_FUNCTIONS", f"Error browsing clients: {str(e)}", level="ERROR")
+            raise
+
     @staticmethod
     def get_all_clients(limit: Optional[int] = None, offset: int = 0) -> List[Dict]:
         """Fetch all clients"""
@@ -38,10 +92,10 @@ class ClientFunctions:
                 order_by="created_at DESC",
                 limit=limit
             )
-            
+
             logger("CLIENT_FUNCTIONS", f"Fetched {len(rows)} clients", level="INFO")
             return [convert_uuids_to_str(dict(row)) for row in rows]
-        
+
         except Exception as e:
             logger("CLIENT_FUNCTIONS", f"Error fetching clients: {str(e)}", level="ERROR")
             raise

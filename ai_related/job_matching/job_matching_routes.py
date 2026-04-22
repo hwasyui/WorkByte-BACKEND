@@ -21,6 +21,7 @@ from functions.response_utils import ResponseSchema
 from functions.logger import logger
 from functions.db_manager import get_db
 from ai_related.job_matching.sweep_worker import run_sweep_once
+# REMOVE THIS LINE if dropping Stage 3 ML:
 from ai_related.job_matching.ml_ranker import rank_jobs_with_ml
 from ai_related.job_matching.rag_analyser import analyse_job_match
 from ai_related.job_matching.embedding_service import get_embedding
@@ -204,7 +205,14 @@ async def match_freelancer_to_jobs(
             )
             return ResponseSchema.success({"matches": [], "count": 0, "stage": "pre-filter_empty"}, 200)
 
-        # Stage 3: LightGBM re-rank
+        # STAGE 3: LightGBM re-rank
+        # TO REMOVE STAGE 3: delete the 3 lines below (t3, ranked, stage3_ms)
+        # and replace with these 2 lines instead:
+        #
+        #   ranked = sorted(filtered, key=lambda x: x["similarity_score"], reverse=True)[:limit]
+        #   for job in ranked: job["match_probability"] = job["similarity_score"]
+        #
+        # Then update the logger line below: remove stage3= from the f-string.
         t3 = time.perf_counter()
         ranked = rank_jobs_with_ml(db, fid, filtered, top_n=limit)
         stage3_ms = (time.perf_counter() - t3) * 1000
@@ -213,7 +221,7 @@ async def match_freelancer_to_jobs(
         logger(
             "JOB_MATCHING",
             f"freelancer-to-jobs complete | freelancer_id={fid} | returned={len(ranked)} "
-            f"| stage1={stage1_ms:.0f}ms | stage2={stage2_ms:.0f}ms | stage3={stage3_ms:.0f}ms "
+            f"| stage1={stage1_ms:.0f}ms | stage2={stage2_ms:.0f}ms | stage3={stage3_ms:.0f}ms "  # remove stage3= if dropping ML
             f"| total={total_ms:.0f}ms",
             level="INFO",
         )

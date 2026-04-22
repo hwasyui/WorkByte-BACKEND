@@ -4,8 +4,9 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 
 from functions.db_manager import get_db
 from functions.logger import logger
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 import uuid
+import math
 
 
 def convert_uuids_to_str(data: Dict) -> Dict:
@@ -74,6 +75,86 @@ class JobPostFunctions:
                    f"Failed to sync proposal_count for {job_post_id}: {str(e)}", level="WARNING")
 
     # ── Fetch operations ──────────────────────────────────────────────────────
+
+    # Valid sort fields → SQL expression
+    _JOB_SORT_FIELDS = {
+        "created_at":     "jp.created_at",
+        "posted_at":      "jp.posted_at",
+        "deadline":       "jp.deadline",
+        "job_title":      "jp.job_title",
+        "proposal_count": "proposal_count",   # subquery alias — PostgreSQL resolves this
+        "view_count":     "jp.view_count",
+    }
+
+    _VALID_STATUSES = {"active", "closed", "filled", "draft", "all"}
+
+    @staticmethod
+    def browse_job_posts(
+        status: str = "active",
+        order_by: str = "created_at",
+        order_dir: str = "desc",
+        page: int = 1,
+        page_size: int = 20,
+        requesting_client_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Paginated + filtered + sorted job post browse.
+        Draft gate: drafts only appear when the requesting client owns them.
+        """
+        try:
+            db = get_db()
+
+            sort_col = JobPostFunctions._JOB_SORT_FIELDS.get(order_by, "jp.created_at")
+            direction = "DESC" if order_dir.lower() == "desc" else "ASC"
+            offset = (page - 1) * page_size
+
+            # Build WHERE + params based on status and draft visibility
+            if status == "all":
+                if requesting_client_id:
+                    where = "WHERE (jp.status != 'draft' OR jp.client_id = :rcid)"
+                    params: Dict = {"rcid": requesting_client_id}
+                else:
+                    where = "WHERE jp.status != 'draft'"
+                    params = {}
+            elif status == "draft":
+                if not requesting_client_id:
+                    return {"items": [], "pagination": {"page": page, "page_size": page_size, "total": 0, "total_pages": 0}}
+                where = "WHERE jp.status = 'draft' AND jp.client_id = :rcid"
+                params = {"rcid": requesting_client_id}
+            else:
+                where = "WHERE jp.status = :status"
+                params = {"status": status}
+
+            count_query = f"""
+                SELECT COUNT(DISTINCT jp.job_post_id) AS total
+                FROM job_post jp
+                {where}
+            """
+            count_rows = db.execute_query(count_query, params)
+            total = int(count_rows[0]["total"]) if count_rows else 0
+
+            data_query = _JOB_POST_SELECT + f"""
+                {where}
+                GROUP BY jp.job_post_id, c.full_name
+                ORDER BY {sort_col} {direction} NULLS LAST
+                LIMIT :limit OFFSET :offset
+            """
+            data_rows = db.execute_query(data_query, {**params, "limit": page_size, "offset": offset})
+            items = [convert_uuids_to_str(dict(row)) for row in data_rows]
+
+            logger("JOB_POST_FUNCTIONS", f"browse_job_posts: {total} total, page {page}/{math.ceil(total/page_size) or 1}", level="INFO")
+            return {
+                "items": items,
+                "pagination": {
+                    "page":        page,
+                    "page_size":   page_size,
+                    "total":       total,
+                    "total_pages": math.ceil(total / page_size) if total else 0,
+                },
+            }
+        except Exception as e:
+            logger("JOB_POST_FUNCTIONS", f"Error browsing job posts: {str(e)}", level="ERROR")
+            raise
 
     @staticmethod
     def get_all_job_posts(limit: Optional[int] = None) -> List[Dict]:

@@ -5,8 +5,7 @@ Logs in as the existing walkthrough users, creates fresh job posts + proposals,
 then exercises the full contract lifecycle:
 
   • full_payment contract  → PDF generated → signed URL returned
-  • milestone_based contract → PDF generated → milestone lifecycle (in_progress →
-    completed → paid → freelancer confirms)
+  • milestone_based contract → PDF generated → signed URL returned
 
 Usage (from inside the backend container):
     python walkthrough/walkthrough-contract.py
@@ -24,7 +23,7 @@ import requests
 
 BASE_URL = "http://localhost:8000"
 
-_RUN_ID         = random.randint(1000, 9999)
+_RUN_ID           = random.randint(1000, 9999)
 _EMAIL_FREELANCER = f"contract.freelancer.{_RUN_ID}@walkthrough.dev"
 _EMAIL_CLIENT1    = f"contract.client1.{_RUN_ID}@walkthrough.dev"
 _EMAIL_CLIENT2    = f"contract.client2.{_RUN_ID}@walkthrough.dev"
@@ -178,7 +177,7 @@ def run():
     print(f"  client1_id    : {cid1}")
     print(f"  client2_id    : {cid2}")
 
-    # ── 3. Create fresh job posts (so we are not blocked by filled ones) ──────
+    # ── 3. Create fresh job posts ─────────────────────────────────────────────
 
     step("Client 1 — Create fresh job post for the full_payment contract")
     resp = post("/job-posts", {
@@ -197,7 +196,7 @@ def run():
     job_fp_id = extract(resp)["job_post_id"]
     print(f"  job_fp_id (full_payment): {job_fp_id}")
 
-    step("Client 1 — Add a role + required skills to the full_payment job")
+    step("Client 1 — Add a role to the full_payment job")
     resp = post("/job-roles", {
         "job_post_id": job_fp_id,
         "role_title": "Backend Developer",
@@ -240,9 +239,9 @@ def run():
     role_ms_id = extract(resp)["job_role_id"]
     print(f"  role_ms_id: {role_ms_id}")
 
-    # ── 4. Budi submits proposals ─────────────────────────────────────────────
+    # ── 4. Freelancer submits proposals ──────────────────────────────────────
 
-    step("Budi submits a proposal for the full_payment job")
+    step("Freelancer submits a proposal for the full_payment job")
     resp = post("/proposals", {
         "job_post_id": job_fp_id,
         "job_role_id": role_fp_id,
@@ -258,7 +257,7 @@ def run():
     proposal_fp_id = extract(resp)["proposal_id"]
     print(f"  proposal_fp_id: {proposal_fp_id}")
 
-    step("Budi submits a proposal for the milestone_based job")
+    step("Freelancer submits a proposal for the milestone_based job")
     resp = post("/proposals", {
         "job_post_id": job_ms_id,
         "job_role_id": role_ms_id,
@@ -295,7 +294,6 @@ def run():
     }, tok_client1)
     contract_fp_id = extract(resp)["contract_id"]
     print(f"  contract_fp_id: {contract_fp_id}")
-    print("  (proposal auto-accepted, job post auto-filled)")
 
     step("Client 2 creates a MILESTONE-BASED contract")
     resp = post("/contracts", {
@@ -329,7 +327,6 @@ def run():
     print(f"  client name        : {gen1['client'].get('full_name', gen1['client'].get('company_name', '?'))}")
     print(f"  job post title     : {gen1['job_post'].get('job_title', '?')}")
     print(f"  existing terms     : {bool(gen1['contract_terms'])}")
-    print(f"  existing milestones: {len(gen1['milestones'])}")
 
     step("Inspect auto-filled generation data for the milestone_based contract")
     gen2 = extract(get(f"/contracts/{contract_ms_id}/generation-data", tok_client2))
@@ -337,7 +334,6 @@ def run():
     print(f"  contract_title     : {c2['contract_title']}")
     print(f"  payment_structure  : {c2['payment_structure']}")
     print(f"  agreed_budget      : ${c2['agreed_budget']} {c2.get('budget_currency', 'USD')}")
-    print(f"  existing milestones: {len(gen2['milestones'])}")
 
     # ── 7. Generate PDFs ──────────────────────────────────────────────────────
 
@@ -363,8 +359,8 @@ def run():
     print(f"  PDF storage path : {pdf_path_fp}")
     print(f"  PDF generated at : {result_fp.get('contract_pdf_generated_at', '?')}")
 
-    step("Generate milestone_based contract PDF (3 milestones) → upload to Supabase")
-    print("  Calling POST /contracts/{id}/generate with milestones ...")
+    step("Generate milestone_based contract PDF → upload to Supabase")
+    print("  Calling POST /contracts/{id}/generate ...")
     resp = post(f"/contracts/{contract_ms_id}/generate", {
         "end_date": "2026-08-31",
         "agreed_duration": "4 months",
@@ -375,33 +371,30 @@ def run():
         "late_payment_penalty": 2.0,
         "dispute_resolution": "mediation",
         "revision_rounds": 1,
-        "additional_clauses": "Freelancer delivers weekly progress reports every Friday.",
-        "milestones": [
+        "payment_schedule": [
             {
-                "milestone_title": "Phase 1 — Ingestion Layer",
-                "milestone_description": "Build REST API ingestion layer and raw data store.",
-                "milestone_amount": 1200.0,
-                "milestone_percentage": 30.0,
-                "milestone_order": 1,
+                "phase": "Phase 1 — Ingestion Layer",
+                "description": "Build REST API ingestion layer and raw data store.",
+                "amount": 1200.0,
+                "percentage": 30.0,
                 "due_date": "2026-05-31"
             },
             {
-                "milestone_title": "Phase 2 — Transformation & Load",
-                "milestone_description": "Implement transform logic and PostgreSQL loading pipeline.",
-                "milestone_amount": 1600.0,
-                "milestone_percentage": 40.0,
-                "milestone_order": 2,
+                "phase": "Phase 2 — Transformation & Load",
+                "description": "Implement transform logic and PostgreSQL loading pipeline.",
+                "amount": 1600.0,
+                "percentage": 40.0,
                 "due_date": "2026-07-15"
             },
             {
-                "milestone_title": "Phase 3 — Testing & Handoff",
-                "milestone_description": "End-to-end tests, documentation, and project handover.",
-                "milestone_amount": 1200.0,
-                "milestone_percentage": 30.0,
-                "milestone_order": 3,
+                "phase": "Phase 3 — Testing & Handoff",
+                "description": "End-to-end tests, documentation, and project handover.",
+                "amount": 1200.0,
+                "percentage": 30.0,
                 "due_date": "2026-08-31"
             }
-        ]
+        ],
+        "additional_clauses": "Freelancer delivers weekly progress reports every Friday."
     }, tok_client2)
     result_ms = extract(resp)
     pdf_path_ms = result_ms.get("contract_pdf_url", "")
@@ -422,56 +415,13 @@ def run():
     print(f"    {url2[:120]}{'...' if len(url2) > 120 else ''}")
     print("  → Open in a browser to verify the PDF in Supabase.")
 
-    # ── 9. List and inspect milestones ───────────────────────────────────────
+    # ── 9. Contract list views ────────────────────────────────────────────────
 
-    step("List milestones created by the generate endpoint")
-    milestones_raw = extract(get(f"/contract-milestones/contract/{contract_ms_id}", tok_freelancer))
-    milestones = milestones_raw if isinstance(milestones_raw, list) else []
-    print(f"  {len(milestones)} milestone(s):")
-    for ms in milestones:
-        print(
-            f"    [{ms.get('status', '?').upper():10}] "
-            f"{ms.get('milestone_title', '?'):<42} "
-            f"${ms.get('milestone_budget', '?')}  due {ms.get('due_date', '?')}"
-        )
-    milestone1_id = milestones[0]["milestone_id"] if milestones else None
-
-    # ── 10. Milestone lifecycle ───────────────────────────────────────────────
-
-    if not milestone1_id:
-        print("\n  WARNING: no milestones found — skipping lifecycle steps.")
-    else:
-        step("Client 2 moves Milestone 1 → in_progress")
-        put(f"/contract-milestones/{milestone1_id}", {"status": "in_progress"}, tok_client2)
-        print("  Milestone 1 is now in_progress (client_approved = True).")
-
-        step("Client 2 marks Milestone 1 → completed (work accepted)")
-        put(f"/contract-milestones/{milestone1_id}", {"status": "completed"}, tok_client2)
-        print("  Milestone 1 marked completed by client.")
-
-        step("Client 2 marks Milestone 1 → paid (releases payment)")
-        put(f"/contract-milestones/{milestone1_id}", {"status": "paid"}, tok_client2)
-        print("  Payment request sent to freelancer.")
-
-        step("Freelancer confirms receipt of Milestone 1 payment")
-        post(f"/contract-milestones/{milestone1_id}/confirm-payment", {}, tok_freelancer)
-        print("  Freelancer confirmed payment — milestone fully settled.")
-
-        step("Verify final state of Milestone 1")
-        ms1 = extract(get(f"/contract-milestones/{milestone1_id}", tok_freelancer))
-        print(f"  status                   : {ms1.get('status')}")
-        print(f"  client_approved          : {ms1.get('client_approved')}")
-        print(f"  payment_requested        : {ms1.get('payment_requested')}")
-        print(f"  freelancer_confirmed_paid: {ms1.get('freelancer_confirmed_paid')}")
-        print(f"  payment_released         : {ms1.get('payment_released')}")
-
-    # ── 11. Contract list views ───────────────────────────────────────────────
-
-    step("List all contracts visible to Budi")
-    budi_contracts = extract(get("/contracts", tok_freelancer))
-    if isinstance(budi_contracts, list):
-        print(f"  {len(budi_contracts)} contract(s):")
-        for c in budi_contracts:
+    step("List all contracts visible to the freelancer")
+    fl_contracts = extract(get("/contracts", tok_freelancer))
+    if isinstance(fl_contracts, list):
+        print(f"  {len(fl_contracts)} contract(s):")
+        for c in fl_contracts:
             print(
                 f"    [{c.get('status', '?').upper():10}] "
                 f"{c.get('contract_title', '?'):<47} "
@@ -479,14 +429,14 @@ def run():
                 f"({c.get('payment_structure', '?')})"
             )
 
-    step("List all contracts visible to Client 1 (TechStartup Inc.)")
+    step("List all contracts visible to Client 1")
     c1_contracts = extract(get("/contracts", tok_client1))
     if isinstance(c1_contracts, list):
         print(f"  {len(c1_contracts)} contract(s):")
         for c in c1_contracts:
             print(f"    [{c.get('status', '?').upper():10}] {c.get('contract_title', '?')}")
 
-    step("List all contracts visible to Client 2 (DataCorp Solutions)")
+    step("List all contracts visible to Client 2")
     c2_contracts = extract(get("/contracts", tok_client2))
     if isinstance(c2_contracts, list):
         print(f"  {len(c2_contracts)} contract(s):")
@@ -503,8 +453,8 @@ def run():
     print(f"    milestone_based: {contract_ms_id}")
     print()
     print(f"  PDF verification (Supabase 'contract-assets' bucket):")
-    print(f"    full_payment   path : {pdf_path_fp or '(not generated)'}")
-    print(f"    milestone_based path: {pdf_path_ms or '(not generated)'}")
+    print(f"    full_payment    path : {pdf_path_fp or '(not generated)'}")
+    print(f"    milestone_based path : {pdf_path_ms or '(not generated)'}")
     print()
     print("  Use the signed URLs printed above to download and inspect the PDFs.")
     print()

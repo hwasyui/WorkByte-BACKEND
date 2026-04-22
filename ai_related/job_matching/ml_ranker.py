@@ -29,6 +29,76 @@ _FEAT_PATH  = os.path.join(_MODEL_DIR, "feature_cols.json")
 _model = None
 _feat_cols: list[str] | None = None
 
+# ── Currency helpers ──────────────────────────────────────────────────────────
+
+_CURRENCY_RATES_PATH = os.path.join(os.path.dirname(__file__), "currency_rates.json")
+_currency_rates: dict[str, float] | None = None
+_currency_rates_fetched_at: float = 0.0
+_CURRENCY_REFRESH_SECONDS = 86400  # re-fetch once per day
+
+
+def _load_currency_rates() -> dict[str, float]:
+    """
+    Return exchange rates (X per 1 USD). Tries to refresh from frankfurter.app
+    once per day; falls back to the bundled currency_rates.json on any failure.
+    Result is cached in a module global so there is at most one HTTP call per day.
+    """
+    global _currency_rates, _currency_rates_fetched_at
+
+    now = time.time()
+    if _currency_rates is not None and (now - _currency_rates_fetched_at) < _CURRENCY_REFRESH_SECONDS:
+        return _currency_rates
+
+    # Try live fetch (no API key needed)
+    try:
+        import urllib.request
+        with urllib.request.urlopen(
+            "https://api.frankfurter.app/latest?from=USD", timeout=4
+        ) as resp:
+            data = json.loads(resp.read())
+        rates = data.get("rates", {})
+        rates["USD"] = 1.0
+        _currency_rates = {k.upper(): float(v) for k, v in rates.items()}
+        _currency_rates_fetched_at = now
+        logger("ML_RANKER", f"Currency rates refreshed from frankfurter.app | {len(_currency_rates)} currencies", level="INFO")
+        return _currency_rates
+    except Exception as e:
+        logger("ML_RANKER", f"Currency rate fetch failed ({e}), using bundled rates", level="WARNING")
+
+    # Fall back to bundled JSON
+    try:
+        with open(_CURRENCY_RATES_PATH) as fh:
+            data = json.load(fh)
+        _currency_rates = {k.upper(): float(v) for k, v in data["rates"].items()}
+        _currency_rates_fetched_at = now
+        logger("ML_RANKER", f"Currency rates loaded from file | {len(_currency_rates)} currencies", level="INFO")
+        return _currency_rates
+    except Exception as e:
+        logger("ML_RANKER", f"Failed to load bundled currency rates ({e}), defaulting to USD-only", level="ERROR")
+        _currency_rates = {"USD": 1.0}
+        return _currency_rates
+
+
+def _to_usd(amount: float, currency: str) -> float:
+    """Convert an amount in any currency to USD using loaded rates."""
+    if amount <= 0:
+        return 0.0
+    rates = _load_currency_rates()
+    rate = rates.get(currency.upper(), 1.0)
+    if rate <= 0:
+        return amount
+    return amount / rate
+
+
+# Hours per month by rate_time — used to normalise freelancer rate to monthly cost
+_RATE_TO_MONTHLY_HOURS: dict[str, float] = {
+    "hourly":   160.0,   # 40 hrs/week × 4 weeks
+    "daily":     20.0,   # 5 days/week × 4 weeks
+    "weekly":     4.0,
+    "monthly":    1.0,
+    "annually":   1.0 / 12.0,
+}
+
 
 def _load_model():
     """
@@ -104,10 +174,10 @@ def _load_freelancer_context(db, freelancer_id: str) -> dict | None:
 
     f_row = db.execute_query(
         """
-        SELECT f.estimated_rate, f.rate_time, f.total_jobs,
-               pr.overall_performance_score, pr.success_rate, pr.total_ratings_received
+        SELECT f.estimated_rate, f.rate_time, f.rate_currency, f.total_jobs, f.user_id,
+               fts.overall_score, fts.total_reviews
         FROM freelancer f
-        LEFT JOIN performance_rating pr ON pr.freelancer_id = f.freelancer_id
+        LEFT JOIN freelancer_trust_scores fts ON fts.freelancer_id = f.user_id
         WHERE f.freelancer_id = :fid
         """,
         {"fid": freelancer_id},
@@ -116,6 +186,18 @@ def _load_freelancer_context(db, freelancer_id: str) -> dict | None:
         logger("ML_RANKER", f"Freelancer not found in DB | freelancer_id={freelancer_id}", level="WARNING")
         return None
     row = dict(f_row[0])
+
+    # Success rate: completed / resolved (excludes still-active contracts from denominator)
+    contract_stats = db.execute_query(
+        """
+        SELECT
+            COUNT(*) FILTER (WHERE status = 'completed') AS completed_count,
+            COUNT(*) FILTER (WHERE status NOT IN ('draft', 'active')) AS resolved_count
+        FROM contract
+        WHERE freelancer_id = :fid
+        """,
+        {"fid": freelancer_id},
+    )
 
     # Skills
     f_skills = db.execute_query(
@@ -158,19 +240,23 @@ def _load_freelancer_context(db, freelancer_id: str) -> dict | None:
         {"fid": freelancer_id},
     )
 
-    total_proj = int(row.get("total_jobs") or 0)
-    ratings_count = int(row.get("total_ratings_received") or 0)
-    is_cold_start = 1 if ratings_count == 0 else 0
+    total_proj    = int(row.get("total_jobs") or 0)
+    total_reviews = int(row.get("total_reviews") or 0)
+    is_cold_start = 1 if total_reviews == 0 else 0
     exp_num = _infer_exp_level(total_proj)
 
     perf_score = (
-        float(row["overall_performance_score"])
-        if ratings_count > 0 and row.get("overall_performance_score") is not None
+        float(row["overall_score"])
+        if total_reviews > 0 and row.get("overall_score") is not None
         else float("nan")
     )
+
+    stats = dict(contract_stats[0]) if contract_stats else {}
+    completed_count = int(stats.get("completed_count") or 0)
+    resolved_count  = int(stats.get("resolved_count") or 0)
     success_rate = (
-        float(row["success_rate"])
-        if ratings_count > 0 and row.get("success_rate") is not None
+        float(completed_count / resolved_count * 100)
+        if total_reviews > 0 and resolved_count > 0
         else float("nan")
     )
 
@@ -179,19 +265,21 @@ def _load_freelancer_context(db, freelancer_id: str) -> dict | None:
         f"Freelancer context loaded | freelancer_id={freelancer_id} "
         f"| skills={len(skill_ids)} | specs={list(spec_names)} | langs={list(lang_names)} "
         f"| rate={row.get('estimated_rate')} | projects={total_proj} "
-        f"| exp_level={exp_num} | cold_start={bool(is_cold_start)} "
-        f"| performance={perf_score:.1f} | success_rate={success_rate:.1f} "
+        f"| exp_level={exp_num} | cold_start={bool(is_cold_start)} | total_reviews={total_reviews} "
+        f"| trust_score={perf_score:.1f} | success_rate={success_rate:.1f} "
         f"| portfolio={port[0]['cnt'] if port else 0} | work_exp={work_exp[0]['cnt'] if work_exp else 0}",
         level="DEBUG",
     )
 
     return {
-        "rate":           float(row.get("estimated_rate") or 0),
-        "total_jobs": total_proj,
-        "exp_num":        exp_num,
-        "skill_ids":      skill_ids,
-        "spec_names":     spec_names,
-        "lang_names":     lang_names,
+        "rate":          float(row.get("estimated_rate") or 0),
+        "rate_time":     str(row.get("rate_time") or "hourly").lower(),
+        "rate_currency": str(row.get("rate_currency") or "USD").upper(),
+        "total_jobs":    total_proj,
+        "exp_num":       exp_num,
+        "skill_ids":     skill_ids,
+        "spec_names":    spec_names,
+        "lang_names":    lang_names,
         "has_portfolio":  float(1 if port and port[0]["cnt"] > 0 else 0),
         "work_exp_count": float(work_exp[0]["cnt"] if work_exp else 0),
         "performance_score": perf_score,
@@ -218,13 +306,13 @@ def _compute_job_features(db, fc: dict, job: dict) -> dict:
     cosine_sim = float(job.get("similarity_score", 0))
 
     roles = db.execute_query(
-        "SELECT job_role_id, role_budget, budget_type FROM job_role WHERE job_post_id = :jpid",
+        "SELECT job_role_id, role_budget, budget_currency, budget_type FROM job_role WHERE job_post_id = :jpid",
         {"jpid": jp_id},
     )
 
     req_skills: set[str] = set()
     pref_skills: set[str] = set()
-    total_budget = 0.0
+    total_budget_usd = 0.0
     budget_count = 0
 
     for role in roles:
@@ -241,10 +329,11 @@ def _compute_job_features(db, fc: dict, job: dict) -> dict:
                 pref_skills.add(sid)
 
         if role.get("role_budget"):
-            total_budget += float(role["role_budget"])
+            budget_currency = str(role.get("budget_currency") or "USD").upper()
+            total_budget_usd += _to_usd(float(role["role_budget"]), budget_currency)
             budget_count += 1
 
-    avg_budget = total_budget / budget_count if budget_count > 0 else 0.0
+    avg_budget_usd = total_budget_usd / budget_count if budget_count > 0 else 0.0
 
     skill_required_total   = len(req_skills)
     skill_required_matched = len(fc["skill_ids"] & req_skills)
@@ -259,11 +348,15 @@ def _compute_job_features(db, fc: dict, job: dict) -> dict:
     experience_level_match = float(1 if fc["exp_num"] >= job_exp_num else 0)
     exp_delta = float(max(-2, min(2, fc["exp_num"] - job_exp_num)))
 
-    if avg_budget > 0 and fc["rate"] > 0:
-        rate_ratio   = min(3.0, fc["rate"] / avg_budget)
-        rate_in_budget = float(1 if fc["rate"] <= avg_budget * 1.1 else 0)
+    # Normalise freelancer rate → monthly USD so it's comparable to job budget
+    monthly_multiplier = _RATE_TO_MONTHLY_HOURS.get(fc["rate_time"], 1.0)
+    monthly_rate_usd   = _to_usd(fc["rate"] * monthly_multiplier, fc["rate_currency"])
+
+    if avg_budget_usd > 0 and monthly_rate_usd > 0:
+        rate_ratio     = min(3.0, monthly_rate_usd / avg_budget_usd)
+        rate_in_budget = float(1 if monthly_rate_usd <= avg_budget_usd * 1.1 else 0)
     else:
-        rate_ratio   = 1.0
+        rate_ratio     = 1.0
         rate_in_budget = 1.0
 
     common_lang_set = {"english", "indonesian", "bahasa indonesia"}
@@ -387,9 +480,9 @@ def rank_jobs_with_ml(
             for feat_row in feature_rows:
                 cosine  = float(feat_row["cosine_sim"])
                 overlap = float(feat_row["skill_overlap_pct"])
-                # base 5 % floor + cosine signal * skill confirmation
-                p = 0.05 + max(0.0, cosine - 0.5) * 0.4 * overlap
-                cold_probs.append(min(0.45, p))
+                p = 0.05 + max(0.0, cosine - 0.5) * 0.9 * overlap + overlap * 0.3
+                p = min(1.0, p)
+                cold_probs.append(p)
             probs = np.array(cold_probs, dtype=float)
             logger(
                 "ML_RANKER",

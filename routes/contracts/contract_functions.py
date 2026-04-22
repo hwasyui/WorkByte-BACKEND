@@ -1,3 +1,4 @@
+from datetime import datetime
 import os
 import sys
 
@@ -182,6 +183,13 @@ class ContractFunctions:
                 logger("CONTRACT_FUNCTIONS", "No data to update", level="WARNING")
                 return ContractFunctions.get_contract_by_id(contract_id)
 
+            # ── Auto-set actual_completion_date when marking as completed ──
+            if update_data.get("status") == "completed":
+                update_data.setdefault(
+                    "actual_completion_date",
+                    datetime.utcnow().strftime("%Y-%m-%d"),
+                )
+
             existing_contract = ContractFunctions.get_contract_by_id(contract_id)
             conditions = [("contract_id", "=", contract_id)]
             db.update_data(table_name="contract", data=update_data, conditions=conditions)
@@ -256,10 +264,14 @@ class ContractFunctions:
             if not contract:
                 raise Exception("Contract not found")
 
-            update_data = {"status": "cancelled", "end_date": "NOW()"}
+            from datetime import date
+            update_data = {
+                "status": "cancelled",
+                "end_date": date.today(),
+                "cancelled_by": cancelled_by,
+            }
             if reason:
                 update_data["cancellation_reason"] = reason
-
             updated_contract = ContractFunctions.update_contract(contract_id, update_data)
 
             # CONTRACT CANCELLED: system message after successful status update

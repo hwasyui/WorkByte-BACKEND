@@ -202,12 +202,15 @@ def build_contract_source_text(contract_id: str) -> Optional[str]:
             SELECT c.role_title,
                    jp.job_title,
                    jp.job_description,
-                   r.overall_rating,
-                   r.review_text
+                   ROUND(AVG(rr.score), 1) AS overall_rating,
+                   rwc.overall_comment     AS review_text
             FROM contract c
-            JOIN job_post jp   ON jp.job_post_id = c.job_post_id
-            LEFT JOIN rating r ON r.contract_id  = c.contract_id
+            JOIN job_post jp ON jp.job_post_id = c.job_post_id
+            LEFT JOIN reviews rv  ON rv.contract_id = c.contract_id AND rv.status = 'published'
+            LEFT JOIN review_written_content rwc ON rwc.review_id = rv.id
+            LEFT JOIN review_ratings rr ON rr.review_id = rv.id
             WHERE c.contract_id = :cid
+            GROUP BY c.role_title, jp.job_title, jp.job_description, rwc.overall_comment
             """,
             {"cid": contract_id},
         )

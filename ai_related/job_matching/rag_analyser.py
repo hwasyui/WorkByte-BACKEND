@@ -121,10 +121,9 @@ def _retrieve_freelancer_context(db, freelancer_id: str) -> dict:
         """
         SELECT f.full_name, f.bio, f.estimated_rate, f.rate_time, f.rate_currency,
                f.total_jobs,
-               pr.overall_performance_score, pr.success_rate,
-               pr.average_result_quality, pr.average_communication
+               fts.overall_score, fts.total_reviews
         FROM freelancer f
-        LEFT JOIN performance_rating pr ON pr.freelancer_id = f.freelancer_id
+        LEFT JOIN freelancer_trust_scores fts ON fts.freelancer_id = f.user_id
         WHERE f.freelancer_id = :fid
         """,
         {"fid": freelancer_id},
@@ -247,20 +246,22 @@ def _retrieve_past_contracts(db, freelancer_id: str, job_post_id: str) -> list[d
             """
             SELECT jp.job_title,
                    jp.job_description,
-                   c.status          AS contract_status,
-                   r.overall_rating,
-                   r.review_text,
-                   r.result_quality_score,
-                   r.communication_score,
+                   c.status                        AS contract_status,
+                   ROUND(AVG(rr.score), 1)         AS overall_rating,
+                   rwc.overall_comment             AS review_text,
                    1 - (ce.embedding_vector <=> je.embedding_vector) AS similarity
             FROM contract_embedding ce
             JOIN contract c  ON c.contract_id   = ce.contract_id
             JOIN job_post jp ON jp.job_post_id  = c.job_post_id
             JOIN job_embedding je ON je.job_post_id = :jpid
-            LEFT JOIN rating r ON r.contract_id = c.contract_id
+            LEFT JOIN reviews rv  ON rv.contract_id = c.contract_id AND rv.status = 'published'
+            LEFT JOIN review_written_content rwc ON rwc.review_id = rv.id
+            LEFT JOIN review_ratings rr ON rr.review_id = rv.id
             WHERE ce.freelancer_id = :fid
               AND ce.embedding_vector IS NOT NULL
               AND c.status = 'completed'
+            GROUP BY jp.job_title, jp.job_description, c.status, rwc.overall_comment,
+                     ce.embedding_vector, je.embedding_vector
             ORDER BY ce.embedding_vector <=> je.embedding_vector
             LIMIT 5
             """,
@@ -278,16 +279,17 @@ def _retrieve_past_contracts(db, freelancer_id: str, job_post_id: str) -> list[d
             """
             SELECT jp.job_title,
                    jp.job_description,
-                   c.status          AS contract_status,
-                   r.overall_rating,
-                   r.review_text,
-                   r.result_quality_score,
-                   r.communication_score
+                   c.status                AS contract_status,
+                   ROUND(AVG(rr.score), 1) AS overall_rating,
+                   rwc.overall_comment     AS review_text
             FROM contract c
-            JOIN job_post jp   ON jp.job_post_id = c.job_post_id
-            LEFT JOIN rating r ON r.contract_id  = c.contract_id
+            JOIN job_post jp ON jp.job_post_id = c.job_post_id
+            LEFT JOIN reviews rv  ON rv.contract_id = c.contract_id AND rv.status = 'published'
+            LEFT JOIN review_written_content rwc ON rwc.review_id = rv.id
+            LEFT JOIN review_ratings rr ON rr.review_id = rv.id
             WHERE c.freelancer_id = :fid
               AND c.status = 'completed'
+            GROUP BY jp.job_title, jp.job_description, c.status, rwc.overall_comment, c.end_date
             ORDER BY c.end_date DESC NULLS LAST
             LIMIT 5
             """,
@@ -376,11 +378,10 @@ def _build_prompt(job: dict, fc: dict, past_contracts: list[dict]) -> tuple[str,
     lines.append("\n=== FREELANCER PROFILE ===")
     lines.append(f"Name:         {fc.get('full_name', '')}")
     lines.append(f"Jobs done:    {fc.get('total_jobs', 0)} completed")
-    if fc.get("overall_performance_score") is not None:
+    if fc.get("overall_score") is not None:
         lines.append(
-            f"Performance:  {fc['overall_performance_score']}/100  |  "
-            f"Success rate: {fc.get('success_rate', 'N/A')}%  |  "
-            f"Avg quality: {fc.get('average_result_quality', 'N/A')}/5"
+            f"Trust score:  {fc['overall_score']}/100  |  "
+            f"Reviews: {fc.get('total_reviews', 0)}"
         )
     bio = (fc.get("bio") or "")[:250]
     if bio:
@@ -509,8 +510,9 @@ Rules for EACH role object (ALL fields required, never omit):
 - strengths: 3-5 detailed items specific to THIS role. For each strength, explain WHY it matters
   for this role and reference concrete evidence (e.g. specific past contract, portfolio project,
   proficiency level, work experience). Do not write generic statements.
-- gaps: 2-4 items; for each gap explain: (a) what is missing, (b) why it matters specifically
-  for this role, and (c) how significant the gap is. Write [] only if there are truly no gaps.
+- gaps: 2-4 items about MISSING SKILLS or EXPERIENCE only — do NOT mention metrics, ratings, or
+  success rates. For each gap explain: (a) what skill/experience is missing, (b) why it matters
+  for this role, and (c) how significant it is. Write [] if there are truly no skill/experience gaps.
 - skill_tips: 2-3 specific, actionable tips for THIS role — name exact technologies, certifications,
   or projects the freelancer should pursue to close each gap. Be concrete, not generic.
 

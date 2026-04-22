@@ -3,13 +3,14 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from typing import List, Optional, Dict
 import uuid
 from functions.schema_model import JobPostCreate, JobPostUpdate, JobPostResponse
 from functions.schema_model import UserInDB
 from functions.authentication import get_current_user
 from functions.access_control import assert_client_owns, get_client_profile_for_user
+from routes.clients.client_functions import ClientFunctions as _ClientFunctions
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.job_posts.job_post_functions import JobPostFunctions
@@ -18,18 +19,60 @@ from ai_related.job_matching.embedding_manager import upsert_job_embedding, mark
 job_post_router = APIRouter(prefix="/job-posts", tags=["Job Posts"])
 
 
+_VALID_JOB_STATUSES   = {"active", "closed", "filled", "draft", "all"}
+_VALID_JOB_ORDER_BY   = {"created_at", "posted_at", "deadline", "job_title", "proposal_count", "view_count"}
+
+
 @job_post_router.get("", response_model=List[JobPostResponse])
-async def get_all_job_posts(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch all job posts - Authenticated users only - JSON response"""
+async def get_all_job_posts(
+    status: str = Query(
+        default="active",
+        description="Filter by job status. One of: active (default), closed, filled, draft, all. "
+                    "Draft jobs are only visible to their creator.",
+    ),
+    order_by: str = Query(
+        default="created_at",
+        description="Sort field. One of: created_at (default), posted_at, deadline, job_title, proposal_count, view_count",
+    ),
+    order_dir: str = Query(default="desc", description="asc or desc", pattern="^(asc|desc)$"),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    current_user: UserInDB = Depends(get_current_user),
+):
+    """
+    Browse all job posts with pagination, status filter, and sorting.
+    Defaults to active jobs. Draft visibility is restricted to the owning client.
+    """
     try:
-        job_posts = JobPostFunctions.get_all_job_posts(limit=limit)
-        success_msg = f"Retrieved {len(job_posts)} job posts" + (f" (limit: {limit})" if limit else "")
-        logger("JOB_POST", success_msg, "GET /job-posts", "INFO")
-        return ResponseSchema.success(job_posts, 200)
+        if status not in _VALID_JOB_STATUSES:
+            return ResponseSchema.error(
+                f"Invalid status '{status}'. Valid values: {', '.join(sorted(_VALID_JOB_STATUSES))}", 400
+            )
+        if order_by not in _VALID_JOB_ORDER_BY:
+            return ResponseSchema.error(
+                f"Invalid order_by '{order_by}'. Valid values: {', '.join(sorted(_VALID_JOB_ORDER_BY))}", 400
+            )
+
+        # Resolve requesting client_id for draft gate (None for freelancers / non-clients)
+        requesting_client_id = None
+        if current_user.type == "client":
+            client = _ClientFunctions.get_client_by_user_id(current_user.user_id)
+            if client:
+                requesting_client_id = str(client["client_id"])
+
+        result = JobPostFunctions.browse_job_posts(
+            status=status,
+            order_by=order_by,
+            order_dir=order_dir,
+            page=page,
+            page_size=page_size,
+            requesting_client_id=requesting_client_id,
+        )
+        logger("JOB_POST", f"Browsed job posts: status={status} page={page}", "GET /job-posts", "INFO")
+        return ResponseSchema.success(result, 200)
     except Exception as e:
-        error_msg = f"Failed to fetch job posts: {str(e)}"
-        logger("JOB_POST", error_msg, "GET /job-posts", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        logger("JOB_POST", f"Failed to fetch job posts: {str(e)}", "GET /job-posts", "ERROR")
+        return ResponseSchema.error(f"Failed to fetch job posts: {str(e)}", 500)
 
 
 @job_post_router.get("/{job_post_id}", response_model=JobPostResponse)

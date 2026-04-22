@@ -3,7 +3,7 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from fastapi import APIRouter, Depends, UploadFile, File
+from fastapi import APIRouter, Depends, Query, UploadFile, File
 from typing import List, Optional, Dict
 import uuid
 from functions.schema_model import FreelancerCreate, FreelancerUpdate, FreelancerResponse, FreelancerProfileComplete
@@ -86,7 +86,7 @@ async def create_freelancer(
 @freelancer_router.put("/{identifier}", response_model=FreelancerResponse)
 async def update_freelancer(
     identifier: str,
-    freelancer_update: FreelancerUpdate = Depends(),
+    freelancer_update: FreelancerUpdate = Depends(FreelancerUpdate.as_form),
     current_user: UserInDB = Depends(get_freelancer_user),
 ):
     try:
@@ -96,10 +96,10 @@ async def update_freelancer(
         freelancer_id = existing["freelancer_id"]
         assert_freelancer_owns(current_user, freelancer_id)
 
-        update_data = {
-            k: v for k, v in freelancer_update.dict().items()
-            if k in freelancer_update.__fields_set__ and k != "profile_picture"
-        }
+        update_data = freelancer_update.model_dump(
+            exclude={"profile_picture"},
+            exclude_unset=True,
+        )
 
         if freelancer_update.profile_picture is not None:
             contents = await freelancer_update.profile_picture.read()
@@ -188,14 +188,33 @@ async def get_freelancer_embedding(freelancer_id: str, current_user: UserInDB = 
         logger("FREELANCER", error_msg, "GET /freelancers/{freelancer_id}/embedding", "ERROR")
         return ResponseSchema.error(error_msg, 500)
 
+_VALID_FREELANCER_ORDER_BY = {"created_at", "updated_at", "full_name", "estimated_rate", "total_jobs"}
+
 @freelancer_router.get("/browse/all", response_model=List[FreelancerResponse])
-async def browse_all_freelancers(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch all registered freelancers for browsing - Authenticated users only - JSON response"""
+async def browse_all_freelancers(
+    order_by: str = Query(
+        default="created_at",
+        description="Sort field. One of: created_at (default), updated_at, full_name, estimated_rate, total_jobs",
+    ),
+    order_dir: str = Query(default="desc", description="asc or desc", pattern="^(asc|desc)$"),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    current_user: UserInDB = Depends(get_current_user),
+):
+    """Browse all freelancers with pagination and sorting - Authenticated users only"""
     try:
-        freelancers = FreelancerFunctions.get_all_freelancers(limit=limit)
-        success_msg = f"Retrieved {len(freelancers)} freelancers for browse"
-        logger("FREELANCER", success_msg, "GET /freelancers/browse/all", "INFO")
-        return ResponseSchema.success(freelancers, 200)
+        if order_by not in _VALID_FREELANCER_ORDER_BY:
+            return ResponseSchema.error(
+                f"Invalid order_by '{order_by}'. Valid values: {', '.join(sorted(_VALID_FREELANCER_ORDER_BY))}", 400
+            )
+        result = FreelancerFunctions.browse_freelancers(
+            order_by=order_by,
+            order_dir=order_dir,
+            page=page,
+            page_size=page_size,
+        )
+        logger("FREELANCER", f"Browsed freelancers: page={page}", "GET /freelancers/browse/all", "INFO")
+        return ResponseSchema.success(result, 200)
     except Exception as e:
         error_msg = f"Failed to fetch freelancers for browse: {str(e)}"
         logger("FREELANCER", error_msg, "GET /freelancers/browse/all", "ERROR")

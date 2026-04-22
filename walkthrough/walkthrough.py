@@ -129,6 +129,21 @@ def put(endpoint: str, body: dict, token: str = None) -> dict:
     return data
 
 
+def put_form(endpoint: str, body: dict, token: str = None) -> dict:
+    """PUT with multipart/form-data — required for freelancer/client profile endpoints."""
+    headers = {}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    r = requests.put(f"{BASE_URL}{endpoint}", data=body, headers=headers, timeout=60)
+    data = r.json()
+    status = "OK" if r.ok else "FAIL"
+    print(f"  PUT  {endpoint}  [{r.status_code}] {status}")
+    if not r.ok:
+        print(f"  ERROR: {json.dumps(data, indent=4)}")
+        sys.exit(1)
+    return data
+
+
 def extract(response: dict) -> dict:
     """Pull the actual payload out of ResponseSchema wrapper (key is 'details')."""
     return response.get("details", response)
@@ -248,7 +263,7 @@ def run():
     # ── 4. Update freelancer profile ──────────────────────────────────────────
 
     step("Fill in freelancer profile — rate, bio")
-    put(f"/freelancers/{fid}", {
+    put_form(f"/freelancers/{fid}", {
         "bio": (
             "Backend developer with 4 years of experience building scalable APIs "
             "and data pipelines. Passionate about clean architecture and open-source."
@@ -767,25 +782,15 @@ def run():
         )
     }, tok_client2)
 
-    step("Create performance rating — sets total_ratings_received so ML ranker is not cold-start")
-    post("/performance-ratings", {
-        "freelancer_id": fid,
-        "overall_performance_score": 82.5,
-        "confidence_score": 75.0,
-        "total_ratings_received": 2,
-        "average_communication": 4.5,
-        "average_result_quality": 4.5,
-        "average_professionalism": 4.5,
-        "average_scope_compliance": 4.5,
-        "average_timeline_compliance": 4.5,
-        "success_rate": 100.0
-    }, tok_client1)
-
     step("Verify Budi's history is in place")
     print("  Both contracts were marked 'completed' above, which auto-incremented")
     print("  freelancer.total_jobs (+2) and client.total_jobs_completed (+1 each).")
-    print("  Budi now has 2 completed jobs and a 4.5/5 performance rating.")
-    print("  The ML ranker will use the full model (not cold-start heuristic).")
+    print("  In production, completing a contract triggers run_post_completion_pipeline()")
+    print("  and submitting a client review triggers run_post_review_pipeline(), which")
+    print("  auto-populates freelancer_trust_scores (total_reviews, overall_score).")
+    print("  For this walkthrough Budi remains in cold-start (total_reviews=0) since")
+    print("  the review pipeline has not been triggered. The ML ranker will use the")
+    print("  cold-start heuristic (cosine + skill overlap) instead of the full model.")
 
     # ── 14. Trigger embeddings ────────────────────────────────────────────────
 
@@ -1176,8 +1181,9 @@ def run():
     print()
     print("  History note:")
     print("  Budi has 2 completed contracts rated 5/5 and 4/5.")
-    print("  performance_rating.total_ratings_received = 2  →  cold_start = False")
-    print("  LightGBM uses full model including performance_score and success_rate.")
+    print("  freelancer_trust_scores is populated automatically by the review pipeline")
+    print("  (run_post_completion_pipeline + run_post_review_pipeline) when clients submit")
+    print("  reviews. total_reviews > 0 → cold_start = False → LightGBM uses full model.")
     print("  RAG retrieves past contract reviews as grounded context for the LLM.")
     print()
 

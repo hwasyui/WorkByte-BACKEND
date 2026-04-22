@@ -4,7 +4,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 
 from functions.db_manager import get_db
 from functions.logger import logger
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
+import math
 import uuid
 import json
 from datetime import datetime
@@ -157,6 +158,59 @@ class EmbeddingFunctions:
 
 class FreelancerFunctions:
     """Handle all freelancer-related database operations"""
+
+    _FREELANCER_SORT_FIELDS = {
+        "created_at":    "created_at",
+        "updated_at":    "updated_at",
+        "full_name":     "full_name",
+        "estimated_rate":"estimated_rate",
+        "total_jobs":    "total_jobs",
+    }
+
+    @staticmethod
+    def browse_freelancers(
+        order_by: str = "created_at",
+        order_dir: str = "desc",
+        page: int = 1,
+        page_size: int = 20,
+    ) -> Dict[str, Any]:
+        """Paginated + sorted freelancer browse."""
+        try:
+            db = get_db()
+
+            sort_col = FreelancerFunctions._FREELANCER_SORT_FIELDS.get(order_by, "created_at")
+            direction = "DESC" if order_dir.lower() == "desc" else "ASC"
+            offset = (page - 1) * page_size
+
+            count_rows = db.execute_query("SELECT COUNT(*) AS total FROM freelancer")
+            total = int(count_rows[0]["total"]) if count_rows else 0
+
+            data_rows = db.execute_query(
+                f"""
+                SELECT freelancer_id, user_id, full_name, bio, cv_file_url,
+                       profile_picture_url, estimated_rate, rate_time, rate_currency,
+                       total_jobs, created_at, updated_at
+                FROM freelancer
+                ORDER BY {sort_col} {direction} NULLS LAST
+                LIMIT :limit OFFSET :offset
+                """,
+                {"limit": page_size, "offset": offset},
+            )
+            items = [convert_uuids_to_str(dict(row)) for row in data_rows]
+
+            logger("FREELANCER_FUNCTIONS", f"browse_freelancers: {total} total, page {page}", level="INFO")
+            return {
+                "items": items,
+                "pagination": {
+                    "page":        page,
+                    "page_size":   page_size,
+                    "total":       total,
+                    "total_pages": math.ceil(total / page_size) if total else 0,
+                },
+            }
+        except Exception as e:
+            logger("FREELANCER_FUNCTIONS", f"Error browsing freelancers: {str(e)}", level="ERROR")
+            raise
 
     @staticmethod
     def get_all_freelancers(limit: Optional[int] = None, offset: int = 0) -> List[Dict]:

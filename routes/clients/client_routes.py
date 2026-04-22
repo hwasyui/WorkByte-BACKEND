@@ -2,7 +2,7 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from fastapi import APIRouter, Depends, status, UploadFile, File
+from fastapi import APIRouter, Depends, Query, status, UploadFile, File
 from typing import List, Optional, Dict
 import uuid
 from functions.schema_model import ClientCreate, ClientUpdate, ClientResponse
@@ -16,6 +16,39 @@ from functions.supabase_client import upload_client_profile_picture, delete_file
 from mimetypes import guess_type as guess_mime
 
 client_router = APIRouter(prefix="/clients", tags=["Clients"])
+
+_VALID_CLIENT_ORDER_BY = {"created_at", "updated_at", "full_name", "total_jobs_posted", "total_jobs_completed"}
+
+
+@client_router.get("/browse/all", response_model=List[ClientResponse])
+async def browse_all_clients(
+    order_by: str = Query(
+        default="created_at",
+        description="Sort field. One of: created_at (default), updated_at, full_name, total_jobs_posted, total_jobs_completed",
+    ),
+    order_dir: str = Query(default="desc", description="asc or desc", pattern="^(asc|desc)$"),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    current_user: UserInDB = Depends(get_current_user),
+):
+    """Browse all clients with pagination and sorting - Authenticated users only"""
+    try:
+        if order_by not in _VALID_CLIENT_ORDER_BY:
+            return ResponseSchema.error(
+                f"Invalid order_by '{order_by}'. Valid values: {', '.join(sorted(_VALID_CLIENT_ORDER_BY))}", 400
+            )
+        result = ClientFunctions.browse_clients(
+            order_by=order_by,
+            order_dir=order_dir,
+            page=page,
+            page_size=page_size,
+        )
+        logger("CLIENT", f"Browsed clients: page={page}", "GET /clients/browse/all", "INFO")
+        return ResponseSchema.success(result, 200)
+    except Exception as e:
+        error_msg = f"Failed to fetch clients for browse: {str(e)}"
+        logger("CLIENT", error_msg, "GET /clients/browse/all", "ERROR")
+        return ResponseSchema.error(error_msg, 500)
 
 
 @client_router.get("", response_model=List[ClientResponse])
@@ -119,7 +152,7 @@ async def create_client(
 @client_router.put("/{identifier}", response_model=ClientResponse)
 async def update_client(
     identifier: str,
-    client_update: ClientUpdate = Depends(),
+    client_update: ClientUpdate = Depends(ClientUpdate.as_form),
     current_user: UserInDB = Depends(get_client_user),
 ):
     """Update client information (supports both client_id and user_id) - Clients only"""
@@ -132,10 +165,10 @@ async def update_client(
             return ResponseSchema.error(error_msg, 404)
         client_id = existing["client_id"]
         assert_client_owns(current_user, client_id)
-        update_data = {
-            k: v for k, v in client_update.dict().items()
-            if v is not None and k != "profile_picture"
-        }
+        update_data = client_update.model_dump(
+            exclude={"profile_picture"},
+            exclude_unset=True,
+        )
 
         if client_update.profile_picture is not None:
             contents = await client_update.profile_picture.read()
