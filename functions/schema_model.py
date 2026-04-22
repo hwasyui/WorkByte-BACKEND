@@ -429,7 +429,7 @@ class JobPostCreate(BaseModel):
     job_title: str
     job_description: str
     project_type: str  # individual, team
-    project_scope: str  # small, medium, large
+    project_scope: Optional[str] = None  # small, medium, large; auto-calculated if omitted
     estimated_duration: Optional[str] = None
     working_days: Optional[int] = None
     deadline: Optional[date] = None
@@ -468,11 +468,37 @@ class JobPostResponse(BaseModel):
     role_count: int = 0
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
-    posted_at: Optional[datetime] = None
-    closed_at: Optional[datetime] = None
+
+
+class JobPostScopeCalculationRequest(BaseModel):
+    job_title: str
+    job_description: str
+    project_type: str  # individual, team
+    estimated_duration: Optional[str] = None
+    working_days: Optional[int] = None
+    experience_level: Optional[str] = None  # entry, intermediate, expert
+    role_count: Optional[int] = 1
+    roles: Optional[List["JobPostScopeRoleInput"]] = None
+
+
+class JobPostScopeCalculationResponse(BaseModel):
+    recommended_project_scope: str
+    score: int
+    confidence: str
+    factors: Dict[str, Any]
+    reasons: List[str]
 
     class Config:
         from_attributes = True
+
+
+class JobPostScopeRoleInput(BaseModel):
+    role_title: Optional[str] = None
+    role_budget: Optional[float] = None
+    budget_currency: Optional[str] = "USD"
+    budget_type: Optional[str] = None
+    positions_available: Optional[int] = 1
+    is_required: Optional[bool] = True
 
 # ==================== JOB ROLES ====================
 class JobRoleCreate(BaseModel):

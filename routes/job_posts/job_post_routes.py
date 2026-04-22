@@ -6,7 +6,13 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 from fastapi import APIRouter, Depends, Query, status
 from typing import List, Optional, Dict
 import uuid
-from functions.schema_model import JobPostCreate, JobPostUpdate, JobPostResponse
+from functions.schema_model import (
+    JobPostCreate,
+    JobPostUpdate,
+    JobPostResponse,
+    JobPostScopeCalculationRequest,
+    JobPostScopeCalculationResponse,
+)
 from functions.schema_model import UserInDB
 from functions.authentication import get_current_user
 from functions.access_control import assert_client_owns, get_client_profile_for_user
@@ -21,6 +27,31 @@ job_post_router = APIRouter(prefix="/job-posts", tags=["Job Posts"])
 
 _VALID_JOB_STATUSES   = {"active", "closed", "filled", "draft", "all"}
 _VALID_JOB_ORDER_BY   = {"created_at", "posted_at", "deadline", "job_title", "proposal_count", "view_count"}
+
+
+@job_post_router.post("/calculate-project-scope", response_model=JobPostScopeCalculationResponse)
+async def calculate_project_scope(
+    payload: JobPostScopeCalculationRequest,
+    current_user: UserInDB = Depends(get_current_user),
+):
+    """Calculate a recommended project_scope from job-post inputs without saving to the database."""
+    try:
+        result = JobPostFunctions.calculate_project_scope(
+            job_title=payload.job_title,
+            job_description=payload.job_description,
+            project_type=payload.project_type,
+            estimated_duration=payload.estimated_duration,
+            working_days=payload.working_days,
+            experience_level=payload.experience_level,
+            role_count=payload.role_count,
+            roles=[role.model_dump() for role in (payload.roles or [])],
+        )
+        logger("JOB_POST", "Calculated project scope recommendation", "POST /job-posts/calculate-project-scope", "INFO")
+        return ResponseSchema.success(result, 200)
+    except Exception as e:
+        error_msg = f"Failed to calculate project scope: {str(e)}"
+        logger("JOB_POST", error_msg, "POST /job-posts/calculate-project-scope", "ERROR")
+        return ResponseSchema.error(error_msg, 500)
 
 
 @job_post_router.get("", response_model=List[JobPostResponse])
@@ -116,12 +147,31 @@ async def create_job_post(job_post: JobPostCreate, current_user: UserInDB = Depe
         if job_post.client_id and str(job_post.client_id) != str(client["client_id"]):
             return ResponseSchema.error("Cannot create a job post for another client", 403)
         
+        resolved_project_scope = job_post.project_scope
+        if not resolved_project_scope:
+            calculation = JobPostFunctions.calculate_project_scope(
+                job_title=job_post.job_title,
+                job_description=job_post.job_description,
+                project_type=job_post.project_type,
+                estimated_duration=job_post.estimated_duration,
+                working_days=job_post.working_days,
+                experience_level=job_post.experience_level,
+                role_count=1,
+            )
+            resolved_project_scope = calculation["recommended_project_scope"]
+            logger(
+                "JOB_POST",
+                f"project_scope missing on create; auto-calculated as {resolved_project_scope}",
+                "POST /job-posts",
+                "INFO",
+            )
+
         new_job_post = JobPostFunctions.create_job_post(
             client_id=client["client_id"],
             job_title=job_post.job_title,
             job_description=job_post.job_description,
             project_type=job_post.project_type,
-            project_scope=job_post.project_scope,
+            project_scope=resolved_project_scope,
             estimated_duration=job_post.estimated_duration,
             working_days=job_post.working_days,
             deadline=job_post.deadline,

@@ -34,7 +34,7 @@ _feat_cols: list[str] | None = None
 _CURRENCY_RATES_PATH = os.path.join(os.path.dirname(__file__), "currency_rates.json")
 _currency_rates: dict[str, float] | None = None
 _currency_rates_fetched_at: float = 0.0
-_CURRENCY_REFRESH_SECONDS = 86400  # re-fetch once per day
+_CURRENCY_REFRESH_SECONDS = 604800  # re-fetch once per week
 
 
 def _load_currency_rates() -> dict[str, float]:
