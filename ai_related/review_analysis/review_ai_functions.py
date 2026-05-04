@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import asyncio
+import random
 import httpx
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
@@ -13,10 +14,12 @@ from datetime import datetime, timezone
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENAI_URL     = "https://api.openai.com/v1/chat/completions"
 MODEL          = "gpt-4o-mini"   # fast + cheap, ideal for classification & analysis
+LLM_CONCURRENCY_LIMIT = 2
+llm_semaphore = asyncio.Semaphore(LLM_CONCURRENCY_LIMIT)
 
 
-async def call_openai(system_prompt: str, user_prompt: str, json_mode: bool = False) -> str:
-    """Single reusable async OpenAI call used by every AI function below."""
+async def call_llm(system_prompt: str, user_prompt: str, json_mode: bool = False):
+    """Single centralized async OpenAI gateway with concurrency and rate-limit backoff."""
     headers = {
         "Authorization": f"Bearer {OPENAI_API_KEY}",
         "Content-Type": "application/json",
@@ -32,46 +35,46 @@ async def call_openai(system_prompt: str, user_prompt: str, json_mode: bool = Fa
     if json_mode:
         body["response_format"] = {"type": "json_object"}
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        resp = await client.post(OPENAI_URL, headers=headers, json=body)
-        resp.raise_for_status()
-        return resp.json()["choices"][0]["message"]["content"].strip()
+    max_retries = 5
+    base_delay_seconds = 2.0
 
-
-# ── Step 2 ────────────────────────────────────────────────────────────────────
-
-async def classify_project_category(
-    job_title: str,
-    role_title: str,
-    job_description: str,
-) -> str:
-    """
-    Uses GPT-4o-mini to classify the project into one of 9 categories.
-    Falls back to 'general' if classification fails or returns unexpected value.
-    """
-    valid_categories = {
-        "mobile_dev", "web_dev", "ui_ux_design", "graphic_design",
-        "copywriting", "backend_dev", "data_analytics", "video_editing", "general",
-    }
-    system = (
-        "You are a project classifier for a freelance marketplace. "
-        "Return ONLY one category label with no explanation or punctuation."
-    )
-    user = (
-        f"Job Title: {job_title}\n"
-        f"Role Title: {role_title}\n"
-        f"Job Description: {job_description[:800]}\n\n"
-        "Classify into exactly one of:\n"
-        "mobile_dev, web_dev, ui_ux_design, graphic_design, "
-        "copywriting, backend_dev, data_analytics, video_editing, general"
-    )
-    try:
-        result = await call_openai(system, user)
-        category = result.lower().strip()
-        return category if category in valid_categories else "general"
-    except Exception as e:
-        logger("REVIEW_AI", f"Category classification failed: {str(e)}", level="ERROR")
-        return "general"
+    async with llm_semaphore:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            for attempt in range(1, max_retries + 1):
+                try:
+                    resp = await client.post(OPENAI_URL, headers=headers, json=body)
+                    resp.raise_for_status()
+                    content = resp.json()["choices"][0]["message"]["content"].strip()
+                    if json_mode:
+                        return json.loads(content)
+                    return content
+                except httpx.HTTPStatusError as e:
+                    status_code = e.response.status_code if e.response is not None else None
+                    if status_code == 429 and attempt < max_retries:
+                        delay = base_delay_seconds * (2 ** (attempt - 1))
+                        jitter = random.uniform(0.0, 0.5)
+                        total_delay = delay + jitter
+                        logger(
+                            "REVIEW_AI",
+                            f"OpenAI rate limit hit, retry {attempt}/{max_retries} after {total_delay:.1f}s",
+                            level="WARNING",
+                        )
+                        await asyncio.sleep(total_delay)
+                        continue
+                    raise
+                except httpx.RequestError as e:
+                    if attempt < max_retries:
+                        delay = base_delay_seconds * (2 ** (attempt - 1))
+                        jitter = random.uniform(0.0, 0.5)
+                        total_delay = delay + jitter
+                        logger(
+                            "REVIEW_AI",
+                            f"OpenAI request error, retry {attempt}/{max_retries} after {total_delay:.1f}s: {str(e)}",
+                            level="WARNING",
+                        )
+                        await asyncio.sleep(total_delay)
+                        continue
+                    raise
 
 
 # ── Step 3 ────────────────────────────────────────────────────────────────────
@@ -175,244 +178,86 @@ def compute_responsiveness_score(contract_id: str, freelancer_user_id: str) -> f
 
 # ── Step 4d ───────────────────────────────────────────────────────────────────
 
-async def analyze_message_thread(contract_id: str) -> Dict:
-    """
-    Sends message thread to GPT-4o-mini.
-    Returns communication_sentiment_score, conflict_score, communication_summary.
-    """
-    try:
-        db = get_db()
-        rows = db.execute_query(
-            """SELECT sender_id, message_text, sent_at FROM message
-               WHERE contract_id = :cid AND message_type = 'user' AND deleted_at IS NULL
-               ORDER BY sent_at ASC LIMIT 60""",
-            {"cid": contract_id},
-        )
-        if not rows:
-            return {"communication_sentiment_score": 0.8, "conflict_score": 0.0, "communication_summary": "No messages found."}
-
-        thread = "\n".join([f"[{r['sender_id']}]: {r['message_text']}" for r in rows])
-
-        system = "You are a professional communication analyst. Always return valid JSON."
-        user = (
-            "Analyse this message thread between a client and freelancer on a completed project.\n\n"
-            f"{thread[:3000]}\n\n"
-            "Return a JSON object with exactly these keys:\n"
-            "{\n"
-            '  "communication_sentiment": <float 0.0-1.0, 1.0=very professional and positive>,\n'
-            '  "conflict_score": <float 0.0-1.0, 1.0=heavy conflict or frustration detected>,\n'
-            '  "communication_summary": <one sentence describing the working relationship>\n'
-            "}"
-        )
-        result = json.loads(await call_openai(system, user, json_mode=True))
-        return {
-            "communication_sentiment_score": float(result.get("communication_sentiment", 0.8)),
-            "conflict_score":                float(result.get("conflict_score", 0.0)),
-            "communication_summary":         result.get("communication_summary", ""),
-        }
-    except Exception as e:
-        logger("REVIEW_AI", f"Message thread analysis failed: {str(e)}", level="ERROR")
-        return {"communication_sentiment_score": 0.8, "conflict_score": 0.0, "communication_summary": "Analysis unavailable."}
-
-
 # ── Step 4e ───────────────────────────────────────────────────────────────────
-
-async def analyze_submitted_files(contract_id: str) -> Dict:
-    """
-    Fetches files from the latest approved contract_submission.
-    Routes to text analysis or vision model based on mime_type.
-    Returns work_quality_score (0–1) and work_quality_notes.
-    """
-    try:
-        db = get_db()
-        submission_rows = db.execute_query(
-            """SELECT submission_id FROM contract_submission
-               WHERE contract_id = :cid AND status = 'approved'
-               ORDER BY submitted_at DESC LIMIT 1""",
-            {"cid": contract_id},
-        )
-        if not submission_rows:
-            return {"work_quality_score": None, "work_quality_notes": "No approved submission found."}
-
-        submission_id = str(submission_rows[0]["submission_id"])
-        file_rows = db.execute_query(
-            """SELECT file_url, file_name, mime_type FROM contract_submission_file
-               WHERE submission_id = :sid LIMIT 5""",
-            {"sid": submission_id},
-        )
-        if not file_rows:
-            return {"work_quality_score": None, "work_quality_notes": "No files in submission."}
-
-        scores = []
-        notes  = []
-
-        for file in file_rows:
-            mime      = str(file.get("mime_type") or "")
-            file_name = str(file.get("file_name") or "")
-            file_url  = str(file.get("file_url")  or "")
-
-            # Text-based files
-            if any(t in mime for t in ["text/", "application/json", "application/pdf"]):
-                try:
-                    async with httpx.AsyncClient(timeout=15.0) as client:
-                        resp    = await client.get(file_url)
-                        content = resp.text[:3000]
-                    system = "You are a professional freelance work quality assessor. Return valid JSON only."
-                    user = (
-                        f"Assess the quality of this freelance deliverable.\n"
-                        f"File: {file_name} ({mime})\n\nContent:\n{content}\n\n"
-                        'Return JSON: { "score": <float 0.0-1.0>, "notes": <one sentence explanation> }'
-                    )
-                    result = json.loads(await call_openai(system, user, json_mode=True))
-                    scores.append(float(result.get("score", 0.7)))
-                    notes.append(result.get("notes", ""))
-                except Exception:
-                    scores.append(0.7)
-                    notes.append(f"Could not analyse {file_name}.")
-
-            # Image files — use vision model
-            elif mime.startswith("image/"):
-                try:
-                    headers = {"Authorization": f"Bearer {OPENAI_API_KEY}", "Content-Type": "application/json"}
-                    body = {
-                        "model": "gpt-4o-mini",
-                        "messages": [{
-                            "role": "user",
-                            "content": [
-                                {"type": "text", "text": (
-                                    "You are a design quality assessor. Rate this image as a freelance deliverable.\n"
-                                    'Return JSON: { "score": <float 0.0-1.0>, "notes": <one sentence> }'
-                                )},
-                                {"type": "image_url", "image_url": {"url": file_url}},
-                            ],
-                        }],
-                        "response_format": {"type": "json_object"},
-                        "max_tokens": 200,
-                    }
-                    async with httpx.AsyncClient(timeout=20.0) as client:
-                        resp   = await client.post(OPENAI_URL, headers=headers, json=body)
-                        result = json.loads(resp.json()["choices"][0]["message"]["content"])
-                    scores.append(float(result.get("score", 0.7)))
-                    notes.append(result.get("notes", ""))
-                except Exception:
-                    scores.append(0.7)
-                    notes.append(f"Could not analyse image {file_name}.")
-
-            # Video or other unsupported types — skip
-            else:
-                notes.append(f"{file_name}: manual review recommended.")
-
-        if not scores:
-            return {"work_quality_score": None, "work_quality_notes": "; ".join(notes) or "Unsupported file types."}
-
-        return {
-            "work_quality_score": round(sum(scores) / len(scores), 3),
-            "work_quality_notes": "; ".join(notes),
-        }
-    except Exception as e:
-        logger("REVIEW_AI", f"File analysis failed: {str(e)}", level="ERROR")
-        return {"work_quality_score": None, "work_quality_notes": "Analysis failed."}
-
 
 # ── Step 6a ───────────────────────────────────────────────────────────────────
 
-async def analyze_sentiment(
+async def analyze_review_full(
     overall_comment: str,
     client_answer: str,
     avg_star_rating: float,
-) -> Dict:
-    system = "You are a sentiment analysis expert. Return valid JSON only."
-    user = (
-        f'Review text: "{overall_comment} {client_answer}"\n'
-        f"Star rating given: {avg_star_rating:.1f} out of 5\n\n"
-        "Return JSON:\n"
-        "{\n"
-        '  "sentiment_score": <float -1.0 to 1.0>,\n'
-        '  "sentiment_label": <"positive" | "neutral" | "negative">,\n'
-        '  "sentiment_mismatch": <true if text tone clearly contradicts the star rating, else false>\n'
-        "}"
-    )
-    try:
-        result = json.loads(await call_openai(system, user, json_mode=True))
-        return {
-            "sentiment_score":    float(result.get("sentiment_score", 0.0)),
-            "sentiment_label":    result.get("sentiment_label", "neutral"),
-            "sentiment_mismatch": bool(result.get("sentiment_mismatch", False)),
-        }
-    except Exception as e:
-        logger("REVIEW_AI", f"Sentiment analysis failed: {str(e)}", level="ERROR")
-        return {"sentiment_score": 0.0, "sentiment_label": "neutral", "sentiment_mismatch": False}
-
-
-# ── Step 6b ───────────────────────────────────────────────────────────────────
-
-async def check_authenticity(overall_comment: str) -> Dict:
-    system = "You are a review authenticity expert. Return valid JSON only."
-    user = (
-        f'Review text: "{overall_comment}"\n\n'
-        "Detect red flags for fake, coerced, or copy-pasted reviews:\n"
-        "- Extremely generic text with no project-specific details\n"
-        "- Suspiciously templated or formal language\n"
-        "- Unrealistic all-positive tone with zero specifics\n\n"
-        "Return JSON:\n"
-        "{\n"
-        '  "authenticity_score": <float 0.0-1.0, 1.0=clearly genuine>,\n'
-        '  "is_flagged_fake": <true/false>,\n'
-        '  "is_flagged_coerced": <true/false>,\n'
-        '  "flag_reasons": [<list of reason strings if flagged, else []>]\n'
-        "}"
-    )
-    try:
-        result = json.loads(await call_openai(system, user, json_mode=True))
-        return {
-            "authenticity_score": float(result.get("authenticity_score", 1.0)),
-            "is_flagged_fake":    bool(result.get("is_flagged_fake", False)),
-            "is_flagged_coerced": bool(result.get("is_flagged_coerced", False)),
-            "flag_reasons":       result.get("flag_reasons", []),
-        }
-    except Exception as e:
-        logger("REVIEW_AI", f"Authenticity check failed: {str(e)}", level="ERROR")
-        return {"authenticity_score": 1.0, "is_flagged_fake": False, "is_flagged_coerced": False, "flag_reasons": []}
-
-
-# ── Step 6c ───────────────────────────────────────────────────────────────────
-
-async def check_bias(
-    overall_comment: str,
-    avg_star_rating: float,
     freelancer_name: str,
     performance_score_summary: Dict,
+    message_thread: str,
 ) -> Dict:
-    system = "You are a bias detection expert. Return valid JSON only."
+    system = "You are a review analysis expert. Return valid JSON only."
     user = (
-        f"Freelancer name: {freelancer_name}\n"
-        f"Star rating given: {avg_star_rating:.1f} / 5.0\n"
-        f'Review text: "{overall_comment}"\n\n'
-        "Objective AI performance scores (0–1 scale):\n"
+        f'Review text: "{overall_comment} {client_answer}"\n'
+        f"Star rating given: {avg_star_rating:.1f} out of 5\n"
+        f"Freelancer name: {freelancer_name}\n\n"
+        "Objective performance summary (0–1 scale):\n"
         f"- On-time delivery:   {performance_score_summary.get('on_time', 'N/A')}\n"
         f"- Revision rate:      {performance_score_summary.get('revision_rate', 'N/A')}\n"
         f"- Responsiveness:     {performance_score_summary.get('responsiveness', 'N/A')}\n"
         f"- Work quality:       {performance_score_summary.get('work_quality', 'N/A')}\n\n"
-        "Detect if the rating seems biased or inconsistent with objective data.\n"
-        "Also check if the review language suggests name-origin bias.\n\n"
-        "Return JSON:\n"
+        "Message thread from the project:\n"
+        f"{message_thread[:3000]}\n\n"
+        "Assess the review for sentiment, authenticity, bias, and communication tone. "
+        "Return JSON with exactly these keys:\n"
         "{\n"
+        '  "sentiment_score": <float -1.0 to 1.0>,\n'
+        '  "sentiment_label": <"positive" | "neutral" | "negative">,\n'
+        '  "sentiment_mismatch": <true/false>,\n'
+        '  "authenticity_score": <float 0.0-1.0, 1.0=clearly genuine>,\n'
+        '  "is_flagged_fake": <true/false>,\n'
+        '  "is_flagged_coerced": <true/false>,\n'
+        '  "flag_reasons": [<list of reason strings if flagged, else []>],\n'
         '  "bias_score": <float 0.0-1.0, 1.0=strong bias detected>,\n'
         '  "bias_flags": {\n'
         '    "rating_vs_performance_inconsistency": <true/false>,\n'
         '    "name_bias": <true/false>\n'
-        "  }\n"
+        "  },\n"
+        '  "communication_summary": <one sentence summary of project communication>\n'
         "}"
     )
     try:
-        result = json.loads(await call_openai(system, user, json_mode=True))
+        result = await call_llm(system, user, json_mode=True)
         return {
-            "bias_score":  float(result.get("bias_score", 0.0)),
-            "bias_flags":  result.get("bias_flags", {}),
+            "sentiment_score":    float(result.get("sentiment_score", 0.0)),
+            "sentiment_label":    result.get("sentiment_label", "neutral"),
+            "sentiment_mismatch": bool(result.get("sentiment_mismatch", False)),
+            "authenticity_score": float(result.get("authenticity_score", 1.0)),
+            "is_flagged_fake":    bool(result.get("is_flagged_fake", False)),
+            "is_flagged_coerced": bool(result.get("is_flagged_coerced", False)),
+            "flag_reasons":       result.get("flag_reasons", []),
+            "bias_score":         float(result.get("bias_score", 0.0)),
+            "bias_flags":         result.get("bias_flags", {}),
+            "communication_summary": result.get("communication_summary", ""),
+            "overall_pass": (
+                float(result.get("authenticity_score", 1.0)) >= 0.5
+                and float(result.get("bias_score", 0.0)) <= 0.6
+                and not (
+                    bool(result.get("sentiment_mismatch", False))
+                    and avg_star_rating == 5.0
+                    and result.get("sentiment_label", "neutral") == "negative"
+                )
+            ),
         }
     except Exception as e:
-        logger("REVIEW_AI", f"Bias check failed: {str(e)}", level="ERROR")
-        return {"bias_score": 0.0, "bias_flags": {}}
+        logger("REVIEW_AI", f"Review analysis failed: {str(e)}", level="ERROR")
+        return {
+            "sentiment_score": 0.0,
+            "sentiment_label": "neutral",
+            "sentiment_mismatch": False,
+            "authenticity_score": 1.0,
+            "is_flagged_fake": False,
+            "is_flagged_coerced": False,
+            "flag_reasons": [],
+            "bias_score": 0.0,
+            "bias_flags": {},
+            "communication_summary": "Analysis unavailable.",
+            "overall_pass": True,
+        }
 
 
 # ── Step 8 helpers ────────────────────────────────────────────────────────────
@@ -434,12 +279,16 @@ def calculate_trust_score(
       + communication_sentiment  × 10  (message tone)
       - 5  if conflict_score > 0.7     (conflict penalty)
     """
+    work_quality_score = float(work_quality_score) if work_quality_score is not None else 0.7
+    communication_sentiment = float(communication_sentiment) if communication_sentiment is not None else 0.8
+    conflict_score = float(conflict_score) if conflict_score is not None else 0.0
+
     score  = (weighted_review_avg / 5.0) * 35
-    score += (work_quality_score or 0.7) * 25
-    score += revision_rate_score * 15
-    score += responsiveness_score * 15
-    score += (communication_sentiment or 0.8) * 10
-    if conflict_score and conflict_score > 0.7:
+    score += work_quality_score * 25
+    score += float(revision_rate_score) * 15
+    score += float(responsiveness_score) * 15
+    score += communication_sentiment * 10
+    if conflict_score > 0.7:
         score -= 5
     return round(min(100.0, max(0.0, score)), 2)
 

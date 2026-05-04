@@ -96,13 +96,23 @@ register_client_payload=$(cat <<EOF
 EOF
 )
 register_client_resp=$(run_step "Register client user" "POST" "/auth/register" "$register_client_payload" "")
+CLIENT_OTP=$(printf '%s' "$register_client_resp" | tail -n 1 | jq -r '.details.verification.dev_verification_otp // empty')
+if [ -n "$CLIENT_OTP" ]; then
+  verify_client_payload=$(cat <<EOF
+{"email":"$TEST_CLIENT_EMAIL","otp":"$CLIENT_OTP"}
+EOF
+)
+  run_step "Verify client email" "POST" "/auth/verify-email" "$verify_client_payload" ""
+else
+  echo "Client verification OTP not returned. Complete email verification before login."
+fi
 
 login_client_payload=$(cat <<EOF
 {"email":"$TEST_CLIENT_EMAIL","password":"$TEST_PASSWORD"}
 EOF
 )
 login_client_resp=$(run_step "Login client user" "POST" "/auth/login" "$login_client_payload" "")
-CLIENT_TOKEN=$(printf '%s' "$login_client_resp" | jq -r '.data.access_token // empty')
+CLIENT_TOKEN=$(printf '%s' "$login_client_resp" | tail -n 1 | jq -r '.details.access_token // .data.access_token // empty')
 
 # freelancer user registration and login
 register_freelancer_payload=$(cat <<EOF
@@ -110,13 +120,23 @@ register_freelancer_payload=$(cat <<EOF
 EOF
 )
 register_freelancer_resp=$(run_step "Register freelancer user" "POST" "/auth/register" "$register_freelancer_payload" "")
+FREELANCER_OTP=$(printf '%s' "$register_freelancer_resp" | tail -n 1 | jq -r '.details.verification.dev_verification_otp // empty')
+if [ -n "$FREELANCER_OTP" ]; then
+  verify_freelancer_payload=$(cat <<EOF
+{"email":"$TEST_FREELANCER_EMAIL","otp":"$FREELANCER_OTP"}
+EOF
+)
+  run_step "Verify freelancer email" "POST" "/auth/verify-email" "$verify_freelancer_payload" ""
+else
+  echo "Freelancer verification OTP not returned. Complete email verification before login."
+fi
 
 login_freelancer_payload=$(cat <<EOF
 {"email":"$TEST_FREELANCER_EMAIL","password":"$TEST_PASSWORD"}
 EOF
 )
 login_freelancer_resp=$(run_step "Login freelancer user" "POST" "/auth/login" "$login_freelancer_payload" "")
-FREELANCER_TOKEN=$(printf '%s' "$login_freelancer_resp" | jq -r '.data.access_token // empty')
+FREELANCER_TOKEN=$(printf '%s' "$login_freelancer_resp" | tail -n 1 | jq -r '.details.access_token // .data.access_token // empty')
 
 me_client_resp=$(run_step "Client /auth/me" "GET" "/auth/me" "" "$CLIENT_TOKEN")
 me_freelancer_resp=$(run_step "Freelancer /auth/me" "GET" "/auth/me" "" "$FREELANCER_TOKEN")

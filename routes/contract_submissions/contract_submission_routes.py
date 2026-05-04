@@ -2,7 +2,7 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, UploadFile
 from typing import List, Optional
 
 from functions.schema_model import RevisionRequest, UserInDB
@@ -13,6 +13,7 @@ from functions.supabase_client import upload_contract_submission_file, guess_mim
 from routes.contract_submissions.contract_submission_functions import ContractSubmissionFunctions
 from routes.freelancers.freelancer_functions import FreelancerFunctions
 from routes.clients.client_functions import ClientFunctions
+from routes.reviews.review_routes import trigger_review_pipeline_on_completion
 
 
 contract_submission_router = APIRouter(
@@ -192,6 +193,7 @@ async def request_revision_for_latest_submission(
 @contract_submission_router.put("/contract/{contract_id}/approve")
 async def approve_latest_submission(
     contract_id: str,
+    background_tasks: BackgroundTasks,
     current_user: UserInDB = Depends(get_current_user),
 ):
     try:
@@ -209,12 +211,13 @@ async def approve_latest_submission(
         if client["client_id"] != contract["client_id"]:
             return ResponseSchema.error("Unauthorized to approve this contract", 403)
 
-        # Pass actor_user_id so the function can create the system message correctly
         latest_submission = ContractSubmissionFunctions.approve_latest_submission(
             contract_id=contract_id
         )
         if not latest_submission:
             return ResponseSchema.error("No submission found for this contract", 404)
+
+        await trigger_review_pipeline_on_completion(contract_id, background_tasks)
 
         logger("CONTRACT_SUBMISSION", f"Latest submission approved for contract {contract_id}", "PUT /contract-submissions/contract/{contract_id}/approve", "INFO")
         return ResponseSchema.success(latest_submission, 200)

@@ -116,6 +116,16 @@ def token_from_login(email: str, password: str) -> str:
     resp = post("/auth/login", {"email": email, "password": password})
     return extract(resp)["access_token"]
 
+def register_and_verify(body: dict) -> dict:
+    resp = post("/auth/register", body)
+    details = extract(resp)
+    otp = details.get("verification", {}).get("dev_verification_otp")
+    if otp:
+        post("/auth/verify-email", {"email": body["email"], "otp": otp})
+    else:
+        print("  Verification OTP not returned. Complete email verification before login.")
+    return resp
+
 
 def run():
     tee, out_path = _start_tee()
@@ -130,7 +140,7 @@ def run():
     print(f"  Output: {out_path}")
 
     step("Register a fresh client user")
-    post("/auth/register", {
+    register_and_verify({
         "email": email,
         "password": password,
         "user_type": "client",

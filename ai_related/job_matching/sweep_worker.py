@@ -11,6 +11,7 @@ from ai_related.job_matching.embedding_manager import (
     upsert_freelancer_embedding,
     upsert_job_embedding,
     upsert_contract_embedding,
+    upsert_portfolio_embedding,
 )
 
 SWEEP_INTERVAL_SECONDS = 300   # 5 minutes
@@ -116,20 +117,71 @@ async def _sweep_contracts() -> int:
     return count
 
 
-async def run_sweep_once() -> dict:
+async def _sweep_portfolios() -> int:
     """
-    Run one full sweep cycle across freelancer, job, and contract embedding tables.
+    Re-embed all dirty manual-portfolio embedding rows in one batch.
+
+    Auto-generated portfolio rows are not represented in portfolio_embedding,
+    so this only touches user-curated showcase items. Their semantic content
+    that mirrors completed work lives in contract_embedding instead.
 
     Returns:
-        Dict with freelancers_refreshed, jobs_refreshed, contracts_refreshed, and total counts.
+        Number of portfolio embeddings successfully refreshed in this cycle.
+    """
+    db = get_db()
+    rows = db.execute_query(
+        """SELECT portfolio_id FROM portfolio_embedding
+           WHERE embedding_dirty = TRUE
+           LIMIT :batch""",
+        {"batch": BATCH_SIZE},
+    )
+    if not rows:
+        logger("SWEEP_WORKER", "No dirty portfolio embeddings to process", level="DEBUG")
+        return 0
+
+    logger("SWEEP_WORKER", f"Found {len(rows)} dirty portfolio embedding(s) to refresh", level="INFO")
+    count = 0
+    for row in rows:
+        pid = str(row["portfolio_id"])
+        try:
+            result = await upsert_portfolio_embedding(pid)
+            logger("SWEEP_WORKER", f"Refreshed portfolio embedding | portfolio_id={pid} | status={result.get('status')}", level="DEBUG")
+            count += 1
+        except Exception as e:
+            logger("SWEEP_WORKER", f"Failed to re-embed portfolio | portfolio_id={pid} | error={e}", level="ERROR")
+
+    logger("SWEEP_WORKER", f"Portfolio sweep complete | refreshed={count}/{len(rows)}", level="INFO")
+    return count
+
+
+async def run_sweep_once() -> dict:
+    """
+    Run one full sweep cycle across freelancer, job, contract, and portfolio
+    embedding tables.
+
+    Returns:
+        Dict with freelancers_refreshed, jobs_refreshed, contracts_refreshed,
+        portfolios_refreshed, and total counts.
     """
     logger("SWEEP_WORKER", "Sweep cycle started", level="INFO")
     f_count = await _sweep_freelancers()
     j_count = await _sweep_jobs()
     c_count = await _sweep_contracts()
-    total = f_count + j_count + c_count
-    logger("SWEEP_WORKER", f"Sweep cycle done | freelancers={f_count} jobs={j_count} contracts={c_count} total={total}", level="INFO")
-    return {"freelancers_refreshed": f_count, "jobs_refreshed": j_count, "contracts_refreshed": c_count, "total": total}
+    p_count = await _sweep_portfolios()
+    total = f_count + j_count + c_count + p_count
+    logger(
+        "SWEEP_WORKER",
+        f"Sweep cycle done | freelancers={f_count} jobs={j_count} contracts={c_count} "
+        f"portfolios={p_count} total={total}",
+        level="INFO",
+    )
+    return {
+        "freelancers_refreshed": f_count,
+        "jobs_refreshed":        j_count,
+        "contracts_refreshed":   c_count,
+        "portfolios_refreshed":  p_count,
+        "total":                 total,
+    }
 
 
 async def embedding_sweep_loop() -> None:

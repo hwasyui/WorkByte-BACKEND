@@ -6,6 +6,7 @@ from functions.db_manager import get_db
 from functions.logger import logger
 from typing import List, Optional, Dict
 import uuid
+from routes.contracts.contract_functions import ContractFunctions
 from routes.messages.message_functions import MessageFunctions
 
 
@@ -302,10 +303,9 @@ class ContractSubmissionFunctions:
                 {"status": "approved"},
             )
 
-            db.update_data(
-                table_name="contract",
-                data={"status": "completed"},
-                conditions=[("contract_id", "=", contract_id)],
+            ContractFunctions.update_contract(
+                contract_id=contract_id,
+                update_data={"status": "completed"},
             )
 
             MessageFunctions.create_system_message(

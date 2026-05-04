@@ -160,6 +160,16 @@ def token_from_login(email: str, password: str) -> str:
     resp = post("/auth/login", {"email": email, "password": password})
     return extract(resp)["access_token"]
 
+def register_and_verify(body: dict) -> dict:
+    resp = post("/auth/register", body)
+    details = extract(resp)
+    otp = details.get("verification", {}).get("dev_verification_otp")
+    if otp:
+        post("/auth/verify-email", {"email": body["email"], "otp": otp})
+    else:
+        print("  Verification OTP not returned. Complete email verification before login.")
+    return resp
+
 
 # ── display helpers ───────────────────────────────────────────────────────────
 
@@ -220,19 +230,19 @@ def run():
 
     step("Register 3 clients")
 
-    post("/auth/register", {"email": f"nocturne.{ts}@pg.dev", "password": pw,
+    register_and_verify({"email": f"nocturne.{ts}@pg.dev", "password": pw,
                             "user_type": "client", "full_name": "Nocturne Labs"})
     nocturne_token  = token_from_login(f"nocturne.{ts}@pg.dev", pw)
     nocturne_id     = extract(get("/clients", nocturne_token))[0]["client_id"]
     print(f"  Nocturne Labs      client_id={nocturne_id}")
 
-    post("/auth/register", {"email": f"verdigris.{ts}@pg.dev", "password": pw,
+    register_and_verify({"email": f"verdigris.{ts}@pg.dev", "password": pw,
                             "user_type": "client", "full_name": "Verdigris Studio"})
     verdigris_token = token_from_login(f"verdigris.{ts}@pg.dev", pw)
     verdigris_id    = extract(get("/clients", verdigris_token))[0]["client_id"]
     print(f"  Verdigris Studio   client_id={verdigris_id}")
 
-    post("/auth/register", {"email": f"phantom.{ts}@pg.dev", "password": pw,
+    register_and_verify({"email": f"phantom.{ts}@pg.dev", "password": pw,
                             "user_type": "client", "full_name": "Phantom Signal"})
     phantom_token   = token_from_login(f"phantom.{ts}@pg.dev", pw)
     phantom_id      = extract(get("/clients", phantom_token))[0]["client_id"]
@@ -444,7 +454,7 @@ def run():
 
     step("Register 3 freelancers")
 
-    post("/auth/register", {"email": f"raia.{ts}@pg.dev", "password": pw,
+    register_and_verify({"email": f"raia.{ts}@pg.dev", "password": pw,
                             "user_type": "freelancer", "full_name": "Raia Solano"})
     raia_token    = token_from_login(f"raia.{ts}@pg.dev", pw)
     raia_id       = extract(get("/freelancers", raia_token))[0]["freelancer_id"]
@@ -455,7 +465,7 @@ def run():
     }, raia_token)
     print(f"  Raia Solano      freelancer_id={raia_id}  rate=$95/hr")
 
-    post("/auth/register", {"email": f"dmitri.{ts}@pg.dev", "password": pw,
+    register_and_verify({"email": f"dmitri.{ts}@pg.dev", "password": pw,
                             "user_type": "freelancer", "full_name": "Dmitri Volkmann"})
     dmitri_token  = token_from_login(f"dmitri.{ts}@pg.dev", pw)
     dmitri_id     = extract(get("/freelancers", dmitri_token))[0]["freelancer_id"]
@@ -466,7 +476,7 @@ def run():
     }, dmitri_token)
     print(f"  Dmitri Volkmann  freelancer_id={dmitri_id}  rate=$110/hr")
 
-    post("/auth/register", {"email": f"yuki.{ts}@pg.dev", "password": pw,
+    register_and_verify({"email": f"yuki.{ts}@pg.dev", "password": pw,
                             "user_type": "freelancer", "full_name": "Yuki Tanabe"})
     yuki_token    = token_from_login(f"yuki.{ts}@pg.dev", pw)
     yuki_id       = extract(get("/freelancers", yuki_token))[0]["freelancer_id"]

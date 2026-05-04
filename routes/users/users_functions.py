@@ -33,7 +33,7 @@ class UserFunctions:
             
             rows = db.fetch_data(
                 table_name="users",
-                columns=["user_id", "email", "type", "created_at", "updated_at"],
+                columns=["user_id", "email", "type", "email_verified", "email_verified_at", "created_at", "updated_at"],
                 conditions=conditions,
                 limit=limit,
                 order_by=order_by
@@ -54,7 +54,7 @@ class UserFunctions:
             conditions = [("user_id", "=", user_id)]
             rows = db.fetch_data(
                 table_name="users",
-                columns=["user_id", "email", "type", "created_at", "updated_at"],
+                columns=["user_id", "email", "type", "email_verified", "email_verified_at", "created_at", "updated_at"],
                 conditions=conditions,
                 limit=1
             )
@@ -78,7 +78,7 @@ class UserFunctions:
             conditions = [("email", "=", email)]
             rows = db.fetch_data(
                 table_name="users",
-                columns=["user_id", "email", "password", "type", "created_at", "updated_at"],
+                columns=["user_id", "email", "password", "type", "email_verified", "email_verified_at", "created_at", "updated_at"],
                 conditions=conditions,
                 limit=1
             )
@@ -175,7 +175,7 @@ class UserFunctions:
         """Search users by email"""
         try:
             db = get_db()
-            query = f"SELECT user_id, email, type, created_at, updated_at FROM users WHERE email ILIKE '%' || :search_term || '%'"
+            query = f"SELECT user_id, email, type, email_verified, email_verified_at, created_at, updated_at FROM users WHERE email ILIKE '%' || :search_term || '%'"
             rows = db.execute_query(query, {"search_term": search_term})
             
             logger("USERS_FUNCTIONS", f"Search found {len(rows)} users", level="INFO")

@@ -127,6 +127,16 @@ def token_from_login(email: str, password: str) -> str:
     resp = post("/auth/login", {"email": email, "password": password})
     return extract(resp)["access_token"]
 
+def register_and_verify(body: dict) -> dict:
+    resp = post("/auth/register", body)
+    details = extract(resp)
+    otp = details.get("verification", {}).get("dev_verification_otp")
+    if otp:
+        post("/auth/verify-email", {"email": body["email"], "otp": otp})
+    else:
+        print("  Verification OTP not returned. Complete email verification before login.")
+    return resp
+
 # ── main ──────────────────────────────────────────────────────────────────────
 
 def run():
@@ -142,19 +152,19 @@ def run():
     # ── 1. Register and log in fresh users ────────────────────────────────────
 
     step(f"Register fresh users for this run (id={_RUN_ID})")
-    post("/auth/register", {
+    register_and_verify({
         "email": _EMAIL_FREELANCER,
         "password": _PASSWORD,
         "user_type": "freelancer",
         "full_name": "Contract Freelancer"
     })
-    post("/auth/register", {
+    register_and_verify({
         "email": _EMAIL_CLIENT1,
         "password": _PASSWORD,
         "user_type": "client",
         "full_name": "Contract Client 1"
     })
-    post("/auth/register", {
+    register_and_verify({
         "email": _EMAIL_CLIENT2,
         "password": _PASSWORD,
         "user_type": "client",

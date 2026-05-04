@@ -189,9 +189,9 @@ def build_freelancer_source_text(freelancer_id: str) -> Optional[str]:
 def build_contract_source_text(contract_id: str) -> Optional[str]:
     """
     Build source text for a completed contract embedding.
-    Aggregates role title, job title, job description, and the client's
-    review text so the vector captures what work was actually done and how
-    it was received.  Returns None if the contract does not exist.
+    Aggregates role title, job title, completion date, job description, and the
+    client's review text so the vector captures what work was done, when, and
+    how it was received. Returns None if the contract does not exist.
     """
     logger("SOURCE_TEXT_BUILDER", f"Building contract source text | contract_id={contract_id}", level="INFO")
     try:
@@ -200,6 +200,8 @@ def build_contract_source_text(contract_id: str) -> Optional[str]:
         rows = db.execute_query(
             """
             SELECT c.role_title,
+                   c.actual_completion_date,
+                   c.end_date,
                    jp.job_title,
                    jp.job_description,
                    ROUND(AVG(rr.score), 1) AS overall_rating,
@@ -210,7 +212,8 @@ def build_contract_source_text(contract_id: str) -> Optional[str]:
             LEFT JOIN review_written_content rwc ON rwc.review_id = rv.id
             LEFT JOIN review_ratings rr ON rr.review_id = rv.id
             WHERE c.contract_id = :cid
-            GROUP BY c.role_title, jp.job_title, jp.job_description, rwc.overall_comment
+            GROUP BY c.role_title, c.actual_completion_date, c.end_date,
+                     jp.job_title, jp.job_description, rwc.overall_comment
             """,
             {"cid": contract_id},
         )
@@ -229,6 +232,12 @@ def build_contract_source_text(contract_id: str) -> Optional[str]:
         parts: list[str] = []
         parts.append(f"Completed Role: {row['role_title']}")
         parts.append(f"Job: {row['job_title']}")
+
+        # Completion date — gives the embedding a recency signal so semantic
+        # queries like "recent ETL work" can rank fresh contracts above stale ones.
+        completion = row.get("actual_completion_date") or row.get("end_date")
+        if completion:
+            parts.append(f"Completed: {completion}")
 
         if row.get("job_description"):
             parts.append(f"Description: {row['job_description'][:600]}")
@@ -251,6 +260,69 @@ def build_contract_source_text(contract_id: str) -> Optional[str]:
         logger(
             "SOURCE_TEXT_BUILDER",
             f"Error building contract source text | contract_id={contract_id} | error={e}",
+            level="ERROR",
+        )
+        raise
+
+
+def build_portfolio_source_text(portfolio_id: str) -> Optional[str]:
+    """
+    Build source text for a manual portfolio embedding.
+
+    Only meant for user-curated showcase items (`is_auto_generated = FALSE`).
+    Auto-generated portfolio rows mirror contract data and are already covered
+    by `contract_embedding`; embedding them again would duplicate vectors and
+    create a sync problem when the contract's rating updates later. Callers
+    must check `is_auto_generated` before invoking this.
+
+    Returns None if the portfolio row does not exist or is auto-generated.
+    """
+    logger("SOURCE_TEXT_BUILDER", f"Building portfolio source text | portfolio_id={portfolio_id}", level="INFO")
+    try:
+        db = get_db()
+        rows = db.execute_query(
+            """SELECT project_title, project_description, completion_date,
+                      is_auto_generated
+               FROM portfolio
+               WHERE portfolio_id = :pid""",
+            {"pid": portfolio_id},
+        )
+        if not rows:
+            logger("SOURCE_TEXT_BUILDER", f"Portfolio {portfolio_id} not found in DB — skipping", level="WARNING")
+            return None
+
+        row = dict(rows[0])
+        if row.get("is_auto_generated"):
+            logger(
+                "SOURCE_TEXT_BUILDER",
+                f"Portfolio {portfolio_id} is auto-generated from a contract — skip embedding "
+                "(already covered by contract_embedding)",
+                level="INFO",
+            )
+            return None
+
+        parts: list[str] = []
+        parts.append(f"Portfolio Project: {row['project_title']}")
+
+        completion = row.get("completion_date")
+        if completion:
+            parts.append(f"Completed: {completion}")
+
+        if row.get("project_description"):
+            parts.append(f"Description: {row['project_description']}")
+
+        source_text = "\n".join(parts)
+        logger(
+            "SOURCE_TEXT_BUILDER",
+            f"Portfolio source text built | portfolio_id={portfolio_id} | sections={len(parts)} | total_chars={len(source_text)}",
+            level="INFO",
+        )
+        return source_text
+
+    except Exception as e:
+        logger(
+            "SOURCE_TEXT_BUILDER",
+            f"Error building portfolio source text | portfolio_id={portfolio_id} | error={e}",
             level="ERROR",
         )
         raise

@@ -16,6 +16,7 @@ from ai_related.job_matching.source_text_builder import (
     build_freelancer_source_text,
     build_job_source_text,
     build_contract_source_text,
+    build_portfolio_source_text,
 )
 
 
@@ -368,3 +369,146 @@ async def upsert_contract_embedding(contract_id: str) -> dict:
     except Exception as e:
         logger("EMBEDDING_MANAGER", f"Error upserting contract embedding | contract_id={contract_id} | error={e}", level="ERROR")
         raise
+
+
+def _is_manual_portfolio(portfolio_id: str) -> bool:
+    """
+    Return True only when the portfolio row exists and is_auto_generated = FALSE.
+    Auto-generated rows mirror contract data — they are NOT embedded here, they
+    are covered by contract_embedding. Returns False if the row is missing.
+    """
+    try:
+        db = get_db()
+        rows = db.execute_query(
+            "SELECT is_auto_generated FROM portfolio WHERE portfolio_id = :pid",
+            {"pid": portfolio_id},
+        )
+        if not rows:
+            return False
+        return not bool(rows[0].get("is_auto_generated"))
+    except Exception as e:
+        logger("EMBEDDING_MANAGER", f"is_auto_generated check failed | portfolio_id={portfolio_id} | error={e}", level="WARNING")
+        return False
+
+
+def mark_portfolio_dirty(portfolio_id: str) -> None:
+    """
+    Flag a manual portfolio entry's embedding as stale, or embed immediately
+    if below the size threshold. Auto-generated rows are skipped silently —
+    their semantic content lives in contract_embedding.
+    Swallows exceptions so a dirty-flag failure never breaks the calling mutation.
+    """
+    try:
+        if not _is_manual_portfolio(portfolio_id):
+            logger(
+                "EMBEDDING_MANAGER",
+                f"Portfolio {portfolio_id} is auto-generated or missing — not embedded "
+                "(contract_embedding covers auto rows)",
+                level="DEBUG",
+            )
+            return
+
+        if _should_embed_immediately():
+            logger("EMBEDDING_MANAGER", f"Immediate embed scheduled | portfolio_id={portfolio_id}", level="INFO")
+            _schedule_immediate(upsert_portfolio_embedding(portfolio_id))
+            return
+        db = get_db()
+        db.execute_query(
+            "UPDATE portfolio_embedding SET embedding_dirty = TRUE WHERE portfolio_id = :pid",
+            {"pid": portfolio_id},
+        )
+        logger("EMBEDDING_MANAGER", f"Marked dirty | portfolio_id={portfolio_id}", level="DEBUG")
+    except Exception as e:
+        logger("EMBEDDING_MANAGER", f"Could not mark portfolio dirty | portfolio_id={portfolio_id} | error={e}", level="ERROR")
+
+
+async def upsert_portfolio_embedding(portfolio_id: str) -> dict:
+    """
+    Build source text for a manual portfolio entry, generate an embedding, and
+    upsert into portfolio_embedding. Skips auto-generated rows.
+    """
+    logger("EMBEDDING_MANAGER", f"Upserting portfolio embedding | portfolio_id={portfolio_id}", level="INFO")
+    try:
+        if not _is_manual_portfolio(portfolio_id):
+            logger(
+                "EMBEDDING_MANAGER",
+                f"Portfolio {portfolio_id} is auto-generated or missing — skip upsert",
+                level="INFO",
+            )
+            return {"status": "skipped", "reason": "auto_generated_or_missing"}
+
+        source_text = build_portfolio_source_text(portfolio_id)
+        if not source_text:
+            logger("EMBEDDING_MANAGER", f"No source text for portfolio {portfolio_id} — skipping upsert", level="WARNING")
+            return {"status": "skipped", "reason": "no_source_text"}
+
+        db = get_db()
+        fid_rows = db.execute_query(
+            "SELECT freelancer_id FROM portfolio WHERE portfolio_id = :pid",
+            {"pid": portfolio_id},
+        )
+        if not fid_rows:
+            return {"status": "skipped", "reason": "portfolio_not_found"}
+        freelancer_id = str(fid_rows[0]["freelancer_id"])
+
+        logger("EMBEDDING_MANAGER", f"Requesting embedding vector | portfolio_id={portfolio_id} | source_chars={len(source_text)}", level="DEBUG")
+        vector = await get_embedding(source_text)
+        vector_pg = _vector_to_pg(vector)
+        metadata = json.dumps({"dim": len(vector)})
+
+        existing = db.execute_query(
+            "SELECT embedding_id FROM portfolio_embedding WHERE portfolio_id = :pid",
+            {"pid": portfolio_id},
+        )
+
+        if existing:
+            db.execute_query(
+                """UPDATE portfolio_embedding
+                   SET embedding_vector   = CAST(:vec AS vector),
+                       source_text        = :txt,
+                       embedding_metadata = CAST(:meta AS jsonb),
+                       embedding_dirty    = FALSE,
+                       updated_at         = NOW()
+                   WHERE portfolio_id = :pid""",
+                {"vec": vector_pg, "txt": source_text, "meta": metadata, "pid": portfolio_id},
+            )
+            logger("EMBEDDING_MANAGER", f"Portfolio embedding UPDATED | portfolio_id={portfolio_id} | dim={len(vector)}", level="INFO")
+            return {"status": "updated", "portfolio_id": portfolio_id, "dim": len(vector)}
+        else:
+            embedding_id = str(uuid.uuid4())
+            db.execute_query(
+                """INSERT INTO portfolio_embedding
+                     (embedding_id, portfolio_id, freelancer_id, embedding_vector,
+                      source_text, embedding_metadata, embedding_dirty)
+                   VALUES (:eid, :pid, :fid, CAST(:vec AS vector), :txt, CAST(:meta AS jsonb), FALSE)""",
+                {
+                    "eid": embedding_id,
+                    "pid": portfolio_id,
+                    "fid": freelancer_id,
+                    "vec": vector_pg,
+                    "txt": source_text,
+                    "meta": metadata,
+                },
+            )
+            logger("EMBEDDING_MANAGER", f"Portfolio embedding CREATED | portfolio_id={portfolio_id} | dim={len(vector)}", level="INFO")
+            return {"status": "created", "portfolio_id": portfolio_id, "dim": len(vector)}
+
+    except Exception as e:
+        logger("EMBEDDING_MANAGER", f"Error upserting portfolio embedding | portfolio_id={portfolio_id} | error={e}", level="ERROR")
+        raise
+
+
+def delete_portfolio_embedding(portfolio_id: str) -> None:
+    """
+    Remove a portfolio embedding row when the source portfolio entry is deleted.
+    Safe to call on auto-generated rows (they have no embedding to begin with).
+    """
+    try:
+        db = get_db()
+        db.execute_query(
+            "DELETE FROM portfolio_embedding WHERE portfolio_id = :pid",
+            {"pid": portfolio_id},
+        )
+        logger("EMBEDDING_MANAGER", f"Portfolio embedding deleted | portfolio_id={portfolio_id}", level="DEBUG")
+    except Exception as e:
+        logger("EMBEDDING_MANAGER", f"Could not delete portfolio embedding | portfolio_id={portfolio_id} | error={e}", level="WARNING")

@@ -1,97 +1,97 @@
 skill_id,skill_name,skill_category
-7152dea4-b047-43e9-9d12-e2876c56db1a,Python,hard_skill
-2f492933-4404-43ae-aff2-b7d122b692d6,JavaScript,hard_skill
-53f646d4-1ed9-4c9e-b3d6-0c0575687aaf,TypeScript,hard_skill
-f46147fa-8453-4e16-a4b2-858d21126803,Java,hard_skill
-9f20df11-6b44-4eca-882b-c21c3e41639c,Go,hard_skill
-37450534-710e-498f-9429-7a9e9ec6a233,Rust,hard_skill
-3a83792b-3d29-4237-a98b-0385ab15734c,C++,hard_skill
-44957ec5-db9e-44e4-80ee-1d530d6ecb9d,PHP,hard_skill
-6d8cc6ab-958c-4ae8-9dea-f14bb0ccb8ab,Ruby,hard_skill
-7a7d6ccb-5037-4416-a74c-cc445f9a59df,Swift,hard_skill
-813b6ae4-b9e0-449e-ad3d-c5387ce9ac6c,Kotlin,hard_skill
-6d05c17e-4d29-416b-89b5-a92916fd25c1,Dart,hard_skill
-9d433869-cd57-4b8e-af94-c6046e7d07a9,C#,hard_skill
-ae5cd610-c10c-4c68-8ef3-b5dcf2020a8f,Scala,hard_skill
-cca1d4c7-45c9-4146-9804-aea944301628,R,hard_skill
-61195128-894c-4e66-acf8-520c96579861,React,hard_skill
-b50b3438-f076-4e33-b987-a805a3efac13,Vue.js,hard_skill
-e63feec7-d238-4834-b986-413d994b14c3,Angular,hard_skill
-23dd4605-c045-4587-88b4-e3c1f0e25aa2,Next.js,hard_skill
-63174c94-cf49-4bbb-92f4-524252aa156f,Nuxt.js,hard_skill
-eca2899d-57ee-404c-a358-1663f2ca8fc1,HTML,hard_skill
-f47a899f-a418-43e7-b6ad-49e4ac3c8fbc,CSS,hard_skill
-5f69fb90-2b5c-434f-a3de-46fc81321846,Tailwind CSS,tool
-9e71f41a-cb95-4949-8bdf-8e2481ba29f8,Bootstrap,tool
-0e7e3f21-2400-42cf-9187-984a48a94dfa,Sass/SCSS,tool
-d1b285c2-fac9-422f-b96a-56cd20c33062,jQuery,tool
-552dabe8-07c0-4ee3-ad1e-5a530440bba8,Webpack,tool
-ccac46b1-90eb-4f1d-97a9-65910e78bdab,Django,hard_skill
-75db70ae-3c8c-4821-88ab-38e804d76fb0,FastAPI,hard_skill
-a2681cb1-9a70-449f-b128-e2fcba0ad193,Flask,hard_skill
-861b5ae0-91d6-477e-81b9-707dfcde9ecc,Node.js,hard_skill
-e6bd4e0d-5c1c-45ea-a698-ec2bfb4faa7c,Express.js,hard_skill
-9cd6f587-3644-45da-b4f4-668f5240c930,Laravel,hard_skill
-cf7e14a0-dbd8-4b11-a492-cfdcb25cbcfa,Spring Boot,hard_skill
-ec380f28-44f9-4ce0-830d-afe2a5034fbe,Rails,hard_skill
-56e87d40-4dc0-48be-ba8d-2403ae5683a2,ASP.NET,hard_skill
-588712e7-cd83-4774-b10d-add3380cbe74,PostgreSQL,hard_skill
-845f3623-5140-413f-aa2d-71162b64b2f7,MySQL,hard_skill
-a4ede06a-0de7-45a9-98c9-5079cdf8ff99,MongoDB,hard_skill
-429281a7-e66b-410a-bc46-2097b51c638c,Redis,hard_skill
-62084099-5031-4597-b1d9-ee2fd350251b,Elasticsearch,hard_skill
-45d0a102-d203-450b-9793-5eab924dda92,SQLite,hard_skill
-9bb51cdd-5842-4d1f-a88c-29ac896af978,Cassandra,hard_skill
-746f476f-a7e3-4d07-8658-cf94d9b3353c,DynamoDB,hard_skill
-653433a2-fe3d-4415-a72b-2b337112b129,Supabase,tool
-c0553466-0912-47d9-afcf-9609f727dc83,Firebase,tool
-aed0d3e7-4d9b-4698-bc7d-eb9c4b5de0bf,Docker,tool
-101a3a4d-77a2-4a2e-b325-4f7de67de3a7,Kubernetes,tool
-f40708f4-a2f0-4728-865f-2a27b523e5c4,AWS,tool
-2e4bbd9d-bd3f-4701-9596-9b3af39ff0de,GCP,tool
-00e792fd-73d4-43ed-a68b-32aaaaaf678a,Azure,tool
-19b729a6-8691-41b8-8263-a84ca010b68f,GitHub Actions,tool
-323ff90f-751f-412a-9f77-489e737092b5,Terraform,tool
-f48d1b6f-de2c-4cc1-88e9-82bf665517c7,Linux,tool
-f7b6291b-6aa1-430b-889c-5331a4ebe20b,Nginx,tool
-19ff13db-46ba-4800-9464-696a5dd242a8,CI/CD,tool
-7e72c12d-0210-4b71-a88e-238b4a151e14,Machine Learning,hard_skill
-2aa5762f-eadc-4d3a-b34f-6f018e3f0167,TensorFlow,tool
-486fb876-4337-4e5f-a5d4-26d8b921f484,PyTorch,tool
-0b548b23-75ef-4ca2-ac84-6545fc59b5ca,scikit-learn,tool
-33e5fd4f-c3a7-48e6-87b4-14dc5e2e0ebd,Pandas,hard_skill
-3fda7a4c-d334-433a-91f0-0360b687b436,NumPy,hard_skill
-2c59e71d-d264-41a0-b48b-441b80ad7881,LLM Integration,hard_skill
-e130a249-7f72-450f-b725-8c4f4fd90f93,Data Science,hard_skill
-a33aa749-35dd-4580-8c55-7556b935102e,Computer Vision,hard_skill
-d823d672-3919-4cf0-a648-f2e56071beb8,NLP,hard_skill
-9d65bb80-e448-4ac9-91b6-f0a6c86f4243,Figma,tool
-2f7d9077-f8d4-40b1-a642-f9c7f87b4684,Adobe XD,tool
-94fd5dff-355e-4f10-8178-84e314a82d99,Sketch,tool
-ab85dff1-d0e3-498a-8d5c-76c2743714c2,UI/UX Design,hard_skill
-88999117-8262-4112-8355-f7fff61ae427,Graphic Design,hard_skill
-b36fbe52-2c5d-4f55-a764-4148dd65f7db,Photoshop,tool
-92d5801a-9306-4509-89b1-56bafb236261,Illustrator,tool
-12a015c1-253c-4215-be8b-0b7ed9f4869d,Motion Design,hard_skill
-23130edb-3347-4a42-8bb0-bd1be3d3a083,Flutter,hard_skill
-56e35043-699b-4786-84b2-70263700259b,React Native,hard_skill
-b74d3b30-d1d9-404a-a2b4-3f26e9ca2fb9,iOS Development,hard_skill
-db1ac8fd-7072-46d2-9a7d-bcb9e0dc2768,Android Development,hard_skill
-79e91e1d-7da5-42eb-a968-f989620d479c,REST API,hard_skill
-39dc2ae9-aa35-4ba8-8f41-24c6c0ecfc70,GraphQL,hard_skill
-c47adb90-1a69-442e-b909-57cbfe28e842,WebSocket,hard_skill
-68f78d3a-9128-4371-881e-51096d77d472,Git,tool
-888cf08e-c304-4c8c-9a47-a8fcbf055eb3,gRPC,hard_skill
-96429ba3-bde3-4ddc-9396-ec27562c4cd4,Microservices,hard_skill
-3b603349-06d4-44b2-94f2-1c033722afd0,System Design,hard_skill
-6e36f8b6-72c3-476f-92ec-9db4c6e7736d,Blockchain,hard_skill
-73c7448d-1587-4753-afd8-40efe64db197,Smart Contracts,hard_skill
-267cda22-2861-46b6-ba76-85bae29943dc,Cybersecurity,hard_skill
-30f76bf2-f207-4cca-abf2-17f1bb87aa75,Solidity,hard_skill
-767b8d64-25a6-40e1-8a8b-6baac5a0ed37,Communication,soft_skill
-539dff7f-6ced-4400-a6eb-84daba9ef011,Leadership,soft_skill
-43b12079-e32b-47f2-bdde-4d434759221e,Problem Solving,soft_skill
-283cc544-20af-4515-8b3c-644558800927,Project Management,soft_skill
-ba99a9f3-017f-4c07-be6e-eecc425af297,Technical Writing,soft_skill
-ece791bb-e729-4eb3-945a-aeaf3c4306b8,Agile,soft_skill
-649a59d9-a271-4ab2-8da2-d8f13510aa6c,Scrum,soft_skill
+b38928c4-8795-4085-906f-17051e798a4e,Python,hard_skill
+bdbda0ac-4e8c-4397-9ccc-1c7d49f624ac,JavaScript,hard_skill
+4ece738b-4e65-486b-9916-ae2938529a51,TypeScript,hard_skill
+27de92a3-f122-444f-b6b6-4a0438592001,Java,hard_skill
+7917e55a-5b39-492f-8d43-2f495c035978,Go,hard_skill
+d0b63838-9114-4cd2-a646-007def85406d,Rust,hard_skill
+ef98c2b0-be34-405f-8ad3-965a3123d12f,C++,hard_skill
+1534e756-fd39-4e85-8aae-89b421305a29,PHP,hard_skill
+ca2c7f6e-20f5-457e-bb2a-41b56cd2ce35,Ruby,hard_skill
+4964b46d-323d-4b24-9ca3-613d28b4c828,Swift,hard_skill
+a8f33b92-ade5-4219-9c3e-b1cbafad9bb0,Kotlin,hard_skill
+96294385-1a73-4cec-bc75-a7fcf8ab1f85,Dart,hard_skill
+daa2feb2-5db7-446e-af4a-d2a1d7a0dc78,C#,hard_skill
+86002186-1c6b-451a-a655-de83bc35f090,Scala,hard_skill
+d01b69aa-edcc-432a-9d3f-c7904bfbbdc4,R,hard_skill
+9442b4a0-2ec8-4a0b-b9fa-fa1da3f7222e,React,hard_skill
+c3eac669-00dc-4191-945a-8d2a2c41e9fe,Vue.js,hard_skill
+fd17aae3-877b-4f6d-99fe-3a26a43ed0cc,Angular,hard_skill
+d9406946-8a29-4275-805f-c77220d89cf7,Next.js,hard_skill
+cad78469-5578-41b1-9b27-afe4060e94db,Nuxt.js,hard_skill
+733881c0-dde2-4681-82d8-6e167a741495,HTML,hard_skill
+44338055-808c-4bca-be2a-584e6c81d4db,CSS,hard_skill
+18784026-f5aa-481a-8cf4-8f17e0582dcd,Tailwind CSS,tool
+426204d3-12db-4eb2-ad44-43dd4a53212c,Bootstrap,tool
+c0329000-3eb7-413c-86c5-b852f02a8c84,Sass/SCSS,tool
+0d625eb6-adea-42ae-a94f-a74db9d7b4c8,jQuery,tool
+48c7d935-b052-4d5a-9876-669eff9ff8ca,Webpack,tool
+ce47d8ac-7c2d-4842-9738-d6cc1cc43bc9,Django,hard_skill
+5d9c82f0-14c6-4fb4-ac60-7946565ba901,FastAPI,hard_skill
+31471107-34ff-4b98-a853-5f2b9443c998,Flask,hard_skill
+91873237-33ea-4616-9d02-d884394577e4,Node.js,hard_skill
+a9fdf614-9306-48cd-aa54-c06d8593e94a,Express.js,hard_skill
+90d70ad6-78d9-472c-acc5-dcf061ea679b,Laravel,hard_skill
+8d77ef43-56c5-4514-9d78-1f7b895d9d0a,Spring Boot,hard_skill
+eb3d3403-87b0-4365-8b6c-83eee2d6f092,Rails,hard_skill
+a14c6fac-4376-4ccf-8311-226027cb533d,ASP.NET,hard_skill
+e9b04df8-e1be-4b33-9e66-076fa63ac0e6,PostgreSQL,hard_skill
+bb4adc67-da67-4a84-8a9c-32f19a598242,MySQL,hard_skill
+a79c00e3-0f06-409c-ab9d-6cefd787025a,MongoDB,hard_skill
+4cd103f8-cbd3-47a7-8290-05a08ad608d5,Redis,hard_skill
+cda13d07-5c80-4a6f-a1c3-8935d10be767,Elasticsearch,hard_skill
+f4b01fad-dfcb-4878-98d1-300f7263cd18,SQLite,hard_skill
+fe3ad350-f7f0-47e0-b4dd-61d1f9121e8c,Cassandra,hard_skill
+ceb7bcf8-211c-4ca1-ac59-9f3226183c3b,DynamoDB,hard_skill
+3454b7cf-f457-4e12-93ff-e8737d41870c,Supabase,tool
+d775e2b6-a19e-49b9-bb84-9b6aa0ae3eb7,Firebase,tool
+224a5d23-cddf-4cd6-929c-a3b1c7666003,Docker,tool
+23874942-96a9-4220-9fe4-95231b09719d,Kubernetes,tool
+e3f8495b-2c03-498b-94c7-2af3b73c5fda,AWS,tool
+2575fe54-028b-4797-a4e3-4905665a601b,GCP,tool
+e2f7ae33-4393-4865-9523-69346b39064c,Azure,tool
+4c92cdc8-c1df-47c0-ab4a-9b63c2e4167c,GitHub Actions,tool
+6da562de-00c3-423e-84b1-748e24e337b0,Terraform,tool
+2c887733-2ccf-48f2-977c-ba9a1c6e588a,Linux,tool
+e3b8b3f1-b37c-4f24-854a-baad2a4245e7,Nginx,tool
+4bb6f953-fa20-44f4-8e2e-848ae0e2ce34,CI/CD,tool
+1c48fd52-b2fe-4a50-8006-fae27847e421,Machine Learning,hard_skill
+33cce223-93e7-4c1d-877f-828ad0730e95,TensorFlow,tool
+20390b7e-99c2-48ae-bd84-22f35677913b,PyTorch,tool
+dfeac3a7-9bb6-45aa-b038-1a8838aee8e6,scikit-learn,tool
+d567dc78-c11e-4bec-ada6-21b10cd49326,Pandas,hard_skill
+d80d41e0-7ec7-4b51-bd83-d46ae0948a7d,NumPy,hard_skill
+f76506b6-8638-4aba-95d4-e4f43fb8533c,LLM Integration,hard_skill
+cb819698-9088-4688-9e52-d82bb104aa63,Data Science,hard_skill
+8115cf30-fce5-446d-9298-69c164953cb4,Computer Vision,hard_skill
+30bf591e-708b-4949-8b39-0c7aa4417c67,NLP,hard_skill
+427112c3-3e0b-485b-a366-b18e41f622b4,Figma,tool
+a2c57fb7-65e1-4f27-a291-aa9733982066,Adobe XD,tool
+7c510939-6374-4ab1-a34b-947c3d8dec2e,Sketch,tool
+1fa16dd2-5fa0-4912-a019-a14cc32f6ade,UI/UX Design,hard_skill
+d9ee970a-7ccd-4344-bdbd-7ec876a83350,Graphic Design,hard_skill
+f45ba265-f507-4384-8b27-79983737b853,Photoshop,tool
+d0b69351-297f-4bca-bd0d-97e42d1643cf,Illustrator,tool
+42b55509-677b-4dcc-8f82-04f9b43d5e81,Motion Design,hard_skill
+f746999a-0364-42ca-9797-0408b9ef6432,Flutter,hard_skill
+2a6364bb-d2c0-4246-b352-d84516f04f12,React Native,hard_skill
+64a9c1a7-f860-405b-b53e-a06eff5eb129,iOS Development,hard_skill
+5e85158e-fbd6-4096-963d-d40115d0f396,Android Development,hard_skill
+a3230547-ad50-4063-bc66-d416acd8ee72,REST API,hard_skill
+dc89ca62-4c2a-4eaa-afec-f79190bf9af3,GraphQL,hard_skill
+1f75a2e8-f5b0-4683-8cab-6fe9fb7a7cf7,WebSocket,hard_skill
+e0286a2a-b1ff-4bba-a786-ed2d3be6e6da,Git,tool
+06576434-b41e-4ed2-afb3-6c6f9c6b998c,gRPC,hard_skill
+d1b5e1b5-c87d-435c-934d-b6b1bd803152,Microservices,hard_skill
+d8d517ba-0323-4858-be3c-a276a3de1a4e,System Design,hard_skill
+eeb53f53-85c9-4835-ab8c-5af48a99bb2d,Blockchain,hard_skill
+c1f4a0f0-a3af-4b5c-9822-f982976cf5a0,Smart Contracts,hard_skill
+02c32a0b-ba2d-42ef-b76e-6098f0da675b,Cybersecurity,hard_skill
+144e5430-6dc6-4007-9708-8e5c97e8e9ad,Solidity,hard_skill
+9ef6a2dd-b897-4706-ae23-7637a2019397,Communication,soft_skill
+e5b0e548-91f8-4703-9818-3914ee14f70d,Leadership,soft_skill
+9c3bae1f-7f0a-48f0-98f2-d451aea74b9b,Problem Solving,soft_skill
+6b606046-a694-42ea-9a03-e2303de7ff11,Project Management,soft_skill
+8a7a1496-4fc4-416b-8c8c-d9352b444acf,Technical Writing,soft_skill
+e1eafee7-7ff7-43ab-a0f4-0f538a1f54a2,Agile,soft_skill
+827f2163-1f60-457e-aa28-8f686e8ea2cc,Scrum,soft_skill

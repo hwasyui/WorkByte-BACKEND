@@ -141,6 +141,16 @@ def token_from_login(email: str, password: str) -> str:
     resp = post("/auth/login", {"email": email, "password": password})
     return extract(resp)["access_token"]
 
+def register_and_verify(body: dict) -> dict:
+    resp = post("/auth/register", body)
+    details = extract(resp)
+    otp = details.get("verification", {}).get("dev_verification_otp")
+    if otp:
+        post("/auth/verify-email", {"email": body["email"], "otp": otp})
+    else:
+        print("  Verification OTP not returned. Complete email verification before login.")
+    return resp
+
 
 # ── main walkthrough ──────────────────────────────────────────────────────────
 
@@ -156,7 +166,7 @@ def run():
     # ── 1. Register freelancer ─────────────────────────────────────────────────
 
     step(f"Register freelancer (Angelica Suti Whiharto) — run id: {_RUN_ID}")
-    post("/auth/register", {
+    register_and_verify({
         "email": _EMAIL,
         "password": _PASSWORD,
         "user_type": "freelancer",

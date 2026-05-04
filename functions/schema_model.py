@@ -16,6 +16,7 @@ class UserInDB(BaseModel):
     email: str
     password: str
     type: str
+    email_verified: bool = False
 
 class UserRegister(BaseModel):
     email: EmailStr
@@ -42,10 +43,18 @@ class UserLogin(BaseModel):
     email: EmailStr
     password: str
 
+class EmailVerificationRequest(BaseModel):
+    email: EmailStr
+    otp: str
+
+class ResendVerificationRequest(BaseModel):
+    email: EmailStr
+
 class UserResponse(BaseModel):
     user_id: str
     email: str
     type: str
+    email_verified: bool = False
     
 class FreelancerProfileCreate(BaseModel):
     full_name: str
@@ -79,6 +88,8 @@ class UserResponseDetail(BaseModel):
     user_id: str
     email: str
     type: str
+    email_verified: bool = False
+    email_verified_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 

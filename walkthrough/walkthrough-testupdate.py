@@ -165,6 +165,16 @@ def login(email: str, password: str) -> str:
     resp = post_json("/auth/login", {"email": email, "password": password})
     return extract(resp)["access_token"]
 
+def register_and_verify(body: dict) -> dict:
+    resp = post_json("/auth/register", body)
+    details = extract(resp)
+    otp = details.get("verification", {}).get("dev_verification_otp")
+    if otp:
+        post_json("/auth/verify-email", {"email": body["email"], "otp": otp})
+    else:
+        print("  Verification OTP not returned. Complete email verification before login.")
+    return resp
+
 
 def show_profile_snapshot(label: str, profile: dict, keys: list[str]) -> None:
     print(f"\n  {label}")
@@ -225,13 +235,13 @@ def run() -> None:
             sys.exit(1)
 
         step("Register fresh freelancer and client users")
-        post_json("/auth/register", {
+        register_and_verify({
             "email": FREELANCER_EMAIL,
             "password": PASSWORD,
             "user_type": "freelancer",
             "full_name": freelancer_initial_name,
         })
-        post_json("/auth/register", {
+        register_and_verify({
             "email": CLIENT_EMAIL,
             "password": PASSWORD,
             "user_type": "client",

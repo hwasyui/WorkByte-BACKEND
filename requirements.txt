@@ -20,7 +20,9 @@ lightgbm
 scikit-learn
 httpx
 google-genai
-groq
+sentence-transformers
 pdfplumber
 python-docx
-PyPDF2
+jupyter
+matplotlib
+seaborn

@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.pool import QueuePool
@@ -16,6 +17,12 @@ def _sanitize_log_params(params) -> dict:
         k: f"<vector>" if k == "vec" else v
         for k, v in (params.items() if isinstance(params, dict) else {})
     }
+
+
+def _serialize_bind_value(value):
+    if isinstance(value, (dict, list)):
+        return json.dumps(value)
+    return value
 
 
 class Database:
@@ -112,6 +119,12 @@ class Database:
 
             query = f"INSERT INTO {table_name} ({col_str}) VALUES ({val_str})"
 
+            # Serialize JSON-like values for database binding
+            data = [
+                {k: _serialize_bind_value(v) for k, v in row.items()}
+                for row in data
+            ]
+
             logger("DATABASE", f"Executing insert into {table_name}", level="DEBUG")
 
             conn.execute(text(query), data)
@@ -143,12 +156,12 @@ class Database:
             set_clauses = ", ".join([f"{col} = :{col}" for col in data.keys()])
 
             where_clauses = []
-            params = dict(data)
+            params = {k: _serialize_bind_value(v) for k, v in data.items()}
 
             for i, (column, operator, value) in enumerate(conditions):
                 key = f"cond{i}"
                 where_clauses.append(f"{column} {operator} :{key}")
-                params[key] = value
+                params[key] = _serialize_bind_value(value)
 
             query = f"UPDATE {table_name} SET {set_clauses} WHERE {' AND '.join(where_clauses)}"
 

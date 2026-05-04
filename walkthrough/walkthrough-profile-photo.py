@@ -154,6 +154,16 @@ def token_from_login(email: str, password: str) -> str:
     resp = post("/auth/login", {"email": email, "password": password})
     return extract(resp)["access_token"]
 
+def register_and_verify(body: dict) -> dict:
+    resp = post("/auth/register", body)
+    details = extract(resp)
+    otp = details.get("verification", {}).get("dev_verification_otp")
+    if otp:
+        post("/auth/verify-email", {"email": body["email"], "otp": otp})
+    else:
+        print("  Verification OTP not returned. Complete email verification before login.")
+    return resp
+
 
 def get_single_profile(endpoint: str, token: str, id_key: str) -> dict:
     profiles = extract(get(endpoint, token))
@@ -178,7 +188,7 @@ def run():
     print(f"  Output: {out_path}")
 
     step("Register freelancer user")
-    post("/auth/register", {
+    register_and_verify({
         "email": FREELANCER_EMAIL,
         "password": PASSWORD,
         "user_type": "freelancer",
@@ -186,7 +196,7 @@ def run():
     })
 
     step("Register client user")
-    post("/auth/register", {
+    register_and_verify({
         "email": CLIENT_EMAIL,
         "password": PASSWORD,
         "user_type": "client",

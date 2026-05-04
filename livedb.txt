@@ -56,6 +56,8 @@ public      |contract                     |created_at                   |timesta
 public      |contract                     |updated_at                   |timestamp without time zone|YES        |now()                                    |
 public      |contract                     |contract_pdf_url             |character varying          |YES        |                                         |
 public      |contract                     |contract_pdf_generated_at    |timestamp without time zone|YES        |                                         |
+public      |contract                     |cancelled_by                 |uuid                       |YES        |                                         |
+public      |contract                     |cancellation_reason          |text                       |YES        |                                         |
 public      |contract_embedding           |embedding_id                 |uuid                       |NO         |gen_random_uuid()                        |
 public      |contract_embedding           |contract_id                  |uuid                       |NO         |                                         |
 public      |contract_embedding           |freelancer_id                |uuid                       |NO         |                                         |
@@ -355,6 +357,8 @@ public      |users                        |user_id                      |uuid   
 public      |users                        |email                        |character varying          |NO         |                                         |
 public      |users                        |password                     |character varying          |NO         |                                         |
 public      |users                        |type                         |USER-DEFINED               |NO         |'freelancer'::user_type                  |
+public      |users                        |email_verified               |boolean                    |NO         |false                                    |
+public      |users                        |email_verified_at            |timestamp without time zone|YES        |                                         |
 public      |users                        |created_at                   |timestamp without time zone|YES        |now()                                    |
 public      |users                        |updated_at                   |timestamp without time zone|YES        |now()                                    |
 public      |work_experience              |work_experience_id           |uuid                       |NO         |gen_random_uuid()                        |

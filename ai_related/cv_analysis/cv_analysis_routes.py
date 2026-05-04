@@ -14,11 +14,11 @@ from ai_related.cv_analysis.cv_analysis import (
     build_freelancer_profile_text,
     get_profile_skill_names,
     extract_skills_from_text,
+    get_cv_embedding,
     cosine_similarity,
     classify_cv_quality,
     build_cv_recommendations,
 )
-from ai_related.job_matching.embedding_service import get_embedding
 
 cv_analysis_router = APIRouter(prefix="/cv_analysis", tags=["CV Analysis"])
 
@@ -28,18 +28,12 @@ async def analyze_cv(
     cv_file: UploadFile = File(...),
     current_user: UserInDB = Depends(get_freelancer_user),
 ) -> Dict[str, Any]:
-    """
-    Analyze a freelancer's CV against their profile.
-    Returns scoring (good/enough/bad) and recommendations for improvement.
-    """
     logger("CV_ANALYSIS", f"CV analysis request from user {current_user.user_id}", level="DEBUG")
     try:
-        # Extract CV text
         cv_text = await extract_cv_text(cv_file)
         if not cv_text:
             raise HTTPException(status_code=400, detail="Unable to extract text from CV")
 
-        # Get freelancer profile
         from routes.freelancers.freelancer_functions import FreelancerFunctions
         freelancer = FreelancerFunctions.get_freelancer_by_user_id(current_user.user_id)
         if not freelancer:
@@ -47,30 +41,23 @@ async def analyze_cv(
 
         freelancer_id = freelancer['freelancer_id']
 
-        # Build profile text
         profile_text = build_freelancer_profile_text(freelancer_id)
         if not profile_text:
             raise HTTPException(status_code=400, detail="Unable to build freelancer profile text")
 
-        # Get embeddings
-        cv_embedding = await get_embedding(cv_text)
-        profile_embedding = await get_embedding(profile_text)
+        cv_embedding = get_cv_embedding(cv_text)
+        profile_embedding = get_cv_embedding(profile_text)
 
-        # Calculate similarity
         similarity = cosine_similarity(cv_embedding, profile_embedding)
 
-        # Get skills and compare CV against the freelancer profile skills
         profile_skills = get_profile_skill_names(freelancer_id)
         matched_skills = extract_skills_from_text(cv_text, profile_skills)
         missing_skills = [skill for skill in profile_skills if skill not in matched_skills]
 
-        # Calculate skill coverage
         skill_coverage = len(matched_skills) / len(profile_skills) if profile_skills else 0.0
 
-        # Classify quality
         quality = classify_cv_quality(similarity, skill_coverage)
 
-        # Build recommendations
         recommendations = await build_cv_recommendations(
             cv_text=cv_text,
             profile_text=profile_text,
@@ -91,6 +78,8 @@ async def analyze_cv(
 
         return ResponseSchema.success(result)
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger("CV_ANALYSIS", f"CV analysis failed: {str(e)}", level="ERROR")
         raise HTTPException(status_code=500, detail=f"CV analysis failed: {str(e)}")

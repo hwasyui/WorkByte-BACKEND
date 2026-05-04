@@ -234,11 +234,90 @@ class ContractFunctions:
                             conditions=[("freelancer_id", "=", freelancer_id)],
                         )
 
+                # ── Auto-create portfolio entry from completed contract ──────
+                # The portfolio row is a flat link to the contract — frontend
+                # joins back via contract_id to display the full work record.
+                # NOT embedded in portfolio_embedding: contract_embedding
+                # already covers this (rating + review + description); duplicating
+                # would create a sync problem when the rating updates later.
+                ContractFunctions._create_auto_portfolio_entry(
+                    contract_id=contract_id,
+                    contract=existing_contract,
+                )
+
             logger("CONTRACT_FUNCTIONS", f"Contract {contract_id} updated", level="INFO")
             return ContractFunctions.get_contract_by_id(contract_id)
         except Exception as e:
             logger("CONTRACT_FUNCTIONS", f"Error updating contract: {str(e)}", level="ERROR")
             raise
+
+    @staticmethod
+    def _create_auto_portfolio_entry(contract_id: str, contract: Dict) -> None:
+        """
+        Create a portfolio row tied to a completed contract.
+
+        Idempotent — does nothing if a portfolio row for this contract already
+        exists. The new row is flagged is_auto_generated=TRUE; embeddings for
+        these rows live in contract_embedding, not portfolio_embedding, so
+        portfolio_embedding only ever holds user-curated showcase items.
+
+        Failures are swallowed: the contract completion must not be blocked by
+        a portfolio insert error.
+        """
+        try:
+            freelancer_id = contract.get("freelancer_id")
+            if not freelancer_id:
+                return
+
+            db = get_db()
+            existing = db.fetch_data(
+                table_name="portfolio",
+                conditions=[("contract_id", "=", contract_id)],
+                limit=1,
+            )
+            if existing:
+                logger(
+                    "CONTRACT_FUNCTIONS",
+                    f"Auto-portfolio already exists for contract {contract_id} — skip",
+                    level="DEBUG",
+                )
+                return
+
+            role_title = contract.get("role_title") or contract.get("contract_title") or "Completed Project"
+            project_title = f"{role_title}".strip()
+            project_description = (
+                f"Completed project: {role_title}. "
+                "Full project details, client rating, and review are linked through the contract record."
+            )
+            completion_date = datetime.utcnow().strftime("%Y-%m-%d")
+
+            portfolio_id = str(uuid.uuid4())
+            db.execute_query(
+                """INSERT INTO portfolio
+                     (portfolio_id, freelancer_id, project_title, project_description,
+                      completion_date, is_auto_generated, contract_id)
+                   VALUES (:pid, :fid, :title, :desc, :cdate, TRUE, :cid)""",
+                {
+                    "pid":   portfolio_id,
+                    "fid":   freelancer_id,
+                    "title": project_title,
+                    "desc":  project_description,
+                    "cdate": completion_date,
+                    "cid":   contract_id,
+                },
+            )
+            logger(
+                "CONTRACT_FUNCTIONS",
+                f"Auto-portfolio created | portfolio_id={portfolio_id} | contract_id={contract_id} "
+                f"| freelancer_id={freelancer_id} (NOT embedded — contract_embedding covers it)",
+                level="INFO",
+            )
+        except Exception as e:
+            logger(
+                "CONTRACT_FUNCTIONS",
+                f"Could not auto-create portfolio for contract {contract_id} | error={e}",
+                level="WARNING",
+            )
 
     @staticmethod
     def delete_contract(contract_id: str) -> bool:

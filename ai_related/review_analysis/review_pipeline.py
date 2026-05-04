@@ -8,19 +8,48 @@ from functions.db_manager import get_db
 from functions.logger import logger
 from routes.reviews.review_functions import ReviewFunctions
 from ai_related.review_analysis.review_ai_functions import (
-    classify_project_category,
     get_targeted_question,
     compute_on_time_score,
     compute_revision_scores,
     compute_responsiveness_score,
-    analyze_message_thread,
-    analyze_submitted_files,
-    analyze_sentiment,
-    check_authenticity,
-    check_bias,
+    analyze_review_full,
     calculate_trust_score,
     calculate_weighted_review_avg,
 )
+
+
+def infer_project_category(role_title: str, job_title: str, job_description: str) -> str:
+    text = " ".join(filter(None, [role_title, job_title, job_description])).lower()
+    category_map = [
+        ("mobile", "mobile_dev"),
+        ("android", "mobile_dev"),
+        ("ios", "mobile_dev"),
+        ("flutter", "mobile_dev"),
+        ("react native", "mobile_dev"),
+        ("swift", "mobile_dev"),
+        ("kotlin", "mobile_dev"),
+        ("backend", "backend_dev"),
+        ("api", "backend_dev"),
+        ("server", "backend_dev"),
+        ("database", "backend_dev"),
+        ("web", "web_dev"),
+        ("frontend", "web_dev"),
+        ("ui/ux", "ui_ux_design"),
+        ("ui ux", "ui_ux_design"),
+        ("user interface", "ui_ux_design"),
+        ("graphic", "graphic_design"),
+        ("design", "graphic_design"),
+        ("copy", "copywriting"),
+        ("writing", "copywriting"),
+        ("data", "data_analytics"),
+        ("analytics", "data_analytics"),
+        ("video", "video_editing"),
+        ("motion", "video_editing"),
+    ]
+    for keyword, category in category_map:
+        if keyword in text:
+            return category
+    return "general"
 
 
 async def run_post_completion_pipeline(contract_id: str) -> None:
@@ -63,11 +92,11 @@ async def run_post_completion_pipeline(contract_id: str) -> None:
         freelancer_user_id = str(freelancer_rows[0]["user_id"])
         client_user_id     = str(client_rows[0]["user_id"])
 
-        # Step 2 — Classify category
-        category = await classify_project_category(
-            job_title=contract["job_title"],
-            role_title=contract["role_title"] or "",
-            job_description=contract["job_description"],
+        # Step 2 — Classify category deterministically from role/title/description
+        category = infer_project_category(
+            role_title=contract.get("role_title", "") or "",
+            job_title=contract.get("job_title", "") or "",
+            job_description=contract.get("job_description", "") or "",
         )
 
         # Step 2 — Create pending review record
@@ -88,13 +117,7 @@ async def run_post_completion_pipeline(contract_id: str) -> None:
         revision_count, revision_rate_score  = compute_revision_scores(contract_id)
         responsiveness_score                 = compute_responsiveness_score(contract_id, freelancer_user_id)
 
-        # Message analysis + file analysis run in parallel
-        message_analysis, file_analysis = await asyncio.gather(
-            analyze_message_thread(contract_id),
-            analyze_submitted_files(contract_id),
-        )
-
-        # Step 4 — Persist all performance scores
+        # Step 4 — Persist all performance scores without extra LLM calls
         ReviewFunctions.save_performance_scores(
             contract_id=contract_id,
             freelancer_id=freelancer_user_id,
@@ -102,11 +125,11 @@ async def run_post_completion_pipeline(contract_id: str) -> None:
             revision_count=revision_count,
             revision_rate_score=revision_rate_score,
             responsiveness_score=responsiveness_score,
-            communication_sentiment_score=message_analysis["communication_sentiment_score"],
-            conflict_score=message_analysis["conflict_score"],
-            communication_summary=message_analysis["communication_summary"],
-            work_quality_score=file_analysis["work_quality_score"],
-            work_quality_notes=file_analysis["work_quality_notes"],
+            communication_sentiment_score=0.8,
+            conflict_score=0.0,
+            communication_summary="No AI communication analysis performed.",
+            work_quality_score=None,
+            work_quality_notes="Work quality analysis skipped.",
         )
 
         logger("REVIEW_PIPELINE", f"Post-completion pipeline done | contract={contract_id} | category={category}", level="INFO")
@@ -155,58 +178,64 @@ async def run_post_review_pipeline(review_id: str) -> None:
             "work_quality":  perf.get("work_quality_score"),
         }
 
-        # Fetch freelancer display name for bias detection
+        # Fetch freelancer display name for bias detection from freelancer profile
         freelancer_name = "Unknown"
-        user_rows = db.execute_query(
-            """SELECT u.full_name FROM users u
-               WHERE u.user_id = :uid""",
+        freelancer_rows = db.execute_query(
+            """SELECT full_name FROM freelancer
+               WHERE user_id = :uid""",
             {"uid": freelancer_id},
         )
-        if user_rows:
-            freelancer_name = user_rows[0].get("full_name", "Unknown")
+        if freelancer_rows:
+            freelancer_name = freelancer_rows[0].get("full_name", "Unknown")
 
-        # Step 6 — Run 3 AI checks in parallel
-        sentiment_result, authenticity_result, bias_result = await asyncio.gather(
-            analyze_sentiment(overall_comment, client_answer, avg_stars),
-            check_authenticity(overall_comment),
-            check_bias(overall_comment, avg_stars, freelancer_name, performance_summary),
+        message_rows = db.execute_query(
+            """SELECT sender_id, message_text FROM message
+               WHERE contract_id = :cid AND deleted_at IS NULL
+               ORDER BY sent_at ASC""",
+            {"cid": review["contract_id"]},
+        )
+        message_thread = (
+            "\n".join([f"[{r['sender_id']}]: {r['message_text']}" for r in message_rows])
+            if message_rows
+            else ""
         )
 
-        # Determine overall pass / fail
-        overall_pass = (
-            authenticity_result["authenticity_score"] >= 0.5
-            and bias_result["bias_score"] <= 0.6
-            and not (
-                sentiment_result["sentiment_mismatch"]
-                and avg_stars == 5.0
-                and sentiment_result["sentiment_label"] == "negative"
-            )
+        # Step 6 — Run the full review analysis in a single LLM call
+        analysis_result = await analyze_review_full(
+            overall_comment=overall_comment,
+            client_answer=client_answer,
+            avg_star_rating=avg_stars,
+            freelancer_name=freelancer_name,
+            performance_score_summary=performance_summary,
+            message_thread=message_thread,
         )
+
+        overall_pass = analysis_result.get("overall_pass", True)
 
         # Step 6 — Save AI analysis results
         ReviewFunctions.save_ai_analysis(
             review_id=review_id,
-            sentiment_score=sentiment_result["sentiment_score"],
-            sentiment_label=sentiment_result["sentiment_label"],
-            sentiment_mismatch=sentiment_result["sentiment_mismatch"],
-            authenticity_score=authenticity_result["authenticity_score"],
-            is_flagged_fake=authenticity_result["is_flagged_fake"],
-            is_flagged_coerced=authenticity_result["is_flagged_coerced"],
-            flag_reasons=authenticity_result["flag_reasons"],
-            bias_score=bias_result["bias_score"],
-            bias_flags=bias_result["bias_flags"],
+            sentiment_score=analysis_result["sentiment_score"],
+            sentiment_label=analysis_result["sentiment_label"],
+            sentiment_mismatch=analysis_result["sentiment_mismatch"],
+            authenticity_score=analysis_result["authenticity_score"],
+            is_flagged_fake=analysis_result["is_flagged_fake"],
+            is_flagged_coerced=analysis_result["is_flagged_coerced"],
+            flag_reasons=analysis_result["flag_reasons"],
+            bias_score=analysis_result["bias_score"],
+            bias_flags=analysis_result["bias_flags"],
             overall_pass=overall_pass,
         )
 
         # Log bias if significant
-        if bias_result["bias_score"] > 0.3:
+        if analysis_result["bias_score"] > 0.3:
             db.insert_data(
                 table_name="bias_detection_log",
                 data={
                     "id": str(uuid.uuid4()),
                     "freelancer_id": freelancer_id,
                     "review_id": review_id,
-                    "detected_factors": bias_result["bias_flags"],
+                    "detected_factors": analysis_result["bias_flags"],
                     "score_before_adjustment": avg_stars,
                     "adjustment_applied": False,
                 },
@@ -217,8 +246,8 @@ async def run_post_review_pipeline(review_id: str) -> None:
             ReviewFunctions.publish_review(review_id)
         else:
             suppress = (
-                authenticity_result["is_flagged_fake"]
-                or authenticity_result["authenticity_score"] < 0.3
+                analysis_result["is_flagged_fake"]
+                or analysis_result["authenticity_score"] < 0.3
             )
             ReviewFunctions.flag_review(review_id, suppress=suppress)
             logger("REVIEW_PIPELINE", f"Review {review_id} not published (pass={overall_pass})", level="WARNING")
