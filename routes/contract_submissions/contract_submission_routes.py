@@ -43,7 +43,7 @@ async def create_contract_submission(
         if not contract:
             return ResponseSchema.error(f"Contract {contract_id} not found", 404)
 
-        if current_user.type != "freelancer":
+        if not current_user.freelancer_id:
             return ResponseSchema.error("Only freelancers can submit work", 403)
 
         freelancer = FreelancerFunctions.get_freelancer_by_user_id(current_user.user_id)
@@ -128,22 +128,17 @@ async def get_submissions_by_contract(
         if not contract:
             return ResponseSchema.error(f"Contract {contract_id} not found", 404)
 
-        if current_user.type == "freelancer":
+        is_party = False
+        if current_user.freelancer_id:
             freelancer = FreelancerFunctions.get_freelancer_by_user_id(current_user.user_id)
-            if not freelancer:
-                return ResponseSchema.error("Freelancer profile not found", 404)
-            if freelancer["freelancer_id"] != contract["freelancer_id"]:
-                return ResponseSchema.error("Unauthorized to view these submissions", 403)
-
-        elif current_user.type == "client":
+            if freelancer and str(freelancer["freelancer_id"]) == str(contract["freelancer_id"]):
+                is_party = True
+        if current_user.client_id:
             client = ClientFunctions.get_client_by_user_id(current_user.user_id)
-            if not client:
-                return ResponseSchema.error("Client profile not found", 404)
-            if client["client_id"] != contract["client_id"]:
-                return ResponseSchema.error("Unauthorized to view these submissions", 403)
-
-        else:
-            return ResponseSchema.error("Unauthorized", 403)
+            if client and str(client["client_id"]) == str(contract["client_id"]):
+                is_party = True
+        if not is_party:
+            return ResponseSchema.error("Unauthorized to view these submissions", 403)
 
         submissions = ContractSubmissionFunctions.get_submissions_by_contract_id(contract_id)
         logger("CONTRACT_SUBMISSION", f"Retrieved {len(submissions)} submissions for contract {contract_id}", "GET /contract-submissions/contract/{contract_id}", "INFO")
@@ -165,7 +160,7 @@ async def request_revision_for_latest_submission(
         if not contract:
             return ResponseSchema.error(f"Contract {contract_id} not found", 404)
 
-        if current_user.type != "client":
+        if not current_user.client_id:
             return ResponseSchema.error("Only clients can request revision", 403)
 
         client = ClientFunctions.get_client_by_user_id(current_user.user_id)
@@ -201,7 +196,7 @@ async def approve_latest_submission(
         if not contract:
             return ResponseSchema.error(f"Contract {contract_id} not found", 404)
 
-        if current_user.type != "client":
+        if not current_user.client_id:
             return ResponseSchema.error("Only clients can approve submissions", 403)
 
         client = ClientFunctions.get_client_by_user_id(current_user.user_id)

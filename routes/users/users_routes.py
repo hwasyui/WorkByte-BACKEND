@@ -2,7 +2,7 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from typing import List, Optional, Dict
 import uuid
 from functions.schema_model import UserCreate, UserUpdate, UserResponseDetail
@@ -30,18 +30,19 @@ async def get_all_users(limit: Optional[int] = None, offset: int = 0, current_us
         return ResponseSchema.error(error_msg, 500)
 
 
-@users_router.get("/search/{search_term}", response_model=Dict)
-async def search_users(search_term: str, current_user: UserInDB = Depends(get_current_user)):
+@users_router.get("/search", response_model=Dict)
+async def search_users(
+    name: str = Query(..., description="User email or name to search for"),
+    current_user: UserInDB = Depends(get_current_user),
+):
     """Search users by email - Authenticated users only - JSON response"""
     try:
-        users = UserFunctions.search_users(search_term)
-        success_msg = f"Searched users for '{search_term}', found {len(users)} results"
-        logger("USER", success_msg, "GET /users/search/{search_term}", "INFO")
-        search_result = {"status": "success", "results": users, "count": len(users)}
-        return ResponseSchema.success(search_result, 200)
+        users = UserFunctions.search_users(name)
+        logger("USER", f"Searched users for '{name}', found {len(users)} results", "GET /users/search", "INFO")
+        return ResponseSchema.success({"results": users, "count": len(users)}, 200)
     except Exception as e:
-        error_msg = f"Failed to search users with term '{search_term}': {str(e)}"
-        logger("USER", error_msg, "GET /users/search/{search_term}", "ERROR")
+        error_msg = f"Failed to search users with term '{name}': {str(e)}"
+        logger("USER", error_msg, "GET /users/search", "ERROR")
         return ResponseSchema.error(error_msg, 500)
 
 
@@ -82,9 +83,8 @@ async def create_user(user: UserCreate, current_user: UserInDB = Depends(get_cur
             user_id=user_id,
             email=user.email,
             password=user.password,
-            user_type=user.type
         )
-        success_msg = f"Created user {user_id} with email {user.email} as type {user.type}"
+        success_msg = f"Created user {user_id} with email {user.email}"
         logger("USER", success_msg, "POST /users", "INFO")
         return ResponseSchema.success(new_user, 201)
     except Exception as e:

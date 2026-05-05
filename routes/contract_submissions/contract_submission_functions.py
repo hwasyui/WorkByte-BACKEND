@@ -7,7 +7,7 @@ from functions.logger import logger
 from typing import List, Optional, Dict
 import uuid
 from routes.contracts.contract_functions import ContractFunctions
-from routes.messages.message_functions import MessageFunctions
+from routes.dm.dm_functions import DMFunctions
 
 
 def convert_uuids_to_str(data: Dict) -> Dict:
@@ -72,16 +72,16 @@ class ContractSubmissionFunctions:
             )
 
             # WORK SUBMITTED: system message after all DB ops succeed
-            MessageFunctions.create_system_message(
-                actor_user_id=submitted_by,
-                contract_id=contract_id,
-                message_text="Work submitted for review.",
-                event_type="submission_created",
-                metadata={
-                    "submission_id": submission_id,
-                    "submitted_by": submitted_by,
-                },
-            )
+            try:
+                DMFunctions.send_system_event(
+                    contract_id=contract_id,
+                    actor_id=submitted_by,
+                    message_text="Work submitted for review.",
+                    event_type="submission_created",
+                    metadata={"submission_id": submission_id, "submitted_by": submitted_by},
+                )
+            except Exception:
+                pass
 
             logger("CONTRACT_SUBMISSION_FUNCTIONS", f"Submission {submission_id} created with system message", level="INFO")
             return ContractSubmissionFunctions.get_submission_by_id(submission_id)
@@ -260,16 +260,16 @@ class ContractSubmissionFunctions:
 
             message_text = f"Revision requested: {note}" if note else "Revision requested."
 
-            MessageFunctions.create_system_message(
-                actor_user_id=actor_user_id,
-                contract_id=contract_id,
-                message_text=message_text,
-                event_type="revision_requested",
-                metadata={
-                    "submission_id": submission_id,
-                    "note": note,
-                },
-            )
+            try:
+                DMFunctions.send_system_event(
+                    contract_id=contract_id,
+                    actor_id=actor_user_id,
+                    message_text=message_text,
+                    event_type="revision_requested",
+                    metadata={"submission_id": submission_id, "note": note},
+                )
+            except Exception:
+                pass
 
             logger("CONTRACT_SUBMISSION_FUNCTIONS", f"Revision requested for submission {submission_id}", level="INFO")
             return ContractSubmissionFunctions.get_submission_by_id(submission_id)
@@ -308,16 +308,16 @@ class ContractSubmissionFunctions:
                 update_data={"status": "completed"},
             )
 
-            MessageFunctions.create_system_message(
-                actor_user_id=actor_user_id,
-                contract_id=contract_id,
-                message_text="Work approved. Contract completed.",
-                event_type="submission_approved",
-                metadata={
-                    "submission_id": submission_id,
-                    "approved_by": actor_user_id,
-                },
-            )
+            try:
+                DMFunctions.send_system_event(
+                    contract_id=contract_id,
+                    actor_id=actor_user_id,
+                    message_text="Work approved. Contract completed.",
+                    event_type="submission_approved",
+                    metadata={"submission_id": submission_id, "approved_by": actor_user_id},
+                )
+            except Exception:
+                pass
 
             logger("CONTRACT_SUBMISSION_FUNCTIONS", f"Latest submission {submission_id} approved for contract {contract_id}", level="INFO")
             return ContractSubmissionFunctions.get_submission_by_id(submission_id)

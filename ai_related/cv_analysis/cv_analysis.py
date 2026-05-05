@@ -108,66 +108,105 @@ def cosine_similarity(a: List[float], b: List[float]) -> float:
     return max(min(dot / (mag_a * mag_b), 1.0), -1.0)
 
 
-def classify_cv_quality(similarity: float, coverage: Optional[float]) -> str:
+def classify_cv_quality(similarity: float, coverage: Optional[float], ats_score: Optional[int] = None) -> str:
     if coverage is not None:
         if similarity >= 0.82 and coverage >= 0.65:
-            return "good"
-        if similarity >= 0.70 and coverage >= 0.40:
-            return "enough"
-        return "bad"
-    if similarity >= 0.78:
-        return "good"
-    if similarity >= 0.62:
-        return "enough"
-    return "bad"
-
-
-def _build_rule_based_recommendations(
-    cv_text: str,
-    profile_text: str,
-    similarity: float,
-    skill_coverage: Optional[float],
-    matched_skills: List[str],
-    missing_skills: List[str],
-) -> List[str]:
-    recommendations = []
-
-    if similarity < 0.82:
-        recommendations.append(
-            "Improve CV alignment with your profile by adding a clear professional summary, quantifiable achievements, and the profile's key skills."
-        )
+            base = "good"
+        elif similarity >= 0.70 and coverage >= 0.40:
+            base = "enough"
+        else:
+            base = "bad"
     else:
-        recommendations.append(
-            "Your CV is reasonably aligned with your profile. Strengthen it by highlighting concrete results and relevant project achievements."
-        )
+        if similarity >= 0.78:
+            base = "good"
+        elif similarity >= 0.62:
+            base = "enough"
+        else:
+            base = "bad"
 
-    if missing_skills:
-        recommendations.append(
-            "Add or emphasize the following skills in your CV: "
-            + ", ".join(missing_skills[:8])
-        )
-    elif matched_skills:
-        recommendations.append(
-            "Keep highlighting skills that already match your profile: "
-            + ", ".join(matched_skills[:8])
-        )
+    if ats_score is not None:
+        if ats_score < 50:
+            return "bad"
+        if ats_score < 70 and base == "good":
+            return "enough"
 
-    if skill_coverage is not None and skill_coverage < 0.5:
-        recommendations.append(
-            "This CV currently covers only a small portion of your profile skills. Make sure key skills appear in the summary and work experience sections."
-        )
+    return base
 
-    if len(_normalize_text(cv_text)) > len(_normalize_text(profile_text)) * 1.5:
-        recommendations.append(
-            "Your CV appears longer than your profile. Focus on the most relevant experience and remove redundancy."
-        )
 
-    if len(_normalize_text(cv_text)) < len(_normalize_text(profile_text)) * 0.5:
-        recommendations.append(
-            "Your CV is relatively short. Add more detail on experience, results, and skills that support your profile."
-        )
+def check_ats_compliance(raw_text: str) -> dict:
+    """
+    Rule-based ATS compliance check.
+    Returns ats_score (0–100) and ats_flags listing each failed check.
+    """
+    import re as _re
+    text_lower = raw_text.lower()
+    word_count = len(raw_text.split())
+    flags: List[str] = []
+    score = 0
 
-    return recommendations
+    # Section presence (40 pts)
+    section_checks = [
+        (["summary", "professional summary", "profile", "about", "objective"], "Missing a Summary or Profile section", 10),
+        (["skills", "technical skills", "expertise", "competencies"], "Missing a Skills section", 10),
+        (["experience", "work experience", "employment", "employment history"], "Missing a Work Experience section", 10),
+        (["education", "academic", "qualification"], "Missing an Education section", 10),
+    ]
+    for keywords, flag_msg, pts in section_checks:
+        if any(kw in text_lower for kw in keywords):
+            score += pts
+        else:
+            flags.append(flag_msg)
+
+    # Contact info (15 pts)
+    if _re.search(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}", raw_text):
+        score += 8
+    else:
+        flags.append("No email address found")
+
+    if _re.search(r"\+?\d[\d\s\-\.\(\)]{6,}\d", raw_text):
+        score += 7
+    else:
+        flags.append("No phone number found")
+
+    # Word count (15 pts)
+    if 300 <= word_count <= 800:
+        score += 15
+    elif 200 <= word_count < 300:
+        score += 8
+        flags.append("CV is too short — aim for at least 300 words")
+    elif 800 < word_count <= 1200:
+        score += 8
+        flags.append("CV is quite long — aim for under 800 words for ATS readability")
+    else:
+        if word_count < 200:
+            flags.append("CV is very short — add more detail on skills, experience, and education")
+        else:
+            flags.append("CV is very long — condense to the most relevant experience")
+
+    # Content quality (30 pts)
+    if _re.search(r"\d+\s*(%|percent|users|clients|projects|increase|decrease|revenue|saving)", text_lower):
+        score += 10
+    else:
+        flags.append("No quantifiable achievements found — add numbers, percentages, or metrics to your experience")
+
+    cliches = [
+        "team player", "hard-working", "hardworking", "go-getter",
+        "think outside the box", "results-oriented", "self-starter",
+        "detail-oriented", "passionate about",
+    ]
+    found_cliches = [c for c in cliches if c in text_lower]
+    if not found_cliches:
+        score += 10
+    else:
+        flags.append(f"Avoid cliché phrases: {', '.join(found_cliches[:3])}")
+
+    if _re.search(r"\b(19|20)\d{2}\b", raw_text):
+        score += 10
+    else:
+        flags.append("No dates found in work experience — include start/end years for each role")
+
+    return {"ats_score": score, "ats_flags": flags}
+
 
 
 def _build_llm_prompt(
@@ -179,18 +218,22 @@ def _build_llm_prompt(
     missing_skills: List[str],
 ) -> str:
     coverage_str = f"{skill_coverage:.0%}" if skill_coverage is not None else "unknown"
-    matched_str = ", ".join(matched_skills[:10]) if matched_skills else "none"
-    missing_str = ", ".join(missing_skills[:10]) if missing_skills else "none"
+    matched_str  = ", ".join(matched_skills[:10]) if matched_skills else "none"
+    missing_str  = ", ".join(missing_skills[:10]) if missing_skills else "none"
 
     return (
-        "You are a professional CV reviewer. Analyze the CV against the freelancer profile below "
-        "and provide 2-3 specific, actionable recommendations to improve the CV's match with the profile. "
-        "Be concise and practical. Return only the recommendations as a numbered list, no preamble.\n\n"
-        f"Similarity score: {similarity:.2f} | Skill coverage: {coverage_str}\n"
-        f"Skills matched: {matched_str}\n"
-        f"Skills missing from CV: {missing_str}\n\n"
-        f"FREELANCER PROFILE:\n{profile_text[:1500]}\n\n"
-        f"CV:\n{cv_text[:1500]}"
+        "You are a professional CV reviewer. Carefully read the CV and the freelancer profile below, "
+        "then provide exactly 3 specific, actionable recommendations to improve this CV's match with "
+        "this particular profile. Each recommendation must reference concrete details from the CV or "
+        "profile — do not give generic advice. Format your response as a numbered list (1. 2. 3.) "
+        "with no preamble, no headers, and no trailing text.\n\n"
+        f"=== ANALYSIS METRICS ===\n"
+        f"Similarity score : {similarity:.2f} ({similarity*100:.1f}%)\n"
+        f"Skill coverage   : {coverage_str}\n"
+        f"Skills matched   : {matched_str}\n"
+        f"Skills missing   : {missing_str}\n\n"
+        f"=== FREELANCER PROFILE ===\n{profile_text[:2000]}\n\n"
+        f"=== CV CONTENT ===\n{cv_text[:2000]}"
     )
 
 
@@ -253,6 +296,20 @@ async def _call_llm_for_recommendations(prompt: str) -> str:
         return await _call_gemini(prompt)
 
 
+def _parse_llm_recommendations(llm_text: str) -> List[str]:
+    """Split a numbered LLM response into individual recommendation strings."""
+    items = re.split(r"\n\s*\d+\.\s+", llm_text)
+    # First split element may be empty or a preamble before "1."
+    cleaned = []
+    for item in items:
+        item = item.strip()
+        # Strip leading "1. " if the text wasn't split (single-item response)
+        item = re.sub(r"^\d+\.\s+", "", item)
+        if item:
+            cleaned.append(item)
+    return cleaned if cleaned else [llm_text.strip()]
+
+
 async def build_cv_recommendations(
     cv_text: str,
     profile_text: str,
@@ -261,18 +318,14 @@ async def build_cv_recommendations(
     matched_skills: List[str],
     missing_skills: List[str],
 ) -> List[str]:
-    rule_based = _build_rule_based_recommendations(
+    prompt = _build_llm_prompt(
         cv_text, profile_text, similarity, skill_coverage, matched_skills, missing_skills
     )
-
     try:
-        prompt = _build_llm_prompt(
-            cv_text, profile_text, similarity, skill_coverage, matched_skills, missing_skills
-        )
         llm_text = await _call_llm_for_recommendations(prompt)
         if llm_text:
-            return [llm_text] + rule_based
+            return _parse_llm_recommendations(llm_text)
     except Exception as e:
-        logger("CV_ANALYSIS", f"LLM recommendation failed, using rule-based only: {e}", level="WARNING")
+        logger("CV_ANALYSIS", f"LLM recommendation failed: {e}", level="WARNING")
 
-    return rule_based
+    return []

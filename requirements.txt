@@ -17,12 +17,16 @@ numpy
 pandas
 joblib
 lightgbm
+catboost
 scikit-learn
 httpx
 google-genai
 sentence-transformers
 pdfplumber
+pdf2image
+easyocr
 python-docx
 jupyter
 matplotlib
 seaborn
+easyocr

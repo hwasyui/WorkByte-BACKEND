@@ -7,6 +7,7 @@ from functions.authentication import (
     authenticate_user,
     create_access_token,
     register_user,
+    add_role,
     verify_token,
     TokenData,
     UserInDB,
@@ -20,6 +21,7 @@ from functions.authentication import (
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from functions.schema_model import (
+    AddRoleRequest,
     EmailVerificationRequest,
     ResendVerificationRequest,
     UserRegister,
@@ -117,17 +119,38 @@ async def login(credentials: UserLogin):
 
 @auth_router.get("/me", response_model=UserResponse)
 async def get_me(current_user: UserInDB = Depends(get_current_user)):
-    """Get current authenticated user info."""
+    """Get current authenticated user info including active profile IDs."""
     try:
         response = UserResponse(
             user_id=current_user.user_id,
             email=current_user.email,
-            type=current_user.type,
-            email_verified=current_user.email_verified
+            email_verified=current_user.email_verified,
+            is_admin=current_user.is_admin,
+            freelancer_id=current_user.freelancer_id,
+            client_id=current_user.client_id,
         )
-        logger("AUTH", f"Retrieved user info for {current_user.email} - type: {current_user.type}", "GET /auth/me", "INFO")
+        logger("AUTH", f"Retrieved user info for {current_user.email}", "GET /auth/me", "INFO")
         return ResponseSchema.success(response.model_dump(), 200)
     except Exception as e:
         error_msg = f"Failed to retrieve user info: {str(e)}"
         logger("AUTH", error_msg, "GET /auth/me", "ERROR")
+        return ResponseSchema.error(error_msg, 500)
+
+
+@auth_router.post("/add-role", response_model=dict)
+async def add_second_role(
+    payload: AddRoleRequest,
+    current_user: UserInDB = Depends(get_current_user),
+):
+    """Add a freelancer or client profile to an existing account."""
+    try:
+        result = add_role(current_user, payload.role, payload.full_name)
+        logger("AUTH", f"Role '{payload.role}' added for user {current_user.user_id}", "POST /auth/add-role", "INFO")
+        return ResponseSchema.success(result, 201)
+    except HTTPException as e:
+        logger("AUTH", f"Add role failed for {current_user.user_id}: {e.detail}", "POST /auth/add-role", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
+    except Exception as e:
+        error_msg = f"Add role failed: {str(e)}"
+        logger("AUTH", error_msg, "POST /auth/add-role", "ERROR")
         return ResponseSchema.error(error_msg, 500)

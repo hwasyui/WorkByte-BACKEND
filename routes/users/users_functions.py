@@ -33,7 +33,7 @@ class UserFunctions:
             
             rows = db.fetch_data(
                 table_name="users",
-                columns=["user_id", "email", "type", "email_verified", "email_verified_at", "created_at", "updated_at"],
+                columns=["user_id", "email", "is_admin", "email_verified", "email_verified_at", "created_at", "updated_at"],
                 conditions=conditions,
                 limit=limit,
                 order_by=order_by
@@ -54,7 +54,7 @@ class UserFunctions:
             conditions = [("user_id", "=", user_id)]
             rows = db.fetch_data(
                 table_name="users",
-                columns=["user_id", "email", "type", "email_verified", "email_verified_at", "created_at", "updated_at"],
+                columns=["user_id", "email", "is_admin", "email_verified", "email_verified_at", "created_at", "updated_at"],
                 conditions=conditions,
                 limit=1
             )
@@ -78,7 +78,7 @@ class UserFunctions:
             conditions = [("email", "=", email)]
             rows = db.fetch_data(
                 table_name="users",
-                columns=["user_id", "email", "password", "type", "email_verified", "email_verified_at", "created_at", "updated_at"],
+                columns=["user_id", "email", "password", "is_admin", "email_verified", "email_verified_at", "created_at", "updated_at"],
                 conditions=conditions,
                 limit=1
             )
@@ -98,17 +98,15 @@ class UserFunctions:
         """Create a new user and auto-create freelancer/client profile"""
         try:
             db = get_db()
-            
+
             user_data = {
                 "user_id": user_id,
                 "email": email,
                 "password": password,
-                "type": user_type
             }
-            
+
             db.insert_data(table_name="users", data=user_data)
-            
-            # Auto-create freelancer or client profile
+
             if user_type == "freelancer":
                 from routes.freelancers.freelancer_functions import FreelancerFunctions
                 FreelancerFunctions.create_freelancer(
@@ -125,8 +123,8 @@ class UserFunctions:
                     user_id=user_id,
                     company_name=None
                 )
-            
-            logger("USERS_FUNCTIONS", f"User {email} created with ID {user_id} (type: {user_type})", level="INFO")
+
+            logger("USERS_FUNCTIONS", f"User {email} created with ID {user_id} as {user_type}", level="INFO")
             return user_data
         
         except Exception as e:

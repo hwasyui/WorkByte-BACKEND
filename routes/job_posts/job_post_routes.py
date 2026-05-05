@@ -86,7 +86,7 @@ async def get_all_job_posts(
 
         # Resolve requesting client_id for draft gate (None for freelancers / non-clients)
         requesting_client_id = None
-        if current_user.type == "client":
+        if current_user.client_id:
             client = _ClientFunctions.get_client_by_user_id(current_user.user_id)
             if client:
                 requesting_client_id = str(client["client_id"])
@@ -104,6 +104,23 @@ async def get_all_job_posts(
     except Exception as e:
         logger("JOB_POST", f"Failed to fetch job posts: {str(e)}", "GET /job-posts", "ERROR")
         return ResponseSchema.error(f"Failed to fetch job posts: {str(e)}", 500)
+
+
+@job_post_router.get("/search", response_model=List[JobPostResponse])
+async def search_job_posts(
+    name: str = Query(..., description="Keyword to search in job title or description"),
+    limit: int = Query(default=20, ge=1, le=100),
+    current_user: UserInDB = Depends(get_current_user),
+):
+    """Search active job posts by title or description keyword."""
+    try:
+        results = JobPostFunctions.search_job_posts(name, limit=limit)
+        logger("JOB_POST", f"Search '{name}': {len(results)} results", "GET /job-posts/search", "INFO")
+        return ResponseSchema.success(results, 200)
+    except Exception as e:
+        error_msg = f"Failed to search job posts: {str(e)}"
+        logger("JOB_POST", error_msg, "GET /job-posts/search", "ERROR")
+        return ResponseSchema.error(error_msg, 500)
 
 
 @job_post_router.get("/{job_post_id}", response_model=JobPostResponse)
@@ -230,7 +247,7 @@ async def delete_job_post(job_post_id: str, current_user: UserInDB = Depends(get
         assert_client_owns(current_user, existing_job_post["client_id"])
         
         JobPostFunctions.delete_job_post(job_post_id)
-        
+
         success_msg = f"Deleted job post {job_post_id}"
         logger("JOB_POST", success_msg, "DELETE /job-posts/{job_post_id}", "INFO")
         return ResponseSchema.success("Deleted successfully", 200)

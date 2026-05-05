@@ -144,15 +144,18 @@ async def delete_freelancer(identifier: str, current_user: UserInDB = Depends(ge
         return ResponseSchema.error(error_msg, 500)
 
 
-@freelancer_router.get("/search/{search_term}", response_model=Dict)
-async def search_freelancers(search_term: str, current_user: UserInDB = Depends(get_current_user)):
+@freelancer_router.get("/search", response_model=Dict)
+async def search_freelancers(
+    name: str = Query(..., description="Freelancer name to search for"),
+    current_user: UserInDB = Depends(get_current_user),
+):
     try:
-        results = FreelancerFunctions.search_freelancers_by_name(search_term)
-        logger("FREELANCER", f"Found {len(results)} results for '{search_term}'", "GET /freelancers/search/{search_term}", "INFO")
+        results = FreelancerFunctions.search_freelancers_by_name(name)
+        logger("FREELANCER", f"Found {len(results)} results for '{name}'", "GET /freelancers/search", "INFO")
         return ResponseSchema.success({"results": results, "count": len(results)}, 200)
     except Exception as e:
         error_msg = f"Failed to search freelancers: {str(e)}"
-        logger("FREELANCER", error_msg, "GET /freelancers/search/{search_term}", "ERROR")
+        logger("FREELANCER", error_msg, "GET /freelancers/search", "ERROR")
         return ResponseSchema.error(error_msg, 500)
 
 

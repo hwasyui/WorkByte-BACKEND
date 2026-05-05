@@ -39,6 +39,7 @@ from routes.client_trust_scores.client_trust_score_routes import client_trust_sc
 from routes.freelancer_embeddings.freelancer_embedding_routes import freelancer_embedding_router
 from routes.job_embeddings.job_embedding_routes import job_embedding_router
 from routes.messages.message_routes import message_router
+from routes.dm.dm_routes import dm_router
 from routes.upload.upload_route import upload_router
 from routes.cv_upload.cv_upload_routes import cv_upload_router
 from routes.contract_submissions.contract_submission_routes import contract_submission_router
@@ -123,6 +124,7 @@ app.include_router(client_trust_score_router)
 app.include_router(freelancer_embedding_router)
 app.include_router(job_embedding_router)
 app.include_router(message_router)
+app.include_router(dm_router)
 app.include_router(upload_router)
 app.include_router(cv_upload_router)
 app.include_router(cv_analysis_router)

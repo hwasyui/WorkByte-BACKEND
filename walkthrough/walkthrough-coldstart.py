@@ -157,7 +157,8 @@ def register_and_verify(body: dict) -> dict:
 
 
 def get_or_create_skill(name: str, category: str, description: str, token: str) -> str:
-    r = requests.get(f"{BASE_URL}/skills/search/{name}",
+    r = requests.get(f"{BASE_URL}/skills/search",
+                     params={"name": name},
                      headers={"Authorization": f"Bearer {token}"}, timeout=30)
     if r.ok:
         for item in r.json().get("details", {}).get("results", []):
@@ -171,7 +172,8 @@ def get_or_create_skill(name: str, category: str, description: str, token: str) 
 
 
 def get_or_create_speciality(name: str, description: str, token: str) -> str:
-    r = requests.get(f"{BASE_URL}/specialities/search/{name}",
+    r = requests.get(f"{BASE_URL}/specialities/search",
+                     params={"name": name},
                      headers={"Authorization": f"Bearer {token}"}, timeout=30)
     if r.ok:
         for item in r.json().get("details", {}).get("results", []):
@@ -185,7 +187,8 @@ def get_or_create_speciality(name: str, description: str, token: str) -> str:
 
 
 def get_or_create_language(name: str, iso_code: str, token: str) -> str:
-    r = requests.get(f"{BASE_URL}/languages/search/{name}",
+    r = requests.get(f"{BASE_URL}/languages/search",
+                     params={"name": name},
                      headers={"Authorization": f"Bearer {token}"}, timeout=30)
     if r.ok:
         for item in r.json().get("details", {}).get("results", []):

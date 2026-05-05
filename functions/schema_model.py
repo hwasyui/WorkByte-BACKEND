@@ -15,15 +15,17 @@ class UserInDB(BaseModel):
     user_id: str
     email: str
     password: str
-    type: str
     email_verified: bool = False
+    is_admin: bool = False
+    freelancer_id: Optional[str] = None
+    client_id: Optional[str] = None
 
 class UserRegister(BaseModel):
     email: EmailStr
     password: str
-    user_type: str = "freelancer"  # freelancer or client
-    full_name: Optional[str] = None  # Required for freelancer or client
-    company_name: Optional[str] = None  # Deprecated: use full_name for client as well
+    user_type: str = "freelancer"  # initial role: freelancer or client
+    full_name: Optional[str] = None
+    company_name: Optional[str] = None
 
     @field_validator('password')
     @classmethod
@@ -31,12 +33,23 @@ class UserRegister(BaseModel):
         if len(v) < 8:
             raise ValueError('Password must be at least 8 characters long')
         return v
-    
+
     @field_validator('user_type')
     @classmethod
     def validate_user_type(cls, v):
         if v not in ["freelancer", "client"]:
             raise ValueError("user_type must be 'freelancer' or 'client'")
+        return v
+
+class AddRoleRequest(BaseModel):
+    role: str
+    full_name: Optional[str] = None
+
+    @field_validator('role')
+    @classmethod
+    def validate_role(cls, v):
+        if v not in ["freelancer", "client"]:
+            raise ValueError("role must be 'freelancer' or 'client'")
         return v
 
 class UserLogin(BaseModel):
@@ -53,8 +66,10 @@ class ResendVerificationRequest(BaseModel):
 class UserResponse(BaseModel):
     user_id: str
     email: str
-    type: str
     email_verified: bool = False
+    is_admin: bool = False
+    freelancer_id: Optional[str] = None
+    client_id: Optional[str] = None
     
 class FreelancerProfileCreate(BaseModel):
     full_name: str
@@ -65,29 +80,26 @@ class ClientProfileCreate(BaseModel):
     company_description: Optional[str] = None
 
 
-class CVParseRequest(BaseModel):
+class CVUploadRequest(BaseModel):
     file: UploadFile = File(...)
-    use_llm: bool = Form(False)
 
     model_config = {"extra": "forbid"}
 
 
 # ==================== USERS ====================
 class UserCreate(BaseModel):
-    user_id: Optional[str] = None  # Auto-generated if not provided
+    user_id: Optional[str] = None
     email: EmailStr
     password: str
-    type: str = "freelancer"
 
 class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     password: Optional[str] = None
-    type: Optional[str] = None
 
 class UserResponseDetail(BaseModel):
     user_id: str
     email: str
-    type: str
+    is_admin: bool = False
     email_verified: bool = False
     email_verified_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
@@ -193,6 +205,7 @@ class ClientUpdate(BaseModel):
     bio: Optional[str] = Form(None)
     website_url: Optional[str] = Form(None)
     profile_picture: Optional[UploadFile] = File(None)
+    contract_message_template: Optional[str] = Form(None)
 
     model_config = {"extra": "forbid"}
 
@@ -203,12 +216,14 @@ class ClientUpdate(BaseModel):
         bio: Optional[str] = Form(None),
         website_url: Optional[str] = Form(None),
         profile_picture: Optional[UploadFile] = File(None),
+        contract_message_template: Optional[str] = Form(None),
     ) -> "ClientUpdate":
         return cls(
             full_name=full_name,
             bio=bio,
             website_url=website_url,
             profile_picture=profile_picture,
+            contract_message_template=contract_message_template,
         )
 
 class ClientResponse(BaseModel):
@@ -221,6 +236,7 @@ class ClientResponse(BaseModel):
     total_jobs_posted: Optional[int] = 0
     total_jobs_completed: Optional[int] = 0
     average_rating_given: Optional[float] = None
+    contract_message_template: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
@@ -749,6 +765,10 @@ class ContractGenerateRequest(BaseModel):
     revision_rounds: Optional[int] = 0
     additional_clauses: Optional[str] = None
     payment_schedule: Optional[List[PaymentScheduleItem]] = None
+    # Notification fields
+    send_notification: bool = True
+    notification_message: Optional[str] = None
+    save_message_as_template: bool = False
 
 # ==================== CONTRACT SUBMISSIONS ====================
 class ContractSubmissionFileResponse(BaseModel):
@@ -1000,28 +1020,96 @@ class JobEmbeddingResponse(BaseModel):
 
 
 # ==================== MESSAGES ====================
+class MessageAttachmentResponse(BaseModel):
+    attachment_id: str
+    message_id: str
+    file_name: str
+    file_url: str
+    file_type: str
+    mime_type: str
+    file_size_bytes: Optional[int] = None
+    duration_seconds: Optional[float] = None
+    created_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
 class MessageCreate(BaseModel):
     contract_id: str
     message_text: str
-
-class MessageMarkRead(BaseModel):
-    contract_id: str
 
 class MessageResponse(BaseModel):
     message_id: str
     sender_id: str
     receiver_id: str
     contract_id: Optional[str] = None
-    message_text: str
+    message_text: Optional[str] = None
     message_type: str = "user"
     event_type: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
     is_read: Optional[bool] = False
     read_at: Optional[datetime] = None
     sent_at: Optional[datetime] = None
+    status: str = "sent"
+    attachments: Optional[List[MessageAttachmentResponse]] = None
 
     class Config:
         from_attributes = True
+
+# ==================== DIRECT MESSAGES ====================
+
+class DMThreadCreate(BaseModel):
+    participant_id: str
+    job_post_id: Optional[str] = None
+    message_text: Optional[str] = None  # if None + job attached → default template used
+
+class DMMessageCreate(BaseModel):
+    message_text: str
+
+class DMAttachmentResponse(BaseModel):
+    attachment_id: str
+    dm_message_id: str
+    file_name: str
+    file_url: str
+    file_type: str
+    mime_type: str
+    file_size_bytes: Optional[int] = None
+    duration_seconds: Optional[float] = None
+    created_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+class DMMessageResponse(BaseModel):
+    dm_message_id: str
+    thread_id: str
+    sender_id: str
+    message_text: str
+    metadata: Optional[Dict[str, Any]] = None
+    is_read: bool = False
+    read_at: Optional[datetime] = None
+    sent_at: Optional[datetime] = None
+    status: str = "sent"
+    attachments: Optional[List[DMAttachmentResponse]] = None
+
+    class Config:
+        from_attributes = True
+
+class DMThreadResponse(BaseModel):
+    thread_id: str
+    status: str
+    initiator_id: str
+    other_user: Optional[Dict[str, Any]] = None
+    job_post: Optional[Dict[str, Any]] = None
+    last_message: Optional[Dict[str, Any]] = None
+    unread_count: int = 0
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
 
 class RevisionRequest(BaseModel):
     note: Optional[str] = None

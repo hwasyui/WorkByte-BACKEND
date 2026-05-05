@@ -65,18 +65,19 @@ async def get_all_clients(limit: Optional[int] = None, current_user: UserInDB = 
         return ResponseSchema.error(error_msg, 500)
 
 
-@client_router.get("/search/{search_term}", response_model=Dict)
-async def search_clients(search_term: str, current_user: UserInDB = Depends(get_current_user)):
+@client_router.get("/search", response_model=Dict)
+async def search_clients(
+    name: str = Query(..., description="Client name to search for"),
+    current_user: UserInDB = Depends(get_current_user),
+):
     """Search clients by full name - Authenticated users only - JSON response"""
     try:
-        results = ClientFunctions.search_clients_by_full_name(search_term)
-        success_msg = f"Searched clients for '{search_term}', found {len(results)} results"
-        logger("CLIENT", success_msg, "GET /clients/search/{search_term}", "INFO")
-        search_result = {"results": results, "count": len(results)}
-        return ResponseSchema.success(search_result, 200)
+        results = ClientFunctions.search_clients_by_full_name(name)
+        logger("CLIENT", f"Searched clients for '{name}', found {len(results)} results", "GET /clients/search", "INFO")
+        return ResponseSchema.success({"results": results, "count": len(results)}, 200)
     except Exception as e:
-        error_msg = f"Failed to search clients with term '{search_term}': {str(e)}"
-        logger("CLIENT", error_msg, "GET /clients/search/{search_term}", "ERROR")
+        error_msg = f"Failed to search clients with term '{name}': {str(e)}"
+        logger("CLIENT", error_msg, "GET /clients/search", "ERROR")
         return ResponseSchema.error(error_msg, 500)
 
 

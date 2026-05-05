@@ -24,7 +24,28 @@ from functions.response_utils import ResponseSchema
 from functions.db_manager import get_db
 from routes.contracts.contract_functions import ContractFunctions
 from routes.contracts.contract_generation_functions import ContractGenerationFunctions
+from routes.clients.client_functions import ClientFunctions
+from routes.freelancers.freelancer_functions import FreelancerFunctions
+from routes.dm.dm_functions import DMFunctions, _contract_accepted_default
 from ai_related.job_matching.embedding_manager import upsert_contract_embedding
+
+
+_DEFAULT_CONTRACT_NOTIFICATION = (
+    "Hello {freelancer_name},\n\n"
+    'The contract for "{contract_title}" ({role_title}) has been finalized '
+    "and is ready for your review.\n\n"
+    "Please find the contract PDF at the link below:\n"
+    "{pdf_url}\n\n"
+    "Looking forward to working with you!"
+)
+
+
+def _render_notification(template: str, subs: dict) -> str:
+    for key, val in subs.items():
+        template = template.replace(f"{{{key}}}", str(val) if val else "")
+    if "{pdf_url}" not in template and subs.get("pdf_url"):
+        template += f"\n\nContract PDF: {subs['pdf_url']}"
+    return template
 
 
 contract_router = APIRouter(prefix="/contracts", tags=["Contracts"])
@@ -37,14 +58,15 @@ contract_router = APIRouter(prefix="/contracts", tags=["Contracts"])
 async def get_all_contracts(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
     """Return all contracts visible to the current user."""
     try:
-        if current_user.type == "client":
-            client = get_client_profile_for_user(current_user)
-            contracts = ContractFunctions.get_contracts_by_client_id(client["client_id"])
-        elif current_user.type == "freelancer":
-            freelancer = get_freelancer_profile_for_user(current_user)
-            contracts = ContractFunctions.get_contracts_by_freelancer_id(freelancer["freelancer_id"])
-        else:
+        if not current_user.client_id and not current_user.freelancer_id:
             return ResponseSchema.error("Only clients and freelancers can access contracts", 403)
+        contracts = []
+        if current_user.client_id:
+            client = get_client_profile_for_user(current_user)
+            contracts += ContractFunctions.get_contracts_by_client_id(client["client_id"])
+        if current_user.freelancer_id:
+            freelancer = get_freelancer_profile_for_user(current_user)
+            contracts += ContractFunctions.get_contracts_by_freelancer_id(freelancer["freelancer_id"])
         logger("CONTRACT", f"Retrieved {len(contracts)} contracts for user {current_user.user_id}", "GET /contracts", "INFO")
         return ResponseSchema.success(contracts, 200)
     except Exception as e:
@@ -174,16 +196,16 @@ async def create_contract(contract: ContractCreate, current_user: UserInDB = Dep
     """Create a new contract."""
     try:
         contract_id = contract.contract_id or str(uuid.uuid4())
-        if current_user.type == "client":
+        if not current_user.client_id and not current_user.freelancer_id:
+            return ResponseSchema.error("Only clients or freelancers can create contracts", 403)
+        if current_user.client_id:
             client = get_client_profile_for_user(current_user)
             if contract.client_id and str(contract.client_id) != str(client["client_id"]):
                 return ResponseSchema.error("Cannot create a contract for another client", 403)
-        elif current_user.type == "freelancer":
+        if current_user.freelancer_id:
             freelancer = get_freelancer_profile_for_user(current_user)
             if contract.freelancer_id and str(contract.freelancer_id) != str(freelancer["freelancer_id"]):
                 return ResponseSchema.error("Cannot create a contract for another freelancer", 403)
-        else:
-            return ResponseSchema.error("Only clients or freelancers can create contracts", 403)
 
         new_contract = ContractFunctions.create_contract(
             contract_id=contract_id,
@@ -207,6 +229,34 @@ async def create_contract(contract: ContractCreate, current_user: UserInDB = Dep
         )
 
         logger("CONTRACT", f"Created contract {contract_id}", "POST /contracts", "INFO")
+
+        # Auto-activate DM thread between client and freelancer on contract creation
+        try:
+            cl_row = ClientFunctions.get_client_by_id(str(new_contract["client_id"]))
+            fl_row = FreelancerFunctions.get_freelancer_by_id(str(new_contract["freelancer_id"]))
+            if cl_row and fl_row:
+                client_user_id    = str(cl_row["user_id"])
+                freelancer_user_id = str(fl_row["user_id"])
+                default_msg = _contract_accepted_default(
+                    role_title=new_contract.get("role_title", ""),
+                    contract_title=new_contract.get("contract_title", ""),
+                )
+                DMFunctions.activate_or_create_thread(
+                    client_user_id=client_user_id,
+                    freelancer_user_id=freelancer_user_id,
+                    message_text=default_msg,
+                    sender_id=client_user_id,
+                    job_post_id=str(new_contract["job_post_id"]) if new_contract.get("job_post_id") else None,
+                    job_role_id=str(new_contract["job_role_id"]) if new_contract.get("job_role_id") else None,
+                    contract_id=contract_id,
+                    role_title=new_contract.get("role_title"),
+                    contract_title=new_contract.get("contract_title"),
+                )
+                logger("CONTRACT", f"DM thread activated for contract {contract_id}", "POST /contracts", "INFO")
+        except Exception as dm_err:
+            # DM failure must never block contract creation
+            logger("CONTRACT", f"DM auto-thread failed (non-fatal): {dm_err}", "POST /contracts", "WARNING")
+
         return ResponseSchema.success(new_contract, 201)
     except ValueError as e:
         logger("CONTRACT", f"Validation error: {str(e)}", "POST /contracts", "WARNING")
@@ -264,6 +314,55 @@ async def generate_contract_pdf(contract_id: str, generation_data: ContractGener
         )
 
         refreshed = ContractFunctions.get_contract_by_id(contract_id)
+
+        # Only the client side sends the notification
+        client_profile = None
+        if current_user.client_id:
+            cp = ClientFunctions.get_client_by_user_id(current_user.user_id)
+            if cp and str(cp["client_id"]) == str(refreshed["client_id"]):
+                client_profile = cp
+
+        if client_profile and generation_data.send_notification:
+            try:
+                # Resolve freelancer info for the message
+                freelancer = FreelancerFunctions.get_freelancer_by_id(str(refreshed["freelancer_id"]))
+                freelancer_name = (freelancer or {}).get("full_name") or "there"
+                freelancer_user_id = str((freelancer or {}).get("user_id", ""))
+
+                # Determine signed URL
+                signed_url = ContractGenerationFunctions.get_signed_contract_url(storage_path)
+
+                # Priority: request message > saved template > system default
+                custom_msg = generation_data.notification_message
+                saved_template = client_profile.get("contract_message_template")
+                raw_template = custom_msg or saved_template or _DEFAULT_CONTRACT_NOTIFICATION
+
+                message_text = _render_notification(raw_template, {
+                    "freelancer_name": freelancer_name,
+                    "contract_title": refreshed.get("contract_title") or "",
+                    "role_title": refreshed.get("role_title") or "",
+                    "pdf_url": signed_url,
+                })
+
+                # Save as template if requested (only when custom message provided)
+                if generation_data.save_message_as_template and custom_msg:
+                    db.execute_query(
+                        "UPDATE client SET contract_message_template = :tpl WHERE client_id = :cid",
+                        {"tpl": custom_msg, "cid": str(client_profile["client_id"])},
+                    )
+
+                if freelancer_user_id:
+                    thread = DMFunctions.get_thread_by_contract_id(contract_id)
+                    if thread:
+                        DMFunctions.send_message(
+                            thread_id=thread["thread_id"],
+                            sender_id=str(current_user.user_id),
+                            message_text=message_text,
+                            metadata={"type": "contract_pdf_shared", "pdf_url": signed_url},
+                        )
+            except Exception as msg_err:
+                logger("CONTRACT", f"Failed to send PDF notification: {str(msg_err)}", "POST /contracts/{contract_id}/generate", "WARNING")
+
         logger("CONTRACT", f"Generated contract PDF for {contract_id}", "POST /contracts/{contract_id}/generate", "INFO")
         return ResponseSchema.success(refreshed, 200)
     except ValueError as e:

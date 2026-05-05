@@ -2,7 +2,7 @@ from datetime import datetime
 import os
 import sys
 
-from routes.messages.message_functions import MessageFunctions
+from routes.dm.dm_functions import DMFunctions
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from functions.db_manager import get_db
@@ -22,6 +22,26 @@ def convert_uuids_to_str(data: Dict) -> Dict:
         else:
             result[key] = value
     return result
+
+
+def _format_contract_created_text(data: dict) -> str:
+    budget = data.get("agreed_budget") or 0
+    currency = data.get("budget_currency") or "USD"
+    payment = (data.get("payment_structure") or "").replace("_", " ").title()
+    duration = data.get("agreed_duration") or "Not specified"
+    start = data.get("start_date") or "Not specified"
+    role = data.get("role_title") or "Not specified"
+    status = (data.get("status") or "").title()
+    return (
+        f"Contract started\n\n"
+        f"Title         : {data.get('contract_title')}\n"
+        f"Role          : {role}\n"
+        f"Budget        : {currency} {budget:,.2f}\n"
+        f"Payment type  : {payment}\n"
+        f"Start date    : {start}\n"
+        f"Duration      : {duration}\n"
+        f"Status        : {status}"
+    )
 
 
 class ContractFunctions:
@@ -157,14 +177,6 @@ class ContractFunctions:
                 raise Exception(f"Client profile not found for client_id: {client_id}")
 
             actor_user_id = str(client_rows[0]["user_id"])
-
-            MessageFunctions.create_system_message(
-                actor_user_id=actor_user_id,  # ← user_id, not client_id
-                contract_id=contract_id,
-                message_text="Contract started.",
-                event_type="contract_started",
-                metadata={"started_by": actor_user_id},
-            )
 
             logger("CONTRACT_FUNCTIONS", f"Contract {contract_id} created", level="INFO")
             return convert_uuids_to_str(contract_data)
@@ -353,17 +365,16 @@ class ContractFunctions:
                 update_data["cancellation_reason"] = reason
             updated_contract = ContractFunctions.update_contract(contract_id, update_data)
 
-            # CONTRACT CANCELLED: system message after successful status update
-            MessageFunctions.create_system_message(
-                actor_user_id=cancelled_by,
-                contract_id=contract_id,
-                message_text="Contract cancelled.",
-                event_type="contract_cancelled",
-                metadata={
-                    "cancelled_by": cancelled_by,
-                    "reason": reason,
-                },
-            )
+            try:
+                DMFunctions.send_system_event(
+                    contract_id=contract_id,
+                    actor_id=cancelled_by,
+                    message_text="Contract cancelled.",
+                    event_type="contract_cancelled",
+                    metadata={"cancelled_by": cancelled_by, "reason": reason},
+                )
+            except Exception:
+                pass
 
             logger("CONTRACT_FUNCTIONS", f"Contract {contract_id} cancelled by {cancelled_by}", level="INFO")
             return updated_contract

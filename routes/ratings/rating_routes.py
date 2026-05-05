@@ -82,7 +82,7 @@ async def get_ratings_by_client(client_id: str, current_user: UserInDB = Depends
 async def create_rating(rating: RatingCreate, current_user: UserInDB = Depends(get_current_user)):
     """Create a new rating - only contract owner client can rate; contract must be complete/cancelled/disputed"""
     try:
-        if current_user.type != "client":
+        if not current_user.client_id:
             return ResponseSchema.error("Only clients can create ratings", 403)
 
         client = get_client_profile_for_user(current_user)
@@ -140,7 +140,7 @@ async def update_rating(rating_id: str, rating_update: RatingUpdate, current_use
         if not contract:
             return ResponseSchema.error("Associated contract not found", 404)
 
-        if current_user.type != "client":
+        if not current_user.client_id:
             return ResponseSchema.error("Only contract owner client can update rating", 403)
         client = get_client_profile_for_user(current_user)
         if str(contract["client_id"]) != str(client["client_id"]):

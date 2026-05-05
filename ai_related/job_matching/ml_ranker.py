@@ -218,25 +218,33 @@ def _top_match_reasons(
     feat_cols: list[str],
     top_k: int = 3,
 ) -> list[dict]:
-    """
-    Convert one row of CatBoost SHAP contributions into the top-K positive drivers
-    of the prediction. Negative contributions (signals pushing the score *down*)
-    are ignored — the homepage only needs to explain why a job ranked high.
-
-    Args:
-        contribs_row: 1D numpy array of length len(feat_cols) + 1, where the last
-            element is the model's bias term (dropped here).
-        feat_cols: ordered feature names matching contribs_row[:-1].
-        top_k: number of reasons to return.
-
-    Returns:
-        List of {"feature", "label", "contribution"} dicts, sorted descending.
-    """
+    """Top-K positive SHAP contributors (why the job ranked high)."""
     feat_contribs = contribs_row[: len(feat_cols)]
     pos_idx = np.where(feat_contribs > 0)[0]
     if pos_idx.size == 0:
         return []
     top_idx = pos_idx[np.argsort(-feat_contribs[pos_idx])[:top_k]]
+    return [
+        {
+            "feature":      feat_cols[i],
+            "label":        _FEATURE_LABELS.get(feat_cols[i], feat_cols[i]),
+            "contribution": round(float(feat_contribs[i]), 4),
+        }
+        for i in top_idx
+    ]
+
+
+def _top_penalty_reasons(
+    contribs_row: np.ndarray,
+    feat_cols: list[str],
+    top_k: int = 2,
+) -> list[dict]:
+    """Top-K negative SHAP contributors (what is dragging the score down)."""
+    feat_contribs = contribs_row[: len(feat_cols)]
+    neg_idx = np.where(feat_contribs < 0)[0]
+    if neg_idx.size == 0:
+        return []
+    top_idx = neg_idx[np.argsort(feat_contribs[neg_idx])[:top_k]]
     return [
         {
             "feature":      feat_cols[i],
@@ -702,6 +710,7 @@ def rank_jobs_with_ml(
                 float(feat_df.iloc[i]["skill_overlap_pct"]) * 100, 1
             )
             job["match_reasons"] = _top_match_reasons(contribs[i], feat_cols, top_k=3)
+            job["penalty_reasons"] = _top_penalty_reasons(contribs[i], feat_cols, top_k=2)
 
         ranked = sorted(job_rows, key=lambda j: j["match_probability"], reverse=True)
         top = ranked[:top_n]

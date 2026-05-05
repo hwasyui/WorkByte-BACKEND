@@ -88,7 +88,7 @@ class ClientFunctions:
                 table_name="client",
                 columns=["client_id", "user_id", "full_name", "bio", "website_url", "profile_picture_url",
                         "total_jobs_posted", "total_jobs_completed",
-                        "average_rating_given", "created_at", "updated_at"],
+                        "average_rating_given", "contract_message_template", "created_at", "updated_at"],
                 order_by="created_at DESC",
                 limit=limit
             )

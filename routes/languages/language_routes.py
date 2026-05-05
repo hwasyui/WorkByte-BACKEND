@@ -2,7 +2,7 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from typing import List, Optional, Dict
 import uuid
 from functions.schema_model import LanguageCreate, LanguageUpdate, LanguageResponse
@@ -29,18 +29,19 @@ async def get_all_languages(limit: Optional[int] = None, current_user: UserInDB 
         return ResponseSchema.error(error_msg, 500)
 
 
-@language_router.get("/search/{search_term}", response_model=Dict)
-async def search_languages(search_term: str, current_user: UserInDB = Depends(get_current_user)):
+@language_router.get("/search", response_model=Dict)
+async def search_languages(
+    name: str = Query(..., description="Language name to search for"),
+    current_user: UserInDB = Depends(get_current_user),
+):
     """Search languages by name - Authenticated users only - JSON response"""
     try:
-        results = LanguageFunctions.search_languages_by_name(search_term)
-        success_msg = f"Searched languages for '{search_term}', found {len(results)} results"
-        logger("LANGUAGE", success_msg, "GET /languages/search/{search_term}", "INFO")
-        search_result = {"results": results, "count": len(results)}
-        return ResponseSchema.success(search_result, 200)
+        results = LanguageFunctions.search_languages_by_name(name)
+        logger("LANGUAGE", f"Searched languages for '{name}', found {len(results)} results", "GET /languages/search", "INFO")
+        return ResponseSchema.success({"results": results, "count": len(results)}, 200)
     except Exception as e:
-        error_msg = f"Failed to search languages with term '{search_term}': {str(e)}"
-        logger("LANGUAGE", error_msg, "GET /languages/search/{search_term}", "ERROR")
+        error_msg = f"Failed to search languages with term '{name}': {str(e)}"
+        logger("LANGUAGE", error_msg, "GET /languages/search", "ERROR")
         return ResponseSchema.error(error_msg, 500)
 
 

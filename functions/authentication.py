@@ -121,11 +121,32 @@ def verify_token(token: str, credentials_exception):
         raise credentials_exception
     return token_data
 
+def _build_user_from_row(row: dict) -> UserInDB:
+    """Build a UserInDB from a joined users+freelancer+client query row."""
+    return UserInDB(
+        user_id=str(row['user_id']),
+        email=row['email'],
+        password=row['password'],
+        email_verified=bool(row['email_verified']),
+        is_admin=bool(row.get('is_admin', False)),
+        freelancer_id=str(row['freelancer_id']) if row.get('freelancer_id') else None,
+        client_id=str(row['client_id']) if row.get('client_id') else None,
+    )
+
+_USER_QUERY = """
+    SELECT u.user_id, u.email, u.password, u.is_admin, u.email_verified,
+           f.freelancer_id,
+           c.client_id
+    FROM users u
+    LEFT JOIN freelancer f ON f.user_id = u.user_id
+    LEFT JOIN client     c ON c.user_id = u.user_id
+    WHERE u.email = :email
+"""
+
 def authenticate_user(email: str, password: str):
     """Authenticate user with email and password."""
     try:
-        query = "SELECT user_id, email, password, type, email_verified FROM users WHERE email = :email"
-        result = get_db().execute_query(query, params={"email": email})
+        result = get_db().execute_query(_USER_QUERY, params={"email": email})
         if not result or len(result) == 0:
             return False
         user = result[0]
@@ -133,13 +154,7 @@ def authenticate_user(email: str, password: str):
             return False
         if EMAIL_VERIFICATION_REQUIRED and not user['email_verified']:
             raise HTTPException(status_code=403, detail="Email is not verified")
-        return UserInDB(
-            user_id=str(user['user_id']),
-            email=user['email'],
-            password=user['password'],
-            type=user['type'],
-            email_verified=bool(user['email_verified'])
-        )
+        return _build_user_from_row(user)
     except HTTPException:
         raise
     except Exception as e:
@@ -149,71 +164,55 @@ def authenticate_user(email: str, password: str):
 def get_user(email: str):
     """Get user from database by email."""
     try:
-        query = "SELECT user_id, email, password, type, email_verified FROM users WHERE email = :email"
-        result = get_db().execute_query(query, params={"email": email})
+        result = get_db().execute_query(_USER_QUERY, params={"email": email})
         if result and len(result) > 0:
-            user = result[0]
-            return UserInDB(
-                user_id=str(user['user_id']),
-                email=user['email'],
-                password=user['password'],
-                type=user['type'],
-                email_verified=bool(user['email_verified'])
-            )
+            return _build_user_from_row(result[0])
     except Exception as e:
         logger("AUTH", f"Get user error: {str(e)}", level="ERROR")
     return None
 
 def register_user(email: str, password: str, user_type: str = "freelancer", full_name: str = None, company_name: str = None):
-    """Register new user and create corresponding profile (freelancer or client)."""
+    """Register new user and create the initial profile (freelancer or client)."""
     created_user_id = None
     try:
-        # Check if email already exists
         if get_user(email):
             raise HTTPException(status_code=400, detail="Email already registered")
 
-        # Validate user_type
         if user_type not in ["freelancer", "client"]:
-            raise HTTPException(status_code=400, detail="Invalid user type. Must be 'freelancer' or 'client'")
+            raise HTTPException(status_code=400, detail="Initial role must be 'freelancer' or 'client'")
 
         hashed_password = get_password_hash(password)
 
-        # Create user record
-        user_query = """
-        INSERT INTO users (email, password, type)
-        VALUES (:email, :password, :user_type)
-        RETURNING user_id
-        """
-        user_result = get_db().execute_query(user_query, params={"email": email, "password": hashed_password, "user_type": user_type})
-        
-        if not user_result or len(user_result) == 0:
+        user_result = get_db().execute_query(
+            "INSERT INTO users (email, password) VALUES (:email, :password) RETURNING user_id",
+            params={"email": email, "password": hashed_password}
+        )
+        if not user_result:
             raise HTTPException(status_code=500, detail="Failed to create user record")
-        
+
         user_id = str(user_result[0]['user_id'])
         created_user_id = user_id
-        
-        # Create profile based on user type (only if required fields provided)
+        freelancer_id = None
+        client_id = None
+
         if user_type == "freelancer" and full_name:
-            profile_query = """
-            INSERT INTO freelancer (user_id, full_name)
-            VALUES (:user_id, :full_name)
-            RETURNING freelancer_id
-            """
-            profile_result = get_db().execute_query(profile_query, params={"user_id": user_id, "full_name": full_name})
+            profile_result = get_db().execute_query(
+                "INSERT INTO freelancer (user_id, full_name) VALUES (:uid, :name) RETURNING freelancer_id",
+                params={"uid": user_id, "name": full_name}
+            )
             if not profile_result:
                 raise HTTPException(status_code=500, detail="Failed to create freelancer profile")
+            freelancer_id = str(profile_result[0]['freelancer_id'])
         elif user_type == "client":
-            # Client profile uses full_name + bio now (company_name renamed to full_name in DB)
-            full_name_value = company_name or full_name
-            profile_query = """
-            INSERT INTO client (user_id, full_name)
-            VALUES (:user_id, :full_name)
-            RETURNING client_id
-            """
-            profile_result = get_db().execute_query(profile_query, params={"user_id": user_id, "full_name": full_name_value})
+            full_name_value = company_name or full_name or ""
+            profile_result = get_db().execute_query(
+                "INSERT INTO client (user_id, full_name) VALUES (:uid, :name) RETURNING client_id",
+                params={"uid": user_id, "name": full_name_value}
+            )
             if not profile_result:
                 raise HTTPException(status_code=500, detail="Failed to create client profile")
-        
+            client_id = str(profile_result[0]['client_id'])
+
         verification = None
         if EMAIL_VERIFICATION_REQUIRED:
             verification = create_email_verification_otp(user_id, email)
@@ -221,33 +220,67 @@ def register_user(email: str, password: str, user_type: str = "freelancer", full
         logger("AUTH", f"User registered: {email} as {user_type}", level="INFO")
         result = {
             "message": "User registered successfully. Please verify your email before logging in.",
-            "user": {"user_id": user_id, "email": email, "type": user_type, "email_verified": False}
+            "user": {
+                "user_id": user_id,
+                "email": email,
+                "email_verified": False,
+                "is_admin": False,
+                "freelancer_id": freelancer_id,
+                "client_id": client_id,
+            }
         }
         if verification:
             result["verification"] = verification
         return result
-    
+
     except HTTPException as e:
         if created_user_id and e.status_code >= 500:
             try:
-                get_db().execute_query(
-                    "DELETE FROM users WHERE user_id = :user_id",
-                    params={"user_id": created_user_id}
-                )
+                get_db().execute_query("DELETE FROM users WHERE user_id = :uid", params={"uid": created_user_id})
             except Exception as cleanup_error:
                 logger("AUTH", f"Registration cleanup error: {str(cleanup_error)}", level="ERROR")
         raise
     except Exception as e:
         if created_user_id:
             try:
-                get_db().execute_query(
-                    "DELETE FROM users WHERE user_id = :user_id",
-                    params={"user_id": created_user_id}
-                )
+                get_db().execute_query("DELETE FROM users WHERE user_id = :uid", params={"uid": created_user_id})
             except Exception as cleanup_error:
                 logger("AUTH", f"Registration cleanup error: {str(cleanup_error)}", level="ERROR")
         logger("AUTH", f"Registration error: {str(e)}", level="ERROR")
         raise HTTPException(status_code=500, detail="Registration failed")
+
+def add_role(current_user: UserInDB, role: str, full_name: str = None) -> dict:
+    """Add a second profile (freelancer or client) to an existing user."""
+    if role == "admin":
+        raise HTTPException(status_code=403, detail="Admin role cannot be self-assigned")
+    if role not in ("freelancer", "client"):
+        raise HTTPException(status_code=400, detail="Role must be 'freelancer' or 'client'")
+
+    if role == "freelancer":
+        if current_user.freelancer_id:
+            raise HTTPException(status_code=400, detail="You already have a freelancer profile")
+        if not full_name:
+            raise HTTPException(status_code=400, detail="full_name is required to create a freelancer profile")
+        result = get_db().execute_query(
+            "INSERT INTO freelancer (user_id, full_name) VALUES (:uid, :name) RETURNING freelancer_id",
+            params={"uid": current_user.user_id, "name": full_name}
+        )
+        if not result:
+            raise HTTPException(status_code=500, detail="Failed to create freelancer profile")
+        logger("AUTH", f"Freelancer profile added for user {current_user.user_id}", level="INFO")
+        return {"role": "freelancer", "freelancer_id": str(result[0]["freelancer_id"])}
+
+    else:  # client
+        if current_user.client_id:
+            raise HTTPException(status_code=400, detail="You already have a client profile")
+        result = get_db().execute_query(
+            "INSERT INTO client (user_id, full_name) VALUES (:uid, :name) RETURNING client_id",
+            params={"uid": current_user.user_id, "name": full_name or ""}
+        )
+        if not result:
+            raise HTTPException(status_code=500, detail="Failed to create client profile")
+        logger("AUTH", f"Client profile added for user {current_user.user_id}", level="INFO")
+        return {"role": "client", "client_id": str(result[0]["client_id"])}
 
 def verify_email_otp(email: str, otp_code: str) -> dict:
     """Verify a registration OTP and mark the user email as verified."""
@@ -342,19 +375,28 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         raise credentials_exception
 
 async def get_freelancer_user(current_user: UserInDB = Depends(get_current_user)):
-    """Get current user if they are a freelancer."""
-    if current_user.type != "freelancer":
+    """Require the current user to have a freelancer profile."""
+    if not current_user.freelancer_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only freelancers can access this resource"
+            detail="A freelancer profile is required to access this resource"
         )
     return current_user
 
 async def get_client_user(current_user: UserInDB = Depends(get_current_user)):
-    """Get current user if they are a client."""
-    if current_user.type != "client":
+    """Require the current user to have a client profile."""
+    if not current_user.client_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only clients can access this resource"
+            detail="A client profile is required to access this resource"
+        )
+    return current_user
+
+async def get_admin_user(current_user: UserInDB = Depends(get_current_user)):
+    """Require the current user to have admin privileges."""
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
         )
     return current_user

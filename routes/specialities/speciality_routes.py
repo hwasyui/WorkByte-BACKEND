@@ -2,7 +2,7 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from typing import List, Optional, Dict
 import uuid
 from functions.schema_model import SpecialityCreate, SpecialityUpdate, SpecialityResponse
@@ -29,18 +29,19 @@ async def get_all_specialities(limit: Optional[int] = None, current_user: UserIn
         return ResponseSchema.error(error_msg, 500)
 
 
-@speciality_router.get("/search/{search_term}", response_model=Dict)
-async def search_specialities(search_term: str, current_user: UserInDB = Depends(get_current_user)):
+@speciality_router.get("/search", response_model=Dict)
+async def search_specialities(
+    name: str = Query(..., description="Speciality name to search for"),
+    current_user: UserInDB = Depends(get_current_user),
+):
     """Search specialities by name - Authenticated users only - JSON response"""
     try:
-        results = SpecialityFunctions.search_specialities_by_name(search_term)
-        success_msg = f"Searched specialities for '{search_term}', found {len(results)} results"
-        logger("SPECIALITY", success_msg, "GET /specialities/search/{search_term}", "INFO")
-        search_result = {"results": results, "count": len(results)}
-        return ResponseSchema.success(search_result, 200)
+        results = SpecialityFunctions.search_specialities_by_name(name)
+        logger("SPECIALITY", f"Searched specialities for '{name}', found {len(results)} results", "GET /specialities/search", "INFO")
+        return ResponseSchema.success({"results": results, "count": len(results)}, 200)
     except Exception as e:
-        error_msg = f"Failed to search specialities with term '{search_term}': {str(e)}"
-        logger("SPECIALITY", error_msg, "GET /specialities/search/{search_term}", "ERROR")
+        error_msg = f"Failed to search specialities with term '{name}': {str(e)}"
+        logger("SPECIALITY", error_msg, "GET /specialities/search", "ERROR")
         return ResponseSchema.error(error_msg, 500)
 
 

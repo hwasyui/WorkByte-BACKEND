@@ -490,6 +490,26 @@ class JobPostFunctions:
             raise
 
     @staticmethod
+    def search_job_posts(search_term: str, limit: int = 20) -> List[Dict]:
+        """Full-text search over job_title and job_description (active posts only)."""
+        try:
+            db = get_db()
+            query = _JOB_POST_SELECT + """
+                WHERE jp.status = 'active'
+                  AND (jp.job_title ILIKE '%' || :term || '%'
+                    OR jp.job_description ILIKE '%' || :term || '%')
+                GROUP BY jp.job_post_id, c.full_name
+                ORDER BY jp.created_at DESC
+                LIMIT :limit
+            """
+            rows = db.execute_query(query, {"term": search_term, "limit": limit})
+            logger("JOB_POST_FUNCTIONS", f"search_job_posts: {len(rows)} results for '{search_term}'", level="INFO")
+            return [convert_uuids_to_str(dict(row)) for row in rows]
+        except Exception as e:
+            logger("JOB_POST_FUNCTIONS", f"Error searching job posts: {str(e)}", level="ERROR")
+            raise
+
+    @staticmethod
     def get_all_job_posts(limit: Optional[int] = None) -> List[Dict]:
         """Fetch all job posts with role_count, client_name, and live proposal_count"""
         try:

@@ -18,8 +18,8 @@ def _not_found(message: str):
 
 
 def get_client_profile_for_user(current_user):
-    if current_user.type != "client":
-        _forbidden("Only clients can use this resource")
+    if not current_user.client_id:
+        _forbidden("A client profile is required to use this resource")
     client = ClientFunctions.get_client_by_user_id(current_user.user_id)
     if not client:
         _forbidden("Client profile not found for the current user")
@@ -27,8 +27,8 @@ def get_client_profile_for_user(current_user):
 
 
 def get_freelancer_profile_for_user(current_user):
-    if current_user.type != "freelancer":
-        _forbidden("Only freelancers can use this resource")
+    if not current_user.freelancer_id:
+        _forbidden("A freelancer profile is required to use this resource")
     freelancer = FreelancerFunctions.get_freelancer_by_user_id(current_user.user_id)
     if not freelancer:
         _forbidden("Freelancer profile not found for the current user")
@@ -55,13 +55,12 @@ def assert_freelancer_owns(current_user, freelancer_id: str):
 def assert_current_user_is_contract_party(current_user, contract):
     if not contract:
         _not_found("Contract not found")
-    if current_user.type == "client":
-        client = get_client_profile_for_user(current_user)
-        if str(contract.get("client_id")) != str(client["client_id"]):
-            _forbidden("Cannot access contracts that do not belong to this client")
-    elif current_user.type == "freelancer":
-        freelancer = get_freelancer_profile_for_user(current_user)
-        if str(contract.get("freelancer_id")) != str(freelancer["freelancer_id"]):
-            _forbidden("Cannot access contracts that do not belong to this freelancer")
-    else:
-        _forbidden("Cannot access contract data")
+    if current_user.client_id:
+        client = ClientFunctions.get_client_by_user_id(current_user.user_id)
+        if client and str(contract.get("client_id")) == str(client["client_id"]):
+            return
+    if current_user.freelancer_id:
+        freelancer = FreelancerFunctions.get_freelancer_by_user_id(current_user.user_id)
+        if freelancer and str(contract.get("freelancer_id")) == str(freelancer["freelancer_id"]):
+            return
+    _forbidden("Cannot access contracts that do not belong to you")

@@ -2,7 +2,7 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from typing import List, Optional, Dict
 import uuid
 from functions.schema_model import SkillCreate, SkillUpdate, SkillResponse
@@ -29,18 +29,19 @@ async def get_all_skills(limit: Optional[int] = None, current_user: UserInDB = D
         return ResponseSchema.error(error_msg, 500)
 
 
-@skill_router.get("/search/{search_term}", response_model=Dict)
-async def search_skills(search_term: str, current_user: UserInDB = Depends(get_current_user)):
+@skill_router.get("/search", response_model=Dict)
+async def search_skills(
+    name: str = Query(..., description="Skill name to search for"),
+    current_user: UserInDB = Depends(get_current_user),
+):
     """Search skills by name - Authenticated users only - JSON response"""
     try:
-        results = SkillFunctions.search_skills_by_name(search_term)
-        success_msg = f"Searched skills for '{search_term}', found {len(results)} results"
-        logger("SKILL", success_msg, "GET /skills/search/{search_term}", "INFO")
-        search_result = {"results": results, "count": len(results)}
-        return ResponseSchema.success(search_result, 200)
+        results = SkillFunctions.search_skills_by_name(name)
+        logger("SKILL", f"Searched skills for '{name}', found {len(results)} results", "GET /skills/search", "INFO")
+        return ResponseSchema.success({"results": results, "count": len(results)}, 200)
     except Exception as e:
-        error_msg = f"Failed to search skills with term '{search_term}': {str(e)}"
-        logger("SKILL", error_msg, "GET /skills/search/{search_term}", "ERROR")
+        error_msg = f"Failed to search skills with term '{name}': {str(e)}"
+        logger("SKILL", error_msg, "GET /skills/search", "ERROR")
         return ResponseSchema.error(error_msg, 500)
 
 

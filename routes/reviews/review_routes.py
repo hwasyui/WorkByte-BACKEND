@@ -162,23 +162,6 @@ async def submit_review(
         logger("REVIEW", f"Error: {str(e)}", "POST /reviews/{review_id}/submit", "ERROR")
         return ResponseSchema.error(str(e), 500)
 
-@review_router.get("/{review_id}")
-async def get_review(
-    review_id: str,
-    current_user: UserInDB = Depends(get_current_user),
-):
-    """Full review detail including ratings, written content, skill tags, and AI analysis results."""
-    try:
-        review = ReviewFunctions.get_review_detail(review_id)
-        if not review:
-            return ResponseSchema.error(f"Review {review_id} not found", 404)
-        logger("REVIEW", f"Fetched review {review_id}", "GET /reviews/{review_id}", "INFO")
-        return ResponseSchema.success(review, 200)
-    except Exception as e:
-        logger("REVIEW", f"Error: {str(e)}", "GET /reviews/{review_id}", "ERROR")
-        return ResponseSchema.error(str(e), 500)
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # GET /reviews/freelancer/{freelancer_id}
 # ─────────────────────────────────────────────────────────────────────────────
@@ -262,7 +245,7 @@ async def get_red_flags(
         return ResponseSchema.error(str(e), 500)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# GET /reviews/{review_id}
+# GET /reviews/{review_id}  ← wildcard last so specific routes above match first
 # ─────────────────────────────────────────────────────────────────────────────
 @review_router.get("/{review_id}")
 async def get_review(

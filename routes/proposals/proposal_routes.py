@@ -10,8 +10,10 @@ from functions.schema_model import UserInDB
 from functions.authentication import get_current_user
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
+from functions.db_manager import get_db
 from routes.proposals.proposal_functions import ProposalFunctions
 from routes.freelancers.freelancer_functions import FreelancerFunctions
+from routes.clients.client_functions import ClientFunctions
 
 proposal_router = APIRouter(prefix="/proposals", tags=["Proposals"])
 
@@ -107,6 +109,20 @@ async def create_proposal(
 
         freelancer_id = freelancer["freelancer_id"]
 
+        # Cross-role guard: freelancer cannot apply to their own job post
+        if current_user.client_id:
+            job_row = get_db().execute_query(
+                "SELECT client_id FROM job_post WHERE job_post_id = :jpid",
+                {"jpid": str(proposal.job_post_id)}
+            )
+            if job_row:
+                client_row = get_db().execute_query(
+                    "SELECT user_id FROM client WHERE client_id = :cid",
+                    {"cid": str(job_row[0]["client_id"])}
+                )
+                if client_row and str(client_row[0]["user_id"]) == str(current_user.user_id):
+                    return ResponseSchema.error("You cannot apply to your own job post", 403)
+
         # Duplicate check
         existing = ProposalFunctions.get_proposals_by_freelancer_id(freelancer_id)
         for p in existing:
@@ -149,17 +165,29 @@ async def update_proposal_status(
         if not proposal:
             return ResponseSchema.error(f"Proposal {proposal_id} not found", 404)
 
-        user_type = current_user.type  # 'client' or 'freelancer'
+        # Determine if user is the proposal's freelancer or the job's client
+        is_proposal_freelancer = False
+        is_proposal_client = False
 
-        if user_type == "freelancer":
-            # Freelancer can only withdraw their own proposal
+        if current_user.freelancer_id:
             freelancer = FreelancerFunctions.get_freelancer_by_user_id(current_user.user_id)
-            if not freelancer or freelancer["freelancer_id"] != proposal["freelancer_id"]:
-                return ResponseSchema.error("You can only withdraw your own proposals", 403)
+            if freelancer and str(freelancer["freelancer_id"]) == str(proposal["freelancer_id"]):
+                is_proposal_freelancer = True
+
+        if current_user.client_id:
+            job_row = get_db().execute_query(
+                "SELECT client_id FROM job_post WHERE job_post_id = :jpid",
+                {"jpid": str(proposal["job_post_id"])}
+            )
+            if job_row:
+                client = ClientFunctions.get_client_by_user_id(current_user.user_id)
+                if client and str(client["client_id"]) == str(job_row[0]["client_id"]):
+                    is_proposal_client = True
+
+        if is_proposal_freelancer:
             if status != "withdrawn":
                 return ResponseSchema.error("Freelancers can only set status to 'withdrawn'", 403)
-
-        elif user_type == "client":
+        elif is_proposal_client:
             if status not in ("accepted", "rejected"):
                 return ResponseSchema.error("Clients can only set status to 'accepted' or 'rejected'", 403)
         else:

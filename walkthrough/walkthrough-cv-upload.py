@@ -165,12 +165,12 @@ def run():
 
     # ── 1. Register freelancer ─────────────────────────────────────────────────
 
-    step(f"Register freelancer (Angelica Suti Whiharto) — run id: {_RUN_ID}")
+    step(f"Register freelancer (Intan Kumala Pasya) — run id: {_RUN_ID}")
     register_and_verify({
         "email": _EMAIL,
         "password": _PASSWORD,
         "user_type": "freelancer",
-        "full_name": "Angelica Suti Whiharto"
+        "full_name": "Intan Kumala Pasya"
     })
 
     # ── 2. Log in ─────────────────────────────────────────────────────────────
@@ -188,14 +188,14 @@ def run():
 
     # ── 4. Upload CV without LLM ──────────────────────────────────────────────
 
-    step("Upload CV (Angelica Suti Whiharto_CV.pdf) without LLM parsing")
-    cv_path = os.path.join(os.path.dirname(__file__), "Angelica Suti Whiharto_CV.pdf")
+    step("Upload CV (Intan Kumala Pasya_CV.pdf) without LLM parsing")
+    cv_path = os.path.join(os.path.dirname(__file__), "Intan Kumala Pasya_CV.pdf")
     if not os.path.exists(cv_path):
         print(f"  ERROR: CV file not found at {cv_path}")
         return
 
     with open(cv_path, "rb") as f:
-        files = {"file": ("Angelica Suti Whiharto_CV.pdf", f, "application/pdf")}
+        files = {"file": ("Intan Kumala Pasya_CV.pdf", f, "application/pdf")}
         data = {"use_llm": "false"}
         resp = post_file("/cv_upload", files=files, data=data, token=tok_freelancer)
 
@@ -228,7 +228,7 @@ def run():
 
     step("Upload CV again with LLM parsing enabled")
     with open(cv_path, "rb") as f:
-        files = {"file": ("Angelica Suti Whiharto_CV.pdf", f, "application/pdf")}
+        files = {"file": ("Intan Kumala Pasya_CV.pdf", f, "application/pdf")}
         data = {"use_llm": "true"}
         resp_llm = post_file("/cv_upload", files=files, data=data, token=tok_freelancer)
 

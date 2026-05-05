@@ -1,9 +1,17 @@
 """
 Job matching routes, all mounted under /ai/job_matching (set in main.py).
 
-Covers the 3-stage freelancer job feed, client-side job-to-freelancer search,
-the RAG deep-analysis endpoint, manual embed/sweep triggers, and an Ollama
-connectivity test.
+This module is the ML pipeline for the freelancer job feed only:
+
+  GET  /match/freelancer-to-jobs        — 3-stage ranked feed (pgvector → skill filter → CatBoost)
+  GET  /analyse/job/{job_post_id}       — RAG + LLM deep-fit analysis for a specific job
+  POST /embed/freelancer/{id}           — queue freelancer re-embedding
+  POST /embed/job/{id}                  — queue job re-embedding
+  POST /sweep                           — run dirty-embedding sweep immediately
+  GET  /test_ai_local                   — Ollama connectivity check
+
+Client-side candidate search (cosine only, no ML) lives at:
+  GET /job-posts/{job_post_id}/candidates
 """
 
 import os
@@ -14,8 +22,8 @@ from fastapi import APIRouter, Depends, Query
 from typing import Optional
 
 from functions.schema_model import UserInDB
-from functions.authentication import get_current_user, get_freelancer_user, get_client_user
-from functions.access_control import get_freelancer_profile_for_user, get_client_profile_for_user
+from functions.authentication import get_current_user, get_freelancer_user
+from functions.access_control import get_freelancer_profile_for_user
 from functions.response_utils import ResponseSchema
 from functions.logger import logger
 from functions.db_manager import get_db
@@ -220,110 +228,6 @@ async def match_freelancer_to_jobs(
     except Exception as e:
         total_ms = (time.perf_counter() - t_request) * 1000
         logger("JOB_MATCHING", f"Error in freelancer-to-jobs after {total_ms:.0f}ms | error={e}", level="ERROR")
-        return ResponseSchema.error(str(e), 500)
-
-
-@router.get("/match/job-to-freelancers/{job_post_id}")
-async def match_job_to_freelancers(
-    job_post_id: str,
-    limit: int = Query(default=10, ge=1, le=50),
-    min_rate: Optional[float] = None,
-    max_rate: Optional[float] = None,
-    min_performance: Optional[float] = None,
-    current_user: UserInDB = Depends(get_client_user),
-):
-    """
-    Find the best-matching freelancers for a given job post (client only).
-    Uses cosine similarity with optional rate/performance filters.
-    """
-    t_request = time.perf_counter()
-    try:
-        client = get_client_profile_for_user(current_user)
-        client_id = str(client["client_id"])
-        db = get_db()
-
-        logger(
-            "JOB_MATCHING",
-            f"job-to-freelancers request started | client_id={client_id} | job_post_id={job_post_id} "
-            f"| limit={limit} | min_rate={min_rate} | max_rate={max_rate} | min_performance={min_performance}",
-            level="INFO",
-        )
-
-        ownership = db.execute_query(
-            "SELECT job_post_id FROM job_post WHERE job_post_id = :jpid AND client_id = :cid",
-            {"jpid": job_post_id, "cid": client_id},
-        )
-        if not ownership:
-            return ResponseSchema.error("Job post not found or does not belong to your account.", 403)
-
-        je = db.execute_query(
-            "SELECT embedding_vector FROM job_embedding WHERE job_post_id = :jpid AND embedding_vector IS NOT NULL",
-            {"jpid": job_post_id},
-        )
-        if not je:
-            return ResponseSchema.error(
-                "Job not yet indexed. Please wait a moment and try again.", 404
-            )
-
-        job_vec = je[0]["embedding_vector"]
-
-        where_clauses = ["fe.embedding_vector IS NOT NULL"]
-        params: dict = {"vec": job_vec, "limit": limit}
-
-        if min_rate is not None:
-            where_clauses.append("f.estimated_rate >= :min_rate")
-            params["min_rate"] = min_rate
-        if max_rate is not None:
-            where_clauses.append("f.estimated_rate <= :max_rate")
-            params["max_rate"] = max_rate
-        if min_performance is not None:
-            where_clauses.append("pr.overall_performance_score >= :min_perf")
-            params["min_perf"] = min_performance
-
-        where_sql = " AND ".join(where_clauses)
-
-        query = f"""
-            SELECT
-                f.freelancer_id,
-                f.full_name,
-                f.bio,
-                f.estimated_rate,
-                f.rate_time,
-                f.rate_currency,
-                f.total_jobs,
-                pr.overall_performance_score,
-                pr.success_rate,
-                pr.average_result_quality,
-                fe.source_text,
-                ROUND((1 - (fe.embedding_vector <=> CAST(:vec AS vector)))::numeric, 4) AS similarity_score
-            FROM freelancer_embedding fe
-            JOIN freelancer f ON f.freelancer_id = fe.freelancer_id
-            LEFT JOIN performance_rating pr ON pr.freelancer_id = fe.freelancer_id
-            WHERE {where_sql}
-            ORDER BY similarity_score DESC
-            LIMIT :limit
-        """
-
-        rows = db.execute_query(query, params)
-        results = _serialize_rows(rows) if rows else []
-
-        total_ms = (time.perf_counter() - t_request) * 1000
-        score_range = (
-            f"[{min(r['similarity_score'] for r in results):.3f}, "
-            f"{max(r['similarity_score'] for r in results):.3f}]"
-            if results else "[]"
-        )
-        logger(
-            "JOB_MATCHING",
-            f"job-to-freelancers complete | job_post_id={job_post_id} | returned={len(results)} "
-            f"| cosine_range={score_range} | time={total_ms:.0f}ms",
-            level="INFO",
-        )
-        return ResponseSchema.success({"matches": results, "count": len(results)}, 200)
-
-    except Exception as e:
-        total_ms = (time.perf_counter() - t_request) * 1000
-        logger("JOB_MATCHING", f"Error in job-to-freelancers after {total_ms:.0f}ms | error={e}", level="ERROR")
         return ResponseSchema.error(str(e), 500)
 
 

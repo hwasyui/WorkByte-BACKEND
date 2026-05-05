@@ -52,7 +52,7 @@ async def get_performance_rating(freelancer_id: str, current_user: UserInDB = De
 async def create_performance_rating(rating: PerformanceRatingCreate, current_user: UserInDB = Depends(get_current_user)):
     """Create a new performance rating - only client can create for completed contract relationship"""
     try:
-        if current_user.type != "client":
+        if not current_user.client_id:
             return ResponseSchema.error("Only clients can create performance ratings", 403)
 
         client = get_client_profile_for_user(current_user)
@@ -86,7 +86,7 @@ async def create_performance_rating(rating: PerformanceRatingCreate, current_use
 async def update_performance_rating(freelancer_id: str, rating_update: PerformanceRatingUpdate, current_user: UserInDB = Depends(get_current_user)):
     """Update performance rating - only client can update if they have completed contract relationship"""
     try:
-        if current_user.type != "client":
+        if not current_user.client_id:
             return ResponseSchema.error("Only clients can update performance ratings", 403)
 
         existing_rating = PerformanceRatingFunctions.get_performance_rating_by_freelancer_id(freelancer_id)

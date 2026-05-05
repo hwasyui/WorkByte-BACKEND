@@ -19,21 +19,31 @@ except ImportError as exc:
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-BUCKET_JOB_FILES       = os.getenv("SUPABASE_STORAGE_BUCKET", "job-files")
-BUCKET_PROPOSAL_FILES  = "proposal-files"
-BUCKET_USER_ASSETS     = "user-assets"
+BUCKET_JOB_FILES            = os.getenv("SUPABASE_STORAGE_BUCKET", "job-files")
+BUCKET_PROPOSAL_FILES       = "proposal-files"
+BUCKET_USER_ASSETS          = "user-assets"
 BUCKET_CONTRACT_SUBMISSIONS = "contract-submissions"
+BUCKET_MESSAGE_ATTACHMENTS  = "message-attachments"
 
 BUCKET_MAP = {
-    "job-files":       BUCKET_JOB_FILES,
-    "proposal-files":  BUCKET_PROPOSAL_FILES,
-    "user-assets":     BUCKET_USER_ASSETS,
+    "job-files":            BUCKET_JOB_FILES,
+    "proposal-files":       BUCKET_PROPOSAL_FILES,
+    "user-assets":          BUCKET_USER_ASSETS,
     "contract-submissions": BUCKET_CONTRACT_SUBMISSIONS,
+    "message-attachments":  BUCKET_MESSAGE_ATTACHMENTS,
 }
 
 def guess_mime(filename: str, fallback: str = "application/octet-stream") -> str:
     """Guess MIME type from filename."""
     return mimetypes.guess_type(filename)[0] or fallback
+
+
+def ensure_bucket(bucket_name: str, public: bool = True) -> None:
+    """Create a storage bucket if it does not already exist."""
+    try:
+        supabase.storage.create_bucket(bucket_name, options={"public": public})
+    except Exception:
+        pass  # already exists — upload will surface any real error
 
 
 def upload_file(
@@ -137,6 +147,17 @@ def upload_contract_submission_file(contract_id: str, submission_id: str, file_n
     return upload_file(
         bucket=BUCKET_CONTRACT_SUBMISSIONS,
         path=f"{contract_id}/{submission_id}/{file_name}",
+        file_bytes=file_bytes,
+        content_type=content_type or guess_mime(file_name),
+    )
+
+
+def upload_thread_attachment(thread_id: str, message_id: str, file_name: str, file_bytes: bytes, content_type: str = None) -> str:
+    """Upload a message attachment (DM or contract chat). Stored at {thread_id}/{message_id}/{file_name}."""
+    ensure_bucket(BUCKET_MESSAGE_ATTACHMENTS, public=True)
+    return upload_file(
+        bucket=BUCKET_MESSAGE_ATTACHMENTS,
+        path=f"{thread_id}/{message_id}/{file_name}",
         file_bytes=file_bytes,
         content_type=content_type or guess_mime(file_name),
     )
