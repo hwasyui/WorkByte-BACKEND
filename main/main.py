@@ -38,7 +38,6 @@ from routes.performance_ratings.performance_rating_routes import performance_rat
 from routes.client_trust_scores.client_trust_score_routes import client_trust_score_router
 from routes.freelancer_embeddings.freelancer_embedding_routes import freelancer_embedding_router
 from routes.job_embeddings.job_embedding_routes import job_embedding_router
-from routes.messages.message_routes import message_router
 from routes.dm.dm_routes import dm_router
 from routes.upload.upload_route import upload_router
 from routes.cv_upload.cv_upload_routes import cv_upload_router
@@ -46,6 +45,7 @@ from routes.contract_submissions.contract_submission_routes import contract_subm
 from routes.reviews.review_routes import review_router
 from routes.dashboard.dashboard_routes import dashboard_router
 from ai_related.cv_analysis.cv_analysis_routes import cv_analysis_router
+# from ai_related.content_moderation.content_moderation_routes import content_moderation_router
 
 
 @asynccontextmanager
@@ -123,7 +123,6 @@ app.include_router(performance_rating_router)
 app.include_router(client_trust_score_router)
 app.include_router(freelancer_embedding_router)
 app.include_router(job_embedding_router)
-app.include_router(message_router)
 app.include_router(dm_router)
 app.include_router(upload_router)
 app.include_router(cv_upload_router)
@@ -132,6 +131,7 @@ app.include_router(contract_submission_router)
 app.include_router(review_router)
 app.include_router(dashboard_router)
 app.include_router(job_matching_router, prefix="/ai/job_matching")
+# app.include_router(content_moderation_router)  # TODO: Uncomment after training models
 
 
 # Custom exception handler for validation errors

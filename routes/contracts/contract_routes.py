@@ -198,14 +198,15 @@ async def create_contract(contract: ContractCreate, current_user: UserInDB = Dep
         contract_id = contract.contract_id or str(uuid.uuid4())
         if not current_user.client_id and not current_user.freelancer_id:
             return ResponseSchema.error("Only clients or freelancers can create contracts", 403)
+        # Only verify client_id — the person creating contract must be the client posting the job
+        # freelancer_id can be anyone (no restriction on who the contract is for)
         if current_user.client_id:
             client = get_client_profile_for_user(current_user)
             if contract.client_id and str(contract.client_id) != str(client["client_id"]):
                 return ResponseSchema.error("Cannot create a contract for another client", 403)
-        if current_user.freelancer_id:
-            freelancer = get_freelancer_profile_for_user(current_user)
-            if contract.freelancer_id and str(contract.freelancer_id) != str(freelancer["freelancer_id"]):
-                return ResponseSchema.error("Cannot create a contract for another freelancer", 403)
+        else:
+            # If user is not a client, they cannot create contracts
+            return ResponseSchema.error("Only clients can create contracts", 403)
 
         new_contract = ContractFunctions.create_contract(
             contract_id=contract_id,
@@ -295,9 +296,7 @@ async def generate_contract_pdf(contract_id: str, generation_data: ContractGener
                 "dispute_resolution": generation_data.dispute_resolution,
                 "revision_rounds": generation_data.revision_rounds,
                 "additional_clauses": generation_data.additional_clauses,
-                "payment_schedule": json.dumps(
-                    [item.model_dump(mode="json") for item in generation_data.payment_schedule]
-                ) if generation_data.payment_schedule else None,
+                "payment_schedule": generation_data.payment_schedule,
             },
         )
 

@@ -17,10 +17,21 @@ from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from functions.supabase_client import upload_thread_attachment, guess_mime
 from routes.dm.dm_functions import DMFunctions
-from routes.messages.message_functions import _classify_file_type
 
 
 dm_router = APIRouter(prefix="/dm", tags=["Direct Messages"])
+
+
+def _classify_file_type(mime_type: str, is_voice_note: bool = False) -> str:
+    if is_voice_note:
+        return "voice_note"
+    if mime_type.startswith("image/"):
+        return "image"
+    if mime_type.startswith("video/"):
+        return "video"
+    if mime_type.startswith("audio/"):
+        return "audio"
+    return "document"
 
 
 # ── WebSocket connection manager ──────────────────────────────────────────────

@@ -2,6 +2,7 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
+
 from functions.db_manager import get_db
 from functions.logger import logger
 from typing import List, Optional, Dict, Any
@@ -11,6 +12,7 @@ import re
 import json
 import urllib.request
 from datetime import datetime, timezone
+
 
 
 def convert_uuids_to_str(data: Dict) -> Dict:
@@ -26,13 +28,14 @@ def convert_uuids_to_str(data: Dict) -> Dict:
     return result
 
 
+
 # ── Shared SELECT columns ─────────────────────────────────────────────────────
 _JOB_POST_SELECT = """
     SELECT
         jp.job_post_id, jp.client_id, jp.job_title, jp.job_description,
         jp.project_type, jp.project_scope, jp.estimated_duration,
         jp.working_days, jp.deadline, jp.experience_level, jp.status,
-        jp.is_ai_generated, jp.view_count,
+        jp.is_ai_generated, jp.view_count, jp.project_category,
         jp.created_at, jp.updated_at, jp.posted_at, jp.closed_at,
         COUNT(DISTINCT jr.job_role_id) AS role_count,
         c.full_name AS client_name,
@@ -45,6 +48,7 @@ _JOB_POST_SELECT = """
     LEFT JOIN job_role jr ON jr.job_post_id = jp.job_post_id
     LEFT JOIN client c ON c.client_id = jp.client_id
 """
+
 
 _SCOPE_MARKET_CACHE_PATH = os.path.join(os.path.dirname(__file__), "project_scope_market_cache.json")
 _SCOPE_CACHE_REFRESH_SECONDS = 7 * 24 * 60 * 60  # weekly refresh
@@ -60,15 +64,18 @@ _GLOBAL_MONTHLY_ROLE_BUDGET_USD = {
 class JobPostFunctions:
     """Handle all job post-related database operations"""
 
+
     @staticmethod
     def _now_utc_iso() -> str:
         return datetime.now(timezone.utc).isoformat()
+
 
     @staticmethod
     def _load_scope_market_cache() -> Dict[str, Any]:
         global _scope_market_cache
         if _scope_market_cache is not None:
             return _scope_market_cache
+
 
         try:
             with open(_SCOPE_MARKET_CACHE_PATH, encoding="utf-8") as fh:
@@ -81,6 +88,7 @@ class JobPostFunctions:
             }
         return _scope_market_cache
 
+
     @staticmethod
     def _save_scope_market_cache() -> None:
         global _scope_market_cache
@@ -88,6 +96,7 @@ class JobPostFunctions:
         with open(_SCOPE_MARKET_CACHE_PATH, "w", encoding="utf-8") as fh:
             json.dump(cache, fh, indent=2, sort_keys=True)
         _scope_market_cache = cache
+
 
     @staticmethod
     def _cache_is_stale(fetched_at: Optional[str]) -> bool:
@@ -101,11 +110,13 @@ class JobPostFunctions:
         except Exception:
             return True
 
+
     @staticmethod
     def _refresh_scope_fx_rates_if_needed() -> Dict[str, float]:
         cache = JobPostFunctions._load_scope_market_cache()
         if not JobPostFunctions._cache_is_stale(cache.get("fx_rates_fetched_at")) and cache.get("fx_rates"):
             return {k.upper(): float(v) for k, v in cache["fx_rates"].items()}
+
 
         try:
             with urllib.request.urlopen(
@@ -123,6 +134,7 @@ class JobPostFunctions:
             logger("JOB_POST_FUNCTIONS", f"Project-scope FX refresh failed ({e}); using cached rates", level="WARNING")
             return {k.upper(): float(v) for k, v in cache.get("fx_rates", {"USD": 1.0}).items()}
 
+
     @staticmethod
     def _to_usd_scope(amount: float, currency: Optional[str]) -> float:
         if amount is None or amount <= 0:
@@ -134,6 +146,7 @@ class JobPostFunctions:
             return float(amount)
         return float(amount) / rate
 
+
     @staticmethod
     def _fetch_country_income_benchmark(country_code: str) -> Optional[Dict[str, Any]]:
         """
@@ -144,6 +157,7 @@ class JobPostFunctions:
         if not normalized:
             return None
 
+
         url = (
             f"https://api.worldbank.org/v2/country/{normalized}/indicator/NY.GNP.PCAP.CD"
             "?format=json&per_page=10"
@@ -151,6 +165,7 @@ class JobPostFunctions:
         try:
             with urllib.request.urlopen(url, timeout=6) as resp:
                 payload = json.loads(resp.read())
+
 
             rows = payload[1] if isinstance(payload, list) and len(payload) > 1 else []
             for row in rows:
@@ -171,17 +186,20 @@ class JobPostFunctions:
             logger("JOB_POST_FUNCTIONS", f"Income benchmark fetch failed for {normalized}: {e}", level="WARNING")
         return None
 
+
     @staticmethod
     def _get_country_income_benchmark(country_code: Optional[str]) -> Optional[Dict[str, Any]]:
         normalized = (country_code or "").strip().upper()
         if not normalized:
             return None
 
+
         cache = JobPostFunctions._load_scope_market_cache()
         benchmarks = cache.setdefault("country_income_benchmarks", {})
         cached = benchmarks.get(normalized)
         if cached and not JobPostFunctions._cache_is_stale(cached.get("fetched_at")):
             return cached
+
 
         live = JobPostFunctions._fetch_country_income_benchmark(normalized)
         if live:
@@ -191,7 +209,9 @@ class JobPostFunctions:
             JobPostFunctions._save_scope_market_cache()
             return live
 
+
         return cached
+
 
     @staticmethod
     def _estimate_days_from_duration(duration: Optional[str]) -> Optional[int]:
@@ -199,10 +219,12 @@ class JobPostFunctions:
         if not duration:
             return None
 
+
         text = duration.strip().lower()
         match = re.search(r"(\d+(?:\.\d+)?)", text)
         if not match:
             return None
+
 
         value = float(match.group(1))
         if "day" in text:
@@ -215,16 +237,19 @@ class JobPostFunctions:
             return math.ceil(value * 365)
         return None
 
+
     @staticmethod
     def _estimate_contributor_count(project_type: str, role_count: int) -> int:
         normalized_project_type = (project_type or "").strip().lower()
         minimum_for_type = 2 if normalized_project_type == "team" else 1
         return max(role_count, minimum_for_type)
 
+
     @staticmethod
     def _calculate_roles_budget_usd(roles: Optional[List[Dict[str, Any]]]) -> Optional[float]:
         if not roles:
             return None
+
 
         total_budget_usd = 0.0
         has_budget = False
@@ -237,7 +262,9 @@ class JobPostFunctions:
             total_budget_usd += JobPostFunctions._to_usd_scope(float(role_budget), budget_currency) * positions_available
             has_budget = True
 
+
         return total_budget_usd if has_budget else None
+
 
     @staticmethod
     def _get_global_monthly_role_budget_usd(experience_level: str) -> float:
@@ -246,6 +273,50 @@ class JobPostFunctions:
             normalized_experience,
             _GLOBAL_MONTHLY_ROLE_BUDGET_USD["default"],
         )
+
+
+    # ── NEW: Category inference ───────────────────────────────────────────────
+
+    @staticmethod
+    def infer_project_category(job_title: str, job_description: str) -> str:
+        """Infer a project category from job title and description using keyword matching."""
+        text = " ".join(filter(None, [job_title, job_description])).lower()
+        category_map = [
+            # Mobile
+            ("mobile", "mobile_dev"), ("android", "mobile_dev"), ("ios", "mobile_dev"),
+            ("flutter", "mobile_dev"), ("react native", "mobile_dev"), ("swift", "mobile_dev"),
+            ("kotlin", "mobile_dev"), ("dart", "mobile_dev"),
+            # Backend
+            ("backend", "backend_dev"), ("api", "backend_dev"), ("server", "backend_dev"),
+            ("database", "backend_dev"), ("fastapi", "backend_dev"), ("django", "backend_dev"),
+            ("node", "backend_dev"), ("postgresql", "backend_dev"), ("mysql", "backend_dev"),
+            # Web Frontend
+            ("web", "web_dev"), ("frontend", "web_dev"), ("html", "web_dev"),
+            ("css", "web_dev"), ("react", "web_dev"), ("vue", "web_dev"), ("nextjs", "web_dev"),
+            # UI/UX Design
+            ("ui/ux", "ui_ux_design"), ("ui ux", "ui_ux_design"), ("user interface", "ui_ux_design"),
+            ("figma", "ui_ux_design"), ("wireframe", "ui_ux_design"), ("prototype", "ui_ux_design"),
+            # Graphic Design
+            ("graphic", "graphic_design"), ("logo", "graphic_design"), ("branding", "graphic_design"),
+            ("illustration", "graphic_design"), ("photoshop", "graphic_design"),
+            # Writing / Copy_writing
+            ("copy", "copy_writing"), ("writing", "copy_writing"), ("content", "copy_writing"),
+            ("blog", "copy_writing"), ("seo", "copy_writing"),
+            # Data / Analytics
+            ("data", "data_analytics"), ("analytics", "data_analytics"), ("machine learning", "data_analytics"),
+            ("ai", "data_analytics"), ("python", "data_analytics"), ("tableau", "data_analytics"),
+            # Video / Motion
+            ("video", "video_editing"), ("motion", "video_editing"), ("animation", "video_editing"),
+            ("premiere", "video_editing"), ("after effects", "video_editing"),
+            # Marketing
+            ("marketing", "marketing"), ("social media", "marketing"), ("ads", "marketing"),
+            ("instagram", "marketing"), ("campaign", "marketing"),
+        ]
+        for keyword, category in category_map:
+            if keyword in text:
+                return category
+        return "general"
+
 
     @staticmethod
     def calculate_project_scope(
@@ -265,6 +336,7 @@ class JobPostFunctions:
         score = 0
         reasons: List[str] = []
 
+
         normalized_project_type = (project_type or "").strip().lower()
         normalized_experience = (experience_level or "").strip().lower()
         normalized_role_count = max(int(role_count or len(roles or []) or 1), 1)
@@ -279,6 +351,7 @@ class JobPostFunctions:
         monthly_budget_benchmark_usd = JobPostFunctions._get_global_monthly_role_budget_usd(normalized_experience)
         budget_to_market_multiple = None
 
+
         if duration_days is not None:
             if duration_days >= 61:
                 score += 3
@@ -290,6 +363,7 @@ class JobPostFunctions:
                 score += 1
                 reasons.append(f"Short-to-moderate timeline detected ({duration_days} days).")
 
+
         if normalized_role_count >= 4:
             score += 3
             reasons.append(f"High role complexity detected ({normalized_role_count} roles).")
@@ -297,9 +371,11 @@ class JobPostFunctions:
             score += 1
             reasons.append(f"Multiple roles detected ({normalized_role_count} roles).")
 
+
         if normalized_project_type == "team":
             score += 1
             reasons.append("Team-based project increases coordination complexity.")
+
 
         if normalized_experience == "expert":
             score += 2
@@ -307,6 +383,7 @@ class JobPostFunctions:
         elif normalized_experience == "intermediate":
             score += 1
             reasons.append("Intermediate-level experience requirement suggests moderate complexity.")
+
 
         if budget_usd is not None:
             baseline = monthly_budget_benchmark_usd * duration_months_estimate * contributor_count
@@ -339,12 +416,14 @@ class JobPostFunctions:
             score += 1
             reasons.append(f"Moderately detailed job description detected ({description_word_count} words).")
 
+
         if score >= 7:
             recommended_scope = "large"
         elif score >= 3:
             recommended_scope = "medium"
         else:
             recommended_scope = "small"
+
 
         non_empty_signals = sum([
             1 if duration_days is not None else 0,
@@ -355,6 +434,7 @@ class JobPostFunctions:
             1 if description_word_count > 0 else 0,
         ])
         confidence = "high" if non_empty_signals >= 5 else "medium" if non_empty_signals >= 3 else "low"
+
 
         return {
             "recommended_project_scope": recommended_scope,
@@ -379,7 +459,9 @@ class JobPostFunctions:
             "reasons": reasons or ["Insufficient complexity signals found; defaulting to small scope."],
         }
 
+
     # ── Internal helper ───────────────────────────────────────────────────────
+
 
     @staticmethod
     def _sync_proposal_count(job_post_id: str) -> None:
@@ -403,11 +485,12 @@ class JobPostFunctions:
             logger("JOB_POST_FUNCTIONS",
                    f"Synced proposal_count for job_post {job_post_id}", level="INFO")
         except Exception as e:
-            # Non-fatal — live subquery still works even if sync fails
             logger("JOB_POST_FUNCTIONS",
                    f"Failed to sync proposal_count for {job_post_id}: {str(e)}", level="WARNING")
 
+
     # ── Fetch operations ──────────────────────────────────────────────────────
+
 
     # Valid sort fields → SQL expression
     _JOB_SORT_FIELDS = {
@@ -415,11 +498,12 @@ class JobPostFunctions:
         "posted_at":      "jp.posted_at",
         "deadline":       "jp.deadline",
         "job_title":      "jp.job_title",
-        "proposal_count": "proposal_count",   # subquery alias — PostgreSQL resolves this
+        "proposal_count": "proposal_count",
         "view_count":     "jp.view_count",
     }
 
     _VALID_STATUSES = {"active", "closed", "filled", "draft", "all"}
+
 
     @staticmethod
     def browse_job_posts(
@@ -429,6 +513,7 @@ class JobPostFunctions:
         page: int = 1,
         page_size: int = 20,
         requesting_client_id: Optional[str] = None,
+         category: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Paginated + filtered + sorted job post browse.
@@ -437,11 +522,12 @@ class JobPostFunctions:
         try:
             db = get_db()
 
+
             sort_col = JobPostFunctions._JOB_SORT_FIELDS.get(order_by, "jp.created_at")
             direction = "DESC" if order_dir.lower() == "desc" else "ASC"
             offset = (page - 1) * page_size
 
-            # Build WHERE + params based on status and draft visibility
+
             if status == "all":
                 if requesting_client_id:
                     where = "WHERE (jp.status != 'draft' OR jp.client_id = :rcid)"
@@ -458,6 +544,10 @@ class JobPostFunctions:
                 where = "WHERE jp.status = :status"
                 params = {"status": status}
 
+            if category:
+                where += " AND jp.project_category = %(category)s"
+                params["category"] = category
+
             count_query = f"""
                 SELECT COUNT(DISTINCT jp.job_post_id) AS total
                 FROM job_post jp
@@ -465,6 +555,7 @@ class JobPostFunctions:
             """
             count_rows = db.execute_query(count_query, params)
             total = int(count_rows[0]["total"]) if count_rows else 0
+
 
             data_query = _JOB_POST_SELECT + f"""
                 {where}
@@ -474,6 +565,7 @@ class JobPostFunctions:
             """
             data_rows = db.execute_query(data_query, {**params, "limit": page_size, "offset": offset})
             items = [convert_uuids_to_str(dict(row)) for row in data_rows]
+
 
             logger("JOB_POST_FUNCTIONS", f"browse_job_posts: {total} total, page {page}/{math.ceil(total/page_size) or 1}", level="INFO")
             return {
@@ -488,6 +580,7 @@ class JobPostFunctions:
         except Exception as e:
             logger("JOB_POST_FUNCTIONS", f"Error browsing job posts: {str(e)}", level="ERROR")
             raise
+
 
     @staticmethod
     def search_job_posts(search_term: str, limit: int = 20) -> List[Dict]:
@@ -509,6 +602,7 @@ class JobPostFunctions:
             logger("JOB_POST_FUNCTIONS", f"Error searching job posts: {str(e)}", level="ERROR")
             raise
 
+
     @staticmethod
     def get_all_job_posts(limit: Optional[int] = None) -> List[Dict]:
         """Fetch all job posts with role_count, client_name, and live proposal_count"""
@@ -520,13 +614,16 @@ class JobPostFunctions:
                 {limit_clause}
             """.format(limit_clause=f"LIMIT {limit}" if limit else "")
 
+
             rows = db.execute_query(query)
             logger("JOB_POST_FUNCTIONS", f"Fetched {len(rows)} job posts", level="INFO")
             return [convert_uuids_to_str(dict(row)) for row in rows]
 
+
         except Exception as e:
             logger("JOB_POST_FUNCTIONS", f"Error fetching job posts: {str(e)}", level="ERROR")
             raise
+
 
     @staticmethod
     def get_job_post_by_id(job_post_id: str) -> Optional[Dict]:
@@ -539,15 +636,19 @@ class JobPostFunctions:
             """
             rows = db.execute_query(query, {"job_post_id": job_post_id})
 
+
             if rows:
                 logger("JOB_POST_FUNCTIONS", f"Job post {job_post_id} found", level="INFO")
                 return convert_uuids_to_str(dict(rows[0]))
 
+
             return None
+
 
         except Exception as e:
             logger("JOB_POST_FUNCTIONS", f"Error fetching job post: {str(e)}", level="ERROR")
             raise
+
 
     @staticmethod
     def get_job_posts_by_client_id(client_id: str) -> List[Dict]:
@@ -561,12 +662,32 @@ class JobPostFunctions:
             """
             rows = db.execute_query(query, {"client_id": client_id})
 
+
             logger("JOB_POST_FUNCTIONS",
                    f"Fetched {len(rows)} job posts for client {client_id}", level="INFO")
             return [convert_uuids_to_str(dict(row)) for row in rows]
 
+
         except Exception as e:
             logger("JOB_POST_FUNCTIONS", f"Error fetching job posts: {str(e)}", level="ERROR")
+            raise
+
+    @staticmethod
+    def get_category_counts() -> list:
+        """Return list of {category, count} for active job posts, sorted by count desc."""
+        try:
+            db = get_db()
+            query = """
+                SELECT jp.project_category AS category, COUNT(*) AS count
+                FROM job_post jp
+                WHERE jp.status = 'active'
+                GROUP BY jp.project_category
+                ORDER BY count DESC
+            """
+            rows = db.execute_query(query)
+            return [{"category": row["category"], "count": int(row["count"])} for row in rows]
+        except Exception as e:
+            logger("JOBPOSTFUNCTIONS", f"Error fetching category counts: {str(e)}", level="ERROR")
             raise
 
     # ── Write operations ──────────────────────────────────────────────────────
@@ -602,6 +723,14 @@ class JobPostFunctions:
                     level="INFO",
                 )
 
+            # ── NEW: infer project category ───────────────────────────────────
+            project_category = JobPostFunctions.infer_project_category(job_title, job_description)
+            logger(
+                "JOB_POST_FUNCTIONS",
+                f"Inferred project_category={project_category} for new job post",
+                level="INFO",
+            )
+
             job_post_data = {
                 "job_post_id":        job_post_id,
                 "client_id":          client_id,
@@ -616,9 +745,12 @@ class JobPostFunctions:
                 "status":             status,
                 "is_ai_generated":    is_ai_generated,
                 "proposal_count":     0,
+                "project_category":   project_category,  # ← NEW
             }
 
+
             db.insert_data(table_name="job_post", data=job_post_data)
+
 
             # Increment the client's total jobs posted count
             client_rows = db.fetch_data(
@@ -634,6 +766,7 @@ class JobPostFunctions:
                     conditions=[("client_id", "=", client_id)]
                 )
 
+
             logger("JOB_POST_FUNCTIONS", f"Job post {job_post_id} created", level="INFO")
             return {
                 **convert_uuids_to_str(job_post_data),
@@ -641,9 +774,11 @@ class JobPostFunctions:
                 "client_name": None,
             }
 
+
         except Exception as e:
             logger("JOB_POST_FUNCTIONS", f"Error creating job post: {str(e)}", level="ERROR")
             raise
+
 
     @staticmethod
     def update_job_post(job_post_id: str, update_data: Dict) -> Optional[Dict]:
@@ -652,19 +787,35 @@ class JobPostFunctions:
             db = get_db()
             update_data = {k: v for k, v in update_data.items() if v is not None}
 
+
             if not update_data:
                 logger("JOB_POST_FUNCTIONS", "No data to update", level="WARNING")
                 return JobPostFunctions.get_job_post_by_id(job_post_id)
 
+            # ── NEW: re-infer category if title or description changed ────────
+            if "job_title" in update_data or "job_description" in update_data:
+                existing = JobPostFunctions.get_job_post_by_id(job_post_id)
+                new_title = update_data.get("job_title", existing["job_title"] if existing else "")
+                new_desc  = update_data.get("job_description", existing["job_description"] if existing else "")
+                update_data["project_category"] = JobPostFunctions.infer_project_category(new_title, new_desc)
+                logger(
+                    "JOB_POST_FUNCTIONS",
+                    f"Re-inferred project_category={update_data['project_category']} on update for {job_post_id}",
+                    level="INFO",
+                )
+
             conditions = [("job_post_id", "=", job_post_id)]
             db.update_data(table_name="job_post", data=update_data, conditions=conditions)
+
 
             logger("JOB_POST_FUNCTIONS", f"Job post {job_post_id} updated", level="INFO")
             return JobPostFunctions.get_job_post_by_id(job_post_id)
 
+
         except Exception as e:
             logger("JOB_POST_FUNCTIONS", f"Error updating job post: {str(e)}", level="ERROR")
             raise
+
 
     @staticmethod
     def delete_job_post(job_post_id: str) -> bool:
@@ -674,8 +825,10 @@ class JobPostFunctions:
             conditions = [("job_post_id", "=", job_post_id)]
             db.delete_data(table_name="job_post", conditions=conditions)
 
+
             logger("JOB_POST_FUNCTIONS", f"Job post {job_post_id} deleted", level="INFO")
             return True
+
 
         except Exception as e:
             logger("JOB_POST_FUNCTIONS", f"Error deleting job post: {str(e)}", level="ERROR")

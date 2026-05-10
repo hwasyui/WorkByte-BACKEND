@@ -30,3 +30,6 @@ jupyter
 matplotlib
 seaborn
 easyocr
+transformers
+torch
+datasets

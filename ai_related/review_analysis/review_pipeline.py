@@ -7,6 +7,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 from functions.db_manager import get_db
 from functions.logger import logger
 from routes.reviews.review_functions import ReviewFunctions
+from routes.dm.dm_functions import DMFunctions
 from ai_related.review_analysis.review_ai_functions import (
     get_targeted_question,
     compute_on_time_score,
@@ -125,11 +126,9 @@ async def run_post_completion_pipeline(contract_id: str) -> None:
             revision_count=revision_count,
             revision_rate_score=revision_rate_score,
             responsiveness_score=responsiveness_score,
-            communication_sentiment_score=0.8,
+            communication_sentiment_score=0.5,
             conflict_score=0.0,
-            communication_summary="No AI communication analysis performed.",
-            work_quality_score=None,
-            work_quality_notes="Work quality analysis skipped.",
+            communication_summary="Communication analysis pending.",
         )
 
         logger("REVIEW_PIPELINE", f"Post-completion pipeline done | contract={contract_id} | category={category}", level="INFO")
@@ -175,7 +174,6 @@ async def run_post_review_pipeline(review_id: str) -> None:
             "on_time":       perf.get("on_time_score"),
             "revision_rate": perf.get("revision_rate_score"),
             "responsiveness":perf.get("responsiveness_score"),
-            "work_quality":  perf.get("work_quality_score"),
         }
 
         # Fetch freelancer display name for bias detection from freelancer profile
@@ -188,17 +186,16 @@ async def run_post_review_pipeline(review_id: str) -> None:
         if freelancer_rows:
             freelancer_name = freelancer_rows[0].get("full_name", "Unknown")
 
-        message_rows = db.execute_query(
-            """SELECT sender_id, message_text FROM message
-               WHERE contract_id = :cid AND deleted_at IS NULL
-               ORDER BY sent_at ASC""",
-            {"cid": review["contract_id"]},
-        )
-        message_thread = (
-            "\n".join([f"[{r['sender_id']}]: {r['message_text']}" for r in message_rows])
-            if message_rows
-            else ""
-        )
+        dm_thread = DMFunctions.get_thread_by_contract_id(review["contract_id"])
+        if dm_thread:
+            messages, _, _ = DMFunctions.get_messages(dm_thread["thread_id"], limit=1000)
+            message_thread = (
+                "\n".join([f"[{m['sender_id']}]: {m['message_text']}" for m in messages])
+                if messages
+                else ""
+            )
+        else:
+            message_thread = ""
 
         # Step 6 — Run the full review analysis in a single LLM call
         analysis_result = await analyze_review_full(
@@ -226,6 +223,23 @@ async def run_post_review_pipeline(review_id: str) -> None:
             bias_flags=analysis_result["bias_flags"],
             overall_pass=overall_pass,
         )
+
+        # Step 6.5 — Update communication analysis in the performance score record
+        sentiment_score = float(analysis_result.get("sentiment_score", 0.0))
+        communication_sentiment_score = max(0.0, min(1.0, 0.5 + sentiment_score / 2.0))
+        conflict_score = 1.0 if analysis_result.get("is_flagged_coerced", False) else 0.0
+        communication_summary = analysis_result.get("communication_summary", "")
+
+        ReviewFunctions.update_performance_scores(
+            contract_id=review["contract_id"],
+            communication_sentiment_score=communication_sentiment_score,
+            conflict_score=conflict_score,
+            communication_summary=communication_summary,
+        )
+
+        perf["communication_sentiment_score"] = communication_sentiment_score
+        perf["conflict_score"] = conflict_score
+        perf["communication_summary"] = communication_summary
 
         # Log bias if significant
         if analysis_result["bias_score"] > 0.3:
@@ -257,7 +271,6 @@ async def run_post_review_pipeline(review_id: str) -> None:
         weighted_avg, total_reviews = calculate_weighted_review_avg(freelancer_id)
         overall_score = calculate_trust_score(
             weighted_review_avg=weighted_avg,
-            work_quality_score=perf.get("work_quality_score"),
             revision_rate_score=float(perf.get("revision_rate_score") or 0.5),
             responsiveness_score=float(perf.get("responsiveness_score") or 0.8),
             communication_sentiment=perf.get("communication_sentiment_score"),
@@ -278,11 +291,27 @@ async def run_post_review_pipeline(review_id: str) -> None:
             if rank_rows and rank_rows[0]["rank_pct"] is not None:
                 category_rank_pct = float(rank_rows[0]["rank_pct"])
 
+        # Compute plain star average across all published ratings for display
+        display_star_rows = db.execute_query(
+            """
+            SELECT AVG(rr.score) as avg_score
+            FROM review_ratings rr
+            JOIN reviews r ON r.id = rr.review_id
+            WHERE r.freelancer_id = :fid AND r.status = 'published'
+            """,
+            {"fid": freelancer_id},
+        )
+        display_star_avg = (
+            round(float(display_star_rows[0]["avg_score"]), 2)
+            if display_star_rows and display_star_rows[0]["avg_score"] is not None
+            else None
+        )
+
         ReviewFunctions.upsert_trust_score(
             freelancer_id=freelancer_id,
             overall_score=overall_score,
             weighted_review_avg=weighted_avg,
-            work_quality_score=perf.get("work_quality_score"),
+            display_star_avg=display_star_avg,
             revision_rate_score=float(perf.get("revision_rate_score") or 0.5),
             responsiveness_score=float(perf.get("responsiveness_score") or 0.8),
             communication_sentiment=perf.get("communication_sentiment_score"),
@@ -290,7 +319,6 @@ async def run_post_review_pipeline(review_id: str) -> None:
             category=category,
             category_rank_pct=category_rank_pct,
         )
-
         # Step 9 — Red flag check
         ReviewFunctions.check_and_create_red_flag(freelancer_id, overall_score)
 

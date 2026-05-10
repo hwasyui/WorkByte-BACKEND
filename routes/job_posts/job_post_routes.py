@@ -68,6 +68,7 @@ async def get_all_job_posts(
     order_dir: str = Query(default="desc", description="asc or desc", pattern="^(asc|desc)$"),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
+    category: Optional[str] = Query(default=None, description="Filter by project category, e.g. mobiledev, backenddev"),
     current_user: UserInDB = Depends(get_current_user),
 ):
     """
@@ -98,6 +99,7 @@ async def get_all_job_posts(
             page=page,
             page_size=page_size,
             requesting_client_id=requesting_client_id,
+            category=category,
         )
         logger("JOB_POST", f"Browsed job posts: status={status} page={page}", "GET /job-posts", "INFO")
         return ResponseSchema.success(result, 200)
@@ -105,6 +107,17 @@ async def get_all_job_posts(
         logger("JOB_POST", f"Failed to fetch job posts: {str(e)}", "GET /job-posts", "ERROR")
         return ResponseSchema.error(f"Failed to fetch job posts: {str(e)}", 500)
 
+@job_post_router.get("/category-counts")
+async def get_category_counts(
+    current_user: UserInDB = Depends(get_current_user),
+):
+    """Return job count per projectcategory for active posts, sorted descending."""
+    try:
+        result = JobPostFunctions.get_category_counts()
+        logger("JOBPOST", "Fetched category counts", "GET job-posts/category-counts", "INFO")
+        return ResponseSchema.success(result, 200)
+    except Exception as e:
+        return ResponseSchema.error(f"Failed to fetch category counts: {str(e)}", 500)
 
 @job_post_router.get("/search", response_model=List[JobPostResponse])
 async def search_job_posts(
@@ -120,6 +133,19 @@ async def search_job_posts(
     except Exception as e:
         error_msg = f"Failed to search job posts: {str(e)}"
         logger("JOB_POST", error_msg, "GET /job-posts/search", "ERROR")
+        return ResponseSchema.error(error_msg, 500)
+
+@job_post_router.get("/client/{client_id}", response_model=List[JobPostResponse])
+async def get_job_posts_by_client(client_id: str, current_user: UserInDB = Depends(get_current_user)):
+    """Fetch all job posts for a specific client - Authenticated users only - JSON response"""
+    try:
+        job_posts = JobPostFunctions.get_job_posts_by_client_id(client_id)
+        success_msg = f"Retrieved {len(job_posts)} job posts for client {client_id}"
+        logger("JOB_POST", success_msg, "GET /job-posts/client/{client_id}", "INFO")
+        return ResponseSchema.success(job_posts, 200)
+    except Exception as e:
+        error_msg = f"Failed to fetch job posts for client {client_id}: {str(e)}"
+        logger("JOB_POST", error_msg, "GET /job-posts/client/{client_id}", "ERROR")
         return ResponseSchema.error(error_msg, 500)
 
 
@@ -138,20 +164,6 @@ async def get_job_post(job_post_id: str, current_user: UserInDB = Depends(get_cu
     except Exception as e:
         error_msg = f"Failed to fetch job post {job_post_id}: {str(e)}"
         logger("JOB_POST", error_msg, "GET /job-posts/{job_post_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
-
-
-@job_post_router.get("/client/{client_id}", response_model=List[JobPostResponse])
-async def get_job_posts_by_client(client_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch all job posts for a specific client - Authenticated users only - JSON response"""
-    try:
-        job_posts = JobPostFunctions.get_job_posts_by_client_id(client_id)
-        success_msg = f"Retrieved {len(job_posts)} job posts for client {client_id}"
-        logger("JOB_POST", success_msg, "GET /job-posts/client/{client_id}", "INFO")
-        return ResponseSchema.success(job_posts, 200)
-    except Exception as e:
-        error_msg = f"Failed to fetch job posts for client {client_id}: {str(e)}"
-        logger("JOB_POST", error_msg, "GET /job-posts/client/{client_id}", "ERROR")
         return ResponseSchema.error(error_msg, 500)
 
 

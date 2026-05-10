@@ -64,12 +64,41 @@ class ReviewFunctions:
                 ],
                 order_by="created_at DESC",
             )
-            logger("REVIEW_FUNCTIONS", f"Fetched {len(rows)} reviews for freelancer {freelancer_user_id}", level="INFO")
-            return [convert_uuids_to_str(dict(r)) for r in rows]
+
+            reviews = []
+            for row in rows:
+                review = convert_uuids_to_str(dict(row))
+
+                ratings_rows = db.fetch_data(
+                    table_name="review_ratings",
+                    conditions=[("review_id", "=", review["id"])],
+                )
+                written_rows = db.fetch_data(
+                    table_name="review_written_content",
+                    conditions=[("review_id", "=", review["id"])],
+                    limit=1,
+                )
+
+                review["ratings"] = [
+                    convert_uuids_to_str(dict(r)) for r in ratings_rows
+                ]
+                review["written_content"] = (
+                    convert_uuids_to_str(dict(written_rows[0])) if written_rows else None
+                )
+
+                reviews.append(review)
+
+            logger(
+                "REVIEW_FUNCTIONS",
+                f"Fetched {len(reviews)} detailed reviews for freelancer {freelancer_user_id}",
+                level="INFO",
+            )
+            return reviews
+
         except Exception as e:
             logger("REVIEW_FUNCTIONS", f"Error fetching reviews: {str(e)}", level="ERROR")
             raise
-
+        
     # ── Step 2: Create pending review record ──────────────────────────────────
 
     @staticmethod
@@ -160,6 +189,39 @@ class ReviewFunctions:
             logger("REVIEW_FUNCTIONS", f"Saved performance scores for contract {contract_id}", level="INFO")
         except Exception as e:
             logger("REVIEW_FUNCTIONS", f"Error saving performance scores: {str(e)}", level="ERROR")
+            raise
+
+    @staticmethod
+    def update_performance_scores(
+        contract_id: str,
+        communication_sentiment_score: Optional[float] = None,
+        conflict_score: Optional[float] = None,
+        communication_summary: Optional[str] = None,
+        work_quality_score: Optional[float] = None,
+        work_quality_notes: Optional[str] = None,
+    ) -> None:
+        try:
+            update_data = {
+                "communication_sentiment_score": communication_sentiment_score,
+                "conflict_score": conflict_score,
+                "communication_summary": communication_summary,
+                "work_quality_score": work_quality_score,
+                "work_quality_notes": work_quality_notes,
+            }
+            update_data = {k: v for k, v in update_data.items() if v is not None}
+            if not update_data:
+                logger("REVIEW_FUNCTIONS", "No performance score fields to update", level="DEBUG")
+                return
+
+            db = get_db()
+            db.update_data(
+                table_name="freelancer_performance_scores",
+                data=update_data,
+                conditions=[("contract_id", "=", contract_id)],
+            )
+            logger("REVIEW_FUNCTIONS", f"Updated performance scores for contract {contract_id}", level="INFO")
+        except Exception as e:
+            logger("REVIEW_FUNCTIONS", f"Error updating performance scores: {str(e)}", level="ERROR")
             raise
 
     # ── Step 5: Save client review submission ────────────────────────────────
@@ -299,6 +361,7 @@ class ReviewFunctions:
         freelancer_id: str,
         overall_score: float,
         weighted_review_avg: float,
+        display_star_avg: Optional[float],    
         work_quality_score: Optional[float],
         revision_rate_score: float,
         responsiveness_score: float,
@@ -318,6 +381,7 @@ class ReviewFunctions:
                 "freelancer_id": freelancer_id,
                 "overall_score": overall_score,
                 "weighted_review_avg": weighted_review_avg,
+                "display_star_avg": display_star_avg,           # ← ADD THIS
                 "work_quality_score": work_quality_score,
                 "revision_rate_score": revision_rate_score,
                 "responsiveness_score": responsiveness_score,
@@ -337,7 +401,6 @@ class ReviewFunctions:
                 data["id"] = str(uuid.uuid4())
                 db.insert_data(table_name="freelancer_trust_scores", data=data)
 
-            # Snapshot
             db.insert_data(
                 table_name="trust_score_history",
                 data={
@@ -351,7 +414,6 @@ class ReviewFunctions:
         except Exception as e:
             logger("REVIEW_FUNCTIONS", f"Error upserting trust score: {str(e)}", level="ERROR")
             raise
-
     # ── Step 9: Red flag detection ────────────────────────────────────────────
 
     @staticmethod

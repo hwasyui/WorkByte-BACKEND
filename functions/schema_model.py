@@ -182,6 +182,7 @@ class FreelancerResponse(BaseModel):
     rate_time: Optional[str] = None
     rate_currency: Optional[str] = None
     total_jobs: Optional[int] = 0
+    completed_contracts_count: int = 0
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
@@ -455,6 +456,7 @@ class JobPostCreate(BaseModel):
     client_id: Optional[str] = None
     job_title: str
     job_description: str
+    project_category: str
     project_type: str  # individual, team
     project_scope: Optional[str] = None  # small, medium, large; auto-calculated if omitted
     estimated_duration: Optional[str] = None
@@ -764,7 +766,7 @@ class ContractGenerateRequest(BaseModel):
     dispute_resolution: Optional[str] = "negotiation"
     revision_rounds: Optional[int] = 0
     additional_clauses: Optional[str] = None
-    payment_schedule: Optional[List[PaymentScheduleItem]] = None
+    payment_schedule: Optional[str] = None
     # Notification fields
     send_notification: bool = True
     notification_message: Optional[str] = None
@@ -1018,45 +1020,6 @@ class JobEmbeddingResponse(BaseModel):
     class Config:
         from_attributes = True
 
-
-# ==================== MESSAGES ====================
-class MessageAttachmentResponse(BaseModel):
-    attachment_id: str
-    message_id: str
-    file_name: str
-    file_url: str
-    file_type: str
-    mime_type: str
-    file_size_bytes: Optional[int] = None
-    duration_seconds: Optional[float] = None
-    created_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
-
-
-class MessageCreate(BaseModel):
-    contract_id: str
-    message_text: str
-
-class MessageResponse(BaseModel):
-    message_id: str
-    sender_id: str
-    receiver_id: str
-    contract_id: Optional[str] = None
-    message_text: Optional[str] = None
-    message_type: str = "user"
-    event_type: Optional[str] = None
-    metadata: Optional[Dict[str, Any]] = None
-    is_read: Optional[bool] = False
-    read_at: Optional[datetime] = None
-    sent_at: Optional[datetime] = None
-    status: str = "sent"
-    attachments: Optional[List[MessageAttachmentResponse]] = None
-
-    class Config:
-        from_attributes = True
-
 # ==================== DIRECT MESSAGES ====================
 
 class DMThreadCreate(BaseModel):
@@ -1102,6 +1065,7 @@ class DMThreadResponse(BaseModel):
     initiator_id: str
     other_user: Optional[Dict[str, Any]] = None
     job_post: Optional[Dict[str, Any]] = None
+    contract_id: Optional[str] = None
     last_message: Optional[Dict[str, Any]] = None
     unread_count: int = 0
     created_at: Optional[datetime] = None

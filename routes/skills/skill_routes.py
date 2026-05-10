@@ -2,7 +2,7 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query
 from typing import List, Optional, Dict
 import uuid
 from functions.schema_model import SkillCreate, SkillUpdate, SkillResponse
@@ -16,8 +16,11 @@ skill_router = APIRouter(prefix="/skills", tags=["Skills"])
 
 
 @skill_router.get("", response_model=List[SkillResponse])
-async def get_all_skills(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch all skills - Authenticated users only - JSON response"""
+async def get_all_skills(
+    limit: Optional[int] = None,
+    current_user: UserInDB = Depends(get_current_user)
+):
+    """Fetch all skills with optional limit"""
     try:
         skills = SkillFunctions.get_all_skills(limit=limit)
         success_msg = f"Retrieved {len(skills)} skills" + (f" (limit: {limit})" if limit else "")
@@ -31,25 +34,47 @@ async def get_all_skills(limit: Optional[int] = None, current_user: UserInDB = D
 
 @skill_router.get("/search", response_model=Dict)
 async def search_skills(
-    name: str = Query(..., description="Skill name to search for"),
+    q: str = Query(..., description="Skill name to search for"),
+    limit: int = Query(10, ge=1, le=50, description="Max results"),
     current_user: UserInDB = Depends(get_current_user),
 ):
-    """Search skills by name - Authenticated users only - JSON response"""
+    """Search and autocomplete skills - matches prefix and contains (case-insensitive)"""
     try:
-        results = SkillFunctions.search_skills_by_name(name)
-        logger("SKILL", f"Searched skills for '{name}', found {len(results)} results", "GET /skills/search", "INFO")
-        return ResponseSchema.success({"results": results, "count": len(results)}, 200)
+        results = SkillFunctions.search_skills_autocomplete(q, limit=limit)
+        logger("SKILL", f"Search '{q}' found {len(results)} results", "GET /skills/search", "INFO")
+        return ResponseSchema.success({"results": results, "count": len(results), "query": q}, 200)
     except Exception as e:
-        error_msg = f"Failed to search skills with term '{name}': {str(e)}"
+        error_msg = f"Failed to search skills with term '{q}': {str(e)}"
         logger("SKILL", error_msg, "GET /skills/search", "ERROR")
         return ResponseSchema.error(error_msg, 500)
 
 
-@skill_router.get("/category/{category}", response_model=List[SkillResponse])
-async def get_skills_by_category(category: str, current_user: UserInDB = Depends(get_current_user)):
-    """Get all skills in a category - Authenticated users only - JSON response"""
+@skill_router.get("/alphabet/{letter}", response_model=Dict)
+async def get_skills_by_alphabet(
+    letter: str,
+    limit: Optional[int] = None,
+    current_user: UserInDB = Depends(get_current_user)
+):
+    """Get skills starting with a specific letter"""
     try:
-        skills = SkillFunctions.get_skills_by_category(category)
+        skills = SkillFunctions.get_skills_by_alphabet(letter, limit=limit)
+        logger("SKILL", f"Found {len(skills)} skills starting with '{letter}'", "GET /skills/alphabet/{letter}", "INFO")
+        return ResponseSchema.success({"results": skills, "count": len(skills), "letter": letter}, 200)
+    except Exception as e:
+        error_msg = f"Failed to fetch skills by letter '{letter}': {str(e)}"
+        logger("SKILL", error_msg, "GET /skills/alphabet/{letter}", "ERROR")
+        return ResponseSchema.error(error_msg, 500)
+
+
+@skill_router.get("/category/{category}", response_model=List[SkillResponse])
+async def get_skills_by_category(
+    category: str,
+    limit: Optional[int] = None,
+    current_user: UserInDB = Depends(get_current_user)
+):
+    """Get all skills in a category (hard_skill, soft_skill, tool)"""
+    try:
+        skills = SkillFunctions.get_skills_by_category(category, limit=limit)
         success_msg = f"Retrieved {len(skills)} skills in category '{category}'"
         logger("SKILL", success_msg, "GET /skills/category/{category}", "INFO")
         return ResponseSchema.success(skills, 200)
@@ -61,7 +86,7 @@ async def get_skills_by_category(category: str, current_user: UserInDB = Depends
 
 @skill_router.get("/{skill_id}", response_model=SkillResponse)
 async def get_skill(skill_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch a single skill by ID - Authenticated users only - JSON response"""
+    """Fetch a single skill by ID"""
     try:
         skill = SkillFunctions.get_skill_by_id(skill_id)
         if not skill:
@@ -79,18 +104,15 @@ async def get_skill(skill_id: str, current_user: UserInDB = Depends(get_current_
 
 @skill_router.post("", response_model=SkillResponse, status_code=201)
 async def create_skill(skill: SkillCreate, current_user: UserInDB = Depends(get_current_user)):
-    """Create a new skill - Authenticated users only - JSON body accepted"""
+    """Create a new skill"""
     try:
-        # Generate UUID if not provided
-        skill_id = skill.skill_id or str(uuid.uuid4())
-        
         new_skill = SkillFunctions.create_skill(
             skill_name=skill.skill_name,
             skill_category=skill.skill_category,
             description=skill.description
         )
-        
-        success_msg = f"Created skill {skill_id}: {skill.skill_name} in category {skill.skill_category}"
+
+        success_msg = f"Created skill: {skill.skill_name} in category {skill.skill_category}"
         logger("SKILL", success_msg, "POST /skills", "INFO")
         return ResponseSchema.success(new_skill, 201)
     except ValueError as e:
@@ -105,19 +127,18 @@ async def create_skill(skill: SkillCreate, current_user: UserInDB = Depends(get_
 
 @skill_router.put("/{skill_id}", response_model=SkillResponse)
 async def update_skill(skill_id: str, skill_update: SkillUpdate, current_user: UserInDB = Depends(get_current_user)):
-    """Update skill information - Authenticated users only - JSON body accepted"""
+    """Update skill information"""
     try:
-        # Check if skill exists
         existing = SkillFunctions.get_skill_by_id(skill_id)
         if not existing:
             error_msg = f"Skill {skill_id} not found for update"
             logger("SKILL", error_msg, "PUT /skills/{skill_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
-        
+
         update_data = {k: v for k, v in skill_update.dict().items() if v is not None}
         updated_skill = SkillFunctions.update_skill(skill_id, update_data)
-        
-        success_msg = f"Updated skill {skill_id} with fields: {', '.join(update_data.keys())}"
+
+        success_msg = f"Updated skill {skill_id}"
         logger("SKILL", success_msg, "PUT /skills/{skill_id}", "INFO")
         return ResponseSchema.success(updated_skill, 200)
     except ValueError as e:
@@ -132,15 +153,14 @@ async def update_skill(skill_id: str, skill_update: SkillUpdate, current_user: U
 
 @skill_router.delete("/{skill_id}", status_code=200)
 async def delete_skill(skill_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Delete a skill - Authenticated users only - JSON response"""
+    """Delete a skill"""
     try:
-        # Check if skill exists
         existing = SkillFunctions.get_skill_by_id(skill_id)
         if not existing:
             error_msg = f"Skill {skill_id} not found for deletion"
             logger("SKILL", error_msg, "DELETE /skills/{skill_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
-        
+
         SkillFunctions.delete_skill(skill_id)
         success_msg = f"Skill {skill_id} deleted successfully"
         logger("SKILL", success_msg, "DELETE /skills/{skill_id}", "INFO")

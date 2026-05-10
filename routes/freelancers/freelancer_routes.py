@@ -99,6 +99,7 @@ async def update_freelancer(
         update_data = freelancer_update.model_dump(
             exclude={"profile_picture"},
             exclude_unset=True,
+            exclude_none=True,
         )
 
         if freelancer_update.profile_picture is not None:
