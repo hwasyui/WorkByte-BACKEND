@@ -456,7 +456,7 @@ class JobPostCreate(BaseModel):
     client_id: Optional[str] = None
     job_title: str
     job_description: str
-    project_category: str
+    project_category: Optional[str] = None  # auto-inferred from title+description if omitted
     project_type: str  # individual, team
     project_scope: Optional[str] = None  # small, medium, large; auto-calculated if omitted
     estimated_duration: Optional[str] = None

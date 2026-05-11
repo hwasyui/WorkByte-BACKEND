@@ -19,24 +19,28 @@ def _get_easyocr_reader():
 
 
 def _extract_text_from_pdf(file_bytes: bytes) -> str:
-    """Extract text from PDF using pdfplumber. Falls back to EasyOCR for scanned PDFs."""
+    """
+    Extract text from PDF using both pdfplumber and EasyOCR, then return whichever
+    yields more characters. pdfplumber handles selectable text (fast, preserves order);
+    EasyOCR captures text embedded in images or complex layouts that pdfplumber misses.
+    """
+    # --- pdfplumber ---
+    plumber_text = ""
     try:
         logger("CV_UPLOAD", "Extracting PDF text with pdfplumber", level="DEBUG")
         with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
             pages = [page.extract_text() or "" for page in pdf.pages]
-        text = "\n".join(pages).strip()
-        if len(text) >= 150:
-            logger("CV_UPLOAD", f"pdfplumber extracted {len(text)} chars", level="DEBUG")
-            return text
-        logger("CV_UPLOAD", "pdfplumber returned sparse text — assuming scanned PDF, switching to EasyOCR", level="DEBUG")
+        plumber_text = "\n".join(pages).strip()
+        logger("CV_UPLOAD", f"pdfplumber extracted {len(plumber_text)} chars", level="DEBUG")
     except Exception as e:
         logger("CV_UPLOAD", f"pdfplumber failed: {e}", level="DEBUG")
 
-    # Scanned PDF fallback: convert each page to an image then OCR
+    # --- EasyOCR (always runs) ---
+    ocr_text = ""
     try:
         import numpy as np
         from pdf2image import convert_from_bytes
-        logger("CV_UPLOAD", "Converting scanned PDF pages to images for EasyOCR", level="DEBUG")
+        logger("CV_UPLOAD", "Converting PDF pages to images for EasyOCR", level="DEBUG")
         images = convert_from_bytes(file_bytes, dpi=200)
         reader = _get_easyocr_reader()
         page_texts = []
@@ -44,12 +48,19 @@ def _extract_text_from_pdf(file_bytes: bytes) -> str:
             blocks = reader.readtext(np.array(img), detail=0, paragraph=True)
             page_texts.append("\n".join(blocks))
             logger("CV_UPLOAD", f"EasyOCR page {i + 1}: {len(blocks)} text blocks", level="DEBUG")
-        text = "\n".join(page_texts).strip()
-        logger("CV_UPLOAD", f"EasyOCR extracted {len(text)} chars from scanned PDF", level="DEBUG")
-        return text
+        ocr_text = "\n".join(page_texts).strip()
+        logger("CV_UPLOAD", f"EasyOCR extracted {len(ocr_text)} chars", level="DEBUG")
     except Exception as e:
-        logger("CV_UPLOAD", f"EasyOCR scanned-PDF fallback failed: {e}", level="ERROR")
-        raise RuntimeError(f"Failed to extract text from PDF (pdfplumber and EasyOCR both failed): {e}")
+        logger("CV_UPLOAD", f"EasyOCR failed: {e}", level="DEBUG")
+
+    # Return whichever extraction is richer
+    if ocr_text and len(ocr_text) >= len(plumber_text):
+        logger("CV_UPLOAD", "Using EasyOCR result (richer or equal)", level="DEBUG")
+        return ocr_text
+    if plumber_text:
+        logger("CV_UPLOAD", "Using pdfplumber result (richer)", level="DEBUG")
+        return plumber_text
+    raise RuntimeError("Failed to extract text from PDF (both pdfplumber and EasyOCR failed)")
 
 
 def _extract_text_from_docx(file_bytes: bytes) -> str:

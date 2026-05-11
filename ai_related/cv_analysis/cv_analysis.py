@@ -2,23 +2,26 @@ import io
 import os
 import re
 import math
-import httpx
-from typing import List, Optional
+import json
+from typing import List, Optional, Dict, Any
 from fastapi import UploadFile
+from groq import Groq
 from sentence_transformers import SentenceTransformer
 from functions.db_manager import get_db
 from functions.logger import logger
 from ai_related.job_matching.source_text_builder import build_freelancer_source_text
 
-_MODEL_PATH = os.path.join(os.path.dirname(__file__), "cv-analysis-model", "cv-matching-model")
+# all-MiniLM-L6-v2 for CV-to-profile semantic similarity (384-dim)
+# Separate from job matching embeddings (768-dim via embedding_service)
+_CV_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 _cv_model: Optional[SentenceTransformer] = None
 
 
 def _get_cv_model() -> SentenceTransformer:
     global _cv_model
     if _cv_model is None:
-        logger("CV_ANALYSIS", f"Loading CV matching model from {_MODEL_PATH}", level="INFO")
-        _cv_model = SentenceTransformer(_MODEL_PATH)
+        logger("CV_ANALYSIS", f"Loading CV similarity model: {_CV_MODEL_NAME}", level="INFO")
+        _cv_model = SentenceTransformer(_CV_MODEL_NAME)
     return _cv_model
 
 
@@ -47,7 +50,7 @@ async def extract_cv_text(cv_file: UploadFile) -> str:
         pages = [page.extract_text() or "" for page in reader.pages]
         extracted = "\n".join(pages).strip()
         if not extracted:
-            raise ValueError("Unable to extract text from the PDF. Ensure the PDF contains selectable text, not scanned images.")
+            raise ValueError("Unable to extract text from the PDF. Ensure the PDF contains selectable text.")
         return extracted
 
     if file_name.endswith(".docx") or cv_file.content_type in (
@@ -58,12 +61,10 @@ async def extract_cv_text(cv_file: UploadFile) -> str:
         doc = docx.Document(io.BytesIO(contents))
         extracted = "\n".join(para.text for para in doc.paragraphs if para.text.strip())
         if not extracted:
-            raise ValueError("Unable to extract text from the DOCX file. Ensure the document contains text content.")
+            raise ValueError("Unable to extract text from the DOCX file.")
         return extracted
 
-    raise ValueError(
-        "Unsupported CV file type. Please upload a PDF (.pdf) or Word document (.docx)."
-    )
+    raise ValueError("Unsupported CV file type. Please upload a PDF (.pdf) or Word document (.docx).")
 
 
 def get_profile_skill_names(freelancer_id: str) -> List[str]:
@@ -108,6 +109,33 @@ def cosine_similarity(a: List[float], b: List[float]) -> float:
     return max(min(dot / (mag_a * mag_b), 1.0), -1.0)
 
 
+def compute_resume_score(similarity: float, skill_coverage: Optional[float]) -> int:
+    """Convert similarity + skill coverage to a 0-100 resume score."""
+    sim_component = min(100.0, max(0.0, (similarity - 0.30) / 0.55 * 100.0))
+    if skill_coverage is not None:
+        cov_component = min(100.0, max(0.0, skill_coverage * 100.0))
+        return int(round(sim_component * 0.6 + cov_component * 0.4))
+    return int(round(sim_component))
+
+
+def compute_overall_score(resume_score: int, ats_score: int) -> int:
+    """Simple average of resume score and ATS score."""
+    result = int(round((resume_score + ats_score) / 2))
+    logger("CV_ANALYSIS", f"compute_overall_score({resume_score}, {ats_score}) = {result}", level="DEBUG")
+    return result
+
+
+def grade_overall_score(overall_score: int) -> str:
+    """Map overall_score (0-100) to one of four grades."""
+    if overall_score >= 80:
+        return "excellent"
+    if overall_score >= 60:
+        return "good"
+    if overall_score >= 40:
+        return "fair"
+    return "bad"
+
+
 def classify_cv_quality(similarity: float, coverage: Optional[float], ats_score: Optional[int] = None) -> str:
     if coverage is not None:
         if similarity >= 0.82 and coverage >= 0.65:
@@ -134,17 +162,13 @@ def classify_cv_quality(similarity: float, coverage: Optional[float], ats_score:
 
 
 def check_ats_compliance(raw_text: str) -> dict:
-    """
-    Rule-based ATS compliance check.
-    Returns ats_score (0–100) and ats_flags listing each failed check.
-    """
+    """Rule-based ATS compliance check. Returns ats_score (0–100) and ats_flags."""
     import re as _re
     text_lower = raw_text.lower()
     word_count = len(raw_text.split())
     flags: List[str] = []
     score = 0
 
-    # Section presence (40 pts)
     section_checks = [
         (["summary", "professional summary", "profile", "about", "objective"], "Missing a Summary or Profile section", 10),
         (["skills", "technical skills", "expertise", "competencies"], "Missing a Skills section", 10),
@@ -157,7 +181,6 @@ def check_ats_compliance(raw_text: str) -> dict:
         else:
             flags.append(flag_msg)
 
-    # Contact info (15 pts)
     if _re.search(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}", raw_text):
         score += 8
     else:
@@ -168,7 +191,6 @@ def check_ats_compliance(raw_text: str) -> dict:
     else:
         flags.append("No phone number found")
 
-    # Word count (15 pts)
     if 300 <= word_count <= 800:
         score += 15
     elif 200 <= word_count < 300:
@@ -183,7 +205,6 @@ def check_ats_compliance(raw_text: str) -> dict:
         else:
             flags.append("CV is very long — condense to the most relevant experience")
 
-    # Content quality (30 pts)
     if _re.search(r"\d+\s*(%|percent|users|clients|projects|increase|decrease|revenue|saving)", text_lower):
         score += 10
     else:
@@ -208,106 +229,211 @@ def check_ats_compliance(raw_text: str) -> dict:
     return {"ats_score": score, "ats_flags": flags}
 
 
+def _call_gemini(system_prompt: str, user_prompt: str, json_mode: bool = False, max_tokens: int = 1500) -> Any:
+    """Call Gemini as fallback when GROQ is unavailable."""
+    from google import genai as google_genai
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        raise RuntimeError("GEMINI_API_KEY not set")
+    client = google_genai.Client(api_key=api_key)
+    model  = os.getenv("GOOGLE_LLM", "gemini-2.5-flash")
+    config: Dict[str, Any] = {
+        "system_instruction": system_prompt,
+        "temperature": 0.3,
+        "max_output_tokens": max_tokens,
+    }
+    if json_mode:
+        config["response_mime_type"] = "application/json"
+    response = client.models.generate_content(
+        model=model,
+        contents=[user_prompt],
+        config=config,
+    )
+    content = response.text.strip()
+    if json_mode:
+        return json.loads(content)
+    return content
 
-def _build_llm_prompt(
+
+def _call_groq(system_prompt: str, user_prompt: str, json_mode: bool = False, max_tokens: int = 1500) -> Any:
+    """Call GROQ LLM; falls back to Gemini on any connection/API error."""
+    try:
+        client = Groq()
+        kwargs: Dict[str, Any] = {
+            "model": "openai/gpt-oss-20b",
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            "temperature": 0.3,
+            "max_tokens": max_tokens,
+        }
+        if json_mode:
+            kwargs["response_format"] = {"type": "json_object"}
+        completion = client.chat.completions.create(**kwargs)
+        content = completion.choices[0].message.content.strip()
+        if json_mode:
+            return json.loads(content)
+        return content
+    except Exception as groq_err:
+        logger("CV_ANALYSIS", f"GROQ failed ({groq_err}), falling back to Gemini", level="WARNING")
+        return _call_gemini(system_prompt, user_prompt, json_mode=json_mode, max_tokens=max_tokens)
+
+
+async def analyze_cv_with_llm(
     cv_text: str,
     profile_text: str,
     similarity: float,
     skill_coverage: Optional[float],
     matched_skills: List[str],
     missing_skills: List[str],
-) -> str:
-    coverage_str = f"{skill_coverage:.0%}" if skill_coverage is not None else "unknown"
-    matched_str  = ", ".join(matched_skills[:10]) if matched_skills else "none"
-    missing_str  = ", ".join(missing_skills[:10]) if missing_skills else "none"
+    ats_result: Dict[str, Any],
+) -> Dict[str, Any]:
+    """
+    Full structured CV analysis via GROQ.
+    All content — assessment, per-section analysis, recommendations — comes from the LLM.
+    """
+    coverage_str = f"{skill_coverage:.0%}" if skill_coverage is not None else "N/A"
+    matched_str = ", ".join(matched_skills[:10]) if matched_skills else "none"
+    missing_str = ", ".join(missing_skills[:10]) if missing_skills else "none"
+    ats_flags_str = "\n".join(f"- {f}" for f in ats_result.get("ats_flags", [])) or "None"
 
-    return (
-        "You are a professional CV reviewer. Carefully read the CV and the freelancer profile below, "
-        "then provide exactly 3 specific, actionable recommendations to improve this CV's match with "
-        "this particular profile. Each recommendation must reference concrete details from the CV or "
-        "profile — do not give generic advice. Format your response as a numbered list (1. 2. 3.) "
-        "with no preamble, no headers, and no trailing text.\n\n"
+    system = (
+        "You are an expert CV reviewer and career coach. "
+        "Analyze the provided CV against the freelancer profile and return valid JSON only. "
+        "Do not include markdown fences, explanations, or any text outside the JSON."
+    )
+
+    schema_example = {
+        "resume_score": 72,
+        "overall_assessment": "Concise overall assessment specific to this candidate's CV...",
+        "profile_match_analysis": "How well the CV aligns with the freelancer's profile...",
+        "sections": [
+            {
+                "title": "Skills Analysis",
+                "analysis": "Specific analysis of skills present, missing, and their relevance...",
+                "recommendations": ["Specific actionable recommendation 1", "Specific actionable recommendation 2"]
+            },
+            {
+                "title": "Work Experience",
+                "analysis": "Analysis of experience descriptions, impact, and relevance...",
+                "recommendations": ["Add quantifiable metrics to each role", "Strengthen impact statements"]
+            },
+            {
+                "title": "Education",
+                "analysis": "Assessment of education section completeness and relevance...",
+                "recommendations": ["Include relevant coursework or certifications"]
+            },
+            {
+                "title": "ATS Optimization",
+                "analysis": "ATS compliance assessment based on formatting and keyword usage...",
+                "recommendations": ["Address specific ATS issues found"]
+            }
+        ]
+    }
+
+    user = (
         f"=== ANALYSIS METRICS ===\n"
-        f"Similarity score : {similarity:.2f} ({similarity*100:.1f}%)\n"
-        f"Skill coverage   : {coverage_str}\n"
-        f"Skills matched   : {matched_str}\n"
-        f"Skills missing   : {missing_str}\n\n"
-        f"=== FREELANCER PROFILE ===\n{profile_text[:2000]}\n\n"
-        f"=== CV CONTENT ===\n{cv_text[:2000]}"
+        f"Profile-CV Similarity: {similarity:.2f} ({similarity * 100:.1f}%)\n"
+        f"Skill Coverage: {coverage_str}\n"
+        f"Skills Matched: {matched_str}\n"
+        f"Skills Missing from CV: {missing_str}\n"
+        f"ATS Score: {ats_result.get('ats_score', 0)}/100\n"
+        f"ATS Issues Found:\n{ats_flags_str}\n\n"
+        f"=== FREELANCER PROFILE ===\n{profile_text[:2500]}\n\n"
+        f"=== CV CONTENT ===\n{cv_text[:2500]}\n\n"
+        "Analyze this CV and return exactly one JSON object matching this structure:\n"
+        f"{json.dumps(schema_example, ensure_ascii=False)}\n\n"
+        "Rules:\n"
+        "- resume_score: integer 0-100 based on CV quality, completeness, and profile alignment\n"
+        "- All text must reference specific details from THIS CV and THIS profile — never generic advice\n"
+        "- sections must contain exactly these four titles in order: "
+        "'Skills Analysis', 'Work Experience', 'Education', 'ATS Optimization'\n"
+        "- Each section must have 2-4 specific, actionable recommendations\n"
+        "- Return only the JSON object, nothing else"
     )
 
-
-async def _call_ollama(prompt: str) -> str:
-    base = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434/api/generate")
-    if "/api/" in base:
-        base = base[: base.index("/api/")]
-    url = base.rstrip("/") + "/api/generate"
-    if "127.0.0.1" in url:
-        url = url.replace("127.0.0.1", "host.docker.internal")
-
-    model = os.getenv("OLLAMA_LLM", "gemma4:e2b")
-    payload = {"model": model, "prompt": prompt, "stream": False, "options": {"temperature": 0.3, "num_predict": 512}}
-
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        resp = await client.post(url, json=payload)
-
-    if resp.status_code != 200:
-        raise RuntimeError(f"Ollama HTTP {resp.status_code}")
-
-    raw = resp.json().get("response", "").strip()
-    if not raw:
-        raise RuntimeError("Ollama returned empty response")
-    return raw
+    try:
+        result = _call_groq(system, user, json_mode=True, max_tokens=1800)
+        return {
+            "resume_score": max(0, min(100, int(result.get("resume_score", 50)))),
+            "overall_assessment": str(result.get("overall_assessment", "")),
+            "profile_match_analysis": str(result.get("profile_match_analysis", "")),
+            "sections": result.get("sections", []),
+        }
+    except Exception as e:
+        logger("CV_ANALYSIS", f"LLM structured analysis failed: {e}", level="ERROR")
+        return {
+            "resume_score": compute_resume_score(similarity, skill_coverage),
+            "overall_assessment": "",
+            "profile_match_analysis": "",
+            "sections": [],
+        }
 
 
-async def _call_gemini(prompt: str) -> str:
-    from google import genai
-
-    project_id = os.getenv("GOOGLE_PROJECT_ID")
-    location = os.getenv("GOOGLE_LOCATION", "us-central1")
-    model = os.getenv("GOOGLE_LLM", "gemini-2.5-flash")
-
-    if project_id:
-        client = genai.Client(vertexai=True, project=project_id, location=location)
-    else:
-        api_key = os.getenv("GEMINI_API_KEY")
-        if not api_key:
-            raise RuntimeError("No GOOGLE_PROJECT_ID or GEMINI_API_KEY configured")
-        client = genai.Client(api_key=api_key)
-
-    response = await client.aio.models.generate_content(
-        model=model,
-        contents=prompt,
-        config={"temperature": 0.3, "max_output_tokens": 512},
+async def parse_cv_for_profile(cv_text: str) -> Dict[str, Any]:
+    """
+    Parse CV text into structured profile fields.
+    Returns suggested data the frontend can offer as profile auto-fill.
+    """
+    system = (
+        "You are an expert at parsing CVs and resumes into structured data. "
+        "Extract profile information and return valid JSON only. "
+        "Do not include markdown fences, explanations, or any text outside the JSON."
     )
-    return response.text.strip()
 
+    schema_example = {
+        "suggested_bio": "Professional bio derived from CV content in 2-3 sentences...",
+        "skills": ["Python", "FastAPI", "React", "PostgreSQL"],
+        "languages": [
+            {"name": "English", "proficiency": "fluent"},
+            {"name": "Indonesian", "proficiency": "native"}
+        ],
+        "work_experience": [
+            {
+                "job_title": "Software Engineer",
+                "company_name": "Tech Corp",
+                "location": "Jakarta, Indonesia",
+                "start_date": "2020-01",
+                "end_date": "2022-06",
+                "is_current": False,
+                "description": "Role responsibilities and achievements..."
+            }
+        ],
+        "education": [
+            {
+                "institution_name": "University Name",
+                "degree": "Bachelor",
+                "field_of_study": "Computer Science",
+                "start_date": "2016",
+                "end_date": "2020",
+                "is_current": False,
+                "grade": ""
+            }
+        ]
+    }
 
-async def _call_llm_for_recommendations(prompt: str) -> str:
-    mode = os.getenv("LLM", "local").strip().lower()
+    user = (
+        f"=== CV TEXT ===\n{cv_text[:4000]}\n\n"
+        "Parse this CV and return exactly one JSON object matching this structure:\n"
+        f"{json.dumps(schema_example, ensure_ascii=False)}\n\n"
+        "Rules:\n"
+        "- suggested_bio: 2-3 sentence professional summary derived from CV content\n"
+        "- skills: all technical and relevant soft skills mentioned\n"
+        "- languages proficiency must be one of: basic, conversational, fluent, native\n"
+        "- dates: use YYYY-MM format when month is known, YYYY when only year is known\n"
+        "- is_current: true only if the role or education is ongoing\n"
+        "- Do not invent information not present in the CV\n"
+        "- Use empty string or empty list when a field cannot be found\n"
+        "- Return only the JSON object, nothing else"
+    )
 
-    if mode == "local":
-        try:
-            return await _call_ollama(prompt)
-        except Exception as e:
-            logger("CV_ANALYSIS", f"Ollama failed ({e}) — falling back to Gemini", level="WARNING")
-            return await _call_gemini(prompt)
-    else:
-        return await _call_gemini(prompt)
-
-
-def _parse_llm_recommendations(llm_text: str) -> List[str]:
-    """Split a numbered LLM response into individual recommendation strings."""
-    items = re.split(r"\n\s*\d+\.\s+", llm_text)
-    # First split element may be empty or a preamble before "1."
-    cleaned = []
-    for item in items:
-        item = item.strip()
-        # Strip leading "1. " if the text wasn't split (single-item response)
-        item = re.sub(r"^\d+\.\s+", "", item)
-        if item:
-            cleaned.append(item)
-    return cleaned if cleaned else [llm_text.strip()]
+    try:
+        result = _call_groq(system, user, json_mode=True, max_tokens=2000)
+        return result
+    except Exception as e:
+        logger("CV_ANALYSIS", f"CV profile parsing failed: {e}", level="ERROR")
+        return {}
 
 
 async def build_cv_recommendations(
@@ -318,14 +444,13 @@ async def build_cv_recommendations(
     matched_skills: List[str],
     missing_skills: List[str],
 ) -> List[str]:
-    prompt = _build_llm_prompt(
-        cv_text, profile_text, similarity, skill_coverage, matched_skills, missing_skills
+    """Flat recommendation list for backward compatibility with cv_upload_routes."""
+    ats_result = check_ats_compliance(cv_text)
+    analysis = await analyze_cv_with_llm(
+        cv_text, profile_text, similarity, skill_coverage,
+        matched_skills, missing_skills, ats_result,
     )
-    try:
-        llm_text = await _call_llm_for_recommendations(prompt)
-        if llm_text:
-            return _parse_llm_recommendations(llm_text)
-    except Exception as e:
-        logger("CV_ANALYSIS", f"LLM recommendation failed: {e}", level="WARNING")
-
-    return []
+    recs: List[str] = []
+    for section in analysis.get("sections", []):
+        recs.extend(section.get("recommendations", []))
+    return recs

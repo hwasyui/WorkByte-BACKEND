@@ -17,7 +17,12 @@ from ai_related.cv_analysis.cv_analysis import (
     get_cv_embedding,
     cosine_similarity,
     classify_cv_quality,
-    build_cv_recommendations,
+    compute_resume_score,
+    compute_overall_score,
+    grade_overall_score,
+    check_ats_compliance,
+    analyze_cv_with_llm,
+    parse_cv_for_profile,
 )
 
 cv_analysis_router = APIRouter(prefix="/cv_analysis", tags=["CV Analysis"])
@@ -39,44 +44,61 @@ async def analyze_cv(
         if not freelancer:
             raise HTTPException(status_code=404, detail="Freelancer profile not found")
 
-        freelancer_id = freelancer['freelancer_id']
+        freelancer_id = freelancer["freelancer_id"]
 
         profile_text = build_freelancer_profile_text(freelancer_id)
         if not profile_text:
-            raise HTTPException(status_code=400, detail="Unable to build freelancer profile text")
+            raise HTTPException(status_code=400, detail="Freelancer profile is incomplete. Add skills, education, or experience first.")
 
         cv_embedding = get_cv_embedding(cv_text)
         profile_embedding = get_cv_embedding(profile_text)
-
         similarity = cosine_similarity(cv_embedding, profile_embedding)
 
         profile_skills = get_profile_skill_names(freelancer_id)
         matched_skills = extract_skills_from_text(cv_text, profile_skills)
-        missing_skills = [skill for skill in profile_skills if skill not in matched_skills]
+        missing_skills = [s for s in profile_skills if s not in matched_skills]
+        skill_coverage = len(matched_skills) / len(profile_skills) if profile_skills else None
 
-        skill_coverage = len(matched_skills) / len(profile_skills) if profile_skills else 0.0
+        ats_result = check_ats_compliance(cv_text)
+        resume_score = compute_resume_score(similarity, skill_coverage)
 
-        quality = classify_cv_quality(similarity, skill_coverage)
-
-        recommendations = await build_cv_recommendations(
+        llm_analysis = await analyze_cv_with_llm(
             cv_text=cv_text,
             profile_text=profile_text,
             similarity=similarity,
             skill_coverage=skill_coverage,
             matched_skills=matched_skills,
             missing_skills=missing_skills,
+            ats_result=ats_result,
         )
 
-        result = {
-            "scoring": quality,
-            "similarity_score": similarity,
-            "skill_coverage": skill_coverage,
-            "recommendations": recommendations,
-        }
+        parsed_profile = await parse_cv_for_profile(cv_text)
 
-        logger("CV_ANALYSIS", f"CV analysis completed for freelancer {freelancer_id} | quality={quality} | similarity={similarity:.3f}", level="INFO")
+        final_resume_score = llm_analysis["resume_score"]
+        overall_score = compute_overall_score(final_resume_score, ats_result["ats_score"])
+        overall_grade = grade_overall_score(overall_score)
 
-        return ResponseSchema.success(result)
+        logger(
+            "CV_ANALYSIS",
+            f"CV analysis completed | freelancer={freelancer_id} | overall={overall_score} ({overall_grade}) | similarity={similarity:.3f}",
+            level="INFO",
+        )
+
+        return ResponseSchema.success({
+            "overall_score": overall_score,
+            "overall_grade": overall_grade,
+            "resume_score": final_resume_score,
+            "ats_score": ats_result["ats_score"],
+            "ats_flags": ats_result["ats_flags"],
+            "similarity_score": round(similarity, 4),
+            "skill_coverage": round(skill_coverage, 4) if skill_coverage is not None else None,
+            "matched_skills": matched_skills,
+            "missing_skills": missing_skills,
+            "overall_assessment": llm_analysis["overall_assessment"],
+            "profile_match_analysis": llm_analysis["profile_match_analysis"],
+            "sections": llm_analysis["sections"],
+            "suggested_profile": parsed_profile,
+        })
 
     except HTTPException:
         raise

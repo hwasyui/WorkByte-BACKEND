@@ -21,6 +21,7 @@ catboost
 scikit-learn
 httpx
 google-genai
+groq
 sentence-transformers
 pdfplumber
 pdf2image
@@ -33,3 +34,4 @@ easyocr
 transformers
 torch
 datasets
+groq
