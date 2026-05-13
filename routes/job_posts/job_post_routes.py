@@ -21,6 +21,7 @@ from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.job_posts.job_post_functions import JobPostFunctions
 from ai_related.job_matching.embedding_manager import upsert_job_embedding, mark_job_dirty
+from routes.admin.admin_functions import queue_content_scan, queue_scam_scan
 
 job_post_router = APIRouter(prefix="/job-posts", tags=["Job Posts"])
 
@@ -210,6 +211,15 @@ async def create_job_post(job_post: JobPostCreate, current_user: UserInDB = Depe
         )
         
         asyncio.create_task(upsert_job_embedding(str(new_job_post["job_post_id"])))
+
+        # Background: content moderation + scam detection
+        scan_text = f"{job_post.job_title} {job_post.job_description}"
+        _jp_id    = str(new_job_post["job_post_id"])
+        _cl_id    = str(client["client_id"])
+        _usr_id   = current_user.user_id
+        asyncio.create_task(asyncio.to_thread(queue_content_scan, "job_post", _jp_id, _usr_id, scan_text))
+        asyncio.create_task(asyncio.to_thread(queue_scam_scan, _jp_id, _cl_id, scan_text))
+
         success_msg = f"Created job post {job_post_id} for client {job_post.client_id}"
         logger("JOB_POST", success_msg, "POST /job-posts", "INFO")
         return ResponseSchema.success(new_job_post, 201)

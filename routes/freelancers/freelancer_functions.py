@@ -410,7 +410,7 @@ def get_comprehensive_freelancer_profile(freelancer_id: str) -> Optional[Dict]:
 
         skills_query = """
             SELECT fs.freelancer_skill_id, fs.proficiency_level, fs.created_at,
-                   s.skill_id, s.skill_name, s.skill_category, s.description,
+                   s.skill_id, s.skill_name, s.skill_category,
                    s.created_at as skill_created_at
             FROM freelancer_skill fs
             JOIN skill s ON fs.skill_id = s.skill_id
@@ -422,7 +422,7 @@ def get_comprehensive_freelancer_profile(freelancer_id: str) -> Optional[Dict]:
 
         specialities_query = """
             SELECT fsp.freelancer_speciality_id, fsp.is_primary, fsp.created_at,
-                   sp.speciality_id, sp.speciality_name, sp.description,
+                   sp.speciality_id, sp.speciality_name,
                    sp.created_at as speciality_created_at
             FROM freelancer_speciality fsp
             JOIN speciality sp ON fsp.speciality_id = sp.speciality_id

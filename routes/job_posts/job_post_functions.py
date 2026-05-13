@@ -37,8 +37,11 @@ _JOB_POST_SELECT = """
         jp.working_days, jp.deadline, jp.experience_level, jp.status,
         jp.is_ai_generated, jp.view_count, jp.project_category,
         jp.created_at, jp.updated_at, jp.posted_at, jp.closed_at,
+        jp.closure_reason, jp.closure_note,
         COUNT(DISTINCT jr.job_role_id) AS role_count,
+        COALESCE(SUM(jr.positions_available), 0) AS available_positions,
         c.full_name AS client_name,
+        c.profile_picture_url AS profile_picture_url,
         (
             SELECT COUNT(*)
             FROM proposal p
@@ -559,7 +562,7 @@ class JobPostFunctions:
 
             data_query = _JOB_POST_SELECT + f"""
                 {where}
-                GROUP BY jp.job_post_id, c.full_name
+                GROUP BY jp.job_post_id, c.full_name, c.profile_picture_url
                 ORDER BY {sort_col} {direction} NULLS LAST
                 LIMIT :limit OFFSET :offset
             """
@@ -591,7 +594,7 @@ class JobPostFunctions:
                 WHERE jp.status = 'active'
                   AND (jp.job_title ILIKE '%' || :term || '%'
                     OR jp.job_description ILIKE '%' || :term || '%')
-                GROUP BY jp.job_post_id, c.full_name
+                GROUP BY jp.job_post_id, c.full_name, c.profile_picture_url
                 ORDER BY jp.created_at DESC
                 LIMIT :limit
             """
@@ -609,7 +612,7 @@ class JobPostFunctions:
         try:
             db = get_db()
             query = _JOB_POST_SELECT + """
-                GROUP BY jp.job_post_id, c.full_name
+                GROUP BY jp.job_post_id, c.full_name, c.profile_picture_url
                 ORDER BY jp.created_at DESC
                 {limit_clause}
             """.format(limit_clause=f"LIMIT {limit}" if limit else "")
@@ -632,7 +635,7 @@ class JobPostFunctions:
             db = get_db()
             query = _JOB_POST_SELECT + """
                 WHERE jp.job_post_id = :job_post_id
-                GROUP BY jp.job_post_id, c.full_name
+                GROUP BY jp.job_post_id, c.full_name, c.profile_picture_url
             """
             rows = db.execute_query(query, {"job_post_id": job_post_id})
 
@@ -657,7 +660,7 @@ class JobPostFunctions:
             db = get_db()
             query = _JOB_POST_SELECT + """
                 WHERE jp.client_id = :client_id
-                GROUP BY jp.job_post_id, c.full_name
+                GROUP BY jp.job_post_id, c.full_name, c.profile_picture_url
                 ORDER BY jp.created_at DESC
             """
             rows = db.execute_query(query, {"client_id": client_id})
@@ -771,7 +774,12 @@ class JobPostFunctions:
             return {
                 **convert_uuids_to_str(job_post_data),
                 "role_count":  0,
+                "available_positions": 0,
                 "client_name": None,
+                "profile_picture_url": None,
+                "proposal_count": 0,
+                "closure_reason": None,
+                "closure_note": None,
             }
 
 

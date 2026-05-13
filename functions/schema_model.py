@@ -19,6 +19,9 @@ class UserInDB(BaseModel):
     is_admin: bool = False
     freelancer_id: Optional[str] = None
     client_id: Optional[str] = None
+    is_report_banned: bool = False
+    ban_message: Optional[str] = None
+    report_banned_at: Optional[datetime] = None
 
 class UserRegister(BaseModel):
     email: EmailStr
@@ -63,6 +66,21 @@ class EmailVerificationRequest(BaseModel):
 class ResendVerificationRequest(BaseModel):
     email: EmailStr
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+    otp: str
+    new_password: str
+
+    @field_validator('new_password')
+    @classmethod
+    def password_strength(cls, v):
+        if len(v) < 8:
+            raise ValueError('Password must be at least 8 characters long')
+        return v
+
 class UserResponse(BaseModel):
     user_id: str
     email: str
@@ -70,6 +88,9 @@ class UserResponse(BaseModel):
     is_admin: bool = False
     freelancer_id: Optional[str] = None
     client_id: Optional[str] = None
+    is_report_banned: bool = False
+    ban_message: Optional[str] = None
+    report_banned_at: Optional[datetime] = None
     
 class FreelancerProfileCreate(BaseModel):
     full_name: str
@@ -104,6 +125,9 @@ class UserResponseDetail(BaseModel):
     email_verified_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    is_report_banned: bool = False   
+    ban_message: Optional[str] = None
+    report_banned_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -456,7 +480,7 @@ class JobPostCreate(BaseModel):
     client_id: Optional[str] = None
     job_title: str
     job_description: str
-    project_category: str
+    project_category: Optional[str] = None  # auto-inferred from title+description if omitted
     project_type: str  # individual, team
     project_scope: Optional[str] = None  # small, medium, large; auto-calculated if omitted
     estimated_duration: Optional[str] = None
@@ -482,6 +506,7 @@ class JobPostResponse(BaseModel):
     job_post_id: str
     client_id: str
     client_name: Optional[str] = None
+    profile_picture_url: Optional[str] = None
     job_title: str
     job_description: str
     project_type: str
@@ -495,8 +520,13 @@ class JobPostResponse(BaseModel):
     view_count: Optional[int] = 0
     proposal_count: Optional[int] = 0
     role_count: int = 0
+    available_positions: Optional[int] = 0               
+    closure_reason: Optional[str] = None     
+    closure_note: Optional[str] = None 
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    posted_at: Optional[datetime] = None
+    closed_at: Optional[datetime] = None
 
 
 class JobPostScopeCalculationRequest(BaseModel):

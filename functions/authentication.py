@@ -13,7 +13,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from functions.database import Database
 from functions.logger import logger
 from functions.db_manager import get_db
-from functions.email_utils import send_otp_email
+from functions.email_utils import send_otp_email, send_password_reset_email
 from functions.schema_model import Token, TokenData, UserInDB
 
 from dotenv import load_dotenv
@@ -122,7 +122,6 @@ def verify_token(token: str, credentials_exception):
     return token_data
 
 def _build_user_from_row(row: dict) -> UserInDB:
-    """Build a UserInDB from a joined users+freelancer+client query row."""
     return UserInDB(
         user_id=str(row['user_id']),
         email=row['email'],
@@ -131,10 +130,14 @@ def _build_user_from_row(row: dict) -> UserInDB:
         is_admin=bool(row.get('is_admin', False)),
         freelancer_id=str(row['freelancer_id']) if row.get('freelancer_id') else None,
         client_id=str(row['client_id']) if row.get('client_id') else None,
+        is_report_banned=bool(row.get('is_report_banned', False)), 
+        ban_message=row.get('ban_message'),                          
+        report_banned_at=row.get('report_banned_at'),                
     )
 
 _USER_QUERY = """
     SELECT u.user_id, u.email, u.password, u.is_admin, u.email_verified,
+           u.is_report_banned, u.ban_message, u.report_banned_at,
            f.freelancer_id,
            c.client_id
     FROM users u
@@ -340,6 +343,93 @@ def verify_email_otp(email: str, otp_code: str) -> dict:
         params={"otp_id": otp_id}
     )
     return {"message": "Email verified successfully", "email": email, "email_verified": True}
+
+def request_password_reset(email: str) -> dict:
+    """Generate and send a password reset OTP. Always returns success to prevent email enumeration."""
+    user = get_user(email)
+    if not user:
+        return {"message": "If that email is registered, a reset code has been sent."}
+
+    otp_code = generate_otp()
+    otp_hash = get_password_hash(otp_code)
+    expires_at = datetime.utcnow() + timedelta(minutes=OTP_EXPIRE_MINUTES)
+
+    get_db().execute_query(
+        """
+        UPDATE password_reset_otps
+        SET consumed_at = NOW()
+        WHERE user_id = :user_id AND consumed_at IS NULL
+        """,
+        params={"user_id": user.user_id}
+    )
+
+    get_db().execute_query(
+        """
+        INSERT INTO password_reset_otps (user_id, otp_hash, expires_at)
+        VALUES (:user_id, :otp_hash, :expires_at)
+        """,
+        params={"user_id": user.user_id, "otp_hash": otp_hash, "expires_at": expires_at}
+    )
+
+    email_sent = send_password_reset_email(email, otp_code)
+    if not email_sent and not is_development_env() and PRODUCTION_EMAIL_DELIVERY_REQUIRED:
+        raise HTTPException(status_code=500, detail="Failed to send password reset email")
+
+    response = {"message": "If that email is registered, a reset code has been sent."}
+    if is_development_env() and SHOW_DEV_OTP:
+        response["dev_reset_otp"] = otp_code
+    return response
+
+
+def reset_password(email: str, otp_code: str, new_password: str) -> dict:
+    """Verify a password reset OTP and update the user's password."""
+    user = get_user(email)
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset code")
+
+    rows = get_db().execute_query(
+        """
+        SELECT otp_id, otp_hash, attempts, expires_at
+        FROM password_reset_otps
+        WHERE user_id = :user_id
+          AND consumed_at IS NULL
+        ORDER BY created_at DESC
+        LIMIT 1
+        """,
+        params={"user_id": user.user_id}
+    )
+
+    if not rows:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset code")
+
+    otp = rows[0]
+    otp_id = str(otp["otp_id"])
+
+    if otp["expires_at"] < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="Reset code has expired")
+    if otp["attempts"] >= MAX_OTP_ATTEMPTS:
+        raise HTTPException(status_code=429, detail="Too many reset attempts")
+
+    if not verify_password(otp_code, otp["otp_hash"]):
+        get_db().execute_query(
+            "UPDATE password_reset_otps SET attempts = attempts + 1 WHERE otp_id = :otp_id",
+            params={"otp_id": otp_id}
+        )
+        raise HTTPException(status_code=400, detail="Invalid reset code")
+
+    new_hash = get_password_hash(new_password)
+    get_db().execute_query(
+        "UPDATE users SET password = :password WHERE user_id = :user_id",
+        params={"password": new_hash, "user_id": user.user_id}
+    )
+    get_db().execute_query(
+        "UPDATE password_reset_otps SET consumed_at = NOW() WHERE otp_id = :otp_id",
+        params={"otp_id": otp_id}
+    )
+
+    logger("AUTH", f"Password reset successful for {email}", level="INFO")
+    return {"message": "Password reset successfully"}
+
 
 def resend_email_verification(email: str) -> dict:
     """Send a fresh verification OTP for an unverified account."""

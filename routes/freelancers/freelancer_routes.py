@@ -16,6 +16,18 @@ from routes.freelancers.freelancer_functions import FreelancerFunctions, get_com
 from ai_related.job_matching.embedding_manager import upsert_freelancer_embedding, mark_freelancer_dirty
 from functions.supabase_client import upload_freelancer_profile_picture, delete_file, BUCKET_USER_ASSETS
 from mimetypes import guess_type as guess_mime
+from ai_related.cv_analysis.cv_analysis import parse_cv_for_profile
+from routes.cv_upload.cv_upload_functions import (
+    _extract_text_from_pdf,
+    _extract_text_from_docx,
+    _extract_text_from_image,
+)
+from routes.admin.admin_functions import queue_content_scan
+
+_DOCX_MIMES = {
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/msword",
+}
 
 freelancer_router = APIRouter(prefix="/freelancers", tags=["Freelancers"])
 
@@ -75,11 +87,71 @@ async def create_freelancer(
             create_embedding=True
         )
         asyncio.create_task(upsert_freelancer_embedding(str(new_freelancer["freelancer_id"])))
+
+        _scan_text = " ".join(filter(None, [freelancer.full_name, freelancer.bio]))
+        if _scan_text.strip():
+            asyncio.create_task(asyncio.to_thread(
+                queue_content_scan,
+                "freelancer_profile",
+                str(new_freelancer["freelancer_id"]),
+                str(current_user.user_id),
+                _scan_text,
+            ))
+
         logger("FREELANCER", f"Created freelancer {freelancer_id}", "POST /freelancers", "INFO")
         return ResponseSchema.success(new_freelancer, 201)
     except Exception as e:
         error_msg = f"Failed to create freelancer: {str(e)}"
         logger("FREELANCER", error_msg, "POST /freelancers", "ERROR")
+        return ResponseSchema.error(error_msg, 500)
+
+
+@freelancer_router.post("/parse-cv")
+async def parse_cv_for_autofill(
+    file: UploadFile = File(...),
+    current_user: UserInDB = Depends(get_freelancer_user),
+):
+    """
+    Parse a CV and return structured profile data for frontend autofill.
+    Does not apply any changes — returns parsed data for the user to review and
+    populate form fields before submitting via POST/PUT /freelancers.
+    """
+    try:
+        contents = await file.read()
+        if not contents:
+            return ResponseSchema.error("CV file must not be empty", 400)
+
+        original_name = file.filename or "cv"
+        ext = original_name.rsplit(".", 1)[-1].lower() if "." in original_name else "pdf"
+        mime = file.content_type or ""
+
+        if ext == "docx" or mime in _DOCX_MIMES:
+            raw_text = _extract_text_from_docx(contents)
+        elif ext == "pdf" or mime == "application/pdf":
+            raw_text = _extract_text_from_pdf(contents)
+        elif mime.startswith("image/") or ext in {"png", "jpg", "jpeg", "bmp", "tiff"}:
+            raw_text = _extract_text_from_image(contents)
+        else:
+            return ResponseSchema.error("Unsupported file type. Please upload a PDF, DOCX, or image.", 400)
+
+        if not raw_text:
+            return ResponseSchema.error("Unable to extract text from the uploaded CV.", 422)
+
+        parsed_profile = await parse_cv_for_profile(raw_text)
+
+        logger(
+            "FREELANCER",
+            f"CV parsed for autofill | user={current_user.user_id} | "
+            f"skills={len(parsed_profile.get('skills', []))} | "
+            f"experience={len(parsed_profile.get('work_experience', []))}",
+            "POST /freelancers/parse-cv",
+            "INFO",
+        )
+        return ResponseSchema.success(parsed_profile, 200)
+
+    except Exception as e:
+        error_msg = f"Failed to parse CV: {str(e)}"
+        logger("FREELANCER", error_msg, "POST /freelancers/parse-cv", "ERROR")
         return ResponseSchema.error(error_msg, 500)
 
 
@@ -120,6 +192,20 @@ async def update_freelancer(
 
         updated_freelancer = FreelancerFunctions.update_freelancer(freelancer_id=freelancer_id, update_data=update_data)
         mark_freelancer_dirty(freelancer_id)
+
+        _scan_text = " ".join(filter(None, [
+            updated_freelancer.get("full_name", ""),
+            updated_freelancer.get("bio", ""),
+        ]))
+        if _scan_text.strip():
+            asyncio.create_task(asyncio.to_thread(
+                queue_content_scan,
+                "freelancer_profile",
+                str(freelancer_id),
+                str(current_user.user_id),
+                _scan_text,
+            ))
+
         logger("FREELANCER", f"Updated freelancer {freelancer_id}", "PUT /freelancers/{identifier}", "INFO")
         return ResponseSchema.success(updated_freelancer, 200)
     except Exception as e:

@@ -622,14 +622,15 @@ def run():
     resp = get("/ai/job_matching/match/freelancer-to-jobs", tok_freelancer, params={"limit": 10})
     matches = extract(resp).get("matches", [])
     print(f"\n  Results ({len(matches)} jobs returned):")
-    print(f"  {'Rank':<5} {'Job Title':<35} {'Match%':<10} {'Cosine':<10} {'Skill Overlap'}")
-    print(f"  {'-'*5} {'-'*35} {'-'*10} {'-'*10} {'-'*15}")
+    print(f"  {'Rank':<5} {'Job Title':<35} {'Cosine':<10} {'Skill Overlap'}")
+    print(f"  {'-'*5} {'-'*35} {'-'*10} {'-'*15}")
     for i, m in enumerate(matches, 1):
+        overlap = m.get("skill_overlap_pct")
+        overlap_str = f"{overlap:.1f}%" if isinstance(overlap, (int, float)) else "N/A"
         print(
             f"  #{i:<4} {m.get('job_title', '?')[:34]:<35} "
-            f"{m.get('match_probability', '?'):<10} "
             f"{m.get('similarity_score', '?'):<10} "
-            f"{m.get('skill_overlap_pct', '?')}%"
+            f"{overlap_str}"
         )
 
     # ── 11. RAG on best match ─────────────────────────────────────────────────

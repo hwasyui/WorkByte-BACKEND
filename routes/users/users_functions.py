@@ -54,18 +54,25 @@ class UserFunctions:
             conditions = [("user_id", "=", user_id)]
             rows = db.fetch_data(
                 table_name="users",
-                columns=["user_id", "email", "is_admin", "email_verified", "email_verified_at", "created_at", "updated_at"],
+                columns=[
+                    "user_id", "email", "is_admin",
+                    "email_verified", "email_verified_at",
+                    "created_at", "updated_at",
+                    "is_report_banned",  
+                    "ban_message",     
+                    "report_banned_at", 
+                ],
                 conditions=conditions,
                 limit=1
             )
-            
+
             if rows:
                 logger("USERS_FUNCTIONS", f"User {user_id} found", level="INFO")
                 return convert_uuids_to_str(dict(rows[0]))
-            
+
             logger("USERS_FUNCTIONS", f"User {user_id} not found", level="WARNING")
             return None
-        
+
         except Exception as e:
             logger("USERS_FUNCTIONS", f"Error fetching user {user_id}: {str(e)}", level="ERROR")
             raise

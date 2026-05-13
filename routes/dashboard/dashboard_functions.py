@@ -42,6 +42,20 @@ def _paginate(items: List[Dict], page: int, page_size: int) -> Dict[str, Any]:
     }
 
 
+def _filter_tracking_statuses(
+    items: List[Dict],
+    include_statuses: Optional[set] = None,
+    exclude_statuses: Optional[set] = None,
+) -> List[Dict]:
+    """Apply include/exclude tracking status filters after summary calculation."""
+    filtered = items
+    if include_statuses:
+        filtered = [i for i in filtered if i.get("tracking_status") in include_statuses]
+    if exclude_statuses:
+        filtered = [i for i in filtered if i.get("tracking_status") not in exclude_statuses]
+    return filtered
+
+
 # ── Tracking status helpers ───────────────────────────────────────────────────
 
 def _freelancer_tracking_status(proposal_status: str, contract_status: Optional[str]) -> str:
@@ -138,6 +152,8 @@ class DashboardFunctions:
     def get_freelancer_dashboard(
         freelancer_id: str,
         tracking_status: Optional[str] = None,
+        tracking_statuses: Optional[set] = None,
+        exclude_tracking_statuses: Optional[set] = None,
         order_by: str = "last_activity_date",
         order_dir: str = "desc",
         page: int = 1,
@@ -232,10 +248,14 @@ class DashboardFunctions:
                 "total_earned":       round(total_earned, 2),
             }
 
-            # Filter by tracking_status
-            filtered = (
-                [i for i in all_items if i["tracking_status"] == tracking_status]
-                if tracking_status else all_items
+            include_statuses = set(tracking_statuses or set())
+            if tracking_status:
+                include_statuses.add(tracking_status)
+
+            filtered = _filter_tracking_statuses(
+                all_items,
+                include_statuses=include_statuses,
+                exclude_statuses=exclude_tracking_statuses,
             )
 
             # Sort
@@ -262,6 +282,8 @@ class DashboardFunctions:
     def get_client_dashboard(
         client_id: str,
         tracking_status: Optional[str] = None,
+        tracking_statuses: Optional[set] = None,
+        exclude_tracking_statuses: Optional[set] = None,
         order_by: str = "last_activity_date",
         order_dir: str = "desc",
         page: int = 1,
@@ -410,10 +432,14 @@ class DashboardFunctions:
                 "total_spent":        round(total_spent, 2),
             }
 
-            # Filter by tracking_status
-            filtered = (
-                [j for j in all_jobs if j["tracking_status"] == tracking_status]
-                if tracking_status else all_jobs
+            include_statuses = set(tracking_statuses or set())
+            if tracking_status:
+                include_statuses.add(tracking_status)
+
+            filtered = _filter_tracking_statuses(
+                all_jobs,
+                include_statuses=include_statuses,
+                exclude_statuses=exclude_tracking_statuses,
             )
 
             # Sort

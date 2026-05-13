@@ -7,7 +7,7 @@ Tests the entire AI job matching pipeline including:
   2. Register & authenticate multiple freelancers
   3. Add skills & CVs to freelancer profiles (for semantic matching)
   4. Create job post (automatically triggers embedding)
-  5. Get freelancer-to-jobs matches (3-stage pipeline with CatBoost + SHAP values)
+  5. Get freelancer-to-jobs matches (2-stage pipeline: pgvector → skill filter → cosine rank)
   6. Analyze specific job match with RAG + LLM insights
   7. Create proposals and contracts
 
@@ -912,13 +912,12 @@ def main():
         # PART 4: TRIGGER JOB MATCHING FOR FREELANCERS
         # ──────────────────────────────────────────────────────────────────────────────
 
-        step("Get Job Recommendations for Freelancers (3-Stage Pipeline with SHAP)")
+        step("Get Job Recommendations for Freelancers (2-Stage Pipeline)")
 
         for fl in freelancers[:2]:
             print(f"\n  📊 Freelancer: {fl['name']} ({fl['freelancer_id']})")
             print(f"     Stage 1: pgvector cosine search → top 100 semantically similar jobs")
-            print(f"     Stage 2: filter by skill overlap (min 20%)")
-            print(f"     Stage 3: CatBoost ranking with SHAP value explanations")
+            print(f"     Stage 2: filter by skill overlap (min 20%) → ranked by cosine score")
 
             match_resp = get(
                 "/ai/job_matching/match/freelancer-to-jobs?limit=10",
@@ -943,43 +942,18 @@ def main():
 
             print(f"    ✓ Found {len(matches)} matching job(s)")
 
-            # Build table of all matches with 3 stages
+            # Build table of all matches with 2 stages
             top_matches = matches[:5]  # Show top 5
-            print(f"\n      Job Match | Stage 1 (Cosine) | Stage 2 (Overlap) | Stage 3 (CatBoost)")
-            print(f"      {'─' * 75}")
+            print(f"\n      Job Match | Stage 1 (Cosine) | Stage 2 (Skill Overlap)")
+            print(f"      {'─' * 65}")
 
             for idx, job in enumerate(top_matches, 1):
                 title = (job.get("job_title", "Unknown"))[:35]
                 cosine = job.get("similarity_score", 0)
-                overlap = job.get("skill_overlap_pct", 0)
-                catboost = job.get("match_probability", 0)
+                overlap = job.get("skill_overlap_pct", "N/A")
+                overlap_str = f"{overlap:.1f}%" if isinstance(overlap, (int, float)) else str(overlap)
 
-                print(f"      [{idx}] {title:<35} | {cosine:>7.4f}       | {overlap:>7.1f}%       | {catboost:>7.1f}%")
-
-            # Show reasons for each match
-            print(f"\n      Reasons:")
-            print(f"      {'─' * 75}")
-
-            for idx, job in enumerate(top_matches, 1):
-                title = (job.get("job_title", "Unknown"))[:40]
-                print(f"\n      Match {idx}: {title}")
-
-                # Collect all reasons
-                all_reasons = []
-                for reason in (job.get("match_reasons") or [])[:3]:
-                    contrib = reason.get("contribution", 0)
-                    label = reason.get("label", "?")
-                    all_reasons.append(f"✓ {label} (+{contrib:.3f})")
-
-                for reason in (job.get("penalty_reasons") or [])[:2]:
-                    contrib = reason.get("contribution", 0)
-                    label = reason.get("label", "?")
-                    all_reasons.append(f"✗ {label} ({contrib:.3f})")
-
-                if all_reasons:
-                    print(f"        {', '.join(all_reasons)}")
-                else:
-                    print(f"        No detailed reasons available")
+                print(f"      [{idx}] {title:<35} | {cosine:>7.4f}       | {overlap_str:>10}")
 
         # ──────────────────────────────────────────────────────────────────────────────
         # PART 5: RAG ANALYSIS - DEEP INSIGHT INTO JOB MATCH
@@ -1086,14 +1060,12 @@ def main():
     ✓ Job post creation with automatic embedding trigger
     ✓ Embedding processed asynchronously (pgvector index updated)
 
-  ✓ JOB MATCHING (3-STAGE ML PIPELINE)
+  ✓ JOB MATCHING (2-STAGE PIPELINE)
     ✓ Stage 1: pgvector cosine similarity search (semantic relevance)
     ✓ Stage 2: skill overlap filtering (minimum 20% required skills match)
-    ✓ Stage 3: CatBoost ranking with SHAP value explanations
-      - Match probability (ML prediction)
-      - Vector similarity (semantic relevance score)
+      - Vector similarity score (semantic relevance)
       - Skill overlap percentage (skill coverage)
-      - SHAP values (which features drove the prediction)
+      - Results ranked by cosine similarity
 
   ✓ RAG ANALYSIS
     ✓ Retrieves freelancer context + job details
@@ -1119,12 +1091,11 @@ def main():
 
   ──────────────────────────────────────────────────────────────────────────────
 
-  ML PIPELINE DETAILS:
+  PIPELINE DETAILS:
     • Vector Embeddings: sentence-transformers (semantic understanding)
     • Skill Matching: string similarity + semantic overlap
-    • Ranking Model: CatBoost classifier (trained on historical data)
-    • Explainability: SHAP values (feature importance)
-    • RAG: Vector retrieval + LLM context generation
+    • Ranking: cosine similarity (pgvector ANN)
+    • RAG: Vector retrieval + LLM context generation (per-role analysis)
         """)
 
     finally:

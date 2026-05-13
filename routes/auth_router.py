@@ -17,6 +17,8 @@ from functions.authentication import (
     get_password_hash,
     resend_email_verification,
     verify_email_otp,
+    request_password_reset,
+    reset_password,
 )
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
@@ -24,6 +26,8 @@ from functions.schema_model import (
     AddRoleRequest,
     EmailVerificationRequest,
     ResendVerificationRequest,
+    ForgotPasswordRequest,
+    ResetPasswordRequest,
     UserRegister,
     UserLogin,
     Token,
@@ -128,12 +132,46 @@ async def get_me(current_user: UserInDB = Depends(get_current_user)):
             is_admin=current_user.is_admin,
             freelancer_id=current_user.freelancer_id,
             client_id=current_user.client_id,
+            is_report_banned=current_user.is_report_banned or False,
+            ban_message=current_user.ban_message,
+            report_banned_at=current_user.report_banned_at,
         )
         logger("AUTH", f"Retrieved user info for {current_user.email}", "GET /auth/me", "INFO")
         return ResponseSchema.success(response.model_dump(), 200)
     except Exception as e:
         error_msg = f"Failed to retrieve user info: {str(e)}"
         logger("AUTH", error_msg, "GET /auth/me", "ERROR")
+        return ResponseSchema.error(error_msg, 500)
+
+@auth_router.post("/forgot-password", response_model=dict)
+async def forgot_password(request: ForgotPasswordRequest):
+    """Request a password reset OTP sent to the given email."""
+    try:
+        result = request_password_reset(request.email)
+        logger("AUTH", f"Password reset requested for {request.email}", "POST /auth/forgot-password", "INFO")
+        return ResponseSchema.success(result, 200)
+    except HTTPException as e:
+        logger("AUTH", f"Password reset request failed for {request.email}: {e.detail}", "POST /auth/forgot-password", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
+    except Exception as e:
+        error_msg = f"Password reset request error: {str(e)}"
+        logger("AUTH", error_msg, "POST /auth/forgot-password", "ERROR")
+        return ResponseSchema.error(error_msg, 500)
+
+
+@auth_router.post("/reset-password", response_model=dict)
+async def reset_password_route(request: ResetPasswordRequest):
+    """Verify the OTP and set a new password."""
+    try:
+        result = reset_password(request.email, request.otp, request.new_password)
+        logger("AUTH", f"Password reset successful for {request.email}", "POST /auth/reset-password", "INFO")
+        return ResponseSchema.success(result, 200)
+    except HTTPException as e:
+        logger("AUTH", f"Password reset failed for {request.email}: {e.detail}", "POST /auth/reset-password", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
+    except Exception as e:
+        error_msg = f"Password reset error: {str(e)}"
+        logger("AUTH", error_msg, "POST /auth/reset-password", "ERROR")
         return ResponseSchema.error(error_msg, 500)
 
 

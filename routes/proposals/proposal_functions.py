@@ -137,6 +137,53 @@ class ProposalFunctions:
             raise
 
     @staticmethod
+    def get_proposal_for_freelancer_job(freelancer_id: str, job_post_id: str) -> Optional[Dict]:
+        """Fetch an existing proposal from a freelancer for one job post."""
+        try:
+            db = get_db()
+            rows = db.fetch_data(
+                table_name="proposal",
+                conditions=[
+                    ("freelancer_id", "=", freelancer_id),
+                    ("job_post_id", "=", job_post_id),
+                ],
+                limit=1,
+            )
+            if rows:
+                return convert_uuids_to_str(dict(rows[0]))
+            return None
+
+        except Exception as e:
+            logger("PROPOSAL_FUNCTIONS", f"Error checking duplicate proposal: {str(e)}", level="ERROR")
+            raise
+
+    @staticmethod
+    def get_proposal_for_freelancer_role(
+        freelancer_id: str,
+        job_post_id: str,
+        job_role_id: str,
+    ) -> Optional[Dict]:
+        """Fetch an existing proposal from a freelancer for one job role."""
+        try:
+            db = get_db()
+            rows = db.fetch_data(
+                table_name="proposal",
+                conditions=[
+                    ("freelancer_id", "=", freelancer_id),
+                    ("job_post_id", "=", job_post_id),
+                    ("job_role_id", "=", job_role_id),
+                ],
+                limit=1,
+            )
+            if rows:
+                return convert_uuids_to_str(dict(rows[0]))
+            return None
+
+        except Exception as e:
+            logger("PROPOSAL_FUNCTIONS", f"Error checking duplicate role proposal: {str(e)}", level="ERROR")
+            raise
+
+    @staticmethod
     def create_proposal(
         job_post_id: str,
         freelancer_id: str,

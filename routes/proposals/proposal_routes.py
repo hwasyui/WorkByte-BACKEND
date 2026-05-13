@@ -123,13 +123,24 @@ async def create_proposal(
                 if client_row and str(client_row[0]["user_id"]) == str(current_user.user_id):
                     return ResponseSchema.error("You cannot apply to your own job post", 403)
 
-        # Duplicate check
-        existing = ProposalFunctions.get_proposals_by_freelancer_id(freelancer_id)
-        for p in existing:
-            if proposal.job_role_id and str(p.get("job_role_id")) == str(proposal.job_role_id):
-                return ResponseSchema.error("You have already submitted a proposal for this role", 409)
-            if not proposal.job_role_id and str(p.get("job_post_id")) == str(proposal.job_post_id):
-                return ResponseSchema.error("You have already submitted a proposal for this job", 409)
+        # Duplicate check: role-based applications may be repeated within the
+        # same job post, as long as each proposal targets a different role.
+        if proposal.job_role_id:
+            existing = ProposalFunctions.get_proposal_for_freelancer_role(
+                freelancer_id=freelancer_id,
+                job_post_id=str(proposal.job_post_id),
+                job_role_id=str(proposal.job_role_id),
+            )
+            duplicate_message = "You have already submitted a proposal for this role"
+        else:
+            existing = ProposalFunctions.get_proposal_for_freelancer_job(
+                freelancer_id=freelancer_id,
+                job_post_id=str(proposal.job_post_id),
+            )
+            duplicate_message = "You have already submitted a proposal for this job"
+
+        if existing:
+            return ResponseSchema.error(duplicate_message, 409)
 
         new_proposal = ProposalFunctions.create_proposal(
             job_post_id=proposal.job_post_id,

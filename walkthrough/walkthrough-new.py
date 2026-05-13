@@ -8,7 +8,7 @@ Covers:
   4.  Job post setup: post + role + required skills (CLIENT and DUAL_ROLE)
   5.  Discovery: search, browse, saved-jobs
   6.  Embeddings: trigger + verify (freelancer + job)
-  7.  Job Matching — Stage 1 cosine / Stage 2 skill overlap / Stage 3 CatBoost ML + SHAP
+  7.  Job Matching — Stage 1 cosine / Stage 2 skill overlap → ranked by cosine
   8.  RAG job-fit analysis
   9.  Proposal: submit / view / accept
   10. Contract: create / messages / read
@@ -322,22 +322,6 @@ def _print_match(m: dict, target_id: str):
     if overlap is not None:
         gate = "✓ pass" if overlap >= 20 else "✗ filtered"
         print(f"    │  Stage 2 overlap : {overlap:5.1f}%  [{_bar(overlap/100)}]  ({gate}, threshold ≥20%)")
-
-    ml = m.get("match_probability")
-    if ml is not None:
-        delta = (ml / 100) - (cosine or 0)
-        effect = f"↑ +{delta:.3f}" if delta > 0 else f"↓ {delta:.3f}"
-        print(f"    │  Stage 3 CatBoost: {ml:5.1f}%  [{_bar(ml/100)}]  re-rank {effect}")
-        print(f"    │    (model: CatBoost gradient boosting, AUC 0.8054)")
-
-    for r in (m.get("match_reasons") or []):
-        c = r.get("contribution", 0)
-        arrow = "▲" if c > 0 else "▼"
-        sign = "+" if c > 0 else ""
-        print(f"    │  SHAP  {arrow} [{sign}{c:.4f}]  {r.get('label', '?')}")
-    for r in (m.get("penalty_reasons") or []):
-        c = r.get("contribution", 0)
-        print(f"    │  SHAP  ▼ [{c:.4f}]  {r.get('label', '?')}  ← dragging score down")
 
     print(f"    └{'─' * 55}")
 
@@ -704,26 +688,21 @@ def run(embed_wait: int, skip_analyse: bool, skip_cv: bool):
         print("    No job embedding yet")
 
     # ══════════════════════════════════════════════════════════════════════════
-    section("JOB MATCHING — Stage 1 → Stage 2 → Stage 3 + SHAP Explanation")
+    section("JOB MATCHING — Stage 1 → Stage 2 + RAG Deep Analysis")
     # ══════════════════════════════════════════════════════════════════════════
 
-    step("How the 3-stage pipeline works")
+    step("How the 2-stage pipeline works")
     print("""
   ┌─────────┬────────────────────────────────────────────────────────────────┐
   │ Stage 1 │ pgvector ANN cosine similarity                                 │
   │         │ Encodes freelancer profile + job post with SentenceTransformer  │
   │         │ Compares vectors in high-dimensional space → similarity score   │
-  │         │ Returns top-K candidates for Stage 2                            │
+  │         │ Returns top-100 candidates for Stage 2                          │
   ├─────────┼────────────────────────────────────────────────────────────────┤
-  │ Stage 2 │ Skill overlap heuristic (hard filter)                          │
+  │ Stage 2 │ Skill overlap heuristic (hard filter + ranking)                │
   │         │ Counts how many freelancer skills appear in job required skills │
   │         │ Threshold: ≥ 20% overlap — jobs below this are dropped         │
-  │         │ Prevents unqualified matches from reaching the ML model         │
-  ├─────────┼────────────────────────────────────────────────────────────────┤
-  │ Stage 3 │ CatBoost gradient boosting classifier                          │
-  │         │ Features: cosine similarity, skill overlap %, experience match  │
-  │         │ Output: match_probability 0–100% (AUC 0.8054 on validation set) │
-  │         │ SHAP values explain which features pushed prediction up or down │
+  │         │ Survivors sorted by cosine similarity score (highest first)     │
   └─────────┴────────────────────────────────────────────────────────────────┘
     """)
 

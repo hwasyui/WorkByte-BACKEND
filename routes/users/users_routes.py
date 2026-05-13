@@ -32,7 +32,7 @@ async def get_all_users(limit: Optional[int] = None, offset: int = 0, current_us
 
 @users_router.get("/search", response_model=Dict)
 async def search_users(
-    name: str = Query(..., description="User email or name to search for"),
+    name: str = Query(..., untu="User email or name to search for"),
     current_user: UserInDB = Depends(get_current_user),
 ):
     """Search users by email - Authenticated users only - JSON response"""

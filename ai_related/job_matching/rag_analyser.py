@@ -366,6 +366,26 @@ def _build_prompt(job: dict, fc: dict, past_contracts: list[dict]) -> tuple[str,
             "coverage_pct":  coverage_pct,
         })
 
+    # ── Experience gap (pre-computed) ─────────────────────────────────────────
+    _EXP_MAP_RAG   = {"entry": 1, "intermediate": 2, "expert": 3}
+    _EXP_LABEL_RAG = {1: "entry", 2: "intermediate", 3: "expert"}
+    job_exp_num = _EXP_MAP_RAG.get((job.get("experience_level") or "entry").lower(), 1)
+    total_jobs  = int(fc.get("total_jobs") or 0)
+    fl_exp_num  = 3 if total_jobs >= 10 else (2 if total_jobs >= 3 else 1)
+    exp_delta   = fl_exp_num - job_exp_num
+    if exp_delta >= 0:
+        exp_fit_str = (
+            f"✓ Meets requirement ({_EXP_LABEL_RAG[fl_exp_num]} ≥ {_EXP_LABEL_RAG[job_exp_num]})"
+        )
+    elif exp_delta == -1:
+        exp_fit_str = (
+            f"△ Slightly under ({_EXP_LABEL_RAG[fl_exp_num]}, job requires {_EXP_LABEL_RAG[job_exp_num]})"
+        )
+    else:
+        exp_fit_str = (
+            f"✗ Under-qualified ({_EXP_LABEL_RAG[fl_exp_num]}, job requires {_EXP_LABEL_RAG[job_exp_num]})"
+        )
+
     # ── Build context ─────────────────────────────────────────────────────────
     lines = []
 
@@ -378,6 +398,12 @@ def _build_prompt(job: dict, fc: dict, past_contracts: list[dict]) -> tuple[str,
     lines.append("\n=== FREELANCER PROFILE ===")
     lines.append(f"Name:         {fc.get('full_name', '')}")
     lines.append(f"Jobs done:    {fc.get('total_jobs', 0)} completed")
+    lines.append(f"Experience:   {_EXP_LABEL_RAG[fl_exp_num]} (inferred from {total_jobs} completed jobs)")
+    lines.append(f"Experience fit: {exp_fit_str}")
+    if fc.get("estimated_rate"):
+        rate_currency = fc.get("rate_currency") or "USD"
+        rate_time     = fc.get("rate_time") or "hourly"
+        lines.append(f"Rate:         {fc['estimated_rate']} {rate_currency}/{rate_time}")
     if fc.get("overall_score") is not None:
         lines.append(
             f"Trust score:  {fc['overall_score']}/100  |  "
@@ -419,6 +445,15 @@ def _build_prompt(job: dict, fc: dict, past_contracts: list[dict]) -> tuple[str,
         lines.append("\n=== PAST CONTRACTS ===\nNone yet.")
 
     # ── Per-role skill match section (primary evidence) ───────────────────────
+    # ── Rate-to-budget helpers (used per role below) ──────────────────────────
+    _RATE_TO_MONTHLY: dict[str, float] = {
+        "hourly": 160.0, "daily": 20.0, "weekly": 4.0, "monthly": 1.0, "annually": 1 / 12,
+    }
+    fl_rate          = float(fc.get("estimated_rate") or 0)
+    fl_rate_time     = (fc.get("rate_time") or "hourly").lower()
+    fl_rate_currency = (fc.get("rate_currency") or "USD").upper()
+    fl_monthly_rate  = fl_rate * _RATE_TO_MONTHLY.get(fl_rate_time, 160.0)
+
     lines.append("\n=== PER-ROLE SKILL MATCH (pre-computed — primary evidence for scoring) ===")
     for ra in role_analyses:
         lines.append(f"\n  ROLE: {ra['role_title']}")
@@ -438,6 +473,28 @@ def _build_prompt(job: dict, fc: dict, past_contracts: list[dict]) -> tuple[str,
             lines.append("  No required skills specified")
         if ra["matched_pref"]:
             lines.append(f"  Preferred PRESENT: {', '.join(ra['matched_pref'])}")
+        # Budget fit
+        role_budget_raw = next(
+            (r.get("role_budget") for r in job.get("roles", []) if r.get("role_title") == ra["role_title"]),
+            None,
+        )
+        role_budget_currency = next(
+            (r.get("budget_currency") or "USD" for r in job.get("roles", []) if r.get("role_title") == ra["role_title"]),
+            "USD",
+        )
+        if fl_monthly_rate > 0 and role_budget_raw:
+            same_currency = fl_rate_currency.upper() == role_budget_currency.upper()
+            if same_currency:
+                fit = "✓ Within budget" if fl_monthly_rate <= float(role_budget_raw) * 1.1 else "✗ Exceeds budget"
+                lines.append(
+                    f"  Budget fit:  freelancer ~{fl_monthly_rate:.0f} {fl_rate_currency}/month "
+                    f"vs role budget {role_budget_raw} {role_budget_currency} → {fit}"
+                )
+            else:
+                lines.append(
+                    f"  Budget fit:  freelancer ~{fl_monthly_rate:.0f} {fl_rate_currency}/month "
+                    f"vs role budget {role_budget_raw} {role_budget_currency} (different currencies — evaluate contextually)"
+                )
 
     context = "\n".join(lines)
 
@@ -482,7 +539,8 @@ Score each role holistically (0-100) considering:
   3. Directly relevant past contracts and their ratings/reviews
   4. Portfolio items that demonstrate the role's core skills
   5. Work experience relevance to this specific role
-  6. Performance score and success rate
+  6. Experience level fit (shown above — note if under/over-qualified)
+  7. Budget fit (shown per role above — note if rate exceeds budget)
 
 Scoring guidance per role (skill coverage reference):
 {role_bands}
@@ -782,9 +840,14 @@ async def analyse_job_match(db, freelancer_id: str, job_post_id: str) -> dict:
             role_result["matching_skills"]         = ra["matched_req"]
             role_result["missing_required_skills"] = ra["missing_req"]
 
-            # Ceiling: coverage_pct + 25, so 0% → max 25, 50% → max 75, 100% → 100.
-            # Prevents e.g. DevOps (33% coverage) from scoring 85 regardless of
-            # how good the portfolio is.  LLM scores freely below the ceiling.
+            # Ceiling: coverage_pct + 25, so 0% → max 25, 40% → max 65, 80% → max 100.
+            # The +25 offset was chosen to be consistent with the three-way threshold
+            # design: Stage 2 requires ≥20% overlap to enter the feed; here, 40%
+            # coverage is the minimum that can ever yield "apply" (40+25=65, exactly
+            # the apply threshold). Below 40% coverage the LLM cannot recommend apply
+            # regardless of portfolio strength. The headroom above coverage lets strong
+            # past-contract and portfolio evidence meaningfully boost the score, but
+            # not enough to mask a large required-skill gap.
             ceiling   = min(100, ra["coverage_pct"] + 25)
             raw_score = int(role_result.get("match_score") or 0)
             role_result["match_score"] = min(ceiling, raw_score)

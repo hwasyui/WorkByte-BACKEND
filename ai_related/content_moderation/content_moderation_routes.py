@@ -11,7 +11,11 @@ from pydantic import BaseModel
 
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
-from ai_related.content_moderation.model_inference import predict, batch_predict
+from ai_related.content_moderation.model_inference import (
+    batch_predict,
+    get_available_models as get_model_registry,
+    predict,
+)
 
 content_moderation_router = APIRouter(prefix="/content_moderation", tags=["Content Moderation"])
 
@@ -54,7 +58,7 @@ async def moderate_text(input_data: TextInput, model_type: str = "best", thresho
             raise HTTPException(status_code=400, detail="Text input cannot be empty")
 
         if not 0.0 <= threshold <= 1.0:
-            threshold = 0.5
+            raise HTTPException(status_code=400, detail="Threshold must be between 0.0 and 1.0")
 
         result = predict(
             input_data.text,
@@ -107,7 +111,10 @@ async def moderate_batch(input_data: BatchTextInput, model_type: str = "best", t
             )
 
         if not 0.0 <= threshold <= 1.0:
-            threshold = 0.5
+            raise HTTPException(status_code=400, detail="Threshold must be between 0.0 and 1.0")
+
+        if any(not text or not text.strip() for text in input_data.texts):
+            raise HTTPException(status_code=400, detail="Texts list cannot contain empty values")
 
         results = batch_predict(
             input_data.texts,
@@ -184,26 +191,22 @@ async def get_available_models() -> Dict[str, Any]:
     Returns:
         Information about available trained models
     """
-    models_dir = os.path.join(os.path.dirname(__file__), "machine_learning", "models")
-
-    available_models = []
-    for model_type in ["bert", "roberta", "distilbert", "best"]:
-        model_file = f"content_moderation_{model_type}.pt"
-        model_path = os.path.join(models_dir, model_file)
-        if os.path.exists(model_path):
-            available_models.append({
-                "type": model_type,
-                "file": model_file,
-                "available": True,
-            })
+    available_models = [
+        model_info
+        for model_info in get_model_registry()
+        if model_info["available"]
+    ]
 
     if not available_models:
         return ResponseSchema.success({
             "available_models": [],
-            "message": "No trained models found. Please run TRAIN_MODEL.ipynb first.",
+            "message": "No trained Hugging Face model folders found. Please upload the output folders from TRAIN_MODEL.ipynb.",
         })
 
     return ResponseSchema.success({
         "available_models": available_models,
-        "default": "best",
+        "default": "roberta",
+        "aliases": {
+            "best": "roberta",
+        },
     })

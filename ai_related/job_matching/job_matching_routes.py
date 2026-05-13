@@ -1,16 +1,14 @@
 """
 Job matching routes, all mounted under /ai/job_matching (set in main.py).
 
-This module is the ML pipeline for the freelancer job feed only:
-
-  GET  /match/freelancer-to-jobs        — 3-stage ranked feed (pgvector → skill filter → CatBoost)
+  GET  /match/freelancer-to-jobs        — 3-stage ranked feed (pgvector → skill filter → heuristic)
   GET  /analyse/job/{job_post_id}       — RAG + LLM deep-fit analysis for a specific job
   POST /embed/freelancer/{id}           — queue freelancer re-embedding
   POST /embed/job/{id}                  — queue job re-embedding
   POST /sweep                           — run dirty-embedding sweep immediately
   GET  /test_ai_local                   — Ollama connectivity check
 
-Client-side candidate search (cosine only, no ML) lives at:
+Client-side candidate search (cosine only) lives at:
   GET /job-posts/{job_post_id}/candidates
 """
 
@@ -28,13 +26,11 @@ from functions.response_utils import ResponseSchema
 from functions.logger import logger
 from functions.db_manager import get_db
 from ai_related.job_matching.sweep_worker import run_sweep_once
-# REMOVE THIS LINE if dropping Stage 3 ML:
-from ai_related.job_matching.ml_ranker import rank_jobs_with_ml
+from ai_related.job_matching.heuristic_ranker import rank_jobs_with_heuristic
 from ai_related.job_matching.rag_analyser import analyse_job_match
 
-# Stage 2 minimum skill overlap — jobs below this threshold are pre-filtered
-# before reaching the ML ranker. Set conservatively so ML still has candidates.
-_MIN_SKILL_OVERLAP = 0.20  # 20 %
+# Stage 2 minimum skill overlap — jobs below this are dropped before Stage 3.
+_MIN_SKILL_OVERLAP = 0.20  # 20%
 
 router = APIRouter()
 
@@ -63,10 +59,25 @@ async def match_freelancer_to_jobs(
     """
     3-stage ranked job feed for the authenticated freelancer.
 
-    Stage 1 runs a pgvector cosine search to get the top-100 semantically
-    relevant jobs. Stage 2 drops anything with less than 20% required-skill
-    overlap. Stage 3 runs LightGBM to predict match_probability and returns
-    the top-N, each with match_probability, similarity_score, and skill_overlap_pct.
+    Stage 1  pgvector cosine search — retrieves the top-100 semantically
+             relevant open jobs using the freelancer's embedding vector.
+
+    Stage 2  Skill filter — drops any job whose best-matching role has less
+             than 20% required-skill overlap with the freelancer's skills.
+             Per-role logic: overlap is computed independently for each role
+             in the job post and the highest value is kept, so a backend
+             engineer is not penalised for skills from an unrelated role in
+             the same post (e.g. financial manager, UI designer).
+
+    Stage 3  Heuristic re-ranking — scores each remaining candidate across
+             five transparent, directly interpretable signals:
+               • Semantic similarity (40%) — cosine from Stage 1
+               • Required-skill coverage (30%) — best-role overlap from Stage 2
+               • Experience compatibility (15%) — smooth match against job level
+               • Budget compatibility (10%) — estimated monthly rate vs role budget
+               • Domain / speciality match (5%) — word-level title/desc match
+             Returns the top-N sorted by heuristic_score (0–100), each with
+             match_reasons (up to 3) and penalty_reasons (up to 2).
     """
     t_request = time.perf_counter()
     try:
@@ -81,7 +92,7 @@ async def match_freelancer_to_jobs(
             level="INFO",
         )
 
-        # Stage 1: pgvector cosine → top-100
+        # ── Stage 1: pgvector cosine → top-100 ───────────────────────────────
         t1 = time.perf_counter()
         fe = db.execute_query(
             "SELECT embedding_vector FROM freelancer_embedding WHERE freelancer_id = :fid AND embedding_vector IS NOT NULL",
@@ -105,21 +116,24 @@ async def match_freelancer_to_jobs(
         where_sql = " AND ".join(where_clauses)
 
         stage1_query = f"""
-            SELECT
-                jp.job_post_id,
-                jp.job_title,
-                jp.job_description,
-                jp.project_type,
-                jp.project_scope,
-                jp.experience_level,
-                jp.estimated_duration,
-                jp.deadline,
-                jp.proposal_count,
-                je.source_text,
-                ROUND((1 - (je.embedding_vector <=> CAST(:vec AS vector)))::numeric, 4) AS similarity_score
-            FROM job_embedding je
-            JOIN job_post jp ON jp.job_post_id = je.job_post_id
-            WHERE {where_sql}
+            SELECT * FROM (
+                SELECT DISTINCT ON (jp.job_post_id)
+                    jp.job_post_id,
+                    jp.job_title,
+                    jp.job_description,
+                    jp.project_type,
+                    jp.project_scope,
+                    jp.experience_level,
+                    jp.estimated_duration,
+                    jp.deadline,
+                    jp.proposal_count,
+                    je.source_text,
+                    ROUND((1 - (je.embedding_vector <=> CAST(:vec AS vector)))::numeric, 4) AS similarity_score
+                FROM job_embedding je
+                JOIN job_post jp ON jp.job_post_id = je.job_post_id
+                WHERE {where_sql}
+                ORDER BY jp.job_post_id, similarity_score DESC
+            ) deduped
             ORDER BY similarity_score DESC
             LIMIT :stage1_limit
         """
@@ -139,7 +153,7 @@ async def match_freelancer_to_jobs(
             level="INFO",
         )
 
-        # Stage 2: drop jobs with too little skill overlap before ML inference
+        # ── Stage 2: drop jobs with too little skill overlap ──────────────────
         t2 = time.perf_counter()
         f_skills = db.execute_query(
             "SELECT skill_id FROM freelancer_skill WHERE freelancer_id = :fid",
@@ -158,30 +172,39 @@ async def match_freelancer_to_jobs(
         dropped_overlap = 0
         for job in candidates:
             jp_id = str(job["job_post_id"])
-            req_skills = db.execute_query(
-                """
-                SELECT jrs.skill_id
-                FROM job_role_skill jrs
-                JOIN job_role jr ON jr.job_role_id = jrs.job_role_id
-                WHERE jr.job_post_id = :jpid AND jrs.is_required = TRUE
-                """,
+
+            role_rows = db.execute_query(
+                "SELECT job_role_id FROM job_role WHERE job_post_id = :jpid",
                 {"jpid": jp_id},
             )
-            req_skill_ids = {str(r["skill_id"]) for r in req_skills}
 
-            if req_skill_ids:
-                overlap = len(f_skill_ids & req_skill_ids) / len(req_skill_ids)
-                if overlap < _MIN_SKILL_OVERLAP:
+            best_overlap = 0.0
+            has_any_required_skills = False
+            for role in (role_rows or []):
+                role_req = db.execute_query(
+                    "SELECT skill_id FROM job_role_skill WHERE job_role_id = :rid AND is_required = TRUE",
+                    {"rid": str(role["job_role_id"])},
+                )
+                role_req_ids = {str(r["skill_id"]) for r in role_req}
+                if role_req_ids:
+                    has_any_required_skills = True
+                    role_overlap = len(f_skill_ids & role_req_ids) / len(role_req_ids)
+                    best_overlap = max(best_overlap, role_overlap)
+
+            if has_any_required_skills:
+                if best_overlap < _MIN_SKILL_OVERLAP:
                     logger(
                         "JOB_MATCHING",
                         f"Stage 2 drop | job_post_id={jp_id} | title='{job.get('job_title','?')[:40]}' "
-                        f"| overlap={overlap:.2%} < {_MIN_SKILL_OVERLAP:.0%}",
+                        f"| best_role_overlap={best_overlap:.2%} < {_MIN_SKILL_OVERLAP:.0%}",
                         level="DEBUG",
                     )
                     dropped_overlap += 1
                     continue
+                job["skill_overlap_pct"] = round(best_overlap * 100, 1)
             else:
                 dropped_no_skills += 1
+                job["skill_overlap_pct"] = None
 
             filtered.append(job)
 
@@ -203,23 +226,16 @@ async def match_freelancer_to_jobs(
             )
             return ResponseSchema.success({"matches": [], "count": 0, "stage": "pre-filter_empty"}, 200)
 
-        # STAGE 3: LightGBM re-rank
-        # TO REMOVE STAGE 3: delete the 3 lines below (t3, ranked, stage3_ms)
-        # and replace with these 2 lines instead:
-        #
-        #   ranked = sorted(filtered, key=lambda x: x["similarity_score"], reverse=True)[:limit]
-        #   for job in ranked: job["match_probability"] = job["similarity_score"]
-        #
-        # Then update the logger line below: remove stage3= from the f-string.
+        # ── Stage 3: heuristic re-rank ────────────────────────────────────────
         t3 = time.perf_counter()
-        ranked = rank_jobs_with_ml(db, fid, filtered, top_n=limit)
+        ranked = rank_jobs_with_heuristic(db, fid, filtered, top_n=limit)
         stage3_ms = (time.perf_counter() - t3) * 1000
 
         total_ms = (time.perf_counter() - t_request) * 1000
         logger(
             "JOB_MATCHING",
             f"freelancer-to-jobs complete | freelancer_id={fid} | returned={len(ranked)} "
-            f"| stage1={stage1_ms:.0f}ms | stage2={stage2_ms:.0f}ms | stage3={stage3_ms:.0f}ms "  # remove stage3= if dropping ML
+            f"| stage1={stage1_ms:.0f}ms | stage2={stage2_ms:.0f}ms | stage3={stage3_ms:.0f}ms "
             f"| total={total_ms:.0f}ms",
             level="INFO",
         )

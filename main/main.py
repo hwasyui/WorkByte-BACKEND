@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import asyncio
 import sys, os, uvicorn, json, re
@@ -11,6 +12,7 @@ from functions.db_manager import init_db, close_db
 from functions.response_utils import ResponseSchema
 from ai_related.job_matching.embedding_manager import _should_embed_immediately
 from routes.auth_router import auth_router
+from routes.oauth.oauth_routes import oauth_router
 from ai_related.job_matching.job_matching_routes import router as job_matching_router
 from ai_related.job_matching.sweep_worker import embedding_sweep_loop
 from routes.users.users_routes import users_router
@@ -45,7 +47,8 @@ from routes.contract_submissions.contract_submission_routes import contract_subm
 from routes.reviews.review_routes import review_router
 from routes.dashboard.dashboard_routes import dashboard_router
 from ai_related.cv_analysis.cv_analysis_routes import cv_analysis_router
-# from ai_related.content_moderation.content_moderation_routes import content_moderation_router
+from routes.admin.admin_routes import admin_router, appeals_router, reports_router
+from ai_related.content_moderation.content_moderation_routes import content_moderation_router
 
 
 @asynccontextmanager
@@ -92,8 +95,17 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Include all routers
 app.include_router(auth_router)
+app.include_router(oauth_router)
 
 # Users router are not included
 # We are handling user authentication through the auth_router.
@@ -131,7 +143,10 @@ app.include_router(contract_submission_router)
 app.include_router(review_router)
 app.include_router(dashboard_router)
 app.include_router(job_matching_router, prefix="/ai/job_matching")
-# app.include_router(content_moderation_router)  # TODO: Uncomment after training models
+app.include_router(admin_router)
+app.include_router(reports_router)
+app.include_router(appeals_router)
+app.include_router(content_moderation_router)
 
 
 # Custom exception handler for validation errors

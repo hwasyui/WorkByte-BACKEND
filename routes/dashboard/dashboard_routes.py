@@ -34,11 +34,51 @@ _CLIENT_ORDER_FIELDS = {
 }
 
 
+def _parse_status_csv(raw: Optional[str]) -> set:
+    if not raw:
+        return set()
+    return {part.strip() for part in raw.split(",") if part.strip()}
+
+
+def _merge_status_filters(*raw_values: Optional[str]) -> set:
+    merged = set()
+    for raw in raw_values:
+        merged.update(_parse_status_csv(raw))
+    return merged
+
+
+def _validate_statuses(label: str, statuses: set, allowed: set):
+    invalid = sorted(statuses - allowed)
+    if invalid:
+        return ResponseSchema.error(
+            f"Invalid {label}: {', '.join(invalid)}. "
+            f"Valid values: {', '.join(sorted(allowed))}",
+            400,
+        )
+    return None
+
+
 @dashboard_router.get("/freelancer")
 async def get_freelancer_dashboard(
     tracking_status: Optional[str] = Query(
         default=None,
         description=f"Filter by status. One of: {', '.join(sorted(_FREELANCER_STATUSES))}",
+    ),
+    tracking_statuses: Optional[str] = Query(
+        default=None,
+        description="Comma-separated include filter. Example: applied,hired,in_progress",
+    ),
+    include_tracking_statuses: Optional[str] = Query(
+        default=None,
+        description="Comma-separated include filter alias. Example: applied,hired,in_progress",
+    ),
+    filter_in_tracking_statuses: Optional[str] = Query(
+        default=None,
+        description="Comma-separated include filter alias. Example: applied,hired,in_progress",
+    ),
+    exclude_tracking_statuses: Optional[str] = Query(
+        default=None,
+        description="Comma-separated exclude filter. Example: rejected,withdrawn",
     ),
     order_by: str = Query(
         default="last_activity_date",
@@ -84,6 +124,18 @@ async def get_freelancer_dashboard(
                 f"Valid values: {', '.join(sorted(_FREELANCER_STATUSES))}",
                 400,
             )
+        include_statuses = _merge_status_filters(
+            tracking_statuses,
+            include_tracking_statuses,
+            filter_in_tracking_statuses,
+        )
+        exclude_statuses = _parse_status_csv(exclude_tracking_statuses)
+        invalid_response = (
+            _validate_statuses("tracking_statuses", include_statuses, _FREELANCER_STATUSES)
+            or _validate_statuses("exclude_tracking_statuses", exclude_statuses, _FREELANCER_STATUSES)
+        )
+        if invalid_response:
+            return invalid_response
         if order_by not in _FREELANCER_ORDER_FIELDS:
             return ResponseSchema.error(
                 f"Invalid order_by '{order_by}'. "
@@ -98,6 +150,8 @@ async def get_freelancer_dashboard(
         data = DashboardFunctions.get_freelancer_dashboard(
             freelancer_id=freelancer["freelancer_id"],
             tracking_status=tracking_status,
+            tracking_statuses=include_statuses,
+            exclude_tracking_statuses=exclude_statuses,
             order_by=order_by,
             order_dir=order_dir,
             page=page,
@@ -115,6 +169,22 @@ async def get_client_dashboard(
     tracking_status: Optional[str] = Query(
         default=None,
         description=f"Filter by job tracking status. One of: {', '.join(sorted(_CLIENT_STATUSES))}",
+    ),
+    tracking_statuses: Optional[str] = Query(
+        default=None,
+        description="Comma-separated include filter. Example: open,hiring,in_progress",
+    ),
+    include_tracking_statuses: Optional[str] = Query(
+        default=None,
+        description="Comma-separated include filter alias. Example: open,hiring,in_progress",
+    ),
+    filter_in_tracking_statuses: Optional[str] = Query(
+        default=None,
+        description="Comma-separated include filter alias. Example: open,hiring,in_progress",
+    ),
+    exclude_tracking_statuses: Optional[str] = Query(
+        default=None,
+        description="Comma-separated exclude filter. Example: draft,completed",
     ),
     order_by: str = Query(
         default="last_activity_date",
@@ -160,6 +230,18 @@ async def get_client_dashboard(
                 f"Valid values: {', '.join(sorted(_CLIENT_STATUSES))}",
                 400,
             )
+        include_statuses = _merge_status_filters(
+            tracking_statuses,
+            include_tracking_statuses,
+            filter_in_tracking_statuses,
+        )
+        exclude_statuses = _parse_status_csv(exclude_tracking_statuses)
+        invalid_response = (
+            _validate_statuses("tracking_statuses", include_statuses, _CLIENT_STATUSES)
+            or _validate_statuses("exclude_tracking_statuses", exclude_statuses, _CLIENT_STATUSES)
+        )
+        if invalid_response:
+            return invalid_response
         if order_by not in _CLIENT_ORDER_FIELDS:
             return ResponseSchema.error(
                 f"Invalid order_by '{order_by}'. "
@@ -174,6 +256,8 @@ async def get_client_dashboard(
         data = DashboardFunctions.get_client_dashboard(
             client_id=client["client_id"],
             tracking_status=tracking_status,
+            tracking_statuses=include_statuses,
+            exclude_tracking_statuses=exclude_statuses,
             order_by=order_by,
             order_dir=order_dir,
             page=page,

@@ -1,0 +1,24 @@
+Content Moderation Model — roberta-base
+============================================================
+
+Folder    : roberta
+HF ID     : roberta-base
+Num labels: 6
+Labels    : ['toxicity', 'severe_toxicity', 'obscene', 'threat', 'insult', 'identity_hate']
+
+Test Metrics:
+  f1                  : 0.7143
+  precision           : 0.6993
+  recall              : 0.7323
+  jaccard             : 0.7196
+  hamming_loss        : 0.0624
+  accuracy            : 0.9376
+  subset_accuracy     : 0.7131
+
+Per-Label F1:
+  toxicity            : 0.9211
+  severe_toxicity     : 0.5128
+  obscene             : 0.8608
+  threat              : 0.6207
+  insult              : 0.7749
+  identity_hate       : 0.5956

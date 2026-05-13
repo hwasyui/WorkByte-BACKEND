@@ -1,11 +1,13 @@
 """
-CV Analysis Walkthrough — dedicated flow for CV upload and analysis.
+CV Analysis Walkthrough — focused flow: login → upload CV → display results.
+
+Assumes the freelancer account and profile already exist.
+Use walkthrough-cv.py for the full flow including profile setup.
 
 Flow:
-  1.  Register + verify + login as a new freelancer
-  2.  Build a complete freelancer profile (bio, skills, work exp, education)
-  3.  Upload CV: Angelica Suti Whiharto_CV.pdf
-  4.  Display full analysis results:
+  1.  Login as existing freelancer
+  2.  Upload CV: Angelica Suti Whiharto_CV.pdf
+  3.  Display full analysis results:
         - Resume score     (0–100, from GROQ LLM)
         - Overall assessment & profile match analysis (from GROQ LLM)
         - Similarity score (all-MiniLM-L6-v2 cosine, CV vs. profile)
@@ -16,24 +18,19 @@ Flow:
           Education, ATS Optimization) — pure LLM output via GROQ
         - Parsed profile suggestions (bio, skills, languages, experience,
           education extracted from CV text via GROQ)
-  5.  GET freelancer profile — verify cv_file_url is saved
-  6.  Summary
-
-  Note: freelancer embedding is marked dirty as soon as cv_file_url is
-  saved (Step 3), so the job-matching sweep picks it up independently
-  of the analysis pipeline.
+  4.  Verify cv_file_url is saved to profile
+  5.  Summary
 
 Requirements (server):
   APP_ENV=development   SHOW_DEV_OTP=true
 
 Usage:
-    python walkthrough/walkthrough_cv.py
-    python walkthrough/walkthrough_cv.py --base-url http://localhost:8000
+    python walkthrough/walkthrough-cv-analysis.py
+    python walkthrough/walkthrough-cv-analysis.py --base-url http://localhost:8000
 """
 
 import argparse
 import datetime
-import io
 import json
 import os
 import sys
@@ -73,7 +70,7 @@ class _Tee:
 
 def _start_tee():
     ts   = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"cv_walkthrough_{ts}.md")
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"cv_analysis_{ts}.md")
     tee  = _Tee(path)
     sys.stdout = tee
     return tee, path
@@ -143,7 +140,7 @@ def post(endpoint, body, token=None, expected=None, label=None, timeout=60):
     return payload
 
 
-def post_mp(endpoint, files, data=None, token=None, expected=None, label=None, timeout=120):
+def post_mp(endpoint, files, data=None, token=None, expected=None, label=None, timeout=180):
     expected = expected or {200, 201}
     headers  = _hdr(token) if token else {}
     r = requests.post(f"{BASE_URL}{endpoint}", files=files, data=data or {},
@@ -162,7 +159,8 @@ def post_mp(endpoint, files, data=None, token=None, expected=None, label=None, t
 
 def get(endpoint, token=None, expected=None, label=None, timeout=60, params=None):
     expected = expected or {200}
-    r = requests.get(f"{BASE_URL}{endpoint}", headers=_hdr(token) if token else {}, params=params, timeout=timeout)
+    r = requests.get(f"{BASE_URL}{endpoint}", headers=_hdr(token) if token else {},
+                     params=params, timeout=timeout)
     try:
         payload = r.json()
     except Exception:
@@ -175,74 +173,11 @@ def get(endpoint, token=None, expected=None, label=None, timeout=60, params=None
     return payload
 
 
-def put_form(endpoint, data, token, expected=None, label=None):
-    expected = expected or {200}
-    r = requests.put(f"{BASE_URL}{endpoint}", data=data, headers=_hdr(token), timeout=60)
-    try:
-        payload = r.json()
-    except Exception:
-        payload = {"raw": r.text}
-    ok  = r.status_code in expected
-    tag = label or f"PUT  {endpoint}"
-    print(f"  {'✓' if ok else '✗'} {tag}  [{r.status_code}]")
-    if not ok:
-        _die(tag, r.status_code, payload)
-    return payload
-
-
-# ── Catalog search helpers ────────────────────────────────────────────────────
-
-def _search_results(resp: dict) -> list:
-    data = _ex(resp)
-    if isinstance(data, list):
-        return data
-    return data.get("results", [])
-
-
-def _find_skill(name: str, token: str):
-    resp = get("/skills/search", token, expected={200}, label=f"      Search skill: {name}", params={"q": name})
-    for item in _search_results(resp):
-        if (item.get("skill_name") or "").lower() == name.lower():
-            return item
-    return None
-
-
 # ── ASCII progress bar ────────────────────────────────────────────────────────
 
 def _bar(value: float, width: int = 24) -> str:
     filled = min(width, int(value * width))
     return "█" * filled + "░" * (width - filled)
-
-
-# ── Auth helper ───────────────────────────────────────────────────────────────
-
-def register_and_login(email: str, full_name: str) -> str:
-    # Try login first — skip register if account already exists
-    r = requests.post(f"{BASE_URL}/auth/login",
-                      json={"email": email, "password": PASSWORD},
-                      headers={"Content-Type": "application/json"}, timeout=30)
-    if r.status_code == 200:
-        token = _ex(r.json()).get("access_token")
-        if token:
-            print(f"  ✓ Login (existing account)  [200]")
-            return token
-
-    # Account not found — register, verify, then login
-    reg = post("/auth/register", {
-        "email": email, "password": PASSWORD,
-        "user_type": "freelancer", "full_name": full_name,
-    }, expected={201}, label=f"  Register freelancer ({full_name})")
-    otp = _ex(reg).get("verification", {}).get("dev_verification_otp")
-    if otp:
-        post("/auth/verify-email", {"email": email, "otp": otp},
-             expected={200}, label="  Verify OTP")
-    else:
-        print("    No dev OTP found — ensure APP_ENV=development and SHOW_DEV_OTP=true on the server.")
-        otp = input("    Enter OTP manually: ").strip()
-        post("/auth/verify-email", {"email": email, "otp": otp}, expected={200})
-    login = post("/auth/login", {"email": email, "password": PASSWORD},
-                 expected={200}, label="  Login")
-    return _ex(login)["access_token"]
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -263,103 +198,26 @@ def run(base_url: str):
     print(f"  Timestamp : {ts}")
 
     # ══════════════════════════════════════════════════════════════════════════
-    section("AUTH — Register, Verify, Login")
+    section("AUTH — Login")
     # ══════════════════════════════════════════════════════════════════════════
 
-    step("Login (or register if account does not exist)")
-    token = register_and_login(email, "Angelica Suti Whiharto")
-    print(f"    Token         : {token[:30]}...")
+    step("Login")
+    r = requests.post(f"{BASE_URL}/auth/login",
+                      json={"email": email, "password": PASSWORD},
+                      headers={"Content-Type": "application/json"}, timeout=30)
+    if r.status_code != 200:
+        print(f"  ✗ Login [{r.status_code}] — account not found or wrong password")
+        print("    Run walkthrough-cv.py first to register and build the profile.")
+        sys.exit(1)
+    token = _ex(r.json()).get("access_token")
+    print(f"  ✓ Login  [200]")
+    print(f"    Token : {token[:30]}...")
 
-    step("GET /freelancers — retrieve current user's freelancer_id")
+    step("GET /freelancers — retrieve freelancer_id")
     me_resp       = _ex(get("/freelancers", token))
     me            = me_resp[0] if isinstance(me_resp, list) else me_resp
     freelancer_id = me.get("freelancer_id") or me.get("id")
     print(f"    freelancer_id : {freelancer_id}")
-
-    # ══════════════════════════════════════════════════════════════════════════
-    section("FREELANCER PROFILE — Build a complete profile before uploading CV")
-    # ══════════════════════════════════════════════════════════════════════════
-
-    step("Update bio, hourly rate, and display name")
-    fl = _ex(put_form(f"/freelancers/{freelancer_id}", {
-        "full_name"      : "Angelica Suti Whiharto",
-        "bio"            : (
-            "Informatics student at Bina Nusantara University with hands-on experience in "
-            "full-stack web development. Proficient in Python, JavaScript, React, and MySQL. "
-            "Built several projects involving REST API design and database optimization. "
-            "Strong communicator and team player with experience in agile environments."
-        ),
-        "estimated_rate" : "35",
-        "rate_time"      : "hourly",
-        "rate_currency"  : "USD",
-    }, token=token))
-    print(f"    name  : {fl.get('full_name')}")
-    print(f"    rate  : {fl.get('estimated_rate')} {fl.get('rate_currency')}/{fl.get('rate_time')}")
-
-    step("Search catalog and add skills to freelancer profile")
-    want_skills = {
-        "Python"     : "advanced",
-        "JavaScript" : "intermediate",
-        "React"      : "intermediate",
-        "MySQL"      : "advanced",
-        "Docker"     : "beginner",
-    }
-    added_skills = []
-    for name, level in want_skills.items():
-        sk = _find_skill(name, token)
-        if sk:
-            r = requests.post(
-                f"{BASE_URL}/freelancer-skills",
-                json={"freelancer_id": freelancer_id, "skill_id": sk["skill_id"], "proficiency_level": level},
-                headers={"Content-Type": "application/json", "Authorization": f"Bearer {token}"},
-                timeout=30,
-            )
-            if r.status_code in {200, 201}:
-                print(f"      ✓ Add skill: {name} ({level})  [{r.status_code}]")
-                added_skills.append(name)
-            elif r.status_code == 409:
-                print(f"      ~ Skill already exists: {name} — skipping")
-                added_skills.append(name)
-            else:
-                print(f"      ✗ Add skill: {name} ({level})  [{r.status_code}] — skipping")
-        else:
-            print(f"      Skill '{name}' not found in catalog — skipping")
-    print(f"    Added : {', '.join(added_skills) or '(none found)'}")
-
-    step("Add work experience")
-    we = _ex(post("/work-experiences", {
-        "freelancer_id": freelancer_id,
-        "job_title"    : "Full-Stack Developer Intern",
-        "company_name" : "Startup XYZ",
-        "start_date"   : "2023-07-01",
-        "end_date"     : "2023-12-31",
-        "is_current"   : False,
-        "description"  : (
-            "Developed a REST API with Python Flask and built a React frontend. "
-            "Optimized MySQL queries reducing average load time by 30%. "
-            "Collaborated with a team of 5 developers in agile sprints."
-        ),
-    }, token=token, expected={200, 201}))
-    print(f"    {we.get('job_title')} @ {we.get('company_name')}")
-
-    step("Add education")
-    edu = _ex(post("/educations", {
-        "freelancer_id"   : freelancer_id,
-        "degree"          : "Bachelor of Computer Science",
-        "field_of_study"  : "Informatics",
-        "institution_name": "Bina Nusantara University",
-        "start_date"      : "2021-09-01",
-        "end_date"        : "2025-07-31",
-    }, token=token, expected={200, 201}))
-    print(f"    {edu.get('degree')} — {edu.get('institution_name')}")
-
-    step("GET /freelancers/{id}/profile — verify profile before CV upload")
-    profile = _ex(get(f"/freelancers/{freelancer_id}/profile", token))
-    print(f"    name      : {profile.get('full_name')}")
-    print(f"    bio chars : {len(profile.get('bio') or '')}")
-    print(f"    skills    : {len(profile.get('skills') or [])}")
-    print(f"    work exp  : {len(profile.get('work_experience') or [])}")
-    print(f"    education : {len(profile.get('education') or [])}")
 
     # ══════════════════════════════════════════════════════════════════════════
     section("CV UPLOAD & ANALYSIS")
@@ -376,7 +234,7 @@ def run(base_url: str):
     print(f"    File   : Angelica Suti Whiharto_CV.pdf")
     print(f"    Size   : {len(cv_bytes):,} bytes  ({len(cv_bytes)/1024:.1f} KB)")
 
-    step("POST /cv_upload — extract text → save file + mark embedding dirty → ATS check → GROQ analysis → profile parse")
+    step("POST /cv_upload — extract → ATS check → GROQ analysis → profile parse")
     print("    (This may take 30–120 seconds due to embedding + LLM inference...)")
     t0      = time.time()
     cv_resp = post_mp(
@@ -396,6 +254,10 @@ def run(base_url: str):
         print(f"  ✗ Invalid response: {str(d)[:300]}")
         sys.exit(1)
 
+    # DEBUG: print raw keys and score fields
+    print(f"    [DEBUG] response keys: {list(d.keys())}")
+    print(f"    [DEBUG] overall_score={d.get('overall_score')!r}  overall_grade={d.get('overall_grade')!r}  resume_score={d.get('resume_score')!r}  ats_score={d.get('ats_score')!r}  is_initial={d.get('is_initial')!r}")
+
     # ── Display full analysis results ─────────────────────────────────────────
 
     step("CV analysis results — full detail")
@@ -403,7 +265,8 @@ def run(base_url: str):
     sim            = d.get("similarity_score") or 0.0
     cov            = d.get("skill_coverage")
     ats            = d.get("ats_score") or 0
-    scoring        = d.get("scoring") or "n/a"
+    overall_score  = d.get("overall_score") or 0
+    overall_grade  = d.get("overall_grade") or "n/a"
     resume_score   = d.get("resume_score") or 0
     overall        = d.get("overall_assessment") or ""
     match_analysis = d.get("profile_match_analysis") or ""
@@ -414,8 +277,8 @@ def run(base_url: str):
     suggested      = d.get("suggested_profile") or {}
     file_url       = d.get("file_url") or ""
 
-    SCORE_ICON = {"good": "✅", "enough": "⚠️ ", "bad": "❌"}
-    score_icon = SCORE_ICON.get(scoring.lower(), "?")
+    SCORE_ICON = {"excellent": "✅", "good": "✅", "fair": "⚠️ ", "bad": "❌"}
+    score_icon = SCORE_ICON.get(overall_grade.lower(), "?")
     sim_pct    = sim * 100
 
     SECTION_ICON = {
@@ -433,11 +296,11 @@ def run(base_url: str):
     File URL     : ...{file_url[-45:]}
     """)
 
-    # ── Resume score ──────────────────────────────────────────────────────────
-    print(f"    ┌─ RESUME SCORE ─────────────────────────────────────────")
-    print(f"    │  {resume_score} / 100")
-    print(f"    │  [{_bar(resume_score / 100)}]")
-    print(f"    │  Overall quality  : {score_icon}  {scoring.upper()}")
+    # ── Overall score ─────────────────────────────────────────────────────────
+    print(f"    ┌─ OVERALL SCORE ────────────────────────────────────────")
+    print(f"    │  {overall_score} / 100  →  {score_icon}  {overall_grade.upper()}")
+    print(f"    │  [{_bar(overall_score / 100)}]")
+    print(f"    │  (Resume Score: {resume_score}/100  +  ATS Score: {ats}/100) ÷ 2")
     print(f"    └────────────────────────────────────────────────────────")
 
     # ── Overall assessment ────────────────────────────────────────────────────
@@ -501,10 +364,10 @@ def run(base_url: str):
     print(f"\n    ┌─ SECTION-BY-SECTION RECOMMENDATIONS ({total_recs} total) ───────")
     if sections:
         for sec in sections:
-            title   = sec.get("title", "")
-            icon    = SECTION_ICON.get(title.lower(), "📋")
+            title         = sec.get("title", "")
+            icon          = SECTION_ICON.get(title.lower(), "📋")
             analysis_text = sec.get("analysis", "")
-            recs    = sec.get("recommendations", [])
+            recs          = sec.get("recommendations", [])
             print(f"    │")
             print(f"    │  {icon}  {title.upper()}")
             if analysis_text:
@@ -567,9 +430,9 @@ def run(base_url: str):
 
     step("GET /freelancers/{id}/profile — final profile verification")
     final = _ex(get(f"/freelancers/{freelancer_id}/profile", token))
-    print(f"    name      : {final.get('full_name')}")
-    print(f"    skills    : {len(final.get('skills') or [])}")
-    print(f"    cv_url    : {'present ✓' if final.get('cv_file_url') else 'missing ✗'}")
+    print(f"    name    : {final.get('full_name')}")
+    print(f"    skills  : {len(final.get('skills') or [])}")
+    print(f"    cv_url  : {'present ✓' if final.get('cv_file_url') else 'missing ✗'}")
 
     # ══════════════════════════════════════════════════════════════════════════
     section("SUMMARY")
@@ -581,8 +444,8 @@ def run(base_url: str):
   ├──────────────────────────────────────────────────────────────────┤
   │  File        : Angelica Suti Whiharto_CV.pdf                    │
   │  Freelancer  : {freelancer_id:<52} │
-  │  Overall     : {scoring.upper():<52} │
-  │  Resume Score: {resume_score}/100                                               │
+  │  Overall     : {overall_score}/100  ({overall_grade.upper()})                                   │
+  │  Resume Score: {resume_score}/100  ·  ATS Score: {ats}/100                         │
   │  Similarity  : {sim:.4f}  ({sim_pct:.1f}%)                                │
   │  Coverage    : {f"{cov:.4f}  ({cov*100:.1f}%)" if cov is not None else "N/A":<52} │
   │  ATS Score   : {ats}/100                                                │
