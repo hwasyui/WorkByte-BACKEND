@@ -17,3 +17,8 @@ walkthrough/*.pdf
 walkthrough/*.jpeg
 walkthrough/*.png
 walkthrough/*.jpg
+*.safetensors
+*.pkl
+ai_related/content_moderation/machine_learning/*.ipynb
+ai_related/content_moderation/machine_learning/models/*.safetensors
+ai_related/content_moderation/machine_learning/models/roberta/
