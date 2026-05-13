@@ -47,8 +47,8 @@ from routes.contract_submissions.contract_submission_routes import contract_subm
 from routes.reviews.review_routes import review_router
 from routes.dashboard.dashboard_routes import dashboard_router
 from ai_related.cv_analysis.cv_analysis_routes import cv_analysis_router
-from routes.admin.admin_routes import admin_router, appeals_router, reports_router
 from ai_related.content_moderation.content_moderation_routes import content_moderation_router
+from routes.admin.admin_routes import admin_router, reports_router, appeals_router
 
 
 @asynccontextmanager
@@ -143,13 +143,12 @@ app.include_router(contract_submission_router)
 app.include_router(review_router)
 app.include_router(dashboard_router)
 app.include_router(job_matching_router, prefix="/ai/job_matching")
+app.include_router(content_moderation_router)
 app.include_router(admin_router)
 app.include_router(reports_router)
 app.include_router(appeals_router)
-app.include_router(content_moderation_router)
 
 
-# Custom exception handler for validation errors
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     """
