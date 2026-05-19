@@ -1,4 +1,4 @@
-"""Text preprocessing and tokenization for content moderation."""
+"""Text preprocessing and tokenization for toxicity detection."""
 
 import re
 from typing import List
@@ -6,7 +6,7 @@ import numpy as np
 
 
 class TextPreprocessor:
-    """Text cleaning and normalization for content moderation."""
+    """Text cleaning and normalization for toxicity detection."""
 
     @staticmethod
     def clean_text(text: str) -> str:

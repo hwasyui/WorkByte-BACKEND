@@ -24,7 +24,7 @@ class SavedJobFunctions:
     """Handle all saved job-related database operations"""
 
     @staticmethod
-    def get_all_saved_jobs(limit: Optional[int] = None, offset: int = 0) -> List[Dict]:
+    def get_all_saved_jobs(limit: Optional[int] = None) -> List[Dict]:
         """Fetch all saved jobs"""
         try:
             db = get_db()
@@ -33,7 +33,6 @@ class SavedJobFunctions:
                 columns=["saved_job_id", "freelancer_id", "job_post_id", "saved_at", "notes"],
                 order_by="saved_at DESC",
                 limit=limit,
-                offset=offset
             )
             
             logger("SAVED_JOB_FUNCTIONS", f"Fetched {len(rows)} saved jobs", level="INFO")
@@ -66,7 +65,7 @@ class SavedJobFunctions:
             raise
 
     @staticmethod
-    def get_saved_jobs_by_freelancer_id(freelancer_id: str) -> List[Dict]:
+    def get_saved_jobs_by_freelancer_id(freelancer_id: str, limit: Optional[int] = None) -> List[Dict]:
         """Fetch all saved jobs for a freelancer"""
         try:
             db = get_db()
@@ -74,7 +73,8 @@ class SavedJobFunctions:
             rows = db.fetch_data(
                 table_name="saved_job",
                 conditions=conditions,
-                order_by="saved_at DESC"
+                order_by="saved_at DESC",
+                limit=limit
             )
             
             logger("SAVED_JOB_FUNCTIONS", f"Fetched {len(rows)} saved jobs for freelancer {freelancer_id}", level="INFO")

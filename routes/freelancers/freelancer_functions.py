@@ -97,21 +97,22 @@ class EmbeddingFunctions:
             raise
 
     @staticmethod
-    def create_job_embedding(job_post_id: str, source_text: str) -> Dict:
+    def create_job_embedding(job_role_id: str, job_post_id: str, source_text: str) -> Dict:
         try:
             db = get_db()
-            query = "SELECT embedding_id FROM job_embedding WHERE job_post_id = :job_post_id"
-            result = db.execute_query(query, {"job_post_id": job_post_id})
+            query = "SELECT embedding_id FROM job_role_embedding WHERE job_role_id = :job_role_id"
+            result = db.execute_query(query, {"job_role_id": job_role_id})
             embedding_vector = EmbeddingFunctions.get_embedding_vector(source_text)
             vector_str = "[" + ",".join(str(x) for x in embedding_vector) + "]"
 
             if result and len(result) > 0:
                 embedding_id = result[0]['embedding_id']
                 update_query = """
-                    UPDATE job_embedding
+                    UPDATE job_role_embedding
                     SET embedding_vector = :vector::vector,
                         source_text = :source_text,
-                        embedding_metadata = :metadata
+                        embedding_metadata = :metadata,
+                        embedding_dirty = FALSE
                     WHERE embedding_id = :embedding_id
                 """
                 db.execute_query(update_query, {
@@ -120,39 +121,40 @@ class EmbeddingFunctions:
                     "metadata": json.dumps({"updated": True}),
                     "embedding_id": embedding_id,
                 })
-                logger("EMBEDDING_FUNCTIONS", f"Updated job embedding: {embedding_id}", level="INFO")
+                logger("EMBEDDING_FUNCTIONS", f"Updated job role embedding: {embedding_id}", level="INFO")
                 return {"embedding_id": embedding_id, "status": "updated"}
             else:
                 embedding_id = str(uuid.uuid4())
                 insert_query = """
-                    INSERT INTO job_embedding
-                        (embedding_id, job_post_id, embedding_vector, source_text, embedding_metadata)
+                    INSERT INTO job_role_embedding
+                        (embedding_id, job_role_id, job_post_id, embedding_vector, source_text, embedding_metadata, embedding_dirty)
                     VALUES
-                        (:embedding_id, :job_post_id, :vector::vector, :source_text, :metadata)
+                        (:embedding_id, :job_role_id, :job_post_id, :vector::vector, :source_text, :metadata, FALSE)
                 """
                 db.execute_query(insert_query, {
                     "embedding_id": embedding_id,
+                    "job_role_id": job_role_id,
                     "job_post_id": job_post_id,
                     "vector": vector_str,
                     "source_text": source_text,
                     "metadata": json.dumps({"created": True}),
                 })
-                logger("EMBEDDING_FUNCTIONS", f"Created job embedding: {embedding_id}", level="INFO")
+                logger("EMBEDDING_FUNCTIONS", f"Created job role embedding: {embedding_id}", level="INFO")
                 return {"embedding_id": embedding_id, "status": "created"}
         except Exception as e:
-            logger("EMBEDDING_FUNCTIONS", f"Error managing job embedding: {str(e)}", level="ERROR")
+            logger("EMBEDDING_FUNCTIONS", f"Error managing job role embedding: {str(e)}", level="ERROR")
             raise
 
     @staticmethod
-    def delete_job_embedding(job_post_id: str) -> bool:
+    def delete_job_embedding(job_role_id: str) -> bool:
         try:
             db = get_db()
-            conditions = [("job_post_id", "=", job_post_id)]
-            db.delete_data(table_name="job_embedding", conditions=conditions)
-            logger("EMBEDDING_FUNCTIONS", f"Deleted job embedding for {job_post_id}", level="INFO")
+            conditions = [("job_role_id", "=", job_role_id)]
+            db.delete_data(table_name="job_role_embedding", conditions=conditions)
+            logger("EMBEDDING_FUNCTIONS", f"Deleted job role embedding for role {job_role_id}", level="INFO")
             return True
         except Exception as e:
-            logger("EMBEDDING_FUNCTIONS", f"Error deleting job embedding: {str(e)}", level="ERROR")
+            logger("EMBEDDING_FUNCTIONS", f"Error deleting job role embedding: {str(e)}", level="ERROR")
             raise
 
 
@@ -160,25 +162,24 @@ class FreelancerFunctions:
     """Handle all freelancer-related database operations"""
 
     _FREELANCER_SORT_FIELDS = {
-        "created_at":    "created_at",
-        "updated_at":    "updated_at",
-        "full_name":     "full_name",
-        "estimated_rate":"estimated_rate",
-        "total_jobs":    "total_jobs",
-    }
+    "created_at":           "f.created_at",
+    "updated_at":           "f.updated_at",
+    "full_name":            "f.full_name",
+    "estimated_rate":       "f.estimated_rate",
+    "total_jobs":           "f.total_jobs",
+    "weighted_review_avg":  "fts.weighted_review_avg",  # ← new
+}
 
     @staticmethod
     def browse_freelancers(
-        order_by: str = "created_at",
+        order_by: str = "weighted_review_avg",   # ← change default
         order_dir: str = "desc",
         page: int = 1,
         page_size: int = 20,
     ) -> Dict[str, Any]:
-        """Paginated + sorted freelancer browse."""
         try:
             db = get_db()
-
-            sort_col = FreelancerFunctions._FREELANCER_SORT_FIELDS.get(order_by, "created_at")
+            sort_col = FreelancerFunctions._FREELANCER_SORT_FIELDS.get(order_by, "fts.weighted_review_avg")
             direction = "DESC" if order_dir.lower() == "desc" else "ASC"
             offset = (page - 1) * page_size
 
@@ -187,10 +188,13 @@ class FreelancerFunctions:
 
             data_rows = db.execute_query(
                 f"""
-                SELECT freelancer_id, user_id, full_name, bio, cv_file_url,
-                       profile_picture_url, estimated_rate, rate_time, rate_currency,
-                       total_jobs, created_at, updated_at
-                FROM freelancer
+                SELECT f.freelancer_id, f.user_id, f.full_name, f.bio, f.cv_file_url,
+                    f.profile_picture_url, f.estimated_rate, f.rate_time, f.rate_currency,
+                    f.total_jobs, f.created_at, f.updated_at,
+                    fts.weighted_review_avg
+                FROM freelancer f
+                LEFT JOIN freelancer_trust_scores fts
+                    ON fts.freelancer_id = f.user_id
                 ORDER BY {sort_col} {direction} NULLS LAST
                 LIMIT :limit OFFSET :offset
                 """,
@@ -211,25 +215,33 @@ class FreelancerFunctions:
         except Exception as e:
             logger("FREELANCER_FUNCTIONS", f"Error browsing freelancers: {str(e)}", level="ERROR")
             raise
-
+        
     @staticmethod
     def get_all_freelancers(limit: Optional[int] = None, offset: int = 0) -> List[Dict]:
         try:
             db = get_db()
-            rows = db.fetch_data(
-                table_name="freelancer",
-                columns=["freelancer_id", "user_id", "full_name", "bio", "cv_file_url",
-                         "profile_picture_url", "estimated_rate", "rate_time", "rate_currency",
-                         "total_jobs", "created_at", "updated_at"],
-                order_by="created_at DESC",
-                limit=limit
+            limit_clause = f"LIMIT {limit}" if limit is not None else ""
+            rows = db.execute_query(
+                f"""
+                SELECT f.freelancer_id, f.user_id, f.full_name, f.bio, f.cv_file_url,
+                    f.profile_picture_url, f.estimated_rate, f.rate_time, f.rate_currency,
+                    f.total_jobs, f.created_at, f.updated_at,
+                    fts.weighted_review_avg
+                FROM freelancer f
+                LEFT JOIN freelancer_trust_scores fts
+                    ON fts.freelancer_id = f.user_id
+                ORDER BY fts.weighted_review_avg DESC NULLS LAST
+                {limit_clause}
+                OFFSET :offset
+                """,
+                {"offset": offset},
             )
             logger("FREELANCER_FUNCTIONS", f"Fetched {len(rows)} freelancers", level="INFO")
             return [convert_uuids_to_str(dict(row)) for row in rows]
         except Exception as e:
             logger("FREELANCER_FUNCTIONS", f"Error fetching freelancers: {str(e)}", level="ERROR")
             raise
-
+        
     @staticmethod
     def get_freelancer_by_id(freelancer_id: str) -> Optional[Dict]:
         try:
@@ -432,18 +444,6 @@ def get_comprehensive_freelancer_profile(freelancer_id: str) -> Optional[Dict]:
         specialities_rows = db.execute_query(specialities_query, {"freelancer_id": freelancer_id})
         specialities = [dict(row) for row in specialities_rows] if specialities_rows else []
 
-        languages_query = """
-            SELECT fl.freelancer_language_id, fl.proficiency_level, fl.created_at,
-                   l.language_id, l.language_name, l.iso_code,
-                   l.created_at as language_created_at
-            FROM freelancer_language fl
-            JOIN language l ON fl.language_id = l.language_id
-            WHERE fl.freelancer_id = :freelancer_id
-            ORDER BY fl.created_at DESC
-        """
-        languages_rows = db.execute_query(languages_query, {"freelancer_id": freelancer_id})
-        languages = [dict(row) for row in languages_rows] if languages_rows else []
-
         education_rows = db.fetch_data(
             table_name="education",
             conditions=[("freelancer_id", "=", freelancer_id)],
@@ -486,7 +486,6 @@ def get_comprehensive_freelancer_profile(freelancer_id: str) -> Optional[Dict]:
             "freelancer": freelancer,
             "skills": skills,
             "specialities": specialities,
-            "languages": languages,
             "education": education,
             "work_experience": work_experience,
             "portfolio": portfolio,

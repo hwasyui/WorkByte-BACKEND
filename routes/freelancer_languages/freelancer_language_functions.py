@@ -24,7 +24,7 @@ class FreelancerLanguageFunctions:
     """Handle all freelancer language-related database operations"""
 
     @staticmethod
-    def get_all_freelancer_languages(limit: Optional[int] = None, offset: int = 0) -> List[Dict]:
+    def get_all_freelancer_languages(limit: Optional[int] = None) -> List[Dict]:
         """Fetch all freelancer languages"""
         try:
             db = get_db()
@@ -33,7 +33,6 @@ class FreelancerLanguageFunctions:
                 columns=["freelancer_language_id", "freelancer_id", "language_id", "proficiency_level", "created_at"],
                 order_by="created_at DESC",
                 limit=limit,
-                offset=offset
             )
             
             logger("FREELANCER_LANGUAGE_FUNCTIONS", f"Fetched {len(rows)} freelancer languages", level="INFO")

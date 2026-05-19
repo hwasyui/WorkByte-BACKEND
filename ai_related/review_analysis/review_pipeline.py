@@ -2,6 +2,7 @@ import os
 import sys
 import asyncio
 import uuid
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from functions.db_manager import get_db
@@ -63,7 +64,6 @@ async def run_post_completion_pipeline(contract_id: str) -> None:
         logger("REVIEW_PIPELINE", f"Starting post-completion pipeline for contract {contract_id}", level="INFO")
         db = get_db()
 
-        # Fetch contract + job details in one query
         rows = db.execute_query(
             """SELECT
                  c.contract_id, c.freelancer_id, c.client_id,
@@ -82,7 +82,6 @@ async def run_post_completion_pipeline(contract_id: str) -> None:
 
         contract = rows[0]
 
-        # Resolve user_ids from profile tables
         freelancer_rows = db.fetch_data("freelancer", conditions=[("freelancer_id", "=", str(contract["freelancer_id"]))], limit=1)
         client_rows     = db.fetch_data("client",     conditions=[("client_id",     "=", str(contract["client_id"]))],     limit=1)
 
@@ -93,14 +92,14 @@ async def run_post_completion_pipeline(contract_id: str) -> None:
         freelancer_user_id = str(freelancer_rows[0]["user_id"])
         client_user_id     = str(client_rows[0]["user_id"])
 
-        # Step 2 — Classify category deterministically from role/title/description
+        # Step 2 — Classify category deterministically
         category = infer_project_category(
             role_title=contract.get("role_title", "") or "",
             job_title=contract.get("job_title", "") or "",
             job_description=contract.get("job_description", "") or "",
         )
 
-        # Step 2 — Create pending review record
+        # Step 2 — Create pending review shell
         review = ReviewFunctions.create_pending_review(
             contract_id=contract_id,
             reviewer_id=client_user_id,
@@ -113,12 +112,12 @@ async def run_post_completion_pipeline(contract_id: str) -> None:
         question = get_targeted_question(category)
         ReviewFunctions.save_ai_question(review_id, question)
 
-        # Step 4 — Compute all performance scores
-        on_time_score                        = compute_on_time_score(contract.get("end_date"), contract.get("actual_completion_date"))
-        revision_count, revision_rate_score  = compute_revision_scores(contract_id)
-        responsiveness_score                 = compute_responsiveness_score(contract_id, freelancer_user_id)
+        # Step 4 — Compute all objective performance scores
+        on_time_score                       = compute_on_time_score(contract.get("end_date"), contract.get("actual_completion_date"))
+        revision_count, revision_rate_score = compute_revision_scores(contract_id)
+        responsiveness_score                = compute_responsiveness_score(contract_id, freelancer_user_id)
 
-        # Step 4 — Persist all performance scores without extra LLM calls
+        # Step 4 — Persist performance scores; communication fields are placeholders until Step 6
         ReviewFunctions.save_performance_scores(
             contract_id=contract_id,
             freelancer_id=freelancer_user_id,
@@ -126,9 +125,9 @@ async def run_post_completion_pipeline(contract_id: str) -> None:
             revision_count=revision_count,
             revision_rate_score=revision_rate_score,
             responsiveness_score=responsiveness_score,
-            communication_sentiment_score=0.5,
-            conflict_score=0.0,
-            communication_summary="Communication analysis pending.",
+            communication_sentiment_score=None,   # filled in Step 6
+            conflict_score=None,                  # filled in Step 6
+            communication_summary=None,           # filled in Step 6
         )
 
         logger("REVIEW_PIPELINE", f"Post-completion pipeline done | contract={contract_id} | category={category}", level="INFO")
@@ -140,19 +139,19 @@ async def run_post_completion_pipeline(contract_id: str) -> None:
 async def run_post_review_pipeline(review_id: str) -> None:
     """
     Steps 6–9. Runs in background after client submits their review.
-    Runs 3 AI checks in parallel → publishes or flags → recalculates trust score.
+    Runs AI analysis → publishes or flags → recalculates trust score.
     """
     try:
         logger("REVIEW_PIPELINE", f"Starting post-review pipeline for review {review_id}", level="INFO")
         db = get_db()
 
-        review  = ReviewFunctions.get_review_detail(review_id)
+        review = ReviewFunctions.get_review_detail(review_id)
         if not review:
             logger("REVIEW_PIPELINE", f"Review {review_id} not found — pipeline aborted", level="ERROR")
             return
 
-        freelancer_id = review["freelancer_id"]
-        written       = review.get("written_content") or {}
+        freelancer_id   = review["freelancer_id"]
+        written         = review.get("written_content") or {}
         overall_comment = written.get("overall_comment", "")
         client_answer   = written.get("client_answer", "")
         ratings         = review.get("ratings", [])
@@ -163,7 +162,13 @@ async def run_post_review_pipeline(review_id: str) -> None:
 
         avg_stars = round(sum(float(r["score"]) for r in ratings) / len(ratings), 2)
 
-        # Fetch performance scores for bias cross-reference
+        # Extract client's explicit communication star rating (1–5) from review_ratings
+        communication_star_rating = next(
+            (float(r["score"]) for r in ratings if r.get("category") == "communication"),
+            None,
+        )
+
+        # Fetch pre-computed performance scores for bias cross-reference + responsiveness blend
         perf_rows = db.fetch_data(
             "freelancer_performance_scores",
             conditions=[("contract_id", "=", review["contract_id"])],
@@ -171,16 +176,15 @@ async def run_post_review_pipeline(review_id: str) -> None:
         )
         perf = dict(perf_rows[0]) if perf_rows else {}
         performance_summary = {
-            "on_time":       perf.get("on_time_score"),
-            "revision_rate": perf.get("revision_rate_score"),
-            "responsiveness":perf.get("responsiveness_score"),
+            "on_time":        perf.get("on_time_score"),
+            "revision_rate":  perf.get("revision_rate_score"),
+            "responsiveness": perf.get("responsiveness_score"),
         }
+        responsiveness_score = float(perf.get("responsiveness_score") or 0.8)
 
-        # Fetch freelancer display name for bias detection from freelancer profile
         freelancer_name = "Unknown"
         freelancer_rows = db.execute_query(
-            """SELECT full_name FROM freelancer
-               WHERE user_id = :uid""",
+            "SELECT full_name FROM freelancer WHERE user_id = :uid",
             {"uid": freelancer_id},
         )
         if freelancer_rows:
@@ -197,7 +201,7 @@ async def run_post_review_pipeline(review_id: str) -> None:
         else:
             message_thread = ""
 
-        # Step 6 — Run the full review analysis in a single LLM call
+        # Step 6 — Single LLM call for full review analysis
         analysis_result = await analyze_review_full(
             overall_comment=overall_comment,
             client_answer=client_answer,
@@ -205,11 +209,13 @@ async def run_post_review_pipeline(review_id: str) -> None:
             freelancer_name=freelancer_name,
             performance_score_summary=performance_summary,
             message_thread=message_thread,
+            responsiveness_score=responsiveness_score,
+            communication_star_rating=communication_star_rating,
         )
 
         overall_pass = analysis_result.get("overall_pass", True)
 
-        # Step 6 — Save AI analysis results
+        # Step 6 — Persist AI analysis
         ReviewFunctions.save_ai_analysis(
             review_id=review_id,
             sentiment_score=analysis_result["sentiment_score"],
@@ -224,9 +230,9 @@ async def run_post_review_pipeline(review_id: str) -> None:
             overall_pass=overall_pass,
         )
 
-        # Step 6.5 — Update communication analysis in the performance score record
-        sentiment_score = float(analysis_result.get("sentiment_score", 0.0))
-        communication_sentiment_score = max(0.0, min(1.0, 0.5 + sentiment_score / 2.0))
+        # Step 6.5 — Update communication fields in performance scores
+        # communication_sentiment_score is already the fully blended value from analyze_review_full
+        communication_sentiment_score = analysis_result["communication_sentiment_score"]
         conflict_score = 1.0 if analysis_result.get("is_flagged_coerced", False) else 0.0
         communication_summary = analysis_result.get("communication_summary", "")
 
@@ -237,11 +243,11 @@ async def run_post_review_pipeline(review_id: str) -> None:
             communication_summary=communication_summary,
         )
 
+        # Keep perf dict in sync for trust score calculation below
         perf["communication_sentiment_score"] = communication_sentiment_score
         perf["conflict_score"] = conflict_score
-        perf["communication_summary"] = communication_summary
 
-        # Log bias if significant
+        # Log significant bias for manual review
         if analysis_result["bias_score"] > 0.3:
             db.insert_data(
                 table_name="bias_detection_log",
@@ -265,7 +271,7 @@ async def run_post_review_pipeline(review_id: str) -> None:
             )
             ReviewFunctions.flag_review(review_id, suppress=suppress)
             logger("REVIEW_PIPELINE", f"Review {review_id} not published (pass={overall_pass})", level="WARNING")
-            return  # Do not update trust score for unpublished reviews
+            return  # Do not recalculate trust score for unpublished reviews
 
         # Step 8 — Recalculate trust score
         weighted_avg, total_reviews = calculate_weighted_review_avg(freelancer_id)
@@ -319,6 +325,7 @@ async def run_post_review_pipeline(review_id: str) -> None:
             category=category,
             category_rank_pct=category_rank_pct,
         )
+
         # Step 9 — Red flag check
         ReviewFunctions.check_and_create_red_flag(freelancer_id, overall_score)
 

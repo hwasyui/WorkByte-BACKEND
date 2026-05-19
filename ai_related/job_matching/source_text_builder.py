@@ -1,7 +1,7 @@
 """
 Builds natural-language "profile documents" from DB data for embedding.
 
-Freelancer: joins freelancer + specialities + skills + languages +
+Freelancer: joins freelancer + specialities + skills +
             work_experience + education + portfolio.
 Job:        joins job_post + job_role(s) + job_role_skill(s).
 
@@ -82,21 +82,6 @@ def build_freelancer_source_text(freelancer_id: str) -> Optional[str]:
             logger("SOURCE_TEXT_BUILDER", f"  {len(skill_rows)} skill(s) added", level="DEBUG")
         else:
             logger("SOURCE_TEXT_BUILDER", "  No skills found", level="DEBUG")
-
-        # languages
-        lang_rows = db.execute_query(
-            """SELECT l.language_name, fl.proficiency_level
-               FROM freelancer_language fl
-               JOIN language l ON l.language_id = fl.language_id
-               WHERE fl.freelancer_id = :fid""",
-            {"fid": freelancer_id},
-        )
-        if lang_rows:
-            langs = [
-                f"{r['language_name']} ({r['proficiency_level']})" for r in lang_rows
-            ]
-            parts.append(f"Languages: {', '.join(langs)}")
-            logger("SOURCE_TEXT_BUILDER", f"  {len(lang_rows)} language(s) added", level="DEBUG")
 
         if f.get("estimated_rate"):
             currency = f.get("rate_currency") or "USD"
@@ -328,107 +313,103 @@ def build_portfolio_source_text(portfolio_id: str) -> Optional[str]:
         raise
 
 
-def build_job_source_text(job_post_id: str) -> Optional[str]:
+def build_job_role_source_text(job_role_id: str) -> Optional[str]:
     """
-    Denormalize a job post + all its roles + required skills into a single
-    descriptive text. Returns None if the job post does not exist.
+    Build source text for a single job role.
+
+    Includes parent job post context (title + description + meta) so the vector
+    captures the project's overall intent, then adds the role-specific title,
+    description, budget and skills. This keeps each role's vector precise while
+    still encoding shared project context.
+
+    Returns None if the role does not exist.
     """
-    logger("SOURCE_TEXT_BUILDER", f"Building job post source text | job_post_id={job_post_id}", level="INFO")
+    logger("SOURCE_TEXT_BUILDER", f"Building job role source text | job_role_id={job_role_id}", level="INFO")
     try:
         db = get_db()
 
-        jp_rows = db.execute_query(
-            """SELECT job_title, job_description, project_type, project_scope,
-                      estimated_duration, experience_level
-               FROM job_post
-               WHERE job_post_id = :jpid""",
-            {"jpid": job_post_id},
+        rows = db.execute_query(
+            """SELECT jp.job_title, jp.job_description, jp.project_type, jp.project_scope,
+                      jp.estimated_duration, jp.experience_level,
+                      jr.role_title, jr.role_description,
+                      jr.role_budget, jr.budget_currency, jr.budget_type
+               FROM job_role jr
+               JOIN job_post jp ON jp.job_post_id = jr.job_post_id
+               WHERE jr.job_role_id = :jrid""",
+            {"jrid": job_role_id},
         )
-        if not jp_rows:
-            logger("SOURCE_TEXT_BUILDER", f"Job post {job_post_id} not found in DB — skipping", level="WARNING")
+        if not rows:
+            logger("SOURCE_TEXT_BUILDER", f"Job role {job_role_id} not found in DB — skipping", level="WARNING")
             return None
-        jp = dict(jp_rows[0])
-        logger("SOURCE_TEXT_BUILDER", f"Job post core loaded | title={jp.get('job_title')}", level="DEBUG")
+
+        r = dict(rows[0])
+        logger(
+            "SOURCE_TEXT_BUILDER",
+            f"Job role loaded | role='{r.get('role_title')}' | job='{r.get('job_title')}'",
+            level="DEBUG",
+        )
 
         parts: list[str] = []
-        parts.append(f"Job Title: {jp['job_title']}")
+        parts.append(f"Job Title: {r['job_title']}")
+        parts.append(f"Role: {r['role_title']}")
 
-        if jp.get("job_description"):
-            parts.append(f"Description: {jp['job_description']}")
+        if r.get("job_description"):
+            parts.append(f"Description: {r['job_description']}")
+
+        if r.get("role_description"):
+            parts.append(f"Role Description: {r['role_description']}")
 
         meta: list[str] = []
-        if jp.get("project_type"):
-            meta.append(f"Type: {jp['project_type']}")
-        if jp.get("project_scope"):
-            meta.append(f"Scope: {jp['project_scope']}")
-        if jp.get("estimated_duration"):
-            meta.append(f"Duration: {jp['estimated_duration']}")
-        if jp.get("experience_level"):
-            meta.append(f"Experience Required: {jp['experience_level']}")
+        if r.get("project_type"):
+            meta.append(f"Type: {r['project_type']}")
+        if r.get("project_scope"):
+            meta.append(f"Scope: {r['project_scope']}")
+        if r.get("estimated_duration"):
+            meta.append(f"Duration: {r['estimated_duration']}")
+        if r.get("experience_level"):
+            meta.append(f"Experience Required: {r['experience_level']}")
         if meta:
             parts.append(" | ".join(meta))
 
-        # roles and their skills
-        role_rows = db.execute_query(
-            """SELECT job_role_id, role_title, role_description,
-                      role_budget, budget_currency, budget_type
-               FROM job_role
-               WHERE job_post_id = :jpid
-               ORDER BY display_order ASC""",
-            {"jpid": job_post_id},
+        if r.get("role_budget"):
+            currency = r.get("budget_currency") or "USD"
+            budget_type = r.get("budget_type") or ""
+            parts.append(f"Budget: {r['role_budget']} {currency} ({budget_type})")
+
+        skill_rows = db.execute_query(
+            """SELECT s.skill_name, jrs.is_required, jrs.importance_level
+               FROM job_role_skill jrs
+               JOIN skill s ON s.skill_id = jrs.skill_id
+               WHERE jrs.job_role_id = :jrid
+               ORDER BY jrs.is_required DESC,
+                 CASE jrs.importance_level
+                   WHEN 'required'     THEN 1
+                   WHEN 'preferred'    THEN 2
+                   WHEN 'nice_to_have' THEN 3
+                   ELSE 4
+                 END""",
+            {"jrid": job_role_id},
         )
-        logger("SOURCE_TEXT_BUILDER", f"  {len(role_rows) if role_rows else 0} role(s) found", level="DEBUG")
-
-        for role in (role_rows or []):
-            role_parts: list[str] = [f"Role: {role['role_title']}"]
-
-            if role.get("role_description"):
-                role_parts.append(f"Role Description: {role['role_description']}")
-
-            if role.get("role_budget"):
-                currency = role.get("budget_currency") or "USD"
-                budget_type = role.get("budget_type") or ""
-                role_parts.append(
-                    f"Budget: {role['role_budget']} {currency} ({budget_type})"
-                )
-
-            skill_rows = db.execute_query(
-                """SELECT s.skill_name, jrs.is_required, jrs.importance_level
-                   FROM job_role_skill jrs
-                   JOIN skill s ON s.skill_id = jrs.skill_id
-                   WHERE jrs.job_role_id = :jrid
-                   ORDER BY jrs.is_required DESC,
-                     CASE jrs.importance_level
-                       WHEN 'required'     THEN 1
-                       WHEN 'preferred'    THEN 2
-                       WHEN 'nice_to_have' THEN 3
-                       ELSE 4
-                     END""",
-                {"jrid": str(role["job_role_id"])},
+        if skill_rows:
+            required  = [s["skill_name"] for s in skill_rows if s["is_required"]]
+            preferred = [
+                f"{s['skill_name']} ({s['importance_level']})"
+                for s in skill_rows if not s["is_required"]
+            ]
+            if required:
+                parts.append(f"Required Skills: {', '.join(required)}")
+            if preferred:
+                parts.append(f"Preferred Skills: {', '.join(preferred)}")
+            logger(
+                "SOURCE_TEXT_BUILDER",
+                f"  Skills: {len(required)} required + {len(preferred)} preferred",
+                level="DEBUG",
             )
-            if skill_rows:
-                required = [r["skill_name"] for r in skill_rows if r["is_required"]]
-                preferred = [
-                    f"{r['skill_name']} ({r['importance_level']})"
-                    for r in skill_rows
-                    if not r["is_required"]
-                ]
-                if required:
-                    role_parts.append(f"Required Skills: {', '.join(required)}")
-                if preferred:
-                    role_parts.append(f"Preferred Skills: {', '.join(preferred)}")
-                logger(
-                    "SOURCE_TEXT_BUILDER",
-                    f"  Role '{role['role_title']}': {len(required)} required + {len(preferred)} preferred skills",
-                    level="DEBUG",
-                )
-
-            parts.append("\n".join(role_parts))
 
         source_text = "\n".join(parts)
         logger(
             "SOURCE_TEXT_BUILDER",
-            f"Job source text built | job_post_id={job_post_id} | roles={len(role_rows) if role_rows else 0} | total_chars={len(source_text)}",
+            f"Job role source text built | job_role_id={job_role_id} | total_chars={len(source_text)}",
             level="INFO",
         )
         return source_text
@@ -436,7 +417,7 @@ def build_job_source_text(job_post_id: str) -> Optional[str]:
     except Exception as e:
         logger(
             "SOURCE_TEXT_BUILDER",
-            f"Error building job source text | job_post_id={job_post_id} | error={e}",
+            f"Error building job role source text | job_role_id={job_role_id} | error={e}",
             level="ERROR",
         )
         raise

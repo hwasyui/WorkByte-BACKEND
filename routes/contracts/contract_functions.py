@@ -48,7 +48,7 @@ class ContractFunctions:
     """Handle all contract-related database operations"""
 
     @staticmethod
-    def get_all_contracts(limit: Optional[int] = None, offset: int = 0) -> List[Dict]:
+    def get_all_contracts(limit: Optional[int] = None) -> List[Dict]:
         """Fetch all contracts"""
         try:
             db = get_db()
@@ -64,7 +64,6 @@ class ContractFunctions:
                 ],
                 order_by="created_at DESC",
                 limit=limit,
-                offset=offset,
             )
             logger("CONTRACT_FUNCTIONS", f"Fetched {len(rows)} contracts", level="INFO")
             return [convert_uuids_to_str(dict(row)) for row in rows]

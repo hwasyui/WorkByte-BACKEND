@@ -1,5 +1,5 @@
 """
-Full Walkthrough — Forgot Password + Heuristic Job Matching + Content Moderation
+Full Walkthrough — Forgot Password + Heuristic Job Matching + Toxicity Detection
 
 Covers three systems end-to-end in one script. All sections run sequentially;
 individual step failures are printed but do not abort later sections.
@@ -26,13 +26,13 @@ SECTION 2  Heuristic Job Matching (3-stage pipeline)
        penalty_reasons (NOT match_probability from old ML ranker)
   2.8  GET /ai/job_matching/analyse/job/{id} (RAG/LLM analysis)
 
-SECTION 3  Content Moderation
+SECTION 3  Toxicity Detection
   3A  Direct ML API (no auth required)
-      GET  /content_moderation/models   — verify RoBERTa available
-      GET  /content_moderation/labels   — show 6 harm labels
-      POST /content_moderation/moderate — clean text → is_harmful=False
-      POST /content_moderation/moderate — toxic text → is_harmful=True + scores
-      POST /content_moderation/moderate_batch — mixed texts → summary
+      GET  /toxicity/models   — verify RoBERTa available
+      GET  /toxicity/labels   — show 6 harm labels
+      POST /toxicity/detect — clean text → is_harmful=False
+      POST /toxicity/detect — toxic text → is_harmful=True + scores
+      POST /toxicity/detect-batch — mixed texts → summary
 
   3B  Admin-triggered manual scan (ML-first with keyword fallback)
       POST /admin/moderation/scan (clean) → flagged=False
@@ -562,7 +562,7 @@ def section_job_matching():
 
 
 # ---------------------------------------------------------------------------
-# SECTION 3: Content Moderation
+# SECTION 3: Toxicity Detection
 # ---------------------------------------------------------------------------
 
 CLEAN_TEXT = "I am looking for an experienced Python developer to build a REST API."
@@ -571,14 +571,14 @@ SCAM_TEXT  = "guaranteed income easy money get rich quick no experience needed e
 TOXIC_BIO  = "You are such an idiot! I hate everyone, you're all worthless morons and complete losers."
 
 
-def section_content_moderation():
+def section_toxicity_detection():
     section("CONTENT MODERATION  (ML-first with keyword fallback)")
 
     # ── 3A: Direct ML API ────────────────────────────────────────────────────
-    print("\n  [3A] Direct ML API  (/content_moderation/*)")
+    print("\n  [3A] Direct ML API  (/toxicity/*)")
 
-    step("GET /content_moderation/models — verify RoBERTa is available")
-    s, ms = _call("GET", "/content_moderation/models", expected=(200,))
+    step("GET /toxicity/models — verify RoBERTa is available")
+    s, ms = _call("GET", "/toxicity/models", expected=(200,))
     if s:
         available = _d(ms).get("available_models", [])
         for m in available:
@@ -590,8 +590,8 @@ def section_content_moderation():
     else:
         fail("models endpoint failed")
 
-    step("GET /content_moderation/labels — list the 6 harm labels")
-    s, ls = _call("GET", "/content_moderation/labels", expected=(200,))
+    step("GET /toxicity/labels — list the 6 harm labels")
+    s, ls = _call("GET", "/toxicity/labels", expected=(200,))
     if s:
         labels = _d(ls)
         info("labels: " + ", ".join(v.get("name", k) for k, v in labels.items() if isinstance(v, dict)))
@@ -599,8 +599,8 @@ def section_content_moderation():
     else:
         fail("labels endpoint failed")
 
-    step("POST /content_moderation/moderate — CLEAN text (expect is_harmful=False)")
-    s, cr = _call("POST", "/content_moderation/moderate",
+    step("POST /toxicity/detect — CLEAN text (expect is_harmful=False)")
+    s, cr = _call("POST", "/toxicity/detect",
                   body={"text": CLEAN_TEXT},
                   params={"model_type": "best", "threshold": "0.5"},
                   expected=(200,))
@@ -615,8 +615,8 @@ def section_content_moderation():
     else:
         fail("moderate endpoint failed for clean text")
 
-    step("POST /content_moderation/moderate — TOXIC text (expect is_harmful=True)")
-    s, tr = _call("POST", "/content_moderation/moderate",
+    step("POST /toxicity/detect — TOXIC text (expect is_harmful=True)")
+    s, tr = _call("POST", "/toxicity/detect",
                   body={"text": TOXIC_TEXT},
                   params={"model_type": "best", "threshold": "0.5"},
                   expected=(200,))
@@ -631,9 +631,9 @@ def section_content_moderation():
     else:
         fail("moderate endpoint failed for toxic text")
 
-    step("POST /content_moderation/moderate_batch — mixed texts (clean + toxic + scam)")
+    step("POST /toxicity/detect-batch — mixed texts (clean + toxic + scam)")
     batch_texts = [CLEAN_TEXT, TOXIC_TEXT, SCAM_TEXT]
-    s, br = _call("POST", "/content_moderation/moderate_batch",
+    s, br = _call("POST", "/toxicity/detect-batch",
                   body={"texts": batch_texts},
                   params={"model_type": "best", "threshold": "0.5"},
                   expected=(200,))
@@ -877,7 +877,7 @@ def section_content_moderation():
                 if matched:
                     m = matched[0]
                     info(f"  id={m.get('moderation_id')}  labels={m.get('detected_labels')}  toxic_score={m.get('toxic_score')}")
-                    ok("toxic job post auto-flagged in content moderation queue")
+                    ok("toxic job post auto-flagged in toxicity queue")
                 else:
                     info("no moderation record found for this specific job_post_id — may be in queue with different status or not flagged")
 
@@ -924,7 +924,7 @@ def main():
     try:
         print("=" * 72)
         print("  Capstone API — Full Walkthrough")
-        print("  Forgot Password | Heuristic Job Matching | Content Moderation")
+        print("  Forgot Password | Heuristic Job Matching | Toxicity Detection")
         print("=" * 72)
         print(f"  BASE_URL     : {BASE_URL}")
         print(f"  Timestamp ID : {_TS}")
@@ -934,7 +934,7 @@ def main():
 
         section_forgot_password()
         section_job_matching()
-        section_content_moderation()
+        section_toxicity_detection()
 
         elapsed = time.perf_counter() - t_start
 
@@ -953,8 +953,8 @@ def main():
         print("    Fields verified: heuristic_score, skill_overlap_pct, match_reasons, penalty_reasons")
         print("    match_probability (old ML) confirmed absent")
         print()
-        print("  Section 3 — Content Moderation")
-        print("    3A  Direct ML API: /content_moderation/moderate + moderate_batch")
+        print("  Section 3 — Toxicity Detection")
+        print("    3A  Direct ML API: /toxicity/detect + moderate_batch")
         print("    3B  Admin manual scan: ML-first with keyword fallback, approve/reject flow")
         print("    3C  Auto-triggered on profile PUT (freelancer_profile + client_profile)")
         print("    3D  Auto-triggered on job post creation (content + scam queues)")

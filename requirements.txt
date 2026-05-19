@@ -35,3 +35,4 @@ transformers
 torch
 datasets
 groq
+google-auth

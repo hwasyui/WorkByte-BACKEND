@@ -1,124 +1,79 @@
 """
 Embedding generation service.
-Mode is controlled by the LLM env var:
-  "local" -> try Ollama first, fallback to Google on failure
-  "api"   -> use Google directly
 
-Both nomic-embed-text (Ollama) and text-embedding-005 (Google) produce 768-dim vectors.
+Uses BAAI/bge-base-en-v1.5 via sentence-transformers (local, no API calls).
+768-dimensional L2-normalised vectors — the same model used in GENERATE_DATA.ipynb
+and rank_demo.py, ensuring all vectors live in the same embedding space.
+
+Why a single fixed model with no fallback:
+  Embeddings from different models are NOT interchangeable even at the same
+  dimension. A cosine similarity computed between a bge-base vector and a
+  nomic-embed-text vector is meaningless — the two spaces are unrelated. A
+  fallback to a different model would silently corrupt pgvector search results
+  and portfolio_relevance scores in the ML ranker.
 """
 
-import os
-import time
-import httpx
+import asyncio
+import hashlib
 from typing import List
+
+import numpy as np
+from sentence_transformers import SentenceTransformer
+
 from functions.logger import logger
 
 
-def _get_ollama_embed_url() -> str:
-    """
-    Build the Ollama embeddings endpoint URL from the OLLAMA_URL environment variable.
+_MODEL_NAME = "BAAI/bge-base-en-v1.5"
+_EMBED_DIM  = 768
 
-    Replaces 127.0.0.1 with host.docker.internal so the container can reach the host Ollama process.
-
-    Returns:
-        Full URL string for the Ollama /api/embeddings endpoint.
-    """
-    base = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434/api/generate")
-    # Strip to base URL then append the embeddings endpoint
-    if "/api/" in base:
-        base = base[: base.index("/api/")]
-    url = base.rstrip("/") + "/api/embeddings"
-    # Inside Docker, localhost resolves to the container, not the host
-    if "127.0.0.1" in url:
-        url = url.replace("127.0.0.1", "host.docker.internal")
-    return url
+# Module-level singleton — loaded once, reused across all requests.
+_model: SentenceTransformer | None = None
 
 
-async def _embed_with_ollama(text: str) -> List[float]:
-    """
-    Request an embedding vector from the local Ollama instance.
-
-    Args:
-        text: Input text to embed.
-
-    Returns:
-        List of floats representing the embedding vector from the nomic-embed-text model.
-    """
-    url = _get_ollama_embed_url()
-    model = os.getenv("OLLAMA_TEXT_EMBEDDING", "nomic-embed-text")
-
-    logger("EMBEDDING_SERVICE", f"Calling Ollama | url={url} | model={model} | text_len={len(text)}", level="DEBUG")
-    t0 = time.perf_counter()
-
-    payload = {"model": model, "prompt": text}
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        response = await client.post(url, json=payload)
-        response.raise_for_status()
-        data = response.json()
-
-    embedding = data.get("embedding")
-    if not embedding:
-        raise ValueError(f"No embedding field in Ollama response: {list(data.keys())}")
-
-    elapsed = round((time.perf_counter() - t0) * 1000)
-    logger("EMBEDDING_SERVICE", f"Ollama embedding done | dim={len(embedding)} | elapsed={elapsed}ms", level="INFO")
-    return embedding
-
-
-async def _embed_with_google(text: str) -> List[float]:
-    """
-    Request an embedding vector from Google Vertex AI (text-embedding-005).
-
-    Args:
-        text: Input text to embed.
-
-    Returns:
-        List of floats representing the 768-dim embedding vector.
-    """
-    from google import genai
-
-    project_id = os.getenv("GOOGLE_PROJECT_ID")
-    location = os.getenv("GOOGLE_LOCATION", "us-central1")
-    model = os.getenv("GOOGLE_TEXT_EMBEDDING", "text-embedding-005")
-
-    logger("EMBEDDING_SERVICE", f"Calling Google Vertex AI | project={project_id} | model={model} | text_len={len(text)}", level="DEBUG")
-    t0 = time.perf_counter()
-
-    client = genai.Client(vertexai=True, project=project_id, location=location)
-    response = await client.aio.models.embed_content(model=model, contents=text)
-    embedding = list(response.embeddings[0].values)
-
-    elapsed = round((time.perf_counter() - t0) * 1000)
-    logger("EMBEDDING_SERVICE", f"Google embedding done | dim={len(embedding)} | elapsed={elapsed}ms", level="INFO")
-    return embedding
+def _get_model() -> SentenceTransformer:
+    global _model
+    if _model is None:
+        logger("EMBEDDING_SERVICE", f"Loading {_MODEL_NAME} ...", level="INFO")
+        _model = SentenceTransformer(_MODEL_NAME)
+        logger("EMBEDDING_SERVICE", f"{_MODEL_NAME} loaded (dim={_EMBED_DIM})", level="INFO")
+    return _model
 
 
 async def get_embedding(text: str) -> List[float]:
     """
-    Generate a 768-dim embedding vector for the given text.
+    Generate a 768-dim L2-normalised embedding vector using BAAI/bge-base-en-v1.5.
 
-    Routes to Ollama or Google based on the LLM environment variable:
-    LLM="local" tries Ollama first, falls back to Google on error.
-    LLM="api" calls Google directly.
+    Runs the CPU-bound encode() call in a thread-pool executor so it does not
+    block the async event loop.
 
     Args:
-        text: Input text to embed.
+        text: Input text to embed. Empty/whitespace-only text returns a zero vector.
 
     Returns:
-        List of 768 floats representing the embedding vector.
+        List of 768 floats (L2-normalised).
     """
-    mode = os.getenv("LLM", "local").strip().lower()
-    logger("EMBEDDING_SERVICE", f"get_embedding called | mode={mode} | text_len={len(text)}", level="DEBUG")
+    if not text or not text.strip():
+        logger("EMBEDDING_SERVICE", "Empty text received — returning zero vector", level="WARNING")
+        return [0.0] * _EMBED_DIM
 
-    if mode == "local":
-        try:
-            return await _embed_with_ollama(text)
-        except Exception as e:
-            logger(
-                "EMBEDDING_SERVICE",
-                f"Ollama failed ({type(e).__name__}: {e}) — falling back to Google API",
-                level="WARNING",
-            )
-            return await _embed_with_google(text)
-    else:
-        return await _embed_with_google(text)
+    log_prefix = hashlib.sha256(text.encode()).hexdigest()[:8]
+    logger(
+        "EMBEDDING_SERVICE",
+        f"embed | hash={log_prefix} | text_len={len(text)}",
+        level="DEBUG",
+    )
+
+    model = _get_model()
+    loop  = asyncio.get_event_loop()
+
+    vec: np.ndarray = await loop.run_in_executor(
+        None,
+        lambda: model.encode(text, normalize_embeddings=True),
+    )
+
+    logger(
+        "EMBEDDING_SERVICE",
+        f"embed done | hash={log_prefix} | dim={len(vec)}",
+        level="DEBUG",
+    )
+    return vec.tolist()

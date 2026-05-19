@@ -24,7 +24,7 @@ class ClientTrustScoreFunctions:
     """Handle all client trust score-related database operations"""
 
     @staticmethod
-    def get_all_client_trust_scores(limit: Optional[int] = None, offset: int = 0) -> List[Dict]:
+    def get_all_client_trust_scores(limit: Optional[int] = None) -> List[Dict]:
         """Fetch all client trust scores"""
         try:
             db = get_db()
@@ -34,7 +34,6 @@ class ClientTrustScoreFunctions:
                         "project_completion_rate", "average_budget_gap", "total_ratings_given", "last_calculated_at"],
                 order_by="last_calculated_at DESC",
                 limit=limit,
-                offset=offset
             )
             
             logger("CLIENT_TRUST_SCORE_FUNCTIONS", f"Fetched {len(rows)} client trust scores", level="INFO")

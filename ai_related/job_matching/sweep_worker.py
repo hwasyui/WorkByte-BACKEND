@@ -9,7 +9,7 @@ from functions.db_manager import get_db
 from functions.logger import logger
 from ai_related.job_matching.embedding_manager import (
     upsert_freelancer_embedding,
-    upsert_job_embedding,
+    upsert_job_role_embedding,
     upsert_contract_embedding,
     upsert_portfolio_embedding,
 )
@@ -53,34 +53,34 @@ async def _sweep_freelancers() -> int:
 
 async def _sweep_jobs() -> int:
     """
-    Re-embed all dirty job embedding rows in one batch.
+    Re-embed all dirty job role embedding rows in one batch.
 
     Returns:
-        Number of job embeddings successfully refreshed in this cycle.
+        Number of job role embeddings successfully refreshed in this cycle.
     """
     db = get_db()
     rows = db.execute_query(
-        """SELECT job_post_id FROM job_embedding
+        """SELECT job_role_id FROM job_role_embedding
            WHERE embedding_dirty = TRUE
            LIMIT :batch""",
         {"batch": BATCH_SIZE},
     )
     if not rows:
-        logger("SWEEP_WORKER", "No dirty job embeddings to process", level="DEBUG")
+        logger("SWEEP_WORKER", "No dirty job role embeddings to process", level="DEBUG")
         return 0
 
-    logger("SWEEP_WORKER", f"Found {len(rows)} dirty job embedding(s) to refresh", level="INFO")
+    logger("SWEEP_WORKER", f"Found {len(rows)} dirty job role embedding(s) to refresh", level="INFO")
     count = 0
     for row in rows:
-        jpid = str(row["job_post_id"])
+        jrid = str(row["job_role_id"])
         try:
-            result = await upsert_job_embedding(jpid)
-            logger("SWEEP_WORKER", f"Refreshed job embedding | job_post_id={jpid} | status={result.get('status')}", level="DEBUG")
+            result = await upsert_job_role_embedding(jrid)
+            logger("SWEEP_WORKER", f"Refreshed job role embedding | job_role_id={jrid} | status={result.get('status')}", level="DEBUG")
             count += 1
         except Exception as e:
-            logger("SWEEP_WORKER", f"Failed to re-embed job | job_post_id={jpid} | error={e}", level="ERROR")
+            logger("SWEEP_WORKER", f"Failed to re-embed job role | job_role_id={jrid} | error={e}", level="ERROR")
 
-    logger("SWEEP_WORKER", f"Job sweep complete | refreshed={count}/{len(rows)}", level="INFO")
+    logger("SWEEP_WORKER", f"Job role sweep complete | refreshed={count}/{len(rows)}", level="INFO")
     return count
 
 

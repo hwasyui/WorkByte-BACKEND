@@ -11,9 +11,10 @@ from typing import Dict, List, Optional
 from functions.db_manager import get_db
 from functions.logger import logger
 from routes.admin.admin_moderation import (
-    scan_content,
+    scan_toxicity,
     scan_for_scam,
-    scan_content_with_ml_fallback,
+    scan_for_scam_with_ml_fallback,
+    scan_toxicity_with_ml_fallback,
     SCAM_AUTO_REMOVE_THRESHOLD,
 )
 
@@ -26,6 +27,8 @@ CONTENT_AUTO_CLOSE_THRESHOLD_JOB     = 0.85
 
 REPORT_AUTO_ACTION_THRESHOLD = 10   # min reports to trigger auto-action
 REPORT_AUTO_ACTION_DAYS      = 30   # min age (days) of oldest report
+
+SCAM_SOFT_FLAG_THRESHOLD = 0.25  # suspicious but not auto-closed; goes to admin queue for manual review
 
 # Default closure / ban messages (admin can override via admin_note / ban_message)
 DEFAULT_CLOSURE_REASON_CONTENT = "content_violation"
@@ -46,6 +49,16 @@ DEFAULT_CLOSURE_NOTE_REPORTS   = (
 DEFAULT_BAN_REASON_REPORTS     = "community_reports"
 DEFAULT_BAN_MESSAGE_REPORTS    = (
     "Your account has been restricted due to multiple community reports. "
+    "Submit an appeal if you believe this was a mistake."
+)
+DEFAULT_CLOSURE_REASON_ADMIN   = "admin_override"
+DEFAULT_CLOSURE_NOTE_ADMIN     = (
+    "This job post was closed by an administrator. "
+    "Submit an appeal if you believe this was a mistake."
+)
+DEFAULT_BAN_REASON_ADMIN       = "admin_override"
+DEFAULT_BAN_MESSAGE_ADMIN      = (
+    "Your account has been restricted by an administrator. "
     "Submit an appeal if you believe this was a mistake."
 )
 
@@ -96,9 +109,9 @@ def _row(result) -> Optional[Dict]:
     return dict(result[0])
 
 
-# ─── content moderation ───────────────────────────────────────────────────────
+# ─── toxicity detection ───────────────────────────────────────────────────────
 
-def queue_content_scan(
+def queue_toxicity_scan(
     content_type: str,
     content_id: str,
     user_id: str,
@@ -109,7 +122,7 @@ def queue_content_scan(
     content_type: 'job_post' | 'freelancer_profile' | 'client_profile'
     Returns the inserted row dict, or None if content is clean.
     """
-    result = scan_content_with_ml_fallback(text)
+    result = scan_toxicity_with_ml_fallback(text)
     if not result["is_flagged"]:
         return None
 
@@ -118,7 +131,7 @@ def queue_content_scan(
     try:
         row = _row(get_db().execute_query(
             """
-            INSERT INTO content_moderation_queue (
+            INSERT INTO toxicity_queue (
                 content_type, content_id, user_id,
                 toxic_score, severe_toxic_score, obscene_score,
                 threat_score, insult_score, identity_hate_score,
@@ -168,7 +181,7 @@ def _auto_approve_expired():
         SELECT *,
                (toxic_score + severe_toxic_score + obscene_score +
                 threat_score + insult_score + identity_hate_score) AS total_score
-        FROM content_moderation_queue
+        FROM toxicity_queue
         WHERE status = 'pending' AND auto_approve_at <= NOW()
         """,
         params={},
@@ -210,7 +223,7 @@ def _auto_approve_expired():
 
         get_db().execute_query(
             """
-            UPDATE content_moderation_queue
+            UPDATE toxicity_queue
             SET status = :status, actioned_at = NOW()
             WHERE moderation_id = :mid
             """,
@@ -226,7 +239,7 @@ def force_expire_moderation(moderation_ids: List[str]) -> None:
     params = {f"id_{i}": mid for i, mid in enumerate(moderation_ids)}
     get_db().execute_query(
         f"""
-        UPDATE content_moderation_queue
+        UPDATE toxicity_queue
         SET auto_approve_at = NOW() - INTERVAL '1 minute'
         WHERE moderation_id IN ({placeholders}) AND status = 'pending'
         """,
@@ -270,7 +283,7 @@ def list_moderation_queue(
                (cmq.toxic_score + cmq.severe_toxic_score + cmq.obscene_score +
                 cmq.threat_score + cmq.insult_score + cmq.identity_hate_score) AS total_score,
                u.email AS user_email
-        FROM content_moderation_queue cmq
+        FROM toxicity_queue cmq
         JOIN users u ON u.user_id = cmq.user_id
         WHERE (:status = 'all' OR cmq.status = :status)
           AND (:content_type = 'all' OR cmq.content_type = :content_type)
@@ -300,7 +313,7 @@ def action_moderation_item(
     new_status = "approved" if action == "approve" else "rejected"
     updated = _row(get_db().execute_query(
         """
-        UPDATE content_moderation_queue
+        UPDATE toxicity_queue
         SET status = :status, admin_user_id = :admin_id,
             admin_note = :note, actioned_at = NOW()
         WHERE moderation_id = :mid AND status = 'pending'
@@ -344,38 +357,94 @@ def queue_scam_scan(
     job_post_id: str,
     client_id: str,
     text: str,
+    title: str = "",
+    description: str = "",
 ) -> Optional[Dict]:
     """
-    Run scam keyword scan and insert a pending flag if score ≥ threshold.
+    Run ML-based scam scan (SBERT + RF, falls back to keyword) on a job post.
+
+    If scam is detected:
+      1. Immediately closes the job post (status → 'closed').
+      2. Inserts a pending flag into scam_job_flags for admin review.
+         Admin can mark it safe (job reopens) or confirm removal.
+
     Returns the flag row, or None if clean.
     """
-    result = scan_for_scam(text)
-    if not result["is_flagged"]:
+    # Prefer explicit title/description for the ML model; fall back to combined text.
+    if title or description:
+        result = scan_for_scam_with_ml_fallback(title, description)
+    else:
+        # Legacy callers pass combined text — split heuristically on first 60 chars.
+        result = scan_for_scam_with_ml_fallback("", text)
+
+    scan_method = result.get("scan_method", "unknown")
+    scam_score  = result["scam_score"]
+    is_hard     = result["is_flagged"]                              # score >= 0.4 → auto-close
+    is_soft     = not is_hard and scam_score >= SCAM_SOFT_FLAG_THRESHOLD  # 0.25–0.4 → review only
+
+    if not is_hard and not is_soft:
+        logger(
+            "ADMIN",
+            f"Scam scan ({scan_method}): job {job_post_id} is clean — score={scam_score:.3f}",
+            level="INFO",
+        )
         return None
 
     auto_remove_at = datetime.utcnow() + timedelta(days=AUTO_REMOVE_DAYS)
     try:
+        if is_hard:
+            # Close the job immediately — high-confidence scam.
+            get_db().execute_query(
+                """
+                UPDATE job_post
+                SET status         = 'closed',
+                    closure_reason = :reason,
+                    closure_note   = :note
+                WHERE job_post_id = :jid
+                  AND status NOT IN ('closed', 'filled')
+                """,
+                params={
+                    "jid":    job_post_id,
+                    "reason": DEFAULT_CLOSURE_REASON_SCAM,
+                    "note":   DEFAULT_CLOSURE_NOTE_SCAM,
+                },
+            )
+
         row = _row(get_db().execute_query(
             """
             INSERT INTO scam_job_flags (
                 job_post_id, client_id, scam_score,
-                detected_keywords, flagged_text, auto_remove_at
+                detected_keywords, flagged_text, auto_remove_at, auto_closed
             ) VALUES (
                 :job_post_id, :client_id, :scam_score,
-                CAST(:keywords AS JSONB), :text, :auto_remove_at
+                CAST(:keywords AS JSONB), :text, :auto_remove_at, :auto_closed
             )
             RETURNING *
             """,
             params={
                 "job_post_id":    job_post_id,
                 "client_id":      client_id,
-                "scam_score":     result["scam_score"],
+                "scam_score":     scam_score,
                 "keywords":       json.dumps(result["detected_keywords"]),
                 "text":           text[:500],
                 "auto_remove_at": auto_remove_at,
+                "auto_closed":    is_hard,
             },
         ))
-        logger("ADMIN", f"Scam flag created for job {job_post_id} score={result['scam_score']}", level="INFO")
+        if is_hard:
+            logger(
+                "ADMIN",
+                f"Scam detected ({scan_method}): job {job_post_id} auto-closed and flagged "
+                f"— score={scam_score:.3f}",
+                level="WARNING",
+            )
+        else:
+            logger(
+                "ADMIN",
+                f"Suspicious job ({scan_method}): job {job_post_id} soft-flagged for review "
+                f"— score={scam_score:.3f} (job still active)",
+                level="WARNING",
+            )
         return row
     except Exception as e:
         logger("ADMIN", f"Failed to queue scam scan: {e}", level="ERROR")
@@ -517,13 +586,32 @@ def action_scam_flag(
             "fid":      flag_id,
         },
     ))
+    if updated and new_status == "safe":
+        if updated.get("auto_closed"):
+            # Hard flag false positive — job was auto-closed, reopen it.
+            get_db().execute_query(
+                """
+                UPDATE job_post
+                SET status         = 'active',
+                    closure_reason = NULL,
+                    closure_note   = NULL
+                WHERE job_post_id = :jid
+                  AND closure_reason = 'scam'
+                """,
+                params={"jid": str(updated["job_post_id"])},
+            )
+            logger("ADMIN", f"Scam flag {flag_id} cleared: job {updated['job_post_id']} reopened by {admin_user_id}", level="INFO")
+        else:
+            # Soft flag dismissed — job was never closed, nothing to reopen.
+            logger("ADMIN", f"Soft scam flag {flag_id} dismissed as safe by {admin_user_id} (job was active)", level="INFO")
+
     if updated and new_status == "removed":
         _flag_client_for_scam(str(updated["client_id"]))
         closure_note = admin_note or DEFAULT_CLOSURE_NOTE_SCAM
         get_db().execute_query(
             """
             UPDATE job_post
-            SET status = 'closed',
+            SET status         = 'closed',
                 closure_reason = :reason,
                 closure_note   = :note
             WHERE job_post_id = :jid
@@ -534,7 +622,7 @@ def action_scam_flag(
                 "note":   closure_note,
             },
         )
-        logger("ADMIN", f"Scam job {updated['job_post_id']} removed by admin {admin_user_id}", level="INFO")
+        logger("ADMIN", f"Scam job {updated['job_post_id']} confirmed removed by admin {admin_user_id}", level="WARNING")
     return updated
 
 
@@ -953,6 +1041,110 @@ def action_report(
     ))
 
 
+# ─── direct admin override actions ───────────────────────────────────────────
+
+def admin_close_job(
+    job_post_id: str,
+    admin_user_id: str,
+    reason: Optional[str] = None,
+) -> Optional[Dict]:
+    """Close any job post directly, bypassing reports and AI flags."""
+    closure_note = reason or DEFAULT_CLOSURE_NOTE_ADMIN
+    updated = _row(get_db().execute_query(
+        """
+        UPDATE job_post
+        SET status         = 'closed',
+            closure_reason = :reason,
+            closure_note   = :note,
+            closed_at      = NOW()
+        WHERE job_post_id = :jid
+        RETURNING *
+        """,
+        params={
+            "jid":    job_post_id,
+            "reason": DEFAULT_CLOSURE_REASON_ADMIN,
+            "note":   closure_note,
+        },
+    ))
+    if updated:
+        logger("ADMIN", f"Job post {job_post_id} force-closed by admin {admin_user_id}", level="WARNING")
+    return updated
+
+
+def admin_reopen_job(
+    job_post_id: str,
+    admin_user_id: str,
+) -> Optional[Dict]:
+    """Reopen a closed job post directly, without requiring a user appeal."""
+    updated = _row(get_db().execute_query(
+        """
+        UPDATE job_post
+        SET status         = 'active',
+            closure_reason = NULL,
+            closure_note   = NULL,
+            closed_at      = NULL
+        WHERE job_post_id = :jid
+          AND status = 'closed'
+        RETURNING *
+        """,
+        params={"jid": job_post_id},
+    ))
+    if updated:
+        logger("ADMIN", f"Job post {job_post_id} reopened by admin {admin_user_id}", level="INFO")
+    return updated
+
+
+def admin_close_account(
+    user_id: str,
+    admin_user_id: str,
+    reason: Optional[str] = None,
+) -> Optional[Dict]:
+    """Restrict any user account directly, bypassing reports and AI flags."""
+    ban_message = reason or DEFAULT_BAN_MESSAGE_ADMIN
+    updated = _row(get_db().execute_query(
+        """
+        UPDATE users
+        SET is_report_banned = TRUE,
+            report_banned_at = NOW(),
+            ban_reason       = :reason,
+            ban_message      = :message
+        WHERE user_id = :uid
+        RETURNING user_id, email, is_report_banned, ban_reason, ban_message, report_banned_at
+        """,
+        params={
+            "uid":     user_id,
+            "reason":  DEFAULT_BAN_REASON_ADMIN,
+            "message": ban_message,
+        },
+    ))
+    if updated:
+        logger("ADMIN", f"Account {user_id} force-closed by admin {admin_user_id}", level="WARNING")
+    return updated
+
+
+def admin_reopen_account(
+    user_id: str,
+    admin_user_id: str,
+) -> Optional[Dict]:
+    """Restore a restricted user account directly, without requiring a user appeal."""
+    updated = _row(get_db().execute_query(
+        """
+        UPDATE users
+        SET is_report_banned = FALSE,
+            report_banned_at = NULL,
+            ban_reason       = NULL,
+            ban_message      = NULL
+        WHERE user_id = :uid
+          AND is_report_banned = TRUE
+        RETURNING user_id, email, is_report_banned, ban_reason, ban_message, report_banned_at
+        """,
+        params={"uid": user_id},
+    ))
+    if updated:
+        logger("ADMIN", f"Account {user_id} restored by admin {admin_user_id}", level="INFO")
+    return updated
+
+
 # ─── admin dashboard ──────────────────────────────────────────────────────────
 
 def get_admin_dashboard_stats() -> Dict:
@@ -967,7 +1159,7 @@ def get_admin_dashboard_stats() -> Dict:
 
     return {
         "pending_moderation_items": _count(
-            "SELECT COUNT(*) AS cnt FROM content_moderation_queue WHERE status = 'pending'"
+            "SELECT COUNT(*) AS cnt FROM toxicity_queue WHERE status = 'pending'"
         ),
         "pending_scam_flags": _count(
             "SELECT COUNT(*) AS cnt FROM scam_job_flags WHERE status = 'pending'"
@@ -980,7 +1172,7 @@ def get_admin_dashboard_stats() -> Dict:
         ),
         "auto_approved_last_24h": _count(
             """
-            SELECT COUNT(*) AS cnt FROM content_moderation_queue
+            SELECT COUNT(*) AS cnt FROM toxicity_queue
             WHERE status = 'approved'
               AND admin_user_id IS NULL
               AND actioned_at >= NOW() - INTERVAL '24 hours'

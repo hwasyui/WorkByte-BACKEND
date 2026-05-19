@@ -24,7 +24,7 @@ class FreelancerSpecialityFunctions:
     """Handle all freelancer speciality-related database operations"""
 
     @staticmethod
-    def get_all_freelancer_specialities(limit: Optional[int] = None, offset: int = 0) -> List[Dict]:
+    def get_all_freelancer_specialities(limit: Optional[int] = None) -> List[Dict]:
         """Fetch all freelancer specialities"""
         try:
             db = get_db()
@@ -33,7 +33,6 @@ class FreelancerSpecialityFunctions:
                 columns=["freelancer_speciality_id", "freelancer_id", "speciality_id", "is_primary", "created_at"],
                 order_by="created_at DESC",
                 limit=limit,
-                offset=offset
             )
             
             logger("FREELANCER_SPECIALITY_FUNCTIONS", f"Fetched {len(rows)} freelancer specialities", level="INFO")
@@ -66,7 +65,7 @@ class FreelancerSpecialityFunctions:
             raise
 
     @staticmethod
-    def get_freelancer_specialities_by_freelancer_id(freelancer_id: str) -> List[Dict]:
+    def get_freelancer_specialities_by_freelancer_id(freelancer_id: str, limit: Optional[int] = None) -> List[Dict]:
         """Fetch all specialities for a freelancer"""
         try:
             db = get_db()
@@ -74,7 +73,8 @@ class FreelancerSpecialityFunctions:
             rows = db.fetch_data(
                 table_name="freelancer_speciality",
                 conditions=conditions,
-                order_by="is_primary DESC"
+                order_by="is_primary DESC",
+                limit=limit
             )
             
             logger("FREELANCER_SPECIALITY_FUNCTIONS", f"Fetched {len(rows)} specialities for freelancer {freelancer_id}", level="INFO")

@@ -24,7 +24,7 @@ class JobFileFunctions:
     """Handle all job file-related database operations"""
 
     @staticmethod
-    def get_all_job_files(limit: Optional[int] = None, offset: int = 0) -> List[Dict]:
+    def get_all_job_files(limit: Optional[int] = None) -> List[Dict]:
         """Fetch all job files"""
         try:
             db = get_db()
@@ -33,7 +33,6 @@ class JobFileFunctions:
                 columns=["job_file_id", "job_post_id", "file_url", "file_type", "file_name", "file_size", "created_at"],
                 order_by="created_at DESC",
                 limit=limit,
-                offset=offset
             )
             
             logger("JOB_FILE_FUNCTIONS", f"Fetched {len(rows)} job files", level="INFO")

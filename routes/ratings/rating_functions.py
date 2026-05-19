@@ -27,7 +27,7 @@ class RatingFunctions:
     """Handle all rating-related database operations"""
 
     @staticmethod
-    def get_all_ratings(limit: Optional[int] = None, offset: int = 0) -> List[Dict]:
+    def get_all_ratings(limit: Optional[int] = None) -> List[Dict]:
         """Fetch all ratings"""
         try:
             db = get_db()
@@ -38,7 +38,6 @@ class RatingFunctions:
                         "overall_rating", "review_text", "created_at"],
                 order_by="created_at DESC",
                 limit=limit,
-                offset=offset
             )
             
             logger("RATING_FUNCTIONS", f"Fetched {len(rows)} ratings", level="INFO")

@@ -3,7 +3,6 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-
 import json
 from fastapi import APIRouter, Body, Depends, Response, BackgroundTasks
 from routes.reviews.review_routes import trigger_review_pipeline_on_completion
@@ -27,6 +26,7 @@ from routes.contracts.contract_generation_functions import ContractGenerationFun
 from routes.clients.client_functions import ClientFunctions
 from routes.freelancers.freelancer_functions import FreelancerFunctions
 from routes.dm.dm_functions import DMFunctions, _contract_accepted_default
+from routes.notifications.notification_functions import NotificationFunctions
 from ai_related.job_matching.embedding_manager import upsert_contract_embedding
 
 
@@ -198,14 +198,11 @@ async def create_contract(contract: ContractCreate, current_user: UserInDB = Dep
         contract_id = contract.contract_id or str(uuid.uuid4())
         if not current_user.client_id and not current_user.freelancer_id:
             return ResponseSchema.error("Only clients or freelancers can create contracts", 403)
-        # Only verify client_id — the person creating contract must be the client posting the job
-        # freelancer_id can be anyone (no restriction on who the contract is for)
         if current_user.client_id:
             client = get_client_profile_for_user(current_user)
             if contract.client_id and str(contract.client_id) != str(client["client_id"]):
                 return ResponseSchema.error("Cannot create a contract for another client", 403)
         else:
-            # If user is not a client, they cannot create contracts
             return ResponseSchema.error("Only clients can create contracts", 403)
 
         new_contract = ContractFunctions.create_contract(
@@ -231,12 +228,12 @@ async def create_contract(contract: ContractCreate, current_user: UserInDB = Dep
 
         logger("CONTRACT", f"Created contract {contract_id}", "POST /contracts", "INFO")
 
-        # Auto-activate DM thread between client and freelancer on contract creation
+        # Auto-activate DM thread + notify freelancer
         try:
             cl_row = ClientFunctions.get_client_by_id(str(new_contract["client_id"]))
             fl_row = FreelancerFunctions.get_freelancer_by_id(str(new_contract["freelancer_id"]))
             if cl_row and fl_row:
-                client_user_id    = str(cl_row["user_id"])
+                client_user_id = str(cl_row["user_id"])
                 freelancer_user_id = str(fl_row["user_id"])
                 default_msg = _contract_accepted_default(
                     role_title=new_contract.get("role_title", ""),
@@ -254,9 +251,17 @@ async def create_contract(contract: ContractCreate, current_user: UserInDB = Dep
                     contract_title=new_contract.get("contract_title"),
                 )
                 logger("CONTRACT", f"DM thread activated for contract {contract_id}", "POST /contracts", "INFO")
+
+                # Notify freelancer
+                await NotificationFunctions.notify(
+                    recipient_user_id=freelancer_user_id,
+                    notif_type="contract_started",
+                    title="Contract Started 🚀",
+                    body=f"A new contract \"{new_contract.get('contract_title')}\" has begun",
+                    data={"contract_id": contract_id},
+                )
         except Exception as dm_err:
-            # DM failure must never block contract creation
-            logger("CONTRACT", f"DM auto-thread failed (non-fatal): {dm_err}", "POST /contracts", "WARNING")
+            logger("CONTRACT", f"DM/notification post-create failed (non-fatal): {dm_err}", "POST /contracts", "WARNING")
 
         return ResponseSchema.success(new_contract, 201)
     except ValueError as e:
@@ -314,7 +319,6 @@ async def generate_contract_pdf(contract_id: str, generation_data: ContractGener
 
         refreshed = ContractFunctions.get_contract_by_id(contract_id)
 
-        # Only the client side sends the notification
         client_profile = None
         if current_user.client_id:
             cp = ClientFunctions.get_client_by_user_id(current_user.user_id)
@@ -323,15 +327,12 @@ async def generate_contract_pdf(contract_id: str, generation_data: ContractGener
 
         if client_profile and generation_data.send_notification:
             try:
-                # Resolve freelancer info for the message
                 freelancer = FreelancerFunctions.get_freelancer_by_id(str(refreshed["freelancer_id"]))
                 freelancer_name = (freelancer or {}).get("full_name") or "there"
                 freelancer_user_id = str((freelancer or {}).get("user_id", ""))
 
-                # Determine signed URL
                 signed_url = ContractGenerationFunctions.get_signed_contract_url(storage_path)
 
-                # Priority: request message > saved template > system default
                 custom_msg = generation_data.notification_message
                 saved_template = client_profile.get("contract_message_template")
                 raw_template = custom_msg or saved_template or _DEFAULT_CONTRACT_NOTIFICATION
@@ -343,7 +344,6 @@ async def generate_contract_pdf(contract_id: str, generation_data: ContractGener
                     "pdf_url": signed_url,
                 })
 
-                # Save as template if requested (only when custom message provided)
                 if generation_data.save_message_as_template and custom_msg:
                     db.execute_query(
                         "UPDATE client SET contract_message_template = :tpl WHERE client_id = :cid",
@@ -395,8 +395,50 @@ async def update_contract(contract_id: str, contract_update: ContractUpdate, bac
                 "UPDATE client SET total_jobs_completed = total_jobs_completed + 1 WHERE client_id = :cid",
                 {"cid": existing_contract["client_id"]},
             )
-
             await trigger_review_pipeline_on_completion(contract_id, background_tasks)
+
+        # ── Status-change notifications ────────────────────────────────────
+        new_status = update_data.get("status")
+        old_status = existing_contract.get("status")
+
+        if new_status and new_status != old_status:
+            try:
+                fl = FreelancerFunctions.get_freelancer_by_id(str(existing_contract["freelancer_id"]))
+                cl = ClientFunctions.get_client_by_id(str(existing_contract["client_id"]))
+                title_str = existing_contract.get("contract_title", "your contract")
+
+                notif_map = {
+                    "under_review": (
+                        str(cl["user_id"]),
+                        "Work Submitted 📦",
+                        f"{fl.get('full_name')} submitted work for review",
+                        "work_submitted",
+                    ),
+                    "revision_requested": (
+                        str(fl["user_id"]),
+                        "Revision Requested",
+                        f"{cl.get('full_name')} requested a revision",
+                        "revision_requested",
+                    ),
+                    "completed": (
+                        str(fl["user_id"]),
+                        "Contract Completed ✅",
+                        f"\"{title_str}\" has been marked as completed",
+                        "contract_completed",
+                    ),
+                }
+
+                if new_status in notif_map:
+                    recipient, title, body, ntype = notif_map[new_status]
+                    await NotificationFunctions.notify(
+                        recipient_user_id=recipient,
+                        notif_type=ntype,
+                        title=title,
+                        body=body,
+                        data={"contract_id": contract_id},
+                    )
+            except Exception as notif_err:
+                logger("CONTRACT", f"Status notification failed (non-fatal): {notif_err}", "PUT /contracts/{contract_id}", "WARNING")
 
         logger("CONTRACT", f"Updated contract {contract_id}", "PUT /contracts/{contract_id}", "INFO")
         return ResponseSchema.success(updated_contract, 200)
@@ -405,7 +447,7 @@ async def update_contract(contract_id: str, contract_update: ContractUpdate, bac
         return ResponseSchema.error(f"Failed to update contract {contract_id}: {str(e)}", 500)
 
 
-# ── NEW: Cancel endpoint ───────────────────────────────────────────────────────
+# ── Cancel endpoint ───────────────────────────────────────────────────────────
 
 
 @contract_router.put("/{contract_id}/cancel")
@@ -417,7 +459,7 @@ async def cancel_contract(
     """
     Cancel an active contract.
     Only the client or freelancer who is a party to the contract can cancel it.
-    Only contracts with status 'active' or 'revision_requested' can be cancelled.
+    Only contracts with status 'active', 'under_review', or 'revision_requested' can be cancelled.
     """
     try:
         contract = ContractFunctions.get_contract_by_id(contract_id)
@@ -438,6 +480,23 @@ async def cancel_contract(
             cancelled_by=str(current_user.user_id),
             reason=payload.reason,
         )
+
+        # Notify the other party
+        try:
+            fl = FreelancerFunctions.get_freelancer_by_id(str(contract["freelancer_id"]))
+            cl = ClientFunctions.get_client_by_id(str(contract["client_id"]))
+            is_client_cancelling = str(current_user.user_id) == str(cl["user_id"])
+            other_party = fl if is_client_cancelling else cl
+
+            await NotificationFunctions.notify(
+                recipient_user_id=str(other_party["user_id"]),
+                notif_type="contract_cancelled",
+                title="Contract Cancelled",
+                body=f"The contract \"{contract.get('contract_title')}\" was cancelled",
+                data={"contract_id": contract_id},
+            )
+        except Exception as notif_err:
+            logger("CONTRACT", f"Cancel notification failed (non-fatal): {notif_err}", "PUT /contracts/{contract_id}/cancel", "WARNING")
 
         logger("CONTRACT", f"Contract {contract_id} cancelled by user {current_user.user_id}", "PUT /contracts/{contract_id}/cancel", "INFO")
         return ResponseSchema.success(cancelled_contract, 200)

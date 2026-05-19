@@ -24,7 +24,7 @@ class JobRoleSkillFunctions:
     """Handle all job role skill-related database operations"""
 
     @staticmethod
-    def get_all_job_role_skills(limit: Optional[int] = None, offset: int = 0) -> List[Dict]:
+    def get_all_job_role_skills(limit: Optional[int] = None) -> List[Dict]:
         """Fetch all job role skills"""
         try:
             db = get_db()
@@ -33,7 +33,6 @@ class JobRoleSkillFunctions:
                 columns=["job_role_skill_id", "job_role_id", "skill_id", "is_required", "importance_level", "created_at"],
                 order_by="created_at DESC",
                 limit=limit,
-                offset=offset
             )
             
             logger("JOB_ROLE_SKILL_FUNCTIONS", f"Fetched {len(rows)} job role skills", level="INFO")

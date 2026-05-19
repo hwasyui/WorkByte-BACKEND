@@ -79,13 +79,10 @@ class ReviewFunctions:
                     limit=1,
                 )
 
-                review["ratings"] = [
-                    convert_uuids_to_str(dict(r)) for r in ratings_rows
-                ]
+                review["ratings"] = [convert_uuids_to_str(dict(r)) for r in ratings_rows]
                 review["written_content"] = (
                     convert_uuids_to_str(dict(written_rows[0])) if written_rows else None
                 )
-
                 reviews.append(review)
 
             logger(
@@ -98,14 +95,14 @@ class ReviewFunctions:
         except Exception as e:
             logger("REVIEW_FUNCTIONS", f"Error fetching reviews: {str(e)}", level="ERROR")
             raise
-        
+
     # ── Step 2: Create pending review record ──────────────────────────────────
 
     @staticmethod
     def create_pending_review(
         contract_id: str,
-        reviewer_id: str,       # client user_id
-        freelancer_id: str,     # freelancer user_id
+        reviewer_id: str,
+        freelancer_id: str,
         inferred_category: str,
     ) -> Dict:
         """
@@ -164,8 +161,6 @@ class ReviewFunctions:
         communication_sentiment_score: Optional[float],
         conflict_score: Optional[float],
         communication_summary: Optional[str],
-        work_quality_score: Optional[float] = None,
-        work_quality_notes: Optional[str] = None,
     ) -> None:
         try:
             db = get_db()
@@ -175,8 +170,6 @@ class ReviewFunctions:
                     "id": str(uuid.uuid4()),
                     "contract_id": contract_id,
                     "freelancer_id": freelancer_id,
-                    "work_quality_score": work_quality_score,
-                    "work_quality_notes": work_quality_notes,
                     "on_time_score": on_time_score,
                     "revision_count": revision_count,
                     "revision_rate_score": revision_rate_score,
@@ -197,18 +190,17 @@ class ReviewFunctions:
         communication_sentiment_score: Optional[float] = None,
         conflict_score: Optional[float] = None,
         communication_summary: Optional[str] = None,
-        work_quality_score: Optional[float] = None,
-        work_quality_notes: Optional[str] = None,
     ) -> None:
         try:
-            update_data = {
-                "communication_sentiment_score": communication_sentiment_score,
-                "conflict_score": conflict_score,
-                "communication_summary": communication_summary,
-                "work_quality_score": work_quality_score,
-                "work_quality_notes": work_quality_notes,
-            }
-            update_data = {k: v for k, v in update_data.items() if v is not None}
+            # Explicit per-field check — 0.0 and False are valid values, not "missing"
+            update_data = {}
+            if communication_sentiment_score is not None:
+                update_data["communication_sentiment_score"] = communication_sentiment_score
+            if conflict_score is not None:
+                update_data["conflict_score"] = conflict_score
+            if communication_summary is not None:
+                update_data["communication_summary"] = communication_summary
+
             if not update_data:
                 logger("REVIEW_FUNCTIONS", "No performance score fields to update", level="DEBUG")
                 return
@@ -229,16 +221,15 @@ class ReviewFunctions:
     @staticmethod
     def save_client_review(
         review_id: str,
-        ratings: List[Dict],            # [{"category": "quality", "score": 4.5}, ...]
+        ratings: List[Dict],
         client_answer: str,
         overall_comment: str,
-        confirmed_skill_tags: List[str],    # pre-filled from job_role_skill (AI-suggested)
-        extra_skill_tags: List[str],        # manually added by client
+        confirmed_skill_tags: List[str],
+        extra_skill_tags: List[str],
     ) -> None:
         try:
             db = get_db()
 
-            # 1. Save ratings
             for rating in ratings:
                 db.insert_data(
                     table_name="review_ratings",
@@ -250,7 +241,6 @@ class ReviewFunctions:
                     },
                 )
 
-            # 2. Update written content (fill in client_answer + overall_comment)
             db.execute_query(
                 """UPDATE review_written_content
                    SET client_answer = :answer, overall_comment = :comment
@@ -258,7 +248,6 @@ class ReviewFunctions:
                 {"answer": client_answer, "comment": overall_comment, "rid": review_id},
             )
 
-            # 3. Save skill tags
             for tag in confirmed_skill_tags:
                 db.insert_data(
                     table_name="review_skill_tags",
@@ -361,8 +350,7 @@ class ReviewFunctions:
         freelancer_id: str,
         overall_score: float,
         weighted_review_avg: float,
-        display_star_avg: Optional[float],    
-        work_quality_score: Optional[float],
+        display_star_avg: Optional[float],
         revision_rate_score: float,
         responsiveness_score: float,
         communication_sentiment: Optional[float],
@@ -378,18 +366,17 @@ class ReviewFunctions:
                 limit=1,
             )
             data = {
-                "freelancer_id": freelancer_id,
-                "overall_score": overall_score,
-                "weighted_review_avg": weighted_review_avg,
-                "display_star_avg": display_star_avg,           # ← ADD THIS
-                "work_quality_score": work_quality_score,
-                "revision_rate_score": revision_rate_score,
-                "responsiveness_score": responsiveness_score,
+                "freelancer_id":          freelancer_id,
+                "overall_score":          overall_score,
+                "weighted_review_avg":    weighted_review_avg,
+                "display_star_avg":       display_star_avg,
+                "revision_rate_score":    revision_rate_score,
+                "responsiveness_score":   responsiveness_score,
                 "communication_sentiment": communication_sentiment,
-                "total_reviews": total_reviews,
-                "category": category,
-                "category_rank_pct": category_rank_pct,
-                "last_updated": datetime.utcnow(),
+                "total_reviews":          total_reviews,
+                "category":               category,
+                "category_rank_pct":      category_rank_pct,
+                "last_updated":           datetime.utcnow(),
             }
             if existing:
                 db.update_data(
@@ -414,6 +401,7 @@ class ReviewFunctions:
         except Exception as e:
             logger("REVIEW_FUNCTIONS", f"Error upserting trust score: {str(e)}", level="ERROR")
             raise
+
     # ── Step 9: Red flag detection ────────────────────────────────────────────
 
     @staticmethod
@@ -466,16 +454,16 @@ class ReviewFunctions:
             review = ReviewFunctions.get_review_by_id(review_id)
             if not review:
                 raise HTTPException(status_code=404, detail="Review not found")
-            
-            ratings  = db.fetch_data("review_ratings",       conditions=[("review_id", "=", review_id)])
-            written  = db.fetch_data("review_written_content", conditions=[("review_id", "=", review_id)], limit=1)
-            tags     = db.fetch_data("review_skill_tags",    conditions=[("review_id", "=", review_id)])
-            analysis = db.fetch_data("review_ai_analysis",   conditions=[("review_id", "=", review_id)], limit=1)
 
-            review["ratings"]       = [convert_uuids_to_str(dict(r)) for r in ratings]
+            ratings  = db.fetch_data("review_ratings",         conditions=[("review_id", "=", review_id)])
+            written  = db.fetch_data("review_written_content", conditions=[("review_id", "=", review_id)], limit=1)
+            tags     = db.fetch_data("review_skill_tags",      conditions=[("review_id", "=", review_id)])
+            analysis = db.fetch_data("review_ai_analysis",     conditions=[("review_id", "=", review_id)], limit=1)
+
+            review["ratings"]         = [convert_uuids_to_str(dict(r)) for r in ratings]
             review["written_content"] = convert_uuids_to_str(dict(written[0])) if written else None
-            review["skill_tags"]    = [convert_uuids_to_str(dict(t)) for t in tags]
-            review["ai_analysis"]   = convert_uuids_to_str(dict(analysis[0])) if analysis else None
+            review["skill_tags"]      = [convert_uuids_to_str(dict(t)) for t in tags]
+            review["ai_analysis"]     = convert_uuids_to_str(dict(analysis[0])) if analysis else None
             return review
         except Exception as e:
             logger("REVIEW_FUNCTIONS", f"Error fetching review detail: {str(e)}", level="ERROR")

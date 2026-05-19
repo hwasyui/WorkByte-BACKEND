@@ -24,7 +24,7 @@ class EducationFunctions:
     """Handle all education-related database operations"""
 
     @staticmethod
-    def get_all_educations(limit: Optional[int] = None, offset: int = 0) -> List[Dict]:
+    def get_all_educations(limit: Optional[int] = None) -> List[Dict]:
         """Fetch all educations"""
         try:
             db = get_db()
@@ -34,7 +34,6 @@ class EducationFunctions:
                         "start_date", "end_date", "is_current", "grade", "description", "created_at", "updated_at"],
                 order_by="start_date DESC",
                 limit=limit,
-                offset=offset
             )
             
             logger("EDUCATION_FUNCTIONS", f"Fetched {len(rows)} educations", level="INFO")

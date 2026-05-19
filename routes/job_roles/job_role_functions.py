@@ -24,7 +24,7 @@ class JobRoleFunctions:
     """Handle all job role-related database operations"""
 
     @staticmethod
-    def get_all_job_roles(limit: Optional[int] = None, offset: int = 0) -> List[Dict]:
+    def get_all_job_roles(limit: Optional[int] = None) -> List[Dict]:
         """Fetch all job roles"""
         try:
             db = get_db()
@@ -35,7 +35,6 @@ class JobRoleFunctions:
                         "is_required", "display_order", "created_at", "updated_at"],
                 order_by="created_at DESC",
                 limit=limit,
-                offset=offset
             )
             
             logger("JOB_ROLE_FUNCTIONS", f"Fetched {len(rows)} job roles", level="INFO")
@@ -84,6 +83,27 @@ class JobRoleFunctions:
         
         except Exception as e:
             logger("JOB_ROLE_FUNCTIONS", f"Error fetching job roles: {str(e)}", level="ERROR")
+            raise
+
+    @staticmethod
+    def get_job_roles_by_client_id(client_id: str) -> List[Dict]:
+        """Fetch all job roles belonging to a client's job posts"""
+        try:
+            db = get_db()
+            rows = db.execute_query(
+                """
+                SELECT jr.*
+                FROM job_role jr
+                JOIN job_post jp ON jp.job_post_id = jr.job_post_id
+                WHERE jp.client_id = :client_id
+                ORDER BY jr.created_at DESC
+                """,
+                {"client_id": client_id}
+            )
+            logger("JOB_ROLE_FUNCTIONS", f"Fetched {len(rows)} job roles for client {client_id}", level="INFO")
+            return [convert_uuids_to_str(dict(row)) for row in rows]
+        except Exception as e:
+            logger("JOB_ROLE_FUNCTIONS", f"Error fetching job roles by client: {str(e)}", level="ERROR")
             raise
 
     @staticmethod

@@ -26,7 +26,7 @@ class ProposalFunctions:
     """Handle all proposal-related database operations"""
 
     @staticmethod
-    def get_all_proposals(limit: Optional[int] = None, offset: int = 0) -> List[Dict]:
+    def get_all_proposals(limit: Optional[int] = None) -> List[Dict]:
         """Fetch all proposals"""
         try:
             db = get_db()
@@ -39,7 +39,6 @@ class ProposalFunctions:
                 ],
                 order_by="submitted_at DESC",
                 limit=limit,
-                offset=offset,
             )
             logger("PROPOSAL_FUNCTIONS", f"Fetched {len(rows)} proposals", level="INFO")
             return [convert_uuids_to_str(dict(row)) for row in rows]

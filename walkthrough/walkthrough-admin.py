@@ -299,7 +299,7 @@ def run():
     me = extract(get("/auth/me", tok_admin))
     print(f"  logged in as: {me['email']}  is_admin={me['is_admin']}")
 
-    step("Create content moderation scenario users (6)")
+    step("Create toxicity detection scenario users (6)")
     _mod_users = {}
     for email, utype in [
         (_MOD_CLIENT_MAN_APP, "client"),
@@ -856,7 +856,7 @@ def run():
     # ── E5: Job post owner submits appeal for auto-closed post ────────────────
 
     step("E5 — Job post owner submits appeal for auto-closed job (target_type='job_post')")
-    # jid_auto_cl was auto-closed in A4 via content moderation force-expire
+    # jid_auto_cl was auto-closed in A4 via toxicity detection force-expire
     tok_job_owner = _mod_users[_MOD_CLIENT_AUTO_CL]["tok"]
     appeal_j = extract(post("/appeals", {
         "target_type": "job_post",

@@ -1,4 +1,4 @@
-"""Inference module for content moderation."""
+"""Inference module for toxicity detection."""
 
 import json
 import os
@@ -7,16 +7,15 @@ from typing import Dict, List, Tuple
 import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
-from ai_related.content_moderation.preprocessing import TextPreprocessor
+from ai_related.toxicity_detection.preprocessing import TextPreprocessor
 
 
 LABEL_SCHEMA = {
     "toxicity": 0,
-    "severe_toxicity": 1,
-    "obscene": 2,
-    "threat": 3,
-    "insult": 4,
-    "identity_hate": 5,
+    "obscene": 1,
+    "threat": 2,
+    "insult": 3,
+    "identity_hate": 4,
 }
 REVERSE_LABEL_SCHEMA = {v: k for k, v in LABEL_SCHEMA.items()}
 
@@ -89,7 +88,7 @@ def get_available_models() -> List[Dict[str, object]]:
 
 def load_model(model_type: str = "best") -> Tuple[torch.nn.Module, AutoTokenizer, torch.device, str]:
     """
-    Load a trained content moderation model.
+    Load a trained toxicity detection model.
 
     Args:
         model_type: Type of model ('bert', 'roberta', 'distilbert', or 'best')
@@ -110,10 +109,14 @@ def load_model(model_type: str = "best") -> Tuple[torch.nn.Module, AutoTokenizer
 
     model_path = _model_path_for(resolved_model)
 
-    if not os.path.isdir(model_path):
+    required_files = ["config.json", "model.safetensors", "tokenizer.json"]
+    missing = [f for f in required_files if not os.path.exists(os.path.join(model_path, f))]
+    if not os.path.isdir(model_path) or missing:
         raise FileNotFoundError(
-            f"Model not found at {model_path}. "
-            f"Please upload the trained Hugging Face model folder from TRAIN_MODEL.ipynb."
+            f"Model files missing at {model_path}. "
+            f"Missing: {missing if missing else 'directory does not exist'}. "
+            f"Download models_export.zip from your Colab training run, extract it, "
+            f"and copy the '{resolved_model}/' folder into machine_learning/models/."
         )
 
     _device = _get_device()

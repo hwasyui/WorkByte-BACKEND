@@ -2132,7 +2132,7 @@ def sec_admin():
     else:
         fail("admin dashboard failed")
 
-    # ── Content Moderation (admin) ─────────────────────────────────────────────
+    # ── Toxicity Detection (admin) ─────────────────────────────────────────────
     step("GET /admin/moderation — list pending items")
     s, mq = _call("GET", "/admin/moderation", token=admin_tok,
                   params={"status": "pending", "page_size": 5}, expected=(200,))
@@ -2371,11 +2371,11 @@ def sec_admin():
 # SECTION 21 — CONTENT MODERATION (ML API)
 # ═════════════════════════════════════════════════════════════════════════════
 
-def sec_content_moderation():
+def sec_toxicity_detection():
     section("CONTENT MODERATION — Direct ML API")
 
-    step("GET /content_moderation/models")
-    s, ms = _call("GET", "/content_moderation/models", expected=(200,))
+    step("GET /toxicity/models")
+    s, ms = _call("GET", "/toxicity/models", expected=(200,))
     if s:
         models = _d(ms).get("available_models", [])
         for m in models:
@@ -2384,12 +2384,12 @@ def sec_content_moderation():
     else:
         fail("models endpoint failed")
 
-    step("GET /content_moderation/labels")
-    s, ls = _call("GET", "/content_moderation/labels", expected=(200,))
+    step("GET /toxicity/labels")
+    s, ls = _call("GET", "/toxicity/labels", expected=(200,))
     ok("labels returned") if s else fail("labels endpoint failed")
 
-    step("POST /content_moderation/moderate — clean text")
-    s, cr = _call("POST", "/content_moderation/moderate",
+    step("POST /toxicity/detect — clean text")
+    s, cr = _call("POST", "/toxicity/detect",
                   body={"text": "I need an experienced developer to build a REST API."},
                   params={"model_type": "best", "threshold": "0.5"}, expected=(200,))
     if s:
@@ -2399,8 +2399,8 @@ def sec_content_moderation():
     else:
         fail("moderate endpoint failed (clean)")
 
-    step("POST /content_moderation/moderate — toxic text")
-    s, tr = _call("POST", "/content_moderation/moderate",
+    step("POST /toxicity/detect — toxic text")
+    s, tr = _call("POST", "/toxicity/detect",
                   body={"text": "You fucking idiot, you are worthless garbage!"},
                   params={"model_type": "best", "threshold": "0.5"}, expected=(200,))
     if s:
@@ -2410,8 +2410,8 @@ def sec_content_moderation():
     else:
         fail("moderate endpoint failed (toxic)")
 
-    step("POST /content_moderation/moderate_batch — 3 texts")
-    s, br = _call("POST", "/content_moderation/moderate_batch",
+    step("POST /toxicity/detect-batch — 3 texts")
+    s, br = _call("POST", "/toxicity/detect-batch",
                   body={"texts": [
                       "I need a Python developer.",
                       "You fucking idiot!",
@@ -2527,7 +2527,7 @@ def main():
         sec_embeddings()
         sec_ai_job_matching()
         sec_admin()
-        sec_content_moderation()
+        sec_toxicity_detection()
         sec_cleanup_reference_deletes()
         sec_misc_oauth()
 

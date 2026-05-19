@@ -19,11 +19,9 @@ from routes.users.users_routes import users_router
 from routes.freelancers.freelancer_routes import freelancer_router
 from routes.clients.client_routes import client_router
 from routes.skills.skill_routes import skill_router
-from routes.languages.language_routes import language_router
 from routes.specialities.speciality_routes import speciality_router
 from routes.freelancer_skills.freelancer_skill_routes import freelancer_skill_router
 from routes.freelancer_specialities.freelancer_speciality_routes import freelancer_speciality_router
-from routes.freelancer_languages.freelancer_language_routes import freelancer_language_router
 from routes.work_experience.work_experience_routes import work_experience_router
 from routes.education.education_routes import education_router
 from routes.job_posts.job_post_routes import job_post_router
@@ -47,8 +45,9 @@ from routes.contract_submissions.contract_submission_routes import contract_subm
 from routes.reviews.review_routes import review_router
 from routes.dashboard.dashboard_routes import dashboard_router
 from ai_related.cv_analysis.cv_analysis_routes import cv_analysis_router
-from ai_related.content_moderation.content_moderation_routes import content_moderation_router
+from ai_related.toxicity_detection.toxicity_routes import toxicity_router
 from routes.admin.admin_routes import admin_router, reports_router, appeals_router
+from routes.notifications.notification_routes import notification_router
 
 
 @asynccontextmanager
@@ -71,6 +70,28 @@ async def lifespan(app: FastAPI):
 
     sweep_task = asyncio.create_task(embedding_sweep_loop())
     logger("LIFESPAN", "Embedding sweep worker started (handles dirty records and manual /embed/ calls regardless of mode)", level="INFO")
+
+    # Warm up ML models in background — both load large weights from disk on
+    # first use, causing a cold-start delay on the first real request.
+    # Running them concurrently at startup means they're ready before any user hits them.
+    def _warmup_toxicity():
+        try:
+            from ai_related.toxicity_detection.model_inference import load_model
+            load_model("best")
+            logger("LIFESPAN", "Toxicity model warmed up (roberta)", level="INFO")
+        except Exception as e:
+            logger("LIFESPAN", f"Toxicity model warm-up failed (non-fatal): {e}", level="WARNING")
+
+    def _warmup_embedding():
+        try:
+            from ai_related.job_matching.embedding_service import _get_model
+            _get_model()
+            logger("LIFESPAN", "Embedding model warmed up (BAAI/bge-base-en-v1.5)", level="INFO")
+        except Exception as e:
+            logger("LIFESPAN", f"Embedding model warm-up failed (non-fatal): {e}", level="WARNING")
+
+    asyncio.create_task(asyncio.to_thread(_warmup_toxicity))
+    asyncio.create_task(asyncio.to_thread(_warmup_embedding))
 
     yield
 
@@ -114,11 +135,9 @@ app.include_router(oauth_router)
 app.include_router(freelancer_router)
 app.include_router(client_router)
 app.include_router(skill_router)
-app.include_router(language_router)
 app.include_router(speciality_router)
 app.include_router(freelancer_skill_router)
 app.include_router(freelancer_speciality_router)
-app.include_router(freelancer_language_router)
 app.include_router(work_experience_router)
 app.include_router(education_router)
 app.include_router(job_post_router)
@@ -143,10 +162,11 @@ app.include_router(contract_submission_router)
 app.include_router(review_router)
 app.include_router(dashboard_router)
 app.include_router(job_matching_router, prefix="/ai/job_matching")
-app.include_router(content_moderation_router)
+app.include_router(toxicity_router)
 app.include_router(admin_router)
 app.include_router(reports_router)
 app.include_router(appeals_router)
+app.include_router(notification_router)
 
 
 @app.exception_handler(RequestValidationError)

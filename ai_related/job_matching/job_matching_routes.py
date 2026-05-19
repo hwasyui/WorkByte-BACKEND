@@ -1,7 +1,7 @@
 """
 Job matching routes, all mounted under /ai/job_matching (set in main.py).
 
-  GET  /match/freelancer-to-jobs        — 3-stage ranked feed (pgvector → skill filter → heuristic)
+  GET  /match/freelancer-to-jobs        — 3-stage ranked feed (pgvector → skill filter → ML)
   GET  /analyse/job/{job_post_id}       — RAG + LLM deep-fit analysis for a specific job
   POST /embed/freelancer/{id}           — queue freelancer re-embedding
   POST /embed/job/{id}                  — queue job re-embedding
@@ -26,7 +26,7 @@ from functions.response_utils import ResponseSchema
 from functions.logger import logger
 from functions.db_manager import get_db
 from ai_related.job_matching.sweep_worker import run_sweep_once
-from ai_related.job_matching.heuristic_ranker import rank_jobs_with_heuristic
+from ai_related.job_matching.ml_ranker import rank_jobs_with_ml
 from ai_related.job_matching.rag_analyser import analyse_job_match
 
 # Stage 2 minimum skill overlap — jobs below this are dropped before Stage 3.
@@ -69,15 +69,15 @@ async def match_freelancer_to_jobs(
              engineer is not penalised for skills from an unrelated role in
              the same post (e.g. financial manager, UI designer).
 
-    Stage 3  Heuristic re-ranking — scores each remaining candidate across
-             five transparent, directly interpretable signals:
-               • Semantic similarity (40%) — cosine from Stage 1
-               • Required-skill coverage (30%) — best-role overlap from Stage 2
-               • Experience compatibility (15%) — smooth match against job level
-               • Budget compatibility (10%) — estimated monthly rate vs role budget
-               • Domain / speciality match (5%) — word-level title/desc match
-             Returns the top-N sorted by heuristic_score (0–100), each with
-             match_reasons (up to 3) and penalty_reasons (up to 2).
+    Stage 3  ML re-ranking — CatBoost model scores each remaining candidate
+             across 13 features and returns a calibrated match_probability (0–100).
+             Features: cosine_sim, portfolio_relevance, skill_overlap_pct,
+             skill_required_matched, skill_required_total, skill_depth,
+             experience_level_match, exp_delta, rate_in_budget, rate_ratio,
+             speciality_match, work_exp_count, total_jobs.
+             Returns the top-N sorted by match_probability, each with
+             match_reasons (up to 3 positive SHAP contributors) and
+             penalty_reasons (up to 2 negative SHAP contributors).
     """
     t_request = time.perf_counter()
     try:
@@ -92,7 +92,7 @@ async def match_freelancer_to_jobs(
             level="INFO",
         )
 
-        # ── Stage 1: pgvector cosine → top-100 ───────────────────────────────
+        # Stage 1: pgvector cosine, top-100
         t1 = time.perf_counter()
         fe = db.execute_query(
             "SELECT embedding_vector FROM freelancer_embedding WHERE freelancer_id = :fid AND embedding_vector IS NOT NULL",
@@ -106,14 +106,14 @@ async def match_freelancer_to_jobs(
 
         freelancer_vec = fe[0]["embedding_vector"]
 
-        where_clauses = ["jp.status = 'active'", "je.embedding_vector IS NOT NULL"]
-        params: dict = {"vec": freelancer_vec, "stage1_limit": 100}
+        # inner_limit > stage1_limit so DISTINCT ON dedup still yields enough
+        # unique job posts even when one job has many matching roles.
+        params: dict = {"vec": freelancer_vec, "stage1_limit": 100, "inner_limit": 300}
 
+        exp_filter = ""
         if experience_level:
-            where_clauses.append("jp.experience_level = :exp_level")
+            exp_filter = "AND jp.experience_level = :exp_level"
             params["exp_level"] = experience_level
-
-        where_sql = " AND ".join(where_clauses)
 
         stage1_query = f"""
             SELECT * FROM (
@@ -125,13 +125,21 @@ async def match_freelancer_to_jobs(
                     jp.project_scope,
                     jp.experience_level,
                     jp.estimated_duration,
+                    jp.working_days,
                     jp.deadline,
                     jp.proposal_count,
-                    je.source_text,
-                    ROUND((1 - (je.embedding_vector <=> CAST(:vec AS vector)))::numeric, 4) AS similarity_score
-                FROM job_embedding je
-                JOIN job_post jp ON jp.job_post_id = je.job_post_id
-                WHERE {where_sql}
+                    jre.source_text,
+                    ROUND((1 - (jre.embedding_vector <=> CAST(:vec AS vector)))::numeric, 4) AS similarity_score
+                FROM (
+                    SELECT job_role_id, source_text, embedding_vector
+                    FROM job_role_embedding
+                    WHERE embedding_vector IS NOT NULL
+                    ORDER BY embedding_vector <=> CAST(:vec AS vector)
+                    LIMIT :inner_limit
+                ) jre
+                JOIN job_role jr ON jr.job_role_id = jre.job_role_id
+                JOIN job_post jp ON jp.job_post_id = jr.job_post_id
+                WHERE jp.status = 'active' {exp_filter}
                 ORDER BY jp.job_post_id, similarity_score DESC
             ) deduped
             ORDER BY similarity_score DESC
@@ -153,7 +161,7 @@ async def match_freelancer_to_jobs(
             level="INFO",
         )
 
-        # ── Stage 2: drop jobs with too little skill overlap ──────────────────
+        # Stage 2: drop jobs with too little skill overlap
         t2 = time.perf_counter()
         f_skills = db.execute_query(
             "SELECT skill_id FROM freelancer_skill WHERE freelancer_id = :fid",
@@ -226,9 +234,9 @@ async def match_freelancer_to_jobs(
             )
             return ResponseSchema.success({"matches": [], "count": 0, "stage": "pre-filter_empty"}, 200)
 
-        # ── Stage 3: heuristic re-rank ────────────────────────────────────────
+        # Stage 3: ML re-rank
         t3 = time.perf_counter()
-        ranked = rank_jobs_with_heuristic(db, fid, filtered, top_n=limit)
+        ranked = rank_jobs_with_ml(db, fid, filtered, top_n=limit)
         stage3_ms = (time.perf_counter() - t3) * 1000
 
         total_ms = (time.perf_counter() - t_request) * 1000
@@ -339,28 +347,14 @@ async def embed_job(
     current_user: UserInDB = Depends(get_current_user),
 ):
     """
-    Mark a job's embedding as dirty so the next sweep re-generates it.
-    Creates the embedding row if it doesn't exist yet.
-    Call POST /sweep right after to generate the vector immediately.
+    Mark all role embeddings for a job as dirty so the next sweep re-generates them.
+    Creates dirty rows for any roles that don't have an embedding row yet.
+    Call POST /sweep right after to generate the vectors immediately.
     """
     try:
-        db = get_db()
-        existing = db.execute_query(
-            "SELECT embedding_id FROM job_embedding WHERE job_post_id = :jpid",
-            {"jpid": job_post_id},
-        )
-        if existing:
-            db.execute_query(
-                "UPDATE job_embedding SET embedding_dirty = TRUE WHERE job_post_id = :jpid",
-                {"jpid": job_post_id},
-            )
-        else:
-            db.execute_query(
-                """INSERT INTO job_embedding (embedding_id, job_post_id, embedding_dirty)
-                   VALUES (:eid, :jpid, TRUE)""",
-                {"eid": str(uuid.uuid4()), "jpid": job_post_id},
-            )
-        logger("JOB_MATCHING", f"Marked job embedding dirty | job_post_id={job_post_id}", level="INFO")
+        from ai_related.job_matching.embedding_manager import mark_job_dirty
+        mark_job_dirty(job_post_id)
+        logger("JOB_MATCHING", f"Marked all role embeddings dirty | job_post_id={job_post_id}", level="INFO")
         return ResponseSchema.success({"message": "Embedding queued", "job_post_id": job_post_id}, 202)
     except Exception as e:
         logger("JOB_MATCHING", f"Error queueing job embed: {e}", level="ERROR")

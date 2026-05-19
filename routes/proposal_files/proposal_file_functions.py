@@ -24,7 +24,7 @@ class ProposalFileFunctions:
     """Handle all proposal file-related database operations"""
 
     @staticmethod
-    def get_all_proposal_files(limit: Optional[int] = None, offset: int = 0) -> List[Dict]:
+    def get_all_proposal_files(limit: Optional[int] = None) -> List[Dict]:
         """Fetch all proposal files"""
         try:
             db = get_db()
@@ -33,7 +33,6 @@ class ProposalFileFunctions:
                 columns=["proposal_file_id", "proposal_id", "file_url", "file_type", "file_name", "file_size", "created_at"],
                 order_by="created_at DESC",
                 limit=limit,
-                offset=offset
             )
             
             logger("PROPOSAL_FILE_FUNCTIONS", f"Fetched {len(rows)} proposal files", level="INFO")

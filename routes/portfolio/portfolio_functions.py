@@ -24,7 +24,7 @@ class PortfolioFunctions:
     """Handle all portfolio-related database operations"""
 
     @staticmethod
-    def get_all_portfolios(limit: Optional[int] = None, offset: int = 0) -> List[Dict]:
+    def get_all_portfolios(limit: Optional[int] = None) -> List[Dict]:
         """Fetch all portfolios"""
         try:
             db = get_db()
@@ -34,7 +34,6 @@ class PortfolioFunctions:
                         "project_url", "completion_date", "is_auto_generated", "contract_id", "created_at", "updated_at"],
                 order_by="created_at DESC",
                 limit=limit,
-                offset=offset
             )
             
             logger("PORTFOLIO_FUNCTIONS", f"Fetched {len(rows)} portfolios", level="INFO")

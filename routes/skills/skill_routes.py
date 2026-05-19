@@ -84,6 +84,22 @@ async def get_skills_by_category(
         return ResponseSchema.error(error_msg, 500)
 
 
+@skill_router.get("/autocomplete", response_model=Dict)
+async def autocomplete_skills(
+    q: str = Query(..., description="Skill name to autocomplete"),
+    limit: int = Query(10, ge=1, le=50),
+    current_user: UserInDB = Depends(get_current_user),
+):
+    try:
+        results = SkillFunctions.search_skills_autocomplete(q, limit=limit)
+        logger("SKILL", f"Autocomplete '{q}' found {len(results)} results", "GET /skills/autocomplete", "INFO")
+        return ResponseSchema.success({"results": results, "count": len(results), "query": q}, 200)
+    except Exception as e:
+        error_msg = f"Failed to fetch skill autocomplete: {str(e)}"
+        logger("SKILL", error_msg, "GET /skills/autocomplete", "ERROR")
+        return ResponseSchema.error(error_msg, 500)
+
+
 @skill_router.get("/{skill_id}", response_model=SkillResponse)
 async def get_skill(skill_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Fetch a single skill by ID"""

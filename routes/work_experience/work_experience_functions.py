@@ -24,7 +24,7 @@ class WorkExperienceFunctions:
     """Handle all work experience-related database operations"""
 
     @staticmethod
-    def get_all_work_experiences(limit: Optional[int] = None, offset: int = 0) -> List[Dict]:
+    def get_all_work_experiences(limit: Optional[int] = None) -> List[Dict]:
         """Fetch all work experiences"""
         try:
             db = get_db()
@@ -34,7 +34,6 @@ class WorkExperienceFunctions:
                         "start_date", "end_date", "is_current", "description", "created_at", "updated_at"],
                 order_by="start_date DESC",
                 limit=limit,
-                offset=offset
             )
             
             logger("WORK_EXPERIENCE_FUNCTIONS", f"Fetched {len(rows)} work experiences", level="INFO")

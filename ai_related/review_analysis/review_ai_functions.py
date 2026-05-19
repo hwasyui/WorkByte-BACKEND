@@ -65,18 +65,10 @@ async def fetch_supported_models(force_refresh: bool = False) -> set[str]:
             }
 
             _supported_models_cache = models
-            logger(
-                "REVIEW_AI",
-                f"Loaded {len(models)} supported Groq models",
-                level="INFO",
-            )
+            logger("REVIEW_AI", f"Loaded {len(models)} supported Groq models", level="INFO")
             return models
     except Exception as e:
-        logger(
-            "REVIEW_AI",
-            f"Failed to load Groq models list: {str(e)}",
-            level="WARNING",
-        )
+        logger("REVIEW_AI", f"Failed to load Groq models list: {str(e)}", level="WARNING")
         return set(MODEL_FALLBACKS)
 
 
@@ -91,7 +83,6 @@ async def pick_best_model() -> str:
 def _is_model_error(status_code: Optional[int], response_text: str) -> bool:
     if status_code != 400:
         return False
-
     text = (response_text or "").lower()
     return (
         "model_decommissioned" in text
@@ -171,11 +162,7 @@ async def call_llm(system_prompt: str, user_prompt: str, json_mode: bool = False
                         )
 
                     except json.JSONDecodeError as e:
-                        logger(
-                            "REVIEW_AI",
-                            f"Invalid JSON from model {model}: {str(e)}",
-                            level="ERROR",
-                        )
+                        logger("REVIEW_AI", f"Invalid JSON from model {model}: {str(e)}", level="ERROR")
                         raise
 
                     except httpx.HTTPStatusError as e:
@@ -311,6 +298,45 @@ def compute_responsiveness_score(contract_id: str, freelancer_user_id: str) -> f
         return 0.8
 
 
+def _blend_communication_score(
+    ai_quality_score: float,
+    client_star_normalized: Optional[float],
+    responsiveness_score: float,
+    sentiment_score: float,
+) -> float:
+    """
+    Blends all available communication signals into a single 0–1 score.
+
+    Signal weights (with client star rating):
+      45% — client's explicit communication star rating (1–5, normalized to 0–1)
+      30% — AI assessment of the message thread
+      20% — reply speed (computed from message timestamps)
+       5% — overall review sentiment (weakest, indirect signal)
+
+    Without client star rating (fallback):
+      50% — AI thread assessment
+      35% — reply speed
+      15% — overall review sentiment
+    """
+    sentiment_component = max(0.0, min(1.0, 0.5 + sentiment_score / 2.0))
+
+    if client_star_normalized is not None:
+        blended = (
+            client_star_normalized * 0.45
+            + ai_quality_score     * 0.30
+            + responsiveness_score * 0.20
+            + sentiment_component  * 0.05
+        )
+    else:
+        blended = (
+            ai_quality_score     * 0.50
+            + responsiveness_score * 0.35
+            + sentiment_component  * 0.15
+        )
+
+    return round(max(0.0, min(1.0, blended)), 3)
+
+
 async def analyze_review_full(
     overall_comment: str,
     client_answer: str,
@@ -318,28 +344,38 @@ async def analyze_review_full(
     freelancer_name: str,
     performance_score_summary: Dict,
     message_thread: str,
+    responsiveness_score: float,
+    communication_star_rating: Optional[float] = None,  # raw 1–5 from review_ratings
 ) -> Dict:
     system = (
         "You are a review analysis expert. "
-        "Return valid JSON only. "
+        "Analyze the provided review data and return your own independent assessment as valid JSON only. "
+        "Do not copy, echo, or mirror any values from the schema description — produce original analysis. "
         "Do not include markdown fences, explanation, or extra text."
     )
 
-    expected_schema = {
-        "sentiment_score": -0.2,
-        "sentiment_label": "neutral",
-        "sentiment_mismatch": False,
-        "authenticity_score": 0.95,
-        "is_flagged_fake": False,
-        "is_flagged_coerced": False,
-        "flag_reasons": [],
-        "bias_score": 0.1,
+    schema_description = {
+        "sentiment_score": "float between -1.0 and 1.0 — how positive or negative the review text is",
+        "sentiment_label": "one of: 'positive', 'neutral', 'negative'",
+        "sentiment_mismatch": "boolean — true if sentiment_label contradicts the star rating (e.g. negative text with 5 stars)",
+        "authenticity_score": "float between 0.0 and 1.0 — likelihood the review is genuine and not fabricated",
+        "is_flagged_fake": "boolean — true if review appears fabricated or templated",
+        "is_flagged_coerced": "boolean — true if review appears pressured or coerced",
+        "flag_reasons": "list of strings describing specific red flags, empty list if none",
+        "bias_score": "float between 0.0 and 1.0 — degree of detected bias in the review",
         "bias_flags": {
-            "rating_vs_performance_inconsistency": False,
-            "name_bias": False
+            "rating_vs_performance_inconsistency": "boolean — true if star rating sharply contradicts objective performance metrics",
+            "name_bias": "boolean — true if freelancer name appears to influence the review tone",
         },
-        "communication_summary": "Communication was timely, professional, and solution-focused."
+        "communication_quality_score": "float between 0.0 and 1.0 — quality of freelancer communication judged from the message thread ONLY, not the review text",
+        "communication_summary": "string — 1-2 sentence summary of communication quality based on the message thread",
     }
+
+    comm_star_line = (
+        f"- Client's explicit communication star rating: {communication_star_rating:.1f} / 5\n"
+        if communication_star_rating is not None
+        else ""
+    )
 
     user = (
         f"Review text:\n{overall_comment}\n{client_answer}\n\n"
@@ -349,54 +385,80 @@ async def analyze_review_full(
         f"- On-time delivery: {performance_score_summary.get('on_time', 'N/A')}\n"
         f"- Revision rate: {performance_score_summary.get('revision_rate', 'N/A')}\n"
         f"- Responsiveness: {performance_score_summary.get('responsiveness', 'N/A')}\n"
-        f"- Work quality: {performance_score_summary.get('work_quality', 'N/A')}\n\n"
-        "Message thread from the project:\n"
+        f"{comm_star_line}"
+        "\nMessage thread from the project (use this to assess communication_quality_score):\n"
         f"{message_thread[:3000]}\n\n"
-        "Assess the review for sentiment, authenticity, bias, and communication tone.\n"
-        "Return exactly one JSON object with these keys and compatible value types:\n"
-        f"{json.dumps(expected_schema, ensure_ascii=False)}"
+        "Assess the review for sentiment, authenticity, bias, and communication quality. "
+        "Base your analysis entirely on the data above — do not invent or assume anything.\n"
+        "Return exactly one JSON object matching this schema:\n"
+        f"{json.dumps(schema_description, ensure_ascii=False, indent=2)}"
     )
 
     try:
         result = await call_llm(system, user, json_mode=True)
 
+        sentiment_score_raw  = float(result.get("sentiment_score", 0.0))
+        ai_quality_score     = max(0.0, min(1.0, float(result.get("communication_quality_score", 0.5))))
+        authenticity_score   = float(result.get("authenticity_score", 1.0))
+        bias_score           = float(result.get("bias_score", 0.0))
+        sentiment_mismatch   = bool(result.get("sentiment_mismatch", False))
+
+        # Normalize client star rating 1–5 → 0–1
+        client_star_normalized = (
+            max(0.0, min(1.0, (communication_star_rating - 1) / 4.0))
+            if communication_star_rating is not None
+            else None
+        )
+
+        communication_sentiment_score = _blend_communication_score(
+            ai_quality_score=ai_quality_score,
+            client_star_normalized=client_star_normalized,
+            responsiveness_score=responsiveness_score,
+            sentiment_score=sentiment_score_raw,
+        )
+
+        overall_pass = (
+            authenticity_score >= 0.5
+            and bias_score <= 0.6
+            and not (
+                sentiment_mismatch
+                and avg_star_rating == 5.0
+                and result.get("sentiment_label", "neutral") == "negative"
+            )
+        )
+
         return {
-            "sentiment_score": float(result.get("sentiment_score", 0.0)),
-            "sentiment_label": result.get("sentiment_label", "neutral"),
-            "sentiment_mismatch": bool(result.get("sentiment_mismatch", False)),
-            "authenticity_score": float(result.get("authenticity_score", 1.0)),
-            "is_flagged_fake": bool(result.get("is_flagged_fake", False)),
-            "is_flagged_coerced": bool(result.get("is_flagged_coerced", False)),
-            "flag_reasons": result.get("flag_reasons", []),
-            "bias_score": float(result.get("bias_score", 0.0)),
-            "bias_flags": result.get("bias_flags", {}),
-            "communication_summary": result.get("communication_summary", ""),
-            "overall_pass": (
-                float(result.get("authenticity_score", 1.0)) >= 0.5
-                and float(result.get("bias_score", 0.0)) <= 0.6
-                and not (
-                    bool(result.get("sentiment_mismatch", False))
-                    and avg_star_rating == 5.0
-                    and result.get("sentiment_label", "neutral") == "negative"
-                )
-            ),
+            "sentiment_score":              sentiment_score_raw,
+            "sentiment_label":              result.get("sentiment_label", "neutral"),
+            "sentiment_mismatch":           sentiment_mismatch,
+            "authenticity_score":           authenticity_score,
+            "is_flagged_fake":              bool(result.get("is_flagged_fake", False)),
+            "is_flagged_coerced":           bool(result.get("is_flagged_coerced", False)),
+            "flag_reasons":                 result.get("flag_reasons", []),
+            "bias_score":                   bias_score,
+            "bias_flags":                   result.get("bias_flags", {}),
+            "communication_sentiment_score": communication_sentiment_score,
+            "communication_summary":        result.get("communication_summary", ""),
+            "overall_pass":                 overall_pass,
         }
 
     except Exception as e:
         logger("REVIEW_AI", f"Review analysis failed: {str(e)}", level="ERROR")
         return {
-            "sentiment_score": 0.0,
-            "sentiment_label": "neutral",
-            "sentiment_mismatch": False,
-            "authenticity_score": 1.0,
-            "is_flagged_fake": False,
-            "is_flagged_coerced": False,
-            "flag_reasons": [],
-            "bias_score": 0.0,
-            "bias_flags": {},
-            "communication_summary": "Analysis unavailable.",
-            "overall_pass": True,
+            "sentiment_score":              0.0,
+            "sentiment_label":              "neutral",
+            "sentiment_mismatch":           False,
+            "authenticity_score":           1.0,
+            "is_flagged_fake":              False,
+            "is_flagged_coerced":           False,
+            "flag_reasons":                 [],
+            "bias_score":                   0.0,
+            "bias_flags":                   {},
+            "communication_sentiment_score": 0.5,
+            "communication_summary":        "Analysis unavailable.",
+            "overall_pass":                 True,
         }
+
 
 def calculate_trust_score(
     weighted_review_avg: float,
@@ -408,15 +470,16 @@ def calculate_trust_score(
     communication_sentiment = float(communication_sentiment) if communication_sentiment is not None else 0.5
     conflict_score = float(conflict_score) if conflict_score is not None else 0.0
 
-    score = (weighted_review_avg / 5.0) * 50
-    score += float(revision_rate_score) * 20
-    score += float(responsiveness_score) * 20
-    score += communication_sentiment * 10
+    score  = (weighted_review_avg / 5.0) * 50   # 50% — recency-weighted client star ratings
+    score += revision_rate_score         * 20   # 20% — revision frequency (fewer = better)
+    score += responsiveness_score        * 20   # 20% — reply speed from message thread
+    score += communication_sentiment     * 10   # 10% — blended communication quality score
 
     if conflict_score > 0.7:
-        score -= 5
+        score -= 5  # penalty for coercion-flagged reviews
 
     return round(min(100.0, max(0.0, score)), 2)
+
 
 def calculate_weighted_review_avg(freelancer_user_id: str) -> Tuple[float, int]:
     try:

@@ -14,7 +14,7 @@ from functions.logger import logger
 from ai_related.job_matching.embedding_service import get_embedding
 from ai_related.job_matching.source_text_builder import (
     build_freelancer_source_text,
-    build_job_source_text,
+    build_job_role_source_text,
     build_contract_source_text,
     build_portfolio_source_text,
 )
@@ -105,65 +105,79 @@ def mark_freelancer_dirty(freelancer_id: str) -> None:
         logger("EMBEDDING_MANAGER", f"Could not mark freelancer dirty | freelancer_id={freelancer_id} | error={e}", level="ERROR")
 
 
+def _upsert_role_dirty_row(db, job_role_id: str, job_post_id: str) -> None:
+    """Update an existing role embedding row to dirty, or insert a new dirty row if none exists."""
+    existing = db.execute_query(
+        "SELECT embedding_id FROM job_role_embedding WHERE job_role_id = :jrid",
+        {"jrid": job_role_id},
+    )
+    if existing:
+        db.execute_query(
+            "UPDATE job_role_embedding SET embedding_dirty = TRUE WHERE job_role_id = :jrid",
+            {"jrid": job_role_id},
+        )
+    else:
+        db.execute_query(
+            """INSERT INTO job_role_embedding (embedding_id, job_role_id, job_post_id, embedding_dirty)
+               VALUES (:eid, :jrid, :jpid, TRUE)""",
+            {"eid": str(uuid.uuid4()), "jrid": job_role_id, "jpid": job_post_id},
+        )
+
+
 def mark_job_dirty(job_post_id: str) -> None:
     """
-    Flag a job's embedding as stale, or embed immediately if below the size threshold.
-    Swallows exceptions.
+    Flag all role embeddings for a job post as stale, creating dirty rows for any
+    roles that don't have an embedding row yet. Embeds immediately if below threshold.
+    Swallows exceptions so a dirty-flag failure never breaks the calling mutation.
     """
     try:
-        if _should_embed_immediately():
-            logger("EMBEDDING_MANAGER", f"Immediate embed scheduled | job_post_id={job_post_id}", level="INFO")
-            _schedule_immediate(upsert_job_embedding(job_post_id))
-            return
         db = get_db()
-        db.execute_query(
-            "UPDATE job_embedding SET embedding_dirty = TRUE WHERE job_post_id = :jpid",
+        role_rows = db.execute_query(
+            "SELECT job_role_id FROM job_role WHERE job_post_id = :jpid",
             {"jpid": job_post_id},
         )
-        logger("EMBEDDING_MANAGER", f"Marked dirty | job_post_id={job_post_id}", level="DEBUG")
+        if not role_rows:
+            logger("EMBEDDING_MANAGER", f"No roles found for job_post_id={job_post_id} — nothing to dirty", level="DEBUG")
+            return
+
+        for role in role_rows:
+            jrid = str(role["job_role_id"])
+            if _should_embed_immediately():
+                logger("EMBEDDING_MANAGER", f"Immediate embed scheduled | job_role_id={jrid}", level="INFO")
+                _schedule_immediate(upsert_job_role_embedding(jrid))
+            else:
+                _upsert_role_dirty_row(db, jrid, job_post_id)
+
+        logger("EMBEDDING_MANAGER", f"Marked dirty | job_post_id={job_post_id} | roles={len(role_rows)}", level="DEBUG")
     except Exception as e:
         logger("EMBEDDING_MANAGER", f"Could not mark job dirty | job_post_id={job_post_id} | error={e}", level="ERROR")
 
 
-def get_job_post_id_from_role(job_role_id: str) -> Optional[str]:
+def mark_job_dirty_by_role(job_role_id: str) -> None:
     """
-    Look up the parent job_post_id for a given job_role_id.
-
-    Args:
-        job_role_id: UUID string of the job role.
-
-    Returns:
-        The job_post_id string if found, None otherwise.
+    Flag a single role embedding as stale, or embed it immediately if below threshold.
+    Creates a dirty row if the role has no embedding row yet.
+    Swallows exceptions.
     """
     try:
         db = get_db()
-        rows = db.execute_query(
+        role_rows = db.execute_query(
             "SELECT job_post_id FROM job_role WHERE job_role_id = :jrid",
             {"jrid": job_role_id},
         )
-        if rows:
-            job_post_id = str(rows[0]["job_post_id"])
-            logger("EMBEDDING_MANAGER", f"Resolved job_role_id={job_role_id} → job_post_id={job_post_id}", level="DEBUG")
-            return job_post_id
-        logger("EMBEDDING_MANAGER", f"job_role_id={job_role_id} has no parent job_post — skipping dirty mark", level="WARNING")
-        return None
+        if not role_rows:
+            logger("EMBEDDING_MANAGER", f"job_role_id={job_role_id} not found — skipping dirty mark", level="WARNING")
+            return
+        job_post_id = str(role_rows[0]["job_post_id"])
+
+        if _should_embed_immediately():
+            logger("EMBEDDING_MANAGER", f"Immediate embed scheduled | job_role_id={job_role_id}", level="INFO")
+            _schedule_immediate(upsert_job_role_embedding(job_role_id))
+        else:
+            _upsert_role_dirty_row(db, job_role_id, job_post_id)
+            logger("EMBEDDING_MANAGER", f"Marked dirty | job_role_id={job_role_id}", level="DEBUG")
     except Exception as e:
-        logger("EMBEDDING_MANAGER", f"Could not resolve job_post_id from role {job_role_id}: {e}", level="ERROR")
-        return None
-
-
-def mark_job_dirty_by_role(job_role_id: str) -> None:
-    """
-    Mark the parent job post embedding as dirty given a job_role_id.
-
-    Resolves the job_post_id from the role and calls mark_job_dirty. No-op if the role has no parent.
-
-    Args:
-        job_role_id: UUID string of the job role whose parent job should be marked dirty.
-    """
-    job_post_id = get_job_post_id_from_role(job_role_id)
-    if job_post_id:
-        mark_job_dirty(job_post_id)
+        logger("EMBEDDING_MANAGER", f"Could not mark role dirty | job_role_id={job_role_id} | error={e}", level="ERROR")
 
 
 def mark_contract_dirty(contract_id: str) -> None:
@@ -245,56 +259,64 @@ async def upsert_freelancer_embedding(freelancer_id: str) -> dict:
         raise
 
 
-async def upsert_job_embedding(job_post_id: str) -> dict:
-    """Build source text, get an embedding vector, and upsert into job_embedding."""
-    logger("EMBEDDING_MANAGER", f"Upserting job embedding | job_post_id={job_post_id}", level="INFO")
+async def upsert_job_role_embedding(job_role_id: str) -> dict:
+    """Build source text for one role, get an embedding vector, and upsert into job_role_embedding."""
+    logger("EMBEDDING_MANAGER", f"Upserting job role embedding | job_role_id={job_role_id}", level="INFO")
     try:
-        source_text = build_job_source_text(job_post_id)
+        source_text = build_job_role_source_text(job_role_id)
         if not source_text:
-            logger("EMBEDDING_MANAGER", f"No source text for job {job_post_id} — skipping upsert", level="WARNING")
+            logger("EMBEDDING_MANAGER", f"No source text for role {job_role_id} — skipping upsert", level="WARNING")
             return {"status": "skipped", "reason": "no_source_text"}
 
-        logger("EMBEDDING_MANAGER", f"Requesting embedding vector | job_post_id={job_post_id} | source_chars={len(source_text)}", level="DEBUG")
+        db = get_db()
+        role_rows = db.execute_query(
+            "SELECT job_post_id FROM job_role WHERE job_role_id = :jrid",
+            {"jrid": job_role_id},
+        )
+        if not role_rows:
+            logger("EMBEDDING_MANAGER", f"Role {job_role_id} not found — skipping upsert", level="WARNING")
+            return {"status": "skipped", "reason": "role_not_found"}
+        job_post_id = str(role_rows[0]["job_post_id"])
+
+        logger("EMBEDDING_MANAGER", f"Requesting embedding vector | job_role_id={job_role_id} | source_chars={len(source_text)}", level="DEBUG")
         vector = await get_embedding(source_text)
         vector_pg = _vector_to_pg(vector)
         metadata = json.dumps({"dim": len(vector)})
-        logger("EMBEDDING_MANAGER", f"Embedding vector received | job_post_id={job_post_id} | dim={len(vector)}", level="DEBUG")
+        logger("EMBEDDING_MANAGER", f"Embedding vector received | job_role_id={job_role_id} | dim={len(vector)}", level="DEBUG")
 
-        db = get_db()
         existing = db.execute_query(
-            "SELECT embedding_id FROM job_embedding WHERE job_post_id = :jpid",
-            {"jpid": job_post_id},
+            "SELECT embedding_id FROM job_role_embedding WHERE job_role_id = :jrid",
+            {"jrid": job_role_id},
         )
 
         if existing:
-            logger("EMBEDDING_MANAGER", f"Updating existing embedding record | job_post_id={job_post_id}", level="DEBUG")
             db.execute_query(
-                """UPDATE job_embedding
+                """UPDATE job_role_embedding
                    SET embedding_vector   = CAST(:vec AS vector),
                        source_text        = :txt,
                        embedding_metadata = CAST(:meta AS jsonb),
                        embedding_dirty    = FALSE,
                        updated_at         = NOW()
-                   WHERE job_post_id = :jpid""",
-                {"vec": vector_pg, "txt": source_text, "meta": metadata, "jpid": job_post_id},
+                   WHERE job_role_id = :jrid""",
+                {"vec": vector_pg, "txt": source_text, "meta": metadata, "jrid": job_role_id},
             )
-            logger("EMBEDDING_MANAGER", f"Job embedding UPDATED | job_post_id={job_post_id} | dim={len(vector)}", level="INFO")
-            return {"status": "updated", "job_post_id": job_post_id, "dim": len(vector)}
+            logger("EMBEDDING_MANAGER", f"Job role embedding UPDATED | job_role_id={job_role_id} | dim={len(vector)}", level="INFO")
+            return {"status": "updated", "job_role_id": job_role_id, "job_post_id": job_post_id, "dim": len(vector)}
         else:
             embedding_id = str(uuid.uuid4())
-            logger("EMBEDDING_MANAGER", f"Creating new embedding record | job_post_id={job_post_id} | embedding_id={embedding_id}", level="DEBUG")
             db.execute_query(
-                """INSERT INTO job_embedding
-                     (embedding_id, job_post_id, embedding_vector, source_text, embedding_metadata, embedding_dirty)
-                   VALUES (:eid, :jpid, CAST(:vec AS vector), :txt, CAST(:meta AS jsonb), FALSE)""",
-                {"eid": embedding_id, "jpid": job_post_id,
+                """INSERT INTO job_role_embedding
+                     (embedding_id, job_role_id, job_post_id, embedding_vector,
+                      source_text, embedding_metadata, embedding_dirty)
+                   VALUES (:eid, :jrid, :jpid, CAST(:vec AS vector), :txt, CAST(:meta AS jsonb), FALSE)""",
+                {"eid": embedding_id, "jrid": job_role_id, "jpid": job_post_id,
                  "vec": vector_pg, "txt": source_text, "meta": metadata},
             )
-            logger("EMBEDDING_MANAGER", f"Job embedding CREATED | job_post_id={job_post_id} | dim={len(vector)}", level="INFO")
-            return {"status": "created", "job_post_id": job_post_id, "dim": len(vector)}
+            logger("EMBEDDING_MANAGER", f"Job role embedding CREATED | job_role_id={job_role_id} | dim={len(vector)}", level="INFO")
+            return {"status": "created", "job_role_id": job_role_id, "job_post_id": job_post_id, "dim": len(vector)}
 
     except Exception as e:
-        logger("EMBEDDING_MANAGER", f"Error upserting job embedding | job_post_id={job_post_id} | error={e}", level="ERROR")
+        logger("EMBEDDING_MANAGER", f"Error upserting job role embedding | job_role_id={job_role_id} | error={e}", level="ERROR")
         raise
 
 

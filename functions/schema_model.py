@@ -279,33 +279,12 @@ class SkillCreate(BaseModel):
 class SkillUpdate(BaseModel):
     skill_name: Optional[str] = None
     skill_category: Optional[str] = None
-    description: Optional[str] = None
 
 class SkillResponse(BaseModel):
     skill_id: str
     skill_name: str
     skill_category: Optional[str] = None
     description: Optional[str] = None
-    created_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
-
-
-# ==================== LANGUAGES ====================
-class LanguageCreate(BaseModel):
-    language_id: Optional[str] = None  # Auto-generated if not provided
-    language_name: str
-    iso_code: Optional[str] = None
-
-class LanguageUpdate(BaseModel):
-    language_name: Optional[str] = None
-    iso_code: Optional[str] = None
-
-class LanguageResponse(BaseModel):
-    language_id: str
-    language_name: str
-    iso_code: Optional[str] = None
     created_at: Optional[datetime] = None
 
     class Config:
@@ -368,27 +347,6 @@ class FreelancerSpecialityResponse(BaseModel):
     freelancer_id: str
     speciality_id: str
     is_primary: Optional[bool] = False
-    created_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
-
-
-# ==================== FREELANCER LANGUAGES ====================
-class FreelancerLanguageCreate(BaseModel):
-    freelancer_language_id: Optional[str] = None
-    freelancer_id: str
-    language_id: str
-    proficiency_level: str  # basic, conversational, fluent, native
-
-class FreelancerLanguageUpdate(BaseModel):
-    proficiency_level: Optional[str] = None
-
-class FreelancerLanguageResponse(BaseModel):
-    freelancer_language_id: str
-    freelancer_id: str
-    language_id: str
-    proficiency_level: Optional[str] = None
     created_at: Optional[datetime] = None
 
     class Config:
@@ -1030,20 +988,24 @@ class FreelancerEmbeddingResponse(BaseModel):
 # ==================== JOB EMBEDDINGS ====================
 class JobEmbeddingCreate(BaseModel):
     embedding_id: Optional[str] = None
-    job_post_id: str
+    job_role_id: str
     embedding_vector: List[float]
-    embedding_type: Optional[str] = None  # skill_based, description_based, etc
-    last_updated: Optional[datetime] = None
+    source_text: Optional[str] = None
+    embedding_metadata: Optional[dict] = None
 
 class JobEmbeddingUpdate(BaseModel):
     embedding_vector: Optional[List[float]] = None
-    embedding_type: Optional[str] = None
+    source_text: Optional[str] = None
+    embedding_metadata: Optional[dict] = None
 
 class JobEmbeddingResponse(BaseModel):
     embedding_id: str
+    job_role_id: str
     job_post_id: str
     embedding_vector: List[float]
-    embedding_type: Optional[str] = None
+    source_text: Optional[str] = None
+    embedding_metadata: Optional[dict] = None
+    embedding_dirty: Optional[bool] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
@@ -1130,20 +1092,10 @@ class FreelancerSpecialityWithDetails(BaseModel):
     class Config:
         from_attributes = True
 
-class FreelancerLanguageWithDetails(BaseModel):
-    freelancer_language_id: str
-    language: LanguageResponse
-    proficiency_level: str
-    created_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
-
 class FreelancerProfileComplete(BaseModel):
     freelancer: FreelancerResponse
     skills: List[FreelancerSkillWithDetails] = []
     specialities: List[FreelancerSpecialityWithDetails] = []
-    languages: List[FreelancerLanguageWithDetails] = []
     education: List[EducationResponse] = []
     work_experience: List[WorkExperienceResponse] = []
     portfolio: List[PortfolioResponse] = []
@@ -1223,3 +1175,20 @@ class RedFlagAlertResponse(BaseModel):
 
 class InitiateReviewPayload(BaseModel):
     contract_id: str
+
+
+# ── Request ───────────────────────────────────────────────────────────────────
+
+class FCMTokenUpdate(BaseModel):
+    token: str
+
+# ── Response ──────────────────────────────────────────────────────────────────
+
+class NotificationResponse(BaseModel):
+    id: str
+    type: str
+    title: str
+    body: str
+    data: Optional[Any] = None
+    is_read: bool
+    created_at: datetime

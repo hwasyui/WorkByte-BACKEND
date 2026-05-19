@@ -24,7 +24,7 @@ class FreelancerSkillFunctions:
     """Handle all freelancer skill-related database operations"""
 
     @staticmethod
-    def get_all_freelancer_skills(limit: Optional[int] = None, offset: int = 0) -> List[Dict]:
+    def get_all_freelancer_skills(limit: Optional[int] = None) -> List[Dict]:
         """Fetch all freelancer skills"""
         try:
             db = get_db()
@@ -33,7 +33,6 @@ class FreelancerSkillFunctions:
                 columns=["freelancer_skill_id", "freelancer_id", "skill_id", "proficiency_level", "created_at"],
                 order_by="created_at DESC",
                 limit=limit,
-                offset=offset
             )
             
             logger("FREELANCER_SKILL_FUNCTIONS", f"Fetched {len(rows)} freelancer skills", level="INFO")

@@ -24,7 +24,7 @@ class PerformanceRatingFunctions:
     """Handle all performance rating-related database operations"""
 
     @staticmethod
-    def get_all_performance_ratings(limit: Optional[int] = None, offset: int = 0) -> List[Dict]:
+    def get_all_performance_ratings(limit: Optional[int] = None) -> List[Dict]:
         """Fetch all performance ratings"""
         try:
             db = get_db()
@@ -35,7 +35,6 @@ class PerformanceRatingFunctions:
                         "average_timeline_compliance", "success_rate", "last_calculated_at"],
                 order_by="last_calculated_at DESC",
                 limit=limit,
-                offset=offset
             )
             
             logger("PERFORMANCE_RATING_FUNCTIONS", f"Fetched {len(rows)} performance ratings", level="INFO")

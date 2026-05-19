@@ -1,8 +1,8 @@
 """
-Content moderation and scam detection utilities.
+Toxicity detection and scam detection utilities.
 
-scan_content_with_ml_fallback() is the primary entry point for content scans.
-It tries the trained RoBERTa ML model first (F1=0.71 on Jigsaw+ETHOS test set),
+scan_toxicity_with_ml_fallback() is the primary entry point for toxicity scans.
+It tries the trained DistilBERT ML model first (F1=0.7298 on Jigsaw+ETHOS test set),
 then falls back to deterministic keyword matching if the model is unavailable.
 
 Keyword lists, threshold values, and their rationale are documented in
@@ -16,7 +16,7 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from functions.logger import logger
 
@@ -55,7 +55,7 @@ def _normalize(text: str) -> str:
 # Keyword-based scan (fallback / standalone)
 # ---------------------------------------------------------------------------
 
-def scan_content(text: str) -> Dict:
+def scan_toxicity(text: str) -> Dict:
     """
     Deterministic keyword scan across 6 harm labels.
     Scoring: score = min(hit_count × 0.35, 1.0)
@@ -63,7 +63,7 @@ def scan_content(text: str) -> Dict:
       — 2 hits → 0.70
       — 3+ hits → 1.0
     Used directly when called explicitly, or as fallback by
-    scan_content_with_ml_fallback() when the ML model is unavailable.
+    scan_toxicity_with_ml_fallback() when the ML model is unavailable.
     """
     normalized = _normalize(text)
     scores: Dict[str, float] = {}
@@ -104,16 +104,50 @@ def scan_for_scam(text: str) -> Dict:
         "scam_score":        score,
         "detected_keywords": matched,
         "is_flagged":        score >= SCAM_FLAG_THRESHOLD,
+        "scan_method":       "keyword",
     }
+
+
+def scan_for_scam_with_ml_fallback(title: str, description: str) -> Dict:
+    """
+    ML-first scam scan using SBERT + Random Forest (AUC-ROC 0.978).
+    Falls back transparently to keyword scan if the model is unavailable.
+
+    Returns the same shape as scan_for_scam() plus a 'scan_method' key
+    ('sbert_rf' or 'keyword') so callers can log which path ran.
+    """
+    combined = f"{title} {description}"
+    try:
+        from ai_related.job_scam_detection.scam_detector import predict_scam
+
+        ml = predict_scam(title, description)
+
+        # Also collect keyword matches for admin review context (informational only).
+        normalized = _normalize(combined)
+        matched_keywords = [kw for kw in _SCAM_KEYWORDS if kw in normalized]
+
+        return {
+            "scam_score":        ml["scam_probability"],
+            "detected_keywords": matched_keywords,
+            "is_flagged":        ml["is_scam"],
+            "scan_method":       "sbert_rf",
+        }
+    except Exception as exc:
+        logger(
+            "MODERATION",
+            f"ML scam scan failed ({type(exc).__name__}: {exc}); falling back to keyword scan",
+            level="WARNING",
+        )
+        return scan_for_scam(combined)
 
 
 # ---------------------------------------------------------------------------
 # ML-first scan (primary entry point)
 # ---------------------------------------------------------------------------
 
-def scan_content_with_ml_fallback(text: str) -> Dict:
+def scan_toxicity_with_ml_fallback(text: str) -> Dict:
     """
-    Primary content scan entry point.
+    Primary toxicity scan entry point.
 
     1. Attempts inference with the trained RoBERTa model (threshold=0.5).
        Model metrics on Jigsaw+ETHOS test set: F1=0.71, precision=0.70,
@@ -121,11 +155,11 @@ def scan_content_with_ml_fallback(text: str) -> Dict:
     2. On any failure (model files missing, CUDA OOM, etc.) logs a WARNING
        and transparently falls back to keyword matching.
 
-    Return shape is identical to scan_content() plus a 'scan_method' key
+    Return shape is identical to scan_toxicity() plus a 'scan_method' key
     ('ml' or 'keyword') so callers can log which path was taken.
     """
     try:
-        from ai_related.content_moderation.model_inference import predict
+        from ai_related.toxicity_detection.model_inference import predict
 
         ml = predict(text, model_type="best", threshold=0.5)
 
@@ -146,8 +180,8 @@ def scan_content_with_ml_fallback(text: str) -> Dict:
 
     except Exception as exc:
         logger(
-            "MODERATION",
-            f"ML content scan failed ({type(exc).__name__}: {exc}); falling back to keyword scan",
+            "TOXICITY",
+            f"ML toxicity scan failed ({type(exc).__name__}: {exc}); falling back to keyword scan",
             level="WARNING",
         )
-        return scan_content(text)
+        return scan_toxicity(text)

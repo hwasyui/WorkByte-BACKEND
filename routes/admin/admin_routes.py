@@ -21,6 +21,10 @@ from routes.admin.admin_functions import (
     action_moderation_item,
     action_report,
     action_scam_flag,
+    admin_close_account,
+    admin_close_job,
+    admin_reopen_account,
+    admin_reopen_job,
     create_report,
     force_expire_moderation,
     force_expire_reports,
@@ -34,7 +38,7 @@ from routes.admin.admin_functions import (
     list_report_targets,
     list_reports,
     list_scam_flags,
-    queue_content_scan,
+    queue_toxicity_scan,
     queue_scam_scan,
     resolve_appeal,
     submit_appeal,
@@ -87,6 +91,10 @@ class ForceExpireReportBody(BaseModel):
     target_id:   str
 
 
+class AdminOverrideBody(BaseModel):
+    reason: Optional[str] = None  # shown to the affected user as closure_note / ban_message
+
+
 # ─── dashboard ────────────────────────────────────────────────────────────────
 
 @admin_router.get("/dashboard")
@@ -101,7 +109,7 @@ async def admin_dashboard(current_user: UserInDB = Depends(get_admin_user)):
         return ResponseSchema.error(f"Failed to fetch dashboard stats: {e}", 500)
 
 
-# ─── content moderation ───────────────────────────────────────────────────────
+# ─── toxicity detection ───────────────────────────────────────────────────────
 
 @admin_router.get("/moderation")
 async def list_moderation(
@@ -113,7 +121,7 @@ async def list_moderation(
     page_size:    int = Query(default=20, ge=1, le=100),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """List content moderation queue items. Supports filtering by status and content_type, and sorting."""
+    """List toxicity detection queue items. Supports filtering by status and content_type, and sorting."""
     try:
         if status not in ("pending", "approved", "rejected", "all"):
             return ResponseSchema.error("status must be pending, approved, rejected, or all", 400)
@@ -186,11 +194,11 @@ async def trigger_content_scan(
     body: ContentScanBody,
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Manually trigger a content moderation scan (admin utility)."""
+    """Manually trigger a toxicity detection scan (admin utility)."""
     try:
         if body.content_type not in ("job_post", "freelancer_profile", "client_profile"):
             return ResponseSchema.error("content_type must be job_post, freelancer_profile, or client_profile", 400)
-        result = queue_content_scan(
+        result = queue_toxicity_scan(
             content_type=body.content_type,
             content_id=body.content_id,
             user_id=body.user_id,
@@ -551,6 +559,92 @@ async def reject_appeal(
     except Exception as e:
         logger("ADMIN", f"Reject appeal error: {e}", "POST /admin/appeals/reject", "ERROR")
         return ResponseSchema.error(f"Failed to reject appeal: {e}", 500)
+
+
+# ─── direct admin overrides (no report / no AI flag required) ────────────────
+
+@admin_router.post("/jobs/{job_post_id}/close")
+async def force_close_job(
+    job_post_id: str,
+    body: AdminOverrideBody = AdminOverrideBody(),
+    current_user: UserInDB = Depends(get_admin_user),
+):
+    """Force-close any job post regardless of report or AI flag status."""
+    try:
+        updated = admin_close_job(
+            job_post_id=job_post_id,
+            admin_user_id=current_user.user_id,
+            reason=body.reason,
+        )
+        if not updated:
+            return ResponseSchema.error("Job post not found", 404)
+        logger("ADMIN", f"Job {job_post_id} force-closed by {current_user.user_id}", "POST /admin/jobs/close", "INFO")
+        return ResponseSchema.success(updated, 200)
+    except Exception as e:
+        logger("ADMIN", f"Force close job error: {e}", "POST /admin/jobs/close", "ERROR")
+        return ResponseSchema.error(f"Failed to close job post: {e}", 500)
+
+
+@admin_router.post("/jobs/{job_post_id}/reopen")
+async def force_reopen_job(
+    job_post_id: str,
+    current_user: UserInDB = Depends(get_admin_user),
+):
+    """Reopen a closed job post directly, without requiring a user appeal."""
+    try:
+        updated = admin_reopen_job(
+            job_post_id=job_post_id,
+            admin_user_id=current_user.user_id,
+        )
+        if not updated:
+            return ResponseSchema.error("Job post not found or is not currently closed", 404)
+        logger("ADMIN", f"Job {job_post_id} reopened by {current_user.user_id}", "POST /admin/jobs/reopen", "INFO")
+        return ResponseSchema.success(updated, 200)
+    except Exception as e:
+        logger("ADMIN", f"Force reopen job error: {e}", "POST /admin/jobs/reopen", "ERROR")
+        return ResponseSchema.error(f"Failed to reopen job post: {e}", 500)
+
+
+@admin_router.post("/accounts/{user_id}/close")
+async def force_close_account(
+    user_id: str,
+    body: AdminOverrideBody = AdminOverrideBody(),
+    current_user: UserInDB = Depends(get_admin_user),
+):
+    """Restrict any user account regardless of report or AI flag status."""
+    try:
+        updated = admin_close_account(
+            user_id=user_id,
+            admin_user_id=current_user.user_id,
+            reason=body.reason,
+        )
+        if not updated:
+            return ResponseSchema.error("User not found", 404)
+        logger("ADMIN", f"Account {user_id} force-closed by {current_user.user_id}", "POST /admin/accounts/close", "INFO")
+        return ResponseSchema.success(updated, 200)
+    except Exception as e:
+        logger("ADMIN", f"Force close account error: {e}", "POST /admin/accounts/close", "ERROR")
+        return ResponseSchema.error(f"Failed to close account: {e}", 500)
+
+
+@admin_router.post("/accounts/{user_id}/reopen")
+async def force_reopen_account(
+    user_id: str,
+    current_user: UserInDB = Depends(get_admin_user),
+):
+    """Restore a restricted user account directly, without requiring a user appeal."""
+    try:
+        updated = admin_reopen_account(
+            user_id=user_id,
+            admin_user_id=current_user.user_id,
+        )
+        if not updated:
+            return ResponseSchema.error("User not found or account is not currently restricted", 404)
+        logger("ADMIN", f"Account {user_id} restored by {current_user.user_id}", "POST /admin/accounts/reopen", "INFO")
+        return ResponseSchema.success(updated, 200)
+    except Exception as e:
+        logger("ADMIN", f"Force reopen account error: {e}", "POST /admin/accounts/reopen", "ERROR")
+        return ResponseSchema.error(f"Failed to restore account: {e}", 500)
 
 
 # ─── reports (user-facing) ────────────────────────────────────────────────────

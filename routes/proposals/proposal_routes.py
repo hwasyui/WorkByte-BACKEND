@@ -14,6 +14,9 @@ from functions.db_manager import get_db
 from routes.proposals.proposal_functions import ProposalFunctions
 from routes.freelancers.freelancer_functions import FreelancerFunctions
 from routes.clients.client_functions import ClientFunctions
+from routes.notifications.notification_functions import NotificationFunctions
+from routes.admin.admin_moderation import scan_toxicity_with_ml_fallback
+
 
 proposal_router = APIRouter(prefix="/proposals", tags=["Proposals"])
 
@@ -102,14 +105,12 @@ async def create_proposal(
 ):
     """Freelancer submits a proposal — freelancer_id is derived from token"""
     try:
-        # Derive freelancer_id from the logged-in user
         freelancer = FreelancerFunctions.get_freelancer_by_user_id(current_user.user_id)
         if not freelancer:
             return ResponseSchema.error("Freelancer profile not found for this account", 404)
 
         freelancer_id = freelancer["freelancer_id"]
 
-        # Cross-role guard: freelancer cannot apply to their own job post
         if current_user.client_id:
             job_row = get_db().execute_query(
                 "SELECT client_id FROM job_post WHERE job_post_id = :jpid",
@@ -123,8 +124,6 @@ async def create_proposal(
                 if client_row and str(client_row[0]["user_id"]) == str(current_user.user_id):
                     return ResponseSchema.error("You cannot apply to your own job post", 403)
 
-        # Duplicate check: role-based applications may be repeated within the
-        # same job post, as long as each proposal targets a different role.
         if proposal.job_role_id:
             existing = ProposalFunctions.get_proposal_for_freelancer_role(
                 freelancer_id=freelancer_id,
@@ -142,6 +141,16 @@ async def create_proposal(
         if existing:
             return ResponseSchema.error(duplicate_message, 409)
 
+        if proposal.cover_letter and proposal.cover_letter.strip():
+            toxicity = scan_toxicity_with_ml_fallback(proposal.cover_letter)
+            if toxicity["is_flagged"]:
+                labels = toxicity.get("detected_labels", [])
+                logger("PROPOSAL", f"Blocked toxic proposal from freelancer {freelancer_id} — labels={labels}", "POST /proposals", "WARNING")
+                return ResponseSchema.error(
+                    f"Your proposal was not submitted. The cover letter was detected as harmful ({', '.join(labels)}).",
+                    400,
+                )
+
         new_proposal = ProposalFunctions.create_proposal(
             job_post_id=proposal.job_post_id,
             freelancer_id=freelancer_id,
@@ -152,6 +161,28 @@ async def create_proposal(
             status=proposal.status if proposal.status else "pending",
             is_ai_generated=proposal.is_ai_generated,
         )
+
+        # Notify client of new proposal
+        try:
+            job_row = get_db().execute_query(
+                "SELECT client_id FROM job_post WHERE job_post_id = :jpid",
+                {"jpid": str(proposal.job_post_id)}
+            )
+            if job_row:
+                client = ClientFunctions.get_client_by_id(str(job_row[0]["client_id"]))
+                if client:
+                    await NotificationFunctions.notify(
+                        recipient_user_id=str(client["user_id"]),
+                        notif_type="new_proposal",
+                        title="New Proposal Received",
+                        body=f"{freelancer.get('full_name')} applied to your job",
+                        data={
+                            "proposal_id": new_proposal["proposal_id"],
+                            "job_post_id": str(proposal.job_post_id),
+                        },
+                    )
+        except Exception as notif_err:
+            logger("PROPOSAL", f"New proposal notification failed (non-fatal): {notif_err}", "POST /proposals", "WARNING")
 
         logger("PROPOSAL", f"Proposal created by freelancer {freelancer_id}", "POST /proposals", "INFO")
         return ResponseSchema.success(new_proposal, 201)
@@ -176,7 +207,6 @@ async def update_proposal_status(
         if not proposal:
             return ResponseSchema.error(f"Proposal {proposal_id} not found", 404)
 
-        # Determine if user is the proposal's freelancer or the job's client
         is_proposal_freelancer = False
         is_proposal_client = False
 
@@ -205,6 +235,35 @@ async def update_proposal_status(
             return ResponseSchema.error("Unauthorized", 403)
 
         updated = ProposalFunctions.update_proposal(proposal_id, {"status": status})
+
+        # Notify freelancer on accept/reject
+        if status in ("accepted", "rejected") and is_proposal_client:
+            try:
+                fl = FreelancerFunctions.get_freelancer_by_id(str(proposal["freelancer_id"]))
+                cl = ClientFunctions.get_client_by_user_id(current_user.user_id)
+                if fl and cl:
+                    if status == "accepted":
+                        notif_title = "Proposal Accepted 🎉"
+                        notif_body = f"{cl.get('full_name')} accepted your proposal"
+                        notif_type = "proposal_accepted"
+                    else:
+                        notif_title = "Proposal Rejected"
+                        notif_body = f"{cl.get('full_name')} has declined your proposal"
+                        notif_type = "proposal_rejected"
+
+                    await NotificationFunctions.notify(
+                        recipient_user_id=str(fl["user_id"]),
+                        notif_type=notif_type,
+                        title=notif_title,
+                        body=notif_body,
+                        data={
+                            "proposal_id": proposal_id,
+                            "job_post_id": str(proposal["job_post_id"]),
+                        },
+                    )
+            except Exception as notif_err:
+                logger("PROPOSAL", f"Status notification failed (non-fatal): {notif_err}", "PATCH /proposals/{proposal_id}/status", "WARNING")
+
         logger("PROPOSAL", f"Proposal {proposal_id} status → {status}", "PATCH /proposals/{proposal_id}/status", "INFO")
         return ResponseSchema.success(updated, 200)
     except Exception as e:
@@ -224,7 +283,6 @@ async def update_proposal(
         if not existing:
             return ResponseSchema.error(f"Proposal {proposal_id} not found", 404)
 
-        # Only the owning freelancer can edit
         freelancer = FreelancerFunctions.get_freelancer_by_user_id(current_user.user_id)
         if not freelancer or freelancer["freelancer_id"] != existing["freelancer_id"]:
             return ResponseSchema.error("You can only edit your own proposals", 403)

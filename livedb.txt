@@ -5,6 +5,16 @@ public      |ai_review_prompts            |project_category             |charact
 public      |ai_review_prompts            |question_text                |text                       |NO         |                                         |
 public      |ai_review_prompts            |is_active                    |boolean                    |NO         |true                                     |
 public      |ai_review_prompts            |created_at                   |timestamp with time zone   |NO         |now()                                    |
+public      |appeals                      |appeal_id                    |uuid                       |NO         |gen_random_uuid()                        |
+public      |appeals                      |user_id                      |uuid                       |NO         |                                         |
+public      |appeals                      |target_type                  |text                       |NO         |                                         |
+public      |appeals                      |target_id                    |uuid                       |NO         |                                         |
+public      |appeals                      |message                      |text                       |NO         |                                         |
+public      |appeals                      |status                       |text                       |NO         |'pending'::text                          |
+public      |appeals                      |admin_user_id                |uuid                       |YES        |                                         |
+public      |appeals                      |admin_note                   |text                       |YES        |                                         |
+public      |appeals                      |actioned_at                  |timestamp without time zone|YES        |                                         |
+public      |appeals                      |created_at                   |timestamp without time zone|YES        |now()                                    |
 public      |bias_detection_log           |id                           |uuid                       |NO         |uuid_generate_v4()                       |
 public      |bias_detection_log           |freelancer_id                |uuid                       |NO         |                                         |
 public      |bias_detection_log           |review_id                    |uuid                       |NO         |                                         |
@@ -24,6 +34,13 @@ public      |client                       |average_rating_given         |numeric
 public      |client                       |created_at                   |timestamp without time zone|YES        |now()                                    |
 public      |client                       |updated_at                   |timestamp without time zone|YES        |now()                                    |
 public      |client                       |profile_picture_url          |character varying          |YES        |                                         |
+public      |client                       |contract_message_template    |text                       |YES        |                                         |
+public      |client_scam_record           |record_id                    |uuid                       |NO         |gen_random_uuid()                        |
+public      |client_scam_record           |client_id                    |uuid                       |NO         |                                         |
+public      |client_scam_record           |total_scam_confirmed         |integer                    |NO         |0                                        |
+public      |client_scam_record           |is_banned                    |boolean                    |NO         |false                                    |
+public      |client_scam_record           |banned_at                    |timestamp without time zone|YES        |                                         |
+public      |client_scam_record           |updated_at                   |timestamp without time zone|YES        |now()                                    |
 public      |client_trust_score           |client_trust_score_id        |uuid                       |NO         |gen_random_uuid()                        |
 public      |client_trust_score           |client_id                    |uuid                       |NO         |                                         |
 public      |client_trust_score           |trust_score                  |numeric                    |YES        |                                         |
@@ -96,6 +113,32 @@ public      |contract_terms               |revision_rounds              |integer
 public      |contract_terms               |additional_clauses           |text                       |YES        |                                         |
 public      |contract_terms               |created_at                   |timestamp without time zone|YES        |now()                                    |
 public      |contract_terms               |payment_schedule             |text                       |YES        |                                         |
+public      |dm_message                   |dm_message_id                |uuid                       |NO         |gen_random_uuid()                        |
+public      |dm_message                   |thread_id                    |uuid                       |NO         |                                         |
+public      |dm_message                   |sender_id                    |uuid                       |NO         |                                         |
+public      |dm_message                   |message_text                 |text                       |NO         |''::text                                 |
+public      |dm_message                   |metadata                     |text                       |YES        |                                         |
+public      |dm_message                   |is_read                      |boolean                    |NO         |false                                    |
+public      |dm_message                   |read_at                      |timestamp with time zone   |YES        |                                         |
+public      |dm_message                   |sent_at                      |timestamp with time zone   |NO         |now()                                    |
+public      |dm_message_attachment        |attachment_id                |uuid                       |NO         |gen_random_uuid()                        |
+public      |dm_message_attachment        |dm_message_id                |uuid                       |NO         |                                         |
+public      |dm_message_attachment        |file_name                    |text                       |NO         |                                         |
+public      |dm_message_attachment        |file_url                     |text                       |NO         |                                         |
+public      |dm_message_attachment        |file_type                    |text                       |NO         |                                         |
+public      |dm_message_attachment        |mime_type                    |text                       |NO         |                                         |
+public      |dm_message_attachment        |file_size_bytes              |integer                    |YES        |                                         |
+public      |dm_message_attachment        |duration_seconds             |double precision           |YES        |                                         |
+public      |dm_message_attachment        |created_at                   |timestamp with time zone   |NO         |now()                                    |
+public      |dm_thread                    |thread_id                    |uuid                       |NO         |gen_random_uuid()                        |
+public      |dm_thread                    |user_a_id                    |uuid                       |NO         |                                         |
+public      |dm_thread                    |user_b_id                    |uuid                       |NO         |                                         |
+public      |dm_thread                    |initiator_id                 |uuid                       |NO         |                                         |
+public      |dm_thread                    |status                       |text                       |NO         |'request'::text                          |
+public      |dm_thread                    |job_post_id                  |uuid                       |YES        |                                         |
+public      |dm_thread                    |contract_id                  |uuid                       |YES        |                                         |
+public      |dm_thread                    |created_at                   |timestamp with time zone   |NO         |now()                                    |
+public      |dm_thread                    |updated_at                   |timestamp with time zone   |NO         |now()                                    |
 public      |education                    |education_id                 |uuid                       |NO         |gen_random_uuid()                        |
 public      |education                    |freelancer_id                |uuid                       |NO         |                                         |
 public      |education                    |institution_name             |character varying          |NO         |                                         |
@@ -108,6 +151,13 @@ public      |education                    |grade                        |charact
 public      |education                    |description                  |text                       |YES        |                                         |
 public      |education                    |created_at                   |timestamp without time zone|YES        |now()                                    |
 public      |education                    |updated_at                   |timestamp without time zone|YES        |now()                                    |
+public      |email_verification_otps      |otp_id                       |uuid                       |NO         |gen_random_uuid()                        |
+public      |email_verification_otps      |user_id                      |uuid                       |NO         |                                         |
+public      |email_verification_otps      |otp_hash                     |character varying          |NO         |                                         |
+public      |email_verification_otps      |expires_at                   |timestamp without time zone|NO         |                                         |
+public      |email_verification_otps      |consumed_at                  |timestamp without time zone|YES        |                                         |
+public      |email_verification_otps      |attempts                     |integer                    |NO         |0                                        |
+public      |email_verification_otps      |created_at                   |timestamp without time zone|YES        |now()                                    |
 public      |freelancer                   |freelancer_id                |uuid                       |NO         |gen_random_uuid()                        |
 public      |freelancer                   |user_id                      |uuid                       |NO         |                                         |
 public      |freelancer                   |full_name                    |character varying          |NO         |                                         |
@@ -168,6 +218,7 @@ public      |freelancer_trust_scores      |total_reviews                |integer
 public      |freelancer_trust_scores      |category                     |character varying          |YES        |                                         |
 public      |freelancer_trust_scores      |category_rank_pct            |numeric                    |YES        |                                         |
 public      |freelancer_trust_scores      |last_updated                 |timestamp with time zone   |NO         |now()                                    |
+public      |freelancer_trust_scores      |display_star_avg             |double precision           |YES        |                                         |
 public      |job_embedding                |embedding_id                 |uuid                       |NO         |gen_random_uuid()                        |
 public      |job_embedding                |job_post_id                  |uuid                       |NO         |                                         |
 public      |job_embedding                |source_text                  |text                       |YES        |                                         |
@@ -201,6 +252,9 @@ public      |job_post                     |created_at                   |timesta
 public      |job_post                     |updated_at                   |timestamp without time zone|YES        |now()                                    |
 public      |job_post                     |posted_at                    |timestamp without time zone|YES        |                                         |
 public      |job_post                     |closed_at                    |timestamp without time zone|YES        |                                         |
+public      |job_post                     |project_category             |character varying          |YES        |'general'::character varying             |
+public      |job_post                     |closure_reason               |text                       |YES        |                                         |
+public      |job_post                     |closure_note                 |text                       |YES        |                                         |
 public      |job_role                     |job_role_id                  |uuid                       |NO         |gen_random_uuid()                        |
 public      |job_role                     |job_post_id                  |uuid                       |NO         |                                         |
 public      |job_role                     |role_title                   |character varying          |NO         |                                         |
@@ -224,18 +278,30 @@ public      |language                     |language_id                  |uuid   
 public      |language                     |language_name                |character varying          |NO         |                                         |
 public      |language                     |iso_code                     |character varying          |YES        |                                         |
 public      |language                     |created_at                   |timestamp without time zone|YES        |now()                                    |
-public      |message                      |message_id                   |uuid                       |NO         |gen_random_uuid()                        |
-public      |message                      |sender_id                    |uuid                       |NO         |                                         |
-public      |message                      |receiver_id                  |uuid                       |NO         |                                         |
-public      |message                      |contract_id                  |uuid                       |YES        |                                         |
-public      |message                      |message_text                 |text                       |NO         |                                         |
-public      |message                      |is_read                      |boolean                    |YES        |false                                    |
-public      |message                      |read_at                      |timestamp without time zone|YES        |                                         |
-public      |message                      |sent_at                      |timestamp without time zone|YES        |now()                                    |
-public      |message                      |message_type                 |text                       |NO         |'user'::text                             |
-public      |message                      |event_type                   |text                       |YES        |                                         |
-public      |message                      |metadata                     |jsonb                      |YES        |                                         |
-public      |message                      |deleted_at                   |timestamp without time zone|YES        |                                         |
+public      |message_attachment           |attachment_id                |uuid                       |NO         |gen_random_uuid()                        |
+public      |message_attachment           |message_id                   |uuid                       |NO         |                                         |
+public      |message_attachment           |file_name                    |text                       |NO         |                                         |
+public      |message_attachment           |file_url                     |text                       |NO         |                                         |
+public      |message_attachment           |file_type                    |text                       |NO         |                                         |
+public      |message_attachment           |mime_type                    |text                       |NO         |                                         |
+public      |message_attachment           |file_size_bytes              |integer                    |YES        |                                         |
+public      |message_attachment           |duration_seconds             |double precision           |YES        |                                         |
+public      |message_attachment           |created_at                   |timestamp with time zone   |NO         |now()                                    |
+public      |notifications                |id                           |uuid                       |NO         |gen_random_uuid()                        |
+public      |notifications                |recipient_id                 |uuid                       |NO         |                                         |
+public      |notifications                |type                         |text                       |NO         |                                         |
+public      |notifications                |title                        |text                       |NO         |                                         |
+public      |notifications                |body                         |text                       |NO         |                                         |
+public      |notifications                |data                         |jsonb                      |YES        |'{}'::jsonb                              |
+public      |notifications                |is_read                      |boolean                    |YES        |false                                    |
+public      |notifications                |created_at                   |timestamp with time zone   |YES        |now()                                    |
+public      |password_reset_otps          |otp_id                       |uuid                       |NO         |gen_random_uuid()                        |
+public      |password_reset_otps          |user_id                      |uuid                       |NO         |                                         |
+public      |password_reset_otps          |otp_hash                     |character varying          |NO         |                                         |
+public      |password_reset_otps          |expires_at                   |timestamp without time zone|NO         |                                         |
+public      |password_reset_otps          |consumed_at                  |timestamp without time zone|YES        |                                         |
+public      |password_reset_otps          |attempts                     |integer                    |NO         |0                                        |
+public      |password_reset_otps          |created_at                   |timestamp without time zone|YES        |now()                                    |
 public      |performance_rating           |performance_rating_id        |uuid                       |NO         |gen_random_uuid()                        |
 public      |performance_rating           |freelancer_id                |uuid                       |NO         |                                         |
 public      |performance_rating           |overall_performance_score    |numeric                    |YES        |                                         |
@@ -259,6 +325,15 @@ public      |portfolio                    |is_auto_generated            |boolean
 public      |portfolio                    |contract_id                  |uuid                       |YES        |                                         |
 public      |portfolio                    |created_at                   |timestamp without time zone|YES        |now()                                    |
 public      |portfolio                    |updated_at                   |timestamp without time zone|YES        |now()                                    |
+public      |portfolio_embedding          |embedding_id                 |uuid                       |NO         |gen_random_uuid()                        |
+public      |portfolio_embedding          |portfolio_id                 |uuid                       |NO         |                                         |
+public      |portfolio_embedding          |freelancer_id                |uuid                       |NO         |                                         |
+public      |portfolio_embedding          |embedding_vector             |USER-DEFINED               |YES        |                                         |
+public      |portfolio_embedding          |source_text                  |text                       |YES        |                                         |
+public      |portfolio_embedding          |embedding_metadata           |jsonb                      |YES        |                                         |
+public      |portfolio_embedding          |embedding_dirty              |boolean                    |NO         |true                                     |
+public      |portfolio_embedding          |created_at                   |timestamp without time zone|YES        |now()                                    |
+public      |portfolio_embedding          |updated_at                   |timestamp without time zone|YES        |now()                                    |
 public      |proposal                     |proposal_id                  |uuid                       |NO         |gen_random_uuid()                        |
 public      |proposal                     |job_post_id                  |uuid                       |NO         |                                         |
 public      |proposal                     |job_role_id                  |uuid                       |YES        |                                         |
@@ -297,6 +372,11 @@ public      |red_flag_alerts              |message                      |text   
 public      |red_flag_alerts              |is_resolved                  |boolean                    |NO         |false                                    |
 public      |red_flag_alerts              |triggered_at                 |timestamp with time zone   |NO         |now()                                    |
 public      |red_flag_alerts              |resolved_at                  |timestamp with time zone   |YES        |                                         |
+public      |report_auto_actions          |action_id                    |uuid                       |NO         |gen_random_uuid()                        |
+public      |report_auto_actions          |target_type                  |text                       |NO         |                                         |
+public      |report_auto_actions          |target_id                    |uuid                       |NO         |                                         |
+public      |report_auto_actions          |report_count                 |integer                    |NO         |                                         |
+public      |report_auto_actions          |created_at                   |timestamp without time zone|YES        |now()                                    |
 public      |review_ai_analysis           |id                           |uuid                       |NO         |uuid_generate_v4()                       |
 public      |review_ai_analysis           |review_id                    |uuid                       |NO         |                                         |
 public      |review_ai_analysis           |sentiment_score              |numeric                    |YES        |                                         |
@@ -337,30 +417,84 @@ public      |saved_job                    |freelancer_id                |uuid   
 public      |saved_job                    |job_post_id                  |uuid                       |NO         |                                         |
 public      |saved_job                    |saved_at                     |timestamp without time zone|YES        |now()                                    |
 public      |saved_job                    |notes                        |text                       |YES        |                                         |
+public      |scam_job_flags               |flag_id                      |uuid                       |NO         |gen_random_uuid()                        |
+public      |scam_job_flags               |job_post_id                  |uuid                       |NO         |                                         |
+public      |scam_job_flags               |client_id                    |uuid                       |NO         |                                         |
+public      |scam_job_flags               |scam_score                   |double precision           |NO         |                                         |
+public      |scam_job_flags               |detected_keywords            |jsonb                      |NO         |'[]'::jsonb                              |
+public      |scam_job_flags               |flagged_text                 |text                       |YES        |                                         |
+public      |scam_job_flags               |status                       |text                       |NO         |'pending'::text                          |
+public      |scam_job_flags               |admin_user_id                |uuid                       |YES        |                                         |
+public      |scam_job_flags               |admin_note                   |text                       |YES        |                                         |
+public      |scam_job_flags               |actioned_at                  |timestamp without time zone|YES        |                                         |
+public      |scam_job_flags               |auto_remove_at               |timestamp without time zone|NO         |                                         |
+public      |scam_job_flags               |created_at                   |timestamp without time zone|YES        |now()                                    |
+public      |scam_job_flags               |auto_closed                  |boolean                    |NO         |true                                     |
 public      |skill                        |skill_id                     |uuid                       |NO         |gen_random_uuid()                        |
 public      |skill                        |skill_name                   |character varying          |NO         |                                         |
 public      |skill                        |skill_category               |USER-DEFINED               |YES        |                                         |
-public      |skill                        |description                  |text                       |YES        |                                         |
 public      |skill                        |created_at                   |timestamp without time zone|YES        |now()                                    |
+public      |skill                        |search_tokens                |text                       |YES        |                                         |
 public      |speciality                   |speciality_id                |uuid                       |NO         |gen_random_uuid()                        |
 public      |speciality                   |speciality_name              |character varying          |NO         |                                         |
 public      |speciality                   |description                  |text                       |YES        |                                         |
 public      |speciality                   |created_at                   |timestamp without time zone|YES        |now()                                    |
 public      |testing_table                |id                           |integer                    |NO         |nextval('testing_table_id_seq'::regclass)|
 public      |testing_table                |description                  |text                       |YES        |                                         |
+public      |toxicity_queue               |moderation_id                |uuid                       |NO         |gen_random_uuid()                        |
+public      |toxicity_queue               |content_type                 |text                       |NO         |                                         |
+public      |toxicity_queue               |content_id                   |uuid                       |NO         |                                         |
+public      |toxicity_queue               |user_id                      |uuid                       |NO         |                                         |
+public      |toxicity_queue               |toxic_score                  |double precision           |NO         |0                                        |
+public      |toxicity_queue               |severe_toxic_score           |double precision           |NO         |0                                        |
+public      |toxicity_queue               |obscene_score                |double precision           |NO         |0                                        |
+public      |toxicity_queue               |threat_score                 |double precision           |NO         |0                                        |
+public      |toxicity_queue               |insult_score                 |double precision           |NO         |0                                        |
+public      |toxicity_queue               |identity_hate_score          |double precision           |NO         |0                                        |
+public      |toxicity_queue               |detected_labels              |jsonb                      |NO         |'[]'::jsonb                              |
+public      |toxicity_queue               |flagged_text                 |text                       |YES        |                                         |
+public      |toxicity_queue               |status                       |text                       |NO         |'pending'::text                          |
+public      |toxicity_queue               |admin_user_id                |uuid                       |YES        |                                         |
+public      |toxicity_queue               |admin_note                   |text                       |YES        |                                         |
+public      |toxicity_queue               |actioned_at                  |timestamp without time zone|YES        |                                         |
+public      |toxicity_queue               |auto_approve_at              |timestamp without time zone|NO         |                                         |
+public      |toxicity_queue               |created_at                   |timestamp without time zone|YES        |now()                                    |
 public      |trust_score_history          |id                           |uuid                       |NO         |uuid_generate_v4()                       |
 public      |trust_score_history          |freelancer_id                |uuid                       |NO         |                                         |
 public      |trust_score_history          |overall_score                |numeric                    |NO         |                                         |
 public      |trust_score_history          |snapshot_reason              |USER-DEFINED               |NO         |'review_published'::trust_snapshot_reason|
 public      |trust_score_history          |recorded_at                  |timestamp with time zone   |NO         |now()                                    |
+public      |user_oauth_providers         |id                           |uuid                       |NO         |gen_random_uuid()                        |
+public      |user_oauth_providers         |user_id                      |uuid                       |NO         |                                         |
+public      |user_oauth_providers         |provider                     |character varying          |NO         |                                         |
+public      |user_oauth_providers         |provider_user_id             |character varying          |NO         |                                         |
+public      |user_oauth_providers         |provider_email               |character varying          |YES        |                                         |
+public      |user_oauth_providers         |created_at                   |timestamp without time zone|YES        |now()                                    |
+public      |user_reports                 |report_id                    |uuid                       |NO         |gen_random_uuid()                        |
+public      |user_reports                 |reporter_id                  |uuid                       |NO         |                                         |
+public      |user_reports                 |reported_user_id             |uuid                       |YES        |                                         |
+public      |user_reports                 |reported_type                |text                       |NO         |                                         |
+public      |user_reports                 |reasons                      |jsonb                      |NO         |'[]'::jsonb                              |
+public      |user_reports                 |custom_reason                |text                       |YES        |                                         |
+public      |user_reports                 |status                       |text                       |NO         |'pending'::text                          |
+public      |user_reports                 |admin_user_id                |uuid                       |YES        |                                         |
+public      |user_reports                 |admin_note                   |text                       |YES        |                                         |
+public      |user_reports                 |actioned_at                  |timestamp without time zone|YES        |                                         |
+public      |user_reports                 |created_at                   |timestamp without time zone|YES        |now()                                    |
+public      |user_reports                 |job_post_id                  |uuid                       |YES        |                                         |
 public      |users                        |user_id                      |uuid                       |NO         |gen_random_uuid()                        |
 public      |users                        |email                        |character varying          |NO         |                                         |
 public      |users                        |password                     |character varying          |NO         |                                         |
-public      |users                        |type                         |USER-DEFINED               |NO         |'freelancer'::user_type                  |
-public      |users                        |email_verified               |boolean                    |NO         |false                                    |
-public      |users                        |email_verified_at            |timestamp without time zone|YES        |                                         |
 public      |users                        |created_at                   |timestamp without time zone|YES        |now()                                    |
 public      |users                        |updated_at                   |timestamp without time zone|YES        |now()                                    |
+public      |users                        |email_verified               |boolean                    |NO         |false                                    |
+public      |users                        |email_verified_at            |timestamp without time zone|YES        |                                         |
+public      |users                        |is_admin                     |boolean                    |NO         |false                                    |
+public      |users                        |is_report_banned             |boolean                    |NO         |false                                    |
+public      |users                        |report_banned_at             |timestamp without time zone|YES        |                                         |
+public      |users                        |ban_reason                   |text                       |YES        |                                         |
+public      |users                        |ban_message                  |text                       |YES        |                                         |
+public      |users                        |fcm_token                    |text                       |YES        |                                         |
 public      |work_experience              |work_experience_id           |uuid                       |NO         |gen_random_uuid()                        |
 public      |work_experience              |freelancer_id                |uuid                       |NO         |                                         |
 public      |work_experience              |job_title                    |character varying          |NO         |                                         |

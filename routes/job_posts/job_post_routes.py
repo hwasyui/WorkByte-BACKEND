@@ -20,8 +20,8 @@ from routes.clients.client_functions import ClientFunctions as _ClientFunctions
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.job_posts.job_post_functions import JobPostFunctions
-from ai_related.job_matching.embedding_manager import upsert_job_embedding, mark_job_dirty
-from routes.admin.admin_functions import queue_content_scan, queue_scam_scan
+from ai_related.job_matching.embedding_manager import mark_job_dirty
+from routes.admin.admin_functions import queue_toxicity_scan, queue_scam_scan
 
 job_post_router = APIRouter(prefix="/job-posts", tags=["Job Posts"])
 
@@ -210,15 +210,19 @@ async def create_job_post(job_post: JobPostCreate, current_user: UserInDB = Depe
             is_ai_generated=job_post.is_ai_generated
         )
         
-        asyncio.create_task(upsert_job_embedding(str(new_job_post["job_post_id"])))
+        # Role embeddings are created when job roles are added via POST /job-roles.
 
-        # Background: content moderation + scam detection
-        scan_text = f"{job_post.job_title} {job_post.job_description}"
+        # Background: toxicity detection + scam detection
         _jp_id    = str(new_job_post["job_post_id"])
         _cl_id    = str(client["client_id"])
         _usr_id   = current_user.user_id
-        asyncio.create_task(asyncio.to_thread(queue_content_scan, "job_post", _jp_id, _usr_id, scan_text))
-        asyncio.create_task(asyncio.to_thread(queue_scam_scan, _jp_id, _cl_id, scan_text))
+        _title    = job_post.job_title
+        _desc     = job_post.job_description
+        _scan_text = f"{_title} {_desc}"
+        asyncio.create_task(asyncio.to_thread(queue_toxicity_scan, "job_post", _jp_id, _usr_id, _scan_text))
+        asyncio.create_task(asyncio.to_thread(
+            queue_scam_scan, _jp_id, _cl_id, _scan_text, _title, _desc,
+        ))
 
         success_msg = f"Created job post {job_post_id} for client {job_post.client_id}"
         logger("JOB_POST", success_msg, "POST /job-posts", "INFO")

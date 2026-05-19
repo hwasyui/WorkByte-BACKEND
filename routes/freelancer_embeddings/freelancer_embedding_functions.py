@@ -24,7 +24,7 @@ class FreelancerEmbeddingFunctions:
     """Handle all freelancer embedding-related database operations"""
 
     @staticmethod
-    def get_all_freelancer_embeddings(limit: Optional[int] = None, offset: int = 0) -> List[Dict]:
+    def get_all_freelancer_embeddings(limit: Optional[int] = None) -> List[Dict]:
         """Fetch all freelancer embeddings"""
         try:
             db = get_db()
@@ -33,7 +33,6 @@ class FreelancerEmbeddingFunctions:
                 columns=["embedding_id", "freelancer_id", "embedding_vector", "source_text", "embedding_metadata", "created_at"],
                 order_by="created_at DESC",
                 limit=limit,
-                offset=offset
             )
             
             logger("FREELANCER_EMBEDDING_FUNCTIONS", f"Fetched {len(rows)} freelancer embeddings", level="INFO")
@@ -85,6 +84,22 @@ class FreelancerEmbeddingFunctions:
         
         except Exception as e:
             logger("FREELANCER_EMBEDDING_FUNCTIONS", f"Error fetching freelancer embedding: {str(e)}", level="ERROR")
+            raise
+
+    @staticmethod
+    def get_freelancer_embeddings_by_freelancer_id(freelancer_id: str) -> List[Dict]:
+        """Fetch all embeddings for a specific freelancer"""
+        try:
+            db = get_db()
+            rows = db.fetch_data(
+                table_name="freelancer_embedding",
+                conditions=[("freelancer_id", "=", freelancer_id)],
+                order_by="created_at DESC"
+            )
+            logger("FREELANCER_EMBEDDING_FUNCTIONS", f"Fetched {len(rows)} embeddings for freelancer {freelancer_id}", level="INFO")
+            return [convert_uuids_to_str(dict(row)) for row in rows]
+        except Exception as e:
+            logger("FREELANCER_EMBEDDING_FUNCTIONS", f"Error fetching freelancer embeddings: {str(e)}", level="ERROR")
             raise
 
     @staticmethod
