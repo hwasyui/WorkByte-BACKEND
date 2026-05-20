@@ -10,7 +10,7 @@ Flow:
   3.  Display full analysis results:
         - Resume score     (0–100, from GROQ LLM)
         - Overall assessment & profile match analysis (from GROQ LLM)
-        - Similarity score (all-MiniLM-L6-v2 cosine, CV vs. profile)
+        - Similarity score (BAAI/bge-base-en-v1.5 cosine, CV vs. profile)
         - Skill coverage   (regex word-boundary matching)
         - ATS compliance   (rule-based 0–100)
         - ATS flags        (missing sections, no email, clichés, etc.)
@@ -322,7 +322,7 @@ def run(base_url: str):
     print(f"    │  Similarity Score  : {sim:.4f}  ({sim_pct:.1f}%)")
     print(f"    │  [{_bar(sim)}]")
     print(f"    │  → Cosine similarity between CV embedding and profile embedding")
-    print(f"    │    (model: all-MiniLM-L6-v2, 384-dim)")
+    print(f"    │    (model: BAAI/bge-base-en-v1.5, 768-dim)")
     if cov is not None:
         cov_pct = cov * 100
         print(f"    │")

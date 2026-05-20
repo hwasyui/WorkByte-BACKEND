@@ -239,6 +239,14 @@ async def match_freelancer_to_jobs(
         ranked = rank_jobs_with_ml(db, fid, filtered, top_n=limit)
         stage3_ms = (time.perf_counter() - t3) * 1000
 
+        # match_probability is a ranking signal calibrated to a ~30%-positive
+        # training distribution — it is not an absolute "% suitable" score and
+        # would mislead users if displayed alongside the RAG match_score (which
+        # uses explicit 0-100 thresholds). Strip it before sending to the client;
+        # the ordering is already applied and match_reasons carry the explanation.
+        for job in ranked:
+            job.pop("match_probability", None)
+
         total_ms = (time.perf_counter() - t_request) * 1000
         logger(
             "JOB_MATCHING",

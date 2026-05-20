@@ -5,6 +5,99 @@ Triggered when a freelancer opens a job detail page. Pulls job requirements,
 the freelancer's profile, and their most relevant past contracts from the DB,
 builds a grounded prompt, and asks the LLM to return a structured JSON with
 match_score, strengths, gaps, recommendation, and skill_tips.
+
+─────────────────────────────────────────────────────────────────────────────
+WHY THE RAG match_score DIFFERS FROM THE HOMEPAGE ML match_probability
+─────────────────────────────────────────────────────────────────────────────
+
+A freelancer will often see a different number on the homepage card than on
+the job detail page. This is intentional — the two scores answer fundamentally
+different questions using different methods, different inputs, and different
+scales.
+
+1. DIFFERENT QUESTION
+   • Homepage ML (ml_ranker.py):
+       "Given the ~30–80 jobs that survived Stage 2, which ones should be
+       ranked higher than others for this freelancer?"
+       → Optimised for RELATIVE ORDERING, not absolute assessment.
+         A probability of 0.72 means "72% of the way up this candidate
+         list," not "this job is 72% suitable."
+   • RAG (rag_analyser.py):
+       "How suitable is this freelancer for this specific job, expressed as
+       a human-readable integer on a 0–100 scale with explicit apply/
+       consider/skip thresholds?"
+       → Optimised for ABSOLUTE ASSESSMENT displayed directly to the user.
+
+2. DIFFERENT INPUTS AND DEPTH
+   • Homepage ML uses 13 pre-computed numeric features (skill overlap %,
+     budget ratio, experience delta, portfolio_relevance, cosine similarity,
+     etc.) evaluated in < 1 ms per candidate.
+   • RAG uses the full text of the job post, the freelancer's full profile,
+     up to 5 past completed contracts ordered by semantic similarity to this
+     job (with client reviews and ratings), and an explicit per-role skill
+     breakdown. The LLM spends 5–30 s reasoning over this evidence to produce
+     a holistic narrative score.
+     A contract review saying "exceptional FastAPI work, delivered under
+     pressure" is invisible to the ML ranker but contributes directly to
+     the RAG score.
+
+3. DIFFERENT SCALE AND CALIBRATION
+   • ML probability is calibrated against a training distribution where
+     ~30% of (freelancer, job) pairs are positive. A probability of 0.60
+     is high in that distribution — it does not mean "60 out of 100."
+   • RAG score IS the 0–100 number. Thresholds are explicit and designed
+     for user interpretation: apply ≥ 65, consider ≥ 40, skip < 40.
+
+4. HARD COVERAGE CEILING IN RAG (no equivalent in ML)
+   RAG applies a server-side ceiling of min(100, coverage_pct + 25).
+   A role requiring 5 skills where the freelancer matches 2 (40% coverage)
+   has a ceiling of 65 — the LLM cannot score that role above 65 regardless
+   of how strong the portfolio is. The ML ranker has no such ceiling; it
+   can rank a 40%-overlap freelancer highly if other features (budget fit,
+   experience, semantic similarity) are strong.
+   This means a freelancer can rank high on the homepage (strong cosine +
+   good budget + right experience) but receive a lower RAG score (not
+   enough required skills for the specific role).
+
+5. PER-ROLE VS. JOB-LEVEL SCORING
+   • ML computes features against the single best-matching role in a job
+     post and produces one probability per job.
+   • RAG evaluates each role independently and uses the best role score as
+     the overall score. A job with one very matching role and one
+     mismatched role will score high in RAG on the matching role, while
+     the ML ranker's single-job score blends signals across all roles.
+
+6. THE ML PROBABILITY IS STRIPPED — ONLY THE RAG SCORE IS SHOWN
+   `match_probability` is computed internally by ml_ranker.py but is
+   stripped from the API response before it reaches the client
+   (see job_matching_routes.py). It is not shown on the homepage card.
+   Reason: it is a relative ranking signal calibrated to a ~30%-positive
+   training distribution — a value of 87 means "high in this candidate
+   pool," not "87% suitable." Showing it alongside the RAG match_score
+   (which is purpose-built for absolute interpretation with apply/
+   consider/skip thresholds) would create a confusing mismatch.
+   The homepage instead surfaces SHAP match_reasons (why a job ranked
+   well) — a more actionable signal than a context-dependent probability.
+   The RAG match_score is the only percentage a user ever sees.
+
+EXPECTED DIVERGENCE EXAMPLES
+  • Freelancer has 100% skill coverage but zero past contracts:
+      ML ranks them high (top skill signals), RAG scores ~65–75 (LLM notes
+      absence of demonstrated past work, can't cite evidence).
+  • Freelancer has 40% skill coverage but five 5-star relevant contracts:
+      ML ranks them moderate (skill gap pulls probability down), RAG scores
+      up to ceiling 65 (LLM credits contracts, but ceiling prevents "apply"
+      on insufficient skill coverage).
+  • Freelancer perfectly fits budget and experience but skills are only
+      partially matched:
+      ML ranks them high (budget + experience features are strong), RAG
+      scores moderate (coverage ceiling limits the score regardless of
+      profile depth).
+
+In short: the homepage score is a fast relative ranking signal; the job
+detail score is a slow absolute assessment grounded in evidence. They are
+designed to complement each other, not agree with each other.
+─────────────────────────────────────────────────────────────────────────────
 """
 
 import os
@@ -13,7 +106,6 @@ import time
 import httpx
 
 from functions.logger import logger
-
 
 def _ollama_generate_url() -> str:
     """

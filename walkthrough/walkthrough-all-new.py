@@ -1,6 +1,6 @@
 """
 Walkthrough ALL (New) — Full API Coverage for WorkByte
-Exercises every route across all 39 sections in ROUTES.md.
+Exercises every route across all 41 sections in ROUTES.md.
 Failures are printed but do NOT abort later sections.
 
 Edge-case scenarios tested:
@@ -9,6 +9,8 @@ Edge-case scenarios tested:
   - Report self                          → 400 rejected
   - Job post with scam content           → async scan (accepted, flagged async)
   - AI: match/analyse/embed/sweep        → full 3-stage pipeline
+  - CV analysis                          → BAAI/bge-base-en-v1.5 similarity + ATS + GROQ LLM
+  - Job scam detection                   → BAAI/bge-base-en-v1.5 + RF (778-dim), admin flag flow
 
 Requirements:
   Server running at BASE_URL (default http://localhost:8000)
@@ -1700,15 +1702,35 @@ def s30_cv_analysis():
         skip("No freelancer token")
         return
 
-    step("POST /cv_analysis/analyze — compare CV vs profile")
+    # Use a text-based CV (txt upload) so text extraction succeeds without PyPDF2
+    cv_txt = _CV_TEXT.strip().encode("utf-8")
+
+    step("POST /cv_analysis/analyze — BAAI/bge-base-en-v1.5 similarity + ATS check + GROQ LLM")
+    info("Embedding model: BAAI/bge-base-en-v1.5 (768-dim) — shared with job matching")
     ok_r, rp = _call("POST", "/cv_analysis/analyze",
-                     files={"cv_file": ("cv.pdf", _TINY_PDF, "application/pdf")},
-                     token=tok, expected=(200, 201, 400, 500))
+                     files={"cv_file": ("cv.txt", cv_txt, "text/plain")},
+                     token=tok, expected=(200, 201, 400, 500),)
     if ok_r:
-        scoring = _d(rp).get("scoring", "?")
-        ok(f"scoring={scoring}")
+        d = _d(rp)
+        sim          = d.get("similarity_score") or 0.0
+        cov          = d.get("skill_coverage")
+        ats          = d.get("ats_score") or 0
+        overall_score = d.get("overall_score") or 0
+        overall_grade = d.get("overall_grade") or d.get("scoring") or "?"
+        resume_score  = d.get("resume_score") or 0
+        matched       = d.get("matched_skills") or []
+        missing       = d.get("missing_skills") or []
+        flags         = d.get("ats_flags") or []
+        sections_out  = d.get("sections") or []
+        ok(f"overall_score={overall_score}/100 grade={overall_grade} resume_score={resume_score}/100")
+        info(f"  similarity={sim:.4f} ({sim*100:.1f}%)  coverage={f'{cov:.2f}' if cov is not None else 'N/A'}  ats={ats}/100")
+        info(f"  matched_skills={len(matched)}  missing_skills={len(missing)}  ats_flags={len(flags)}")
+        info(f"  llm_sections={len(sections_out)}")
+        if d.get("suggested_profile"):
+            sp = d["suggested_profile"]
+            info(f"  suggested_bio_len={len(sp.get('suggested_bio',''))}  suggested_skills={len(sp.get('skills',[]))}")
     else:
-        info("CV analysis skipped (model may not be loaded)")
+        info("CV analysis skipped (model or LLM may not be available)")
 
 
 # ─── SECTION 31: AI — Job Matching ───────────────────────────────────────────
@@ -2381,6 +2403,115 @@ def s40_admin_moderation():
         fail("failed")
 
 
+# ─── SECTION 41: AI — Job Scam Detection ─────────────────────────────────────
+
+def s41_job_scam_detection():
+    section("AI — Job Scam Detection (S41)")
+
+    a_tok  = _S.get("admin_token")
+    c_tok  = _S.get("client_token")
+    cid    = _S.get("client_id", "")
+    jpid   = _S.get("scam_job_post_id", "") or _S.get("job_post_id", "")
+
+    if not a_tok:
+        skip("No admin token — scam detection tests skipped")
+        return
+
+    # Manual scan via admin utility
+    step("POST /admin/scam-flags/scan — manually trigger scam scan on scam job post")
+    info("Model: BAAI/bge-base-en-v1.5 + Random Forest (778 features = 768-dim SBERT + 10 engineered)")
+    if jpid:
+        ok_r, rp = _call("POST", "/admin/scam-flags/scan",
+                         body={"job_post_id": jpid},
+                         token=a_tok, expected=(200, 201, 400, 404, 500))
+        if ok_r:
+            d = _d(rp)
+            flagged = d.get("flagged", False)
+            sf      = d.get("scam_flag") or {}
+            prob    = sf.get("scam_probability") or sf.get("scam_score") or "?"
+            ok(f"flagged={flagged}  scam_probability={prob}")
+            if flagged:
+                _S["scam_flag_id"] = str(sf.get("scam_flag_id") or sf.get("flag_id") or "")
+                info(f"  scam_flag_id={_S['scam_flag_id']}")
+        else:
+            info("Scan failed (job post may already be closed or model unavailable)")
+    else:
+        skip("No job_post_id for scam scan")
+
+    # List scam flags
+    step("GET /admin/scam-flags — list all scam flags (status=pending)")
+    ok_r, rp = _call("GET", "/admin/scam-flags",
+                     params={"status": "pending", "page": 1, "page_size": 10},
+                     token=a_tok, expected=(200,))
+    if ok_r:
+        items = _list(rp)
+        ok(f"got {len(items)} pending scam flags")
+        if items and not _S.get("scam_flag_id"):
+            _S["scam_flag_id"] = str(items[0].get("scam_flag_id") or items[0].get("flag_id") or "")
+    else:
+        fail("list scam flags failed")
+
+    step("GET /admin/scam-flags — sorted by scam_score desc")
+    ok_r, rp = _call("GET", "/admin/scam-flags",
+                     params={"status": "all", "sort_by": "scam_score", "sort_dir": "desc", "page_size": 5},
+                     token=a_tok, expected=(200,))
+    ok(f"got {len(_list(rp))} items sorted by score") if ok_r else fail("failed")
+
+    flag_id = _S.get("scam_flag_id", "")
+
+    # Approve (mark as false positive)
+    step("POST /admin/scam-flags/{flag_id}/approve — mark as false positive")
+    if flag_id:
+        ok_r, _ = _call("POST", f"/admin/scam-flags/{flag_id}/approve",
+                        token=a_tok, expected=(200, 201, 404))
+        ok("flag marked safe (false positive)") if ok_r else info("approve failed or already actioned")
+    else:
+        skip("No scam_flag_id to approve")
+
+    # Re-scan to get a fresh flag to test remove
+    step("POST /admin/scam-flags/scan — rescan to get fresh flag for remove test")
+    scam_jpid = _S.get("scam_job_post_id", "")
+    if scam_jpid:
+        ok_r, rp = _call("POST", "/admin/scam-flags/scan",
+                         body={"job_post_id": scam_jpid},
+                         token=a_tok, expected=(200, 201, 400, 404, 500))
+        if ok_r:
+            d       = _d(rp)
+            flagged = d.get("flagged", False)
+            sf      = d.get("scam_flag") or {}
+            _S["scam_flag_id_remove"] = str(sf.get("scam_flag_id") or sf.get("flag_id") or "")
+            ok(f"rescan flagged={flagged} flag_id={_S['scam_flag_id_remove']}")
+        else:
+            info("Rescan skipped (job may be closed after approve)")
+    else:
+        skip("No scam_job_post_id for rescan")
+
+    # Remove (confirm scam, close job)
+    step("POST /admin/scam-flags/{flag_id}/remove — confirm scam, close job post")
+    rfid = _S.get("scam_flag_id_remove", "")
+    if rfid:
+        ok_r, _ = _call("POST", f"/admin/scam-flags/{rfid}/remove",
+                        token=a_tok, expected=(200, 201, 404))
+        ok("scam confirmed — job closed, client strike recorded") if ok_r else info("remove failed (may already be actioned)")
+    else:
+        skip("No flag_id for remove test")
+
+    # Client scam record
+    step("GET /admin/scam-flags/client/{client_id} — check client scam record")
+    if cid:
+        ok_r, rp = _call("GET", f"/admin/scam-flags/client/{cid}",
+                         token=a_tok, expected=(200,))
+        if ok_r:
+            d = _d(rp)
+            total    = d.get("total_scam_confirmed", 0)
+            is_banned = d.get("is_banned", False)
+            ok(f"total_scam_confirmed={total}  is_banned={is_banned}")
+        else:
+            fail("client scam record failed")
+    else:
+        skip("No client_id")
+
+
 # ─── Cleanup / teardown ───────────────────────────────────────────────────────
 
 def s_cleanup():
@@ -2516,7 +2647,7 @@ def main():
     print(f"WorkByte Walkthrough ALL (New)")
     print(f"Target: {BASE_URL}")
     print(f"Started: {datetime.datetime.now().isoformat()}")
-    print(f"Sections: 39 + cleanup\n")
+    print(f"Sections: 41 + cleanup\n")
 
     sections = [
         s01_auth,
@@ -2559,6 +2690,7 @@ def main():
         s38_reports,
         s39_appeals,
         s40_admin_moderation,
+        s41_job_scam_detection,
         s_cleanup,
     ]
 

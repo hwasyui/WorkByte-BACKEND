@@ -18,7 +18,7 @@ Two scenarios tested end-to-end:
     2g. Verify client_scam_record (total_scam_confirmed=1)
 
 Notes:
-  - Model: SBERT (all-MiniLM-L6-v2) + Random Forest — 394 features
+  - Model: SBERT (BAAI/bge-base-en-v1.5) + Random Forest — 778 features
   - Threshold: scam_probability >= 0.4 → flagged and auto-closed
   - First run may take ~20s for SBERT cold start; subsequent runs are faster.
 
@@ -127,16 +127,30 @@ def extract(resp):
     return resp.get("details", resp)
 
 def register_and_verify(body):
-    resp    = post("/auth/register", body)
+    resp    = _req("post", "/auth/register", body=body, allow_fail=True)
     details = extract(resp)
     otp     = details.get("verification", {}).get("dev_verification_otp")
     if otp:
-        post("/auth/verify-email", {"email": body["email"], "otp": otp})
+        _req("post", "/auth/verify-email", body={"email": body["email"], "otp": otp}, allow_fail=True)
+    else:
+        print("    No dev OTP in response — skipping verify (ensure APP_ENV=development and SHOW_DEV_OTP=true)")
     return resp
 
 def login(email, password):
     resp = post("/auth/login", {"email": email, "password": password})
     return extract(resp)["access_token"]
+
+def login_or_register(email, password, full_name, user_type="client", company_name=None):
+    """Try login first; register + auto-verify OTP if account does not exist."""
+    resp = _req("post", "/auth/login", body={"email": email, "password": password}, allow_fail=True)
+    token = extract(resp).get("access_token")
+    if token:
+        return token
+    reg_body = {"email": email, "password": password, "user_type": user_type, "full_name": full_name}
+    if company_name:
+        reg_body["company_name"] = company_name
+    register_and_verify(reg_body)
+    return login(email, password)
 
 
 # ── Polling helpers ───────────────────────────────────────────────────────────
@@ -223,7 +237,7 @@ def run():
     print("=" * 62)
     print(f"  Target  : {BASE_URL}")
     print(f"  Run ID  : {_RUN_ID}")
-    print(f"  Model   : SBERT (all-MiniLM-L6-v2) + Random Forest")
+    print(f"  Model   : SBERT (BAAI/bge-base-en-v1.5) + Random Forest")
     print(f"  Threshold: scam_probability >= 0.4")
     print(f"  Output  : {out_path}")
 
@@ -237,13 +251,13 @@ def run():
     print(f"  logged in as: {me['email']}  is_admin={me['is_admin']}")
 
     step("Login Scenario 1 client (clean job poster)")
-    tok_clean  = login(_CLIENT_EMAIL, _CLIENT_PASS)
+    tok_clean  = login_or_register(_CLIENT_EMAIL, _CLIENT_PASS, "Sarah Fischer", "client", "WalkTest Inc")
     cid_clean  = extract(get("/clients", tok_clean))[0]["client_id"]
     print(f"  email     : {_CLIENT_EMAIL}")
     print(f"  client_id : {cid_clean}")
 
     step("Login Scenario 2 client (scam job poster)")
-    tok_scam  = login(_CLIENT_EMAIL, _CLIENT_PASS)
+    tok_scam  = login_or_register(_CLIENT_EMAIL, _CLIENT_PASS, "Sarah Fischer", "client", "WalkTest Inc")
     cid_scam  = extract(get("/clients", tok_scam))[0]["client_id"]
     print(f"  email     : {_CLIENT_EMAIL}")
     print(f"  client_id : {cid_scam}")

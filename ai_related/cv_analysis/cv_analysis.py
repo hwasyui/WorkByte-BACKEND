@@ -6,27 +6,14 @@ import json
 from typing import List, Optional, Dict, Any
 from fastapi import UploadFile
 from groq import Groq
-from sentence_transformers import SentenceTransformer
 from functions.db_manager import get_db
 from functions.logger import logger
 from ai_related.job_matching.source_text_builder import build_freelancer_source_text
-
-# all-MiniLM-L6-v2 for CV-to-profile semantic similarity (384-dim)
-# Separate from job matching embeddings (768-dim via embedding_service)
-_CV_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
-_cv_model: Optional[SentenceTransformer] = None
-
-
-def _get_cv_model() -> SentenceTransformer:
-    global _cv_model
-    if _cv_model is None:
-        logger("CV_ANALYSIS", f"Loading CV similarity model: {_CV_MODEL_NAME}", level="INFO")
-        _cv_model = SentenceTransformer(_CV_MODEL_NAME)
-    return _cv_model
+from ai_related.job_matching.embedding_service import _get_model
 
 
 def get_cv_embedding(text: str) -> List[float]:
-    model = _get_cv_model()
+    model = _get_model()
     embedding = model.encode(text, normalize_embeddings=True)
     return embedding.tolist()
 
