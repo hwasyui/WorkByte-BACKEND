@@ -1,6 +1,7 @@
 """Admin business logic — moderation queue, scam flags, user reports, dashboard."""
 
 import json
+import math
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -1192,4 +1193,293 @@ def get_admin_dashboard_stats() -> Dict:
         "report_auto_actions_total": _count(
             "SELECT COUNT(*) AS cnt FROM report_auto_actions"
         ),
+    }
+
+
+# ─── admin browse: jobs ───────────────────────────────────────────────────────
+
+_JOB_ADMIN_SORT_COLS = {
+    "created_at":    "jp.created_at",
+    "closed_at":     "jp.closed_at",
+    "updated_at":    "jp.updated_at",
+    "job_title":     "jp.job_title",
+    "status":        "jp.status",
+    "proposal_count": "jp.proposal_count",
+    "view_count":    "jp.view_count",
+}
+
+_USER_ADMIN_SORT_COLS = {
+    "created_at":       "u.created_at",
+    "updated_at":       "u.updated_at",
+    "email":            "u.email",
+    "report_banned_at": "u.report_banned_at",
+    "ban_reason":       "u.ban_reason",
+}
+
+
+def _csv(val: Optional[str]) -> List[str]:
+    if not val:
+        return []
+    return [v.strip() for v in val.split(",") if v.strip()]
+
+
+def _in_filter(
+    col: str,
+    values: List[str],
+    prefix: str,
+    where: List[str],
+    params: dict,
+    exclude: bool = False,
+) -> None:
+    if not values:
+        return
+    placeholders = ", ".join(f":{prefix}_{i}" for i in range(len(values)))
+    op = "NOT IN" if exclude else "IN"
+    where.append(f"{col} {op} ({placeholders})")
+    for i, v in enumerate(values):
+        params[f"{prefix}_{i}"] = v
+
+
+def admin_list_jobs(
+    status: Optional[str] = None,
+    exclude_status: Optional[str] = None,
+    closure_reason: Optional[str] = None,
+    exclude_closure_reason: Optional[str] = None,
+    project_type: Optional[str] = None,
+    exclude_project_type: Optional[str] = None,
+    project_scope: Optional[str] = None,
+    exclude_project_scope: Optional[str] = None,
+    experience_level: Optional[str] = None,
+    exclude_experience_level: Optional[str] = None,
+    project_category: Optional[str] = None,
+    is_ai_generated: Optional[bool] = None,
+    client_id: Optional[str] = None,
+    search: Optional[str] = None,
+    created_from: Optional[str] = None,
+    created_to: Optional[str] = None,
+    closed_from: Optional[str] = None,
+    closed_to: Optional[str] = None,
+    sort_by: str = "created_at",
+    sort_dir: str = "desc",
+    page: int = 1,
+    page_size: int = 20,
+) -> Dict:
+    offset    = (page - 1) * page_size
+    sort_col  = _JOB_ADMIN_SORT_COLS.get(sort_by, "jp.created_at")
+    direction = "ASC" if sort_dir.lower() == "asc" else "DESC"
+
+    where: List[str] = []
+    params: Dict     = {}
+
+    _in_filter("jp.status",           _csv(status),                   "st",  where, params)
+    _in_filter("jp.status",           _csv(exclude_status),           "xst", where, params, exclude=True)
+    _in_filter("jp.closure_reason",   _csv(closure_reason),           "cr",  where, params)
+    _in_filter("jp.closure_reason",   _csv(exclude_closure_reason),   "xcr", where, params, exclude=True)
+    _in_filter("jp.project_type",     _csv(project_type),             "pt",  where, params)
+    _in_filter("jp.project_type",     _csv(exclude_project_type),     "xpt", where, params, exclude=True)
+    _in_filter("jp.project_scope",    _csv(project_scope),            "ps",  where, params)
+    _in_filter("jp.project_scope",    _csv(exclude_project_scope),    "xps", where, params, exclude=True)
+    _in_filter("jp.experience_level", _csv(experience_level),         "el",  where, params)
+    _in_filter("jp.experience_level", _csv(exclude_experience_level), "xel", where, params, exclude=True)
+
+    if project_category:
+        where.append("jp.project_category ILIKE :proj_cat")
+        params["proj_cat"] = f"%{project_category}%"
+    if is_ai_generated is not None:
+        where.append("jp.is_ai_generated = :is_ai")
+        params["is_ai"] = is_ai_generated
+    if client_id:
+        where.append("jp.client_id = :client_id")
+        params["client_id"] = client_id
+    if search:
+        where.append("jp.job_title ILIKE :search")
+        params["search"] = f"%{search}%"
+    if created_from:
+        where.append("jp.created_at >= :created_from")
+        params["created_from"] = created_from
+    if created_to:
+        where.append("jp.created_at <= :created_to")
+        params["created_to"] = created_to
+    if closed_from:
+        where.append("jp.closed_at >= :closed_from")
+        params["closed_from"] = closed_from
+    if closed_to:
+        where.append("jp.closed_at <= :closed_to")
+        params["closed_to"] = closed_to
+
+    where_sql = ("WHERE " + " AND ".join(where)) if where else ""
+
+    rows = _rows(get_db().execute_query(
+        f"""
+        SELECT
+            jp.job_post_id, jp.client_id, jp.job_title, jp.project_type,
+            jp.project_scope, jp.experience_level, jp.status, jp.is_ai_generated,
+            jp.view_count, jp.proposal_count, jp.project_category,
+            jp.created_at, jp.updated_at, jp.posted_at, jp.closed_at,
+            jp.closure_reason, jp.closure_note,
+            c.full_name  AS client_name,
+            u.email      AS client_email,
+            COUNT(DISTINCT jr.job_role_id) AS role_count
+        FROM job_post jp
+        LEFT JOIN client   c  ON c.client_id   = jp.client_id
+        LEFT JOIN users    u  ON u.user_id      = c.user_id
+        LEFT JOIN job_role jr ON jr.job_post_id = jp.job_post_id
+        {where_sql}
+        GROUP BY jp.job_post_id, c.full_name, u.email
+        ORDER BY {sort_col} {direction}
+        LIMIT :limit OFFSET :offset
+        """,
+        params={**params, "limit": page_size, "offset": offset},
+    ))
+
+    total_row = _row(get_db().execute_query(
+        f"""
+        SELECT COUNT(DISTINCT jp.job_post_id) AS cnt
+        FROM job_post jp
+        LEFT JOIN client c ON c.client_id = jp.client_id
+        LEFT JOIN users  u ON u.user_id   = c.user_id
+        {where_sql}
+        """,
+        params=params,
+    ))
+    total = int(total_row["cnt"]) if total_row else 0
+
+    return {
+        "jobs":        rows,
+        "total":       total,
+        "page":        page,
+        "page_size":   page_size,
+        "total_pages": math.ceil(total / page_size) if page_size > 0 else 0,
+    }
+
+
+# ─── admin browse: users ──────────────────────────────────────────────────────
+
+def admin_list_users(
+    role: Optional[str] = None,
+    exclude_role: Optional[str] = None,
+    is_banned: Optional[bool] = None,
+    email_verified: Optional[bool] = None,
+    ban_reason: Optional[str] = None,
+    exclude_ban_reason: Optional[str] = None,
+    search: Optional[str] = None,
+    created_from: Optional[str] = None,
+    created_to: Optional[str] = None,
+    banned_from: Optional[str] = None,
+    banned_to: Optional[str] = None,
+    sort_by: str = "created_at",
+    sort_dir: str = "desc",
+    page: int = 1,
+    page_size: int = 20,
+) -> Dict:
+    offset    = (page - 1) * page_size
+    sort_col  = _USER_ADMIN_SORT_COLS.get(sort_by, "u.created_at")
+    direction = "ASC" if sort_dir.lower() == "asc" else "DESC"
+
+    where: List[str] = []
+    params: Dict     = {}
+
+    # Role is derived from joined tables, so we build OR conditions manually.
+    include_roles = _csv(role)
+    if include_roles:
+        role_conds = []
+        for r in include_roles:
+            if r == "freelancer":
+                role_conds.append("f.freelancer_id IS NOT NULL")
+            elif r == "client":
+                role_conds.append("c.client_id IS NOT NULL AND u.is_admin = FALSE")
+            elif r == "admin":
+                role_conds.append("u.is_admin = TRUE")
+        if role_conds:
+            where.append(f"({' OR '.join(role_conds)})")
+
+    exclude_roles = _csv(exclude_role)
+    for r in exclude_roles:
+        if r == "freelancer":
+            where.append("f.freelancer_id IS NULL")
+        elif r == "client":
+            where.append("c.client_id IS NULL")
+        elif r == "admin":
+            where.append("u.is_admin = FALSE")
+
+    if is_banned is not None:
+        where.append("u.is_report_banned = :is_banned")
+        params["is_banned"] = is_banned
+    if email_verified is not None:
+        where.append("u.email_verified = :email_verified")
+        params["email_verified"] = email_verified
+
+    _in_filter("u.ban_reason", _csv(ban_reason),         "br",  where, params)
+    _in_filter("u.ban_reason", _csv(exclude_ban_reason),  "xbr", where, params, exclude=True)
+
+    if search:
+        where.append(
+            "(u.email ILIKE :search OR COALESCE(f.full_name, c.full_name, '') ILIKE :search)"
+        )
+        params["search"] = f"%{search}%"
+    if created_from:
+        where.append("u.created_at >= :created_from")
+        params["created_from"] = created_from
+    if created_to:
+        where.append("u.created_at <= :created_to")
+        params["created_to"] = created_to
+    if banned_from:
+        where.append("u.report_banned_at >= :banned_from")
+        params["banned_from"] = banned_from
+    if banned_to:
+        where.append("u.report_banned_at <= :banned_to")
+        params["banned_to"] = banned_to
+
+    where_sql = ("WHERE " + " AND ".join(where)) if where else ""
+
+    rows = _rows(get_db().execute_query(
+        f"""
+        SELECT
+            u.user_id, u.email, u.is_admin, u.email_verified, u.email_verified_at,
+            u.is_report_banned, u.report_banned_at, u.ban_reason, u.ban_message,
+            u.created_at, u.updated_at,
+            f.freelancer_id,
+            f.full_name             AS freelancer_name,
+            f.profile_picture_url   AS freelancer_avatar,
+            c.client_id,
+            c.full_name             AS client_name,
+            c.profile_picture_url   AS client_avatar,
+            c.total_jobs_posted,
+            CASE
+                WHEN u.is_admin              THEN 'admin'
+                WHEN f.freelancer_id IS NOT NULL THEN 'freelancer'
+                WHEN c.client_id     IS NOT NULL THEN 'client'
+                ELSE 'unassigned'
+            END AS role,
+            csr.total_scam_confirmed,
+            csr.is_banned AS is_scam_banned
+        FROM users u
+        LEFT JOIN freelancer         f   ON f.user_id   = u.user_id
+        LEFT JOIN client             c   ON c.user_id   = u.user_id
+        LEFT JOIN client_scam_record csr ON csr.client_id = c.client_id
+        {where_sql}
+        ORDER BY {sort_col} {direction}
+        LIMIT :limit OFFSET :offset
+        """,
+        params={**params, "limit": page_size, "offset": offset},
+    ))
+
+    total_row = _row(get_db().execute_query(
+        f"""
+        SELECT COUNT(*) AS cnt
+        FROM users u
+        LEFT JOIN freelancer f ON f.user_id = u.user_id
+        LEFT JOIN client     c ON c.user_id = u.user_id
+        {where_sql}
+        """,
+        params=params,
+    ))
+    total = int(total_row["cnt"]) if total_row else 0
+
+    return {
+        "users":       rows,
+        "total":       total,
+        "page":        page,
+        "page_size":   page_size,
+        "total_pages": math.ceil(total / page_size) if page_size > 0 else 0,
     }

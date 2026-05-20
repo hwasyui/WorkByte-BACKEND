@@ -23,6 +23,8 @@ from routes.admin.admin_functions import (
     action_scam_flag,
     admin_close_account,
     admin_close_job,
+    admin_list_jobs,
+    admin_list_users,
     admin_reopen_account,
     admin_reopen_job,
     create_report,
@@ -645,6 +647,104 @@ async def force_reopen_account(
     except Exception as e:
         logger("ADMIN", f"Force reopen account error: {e}", "POST /admin/accounts/reopen", "ERROR")
         return ResponseSchema.error(f"Failed to restore account: {e}", 500)
+
+
+# ─── admin browse: all jobs ──────────────────────────────────────────────────
+
+@admin_router.get("/jobs")
+async def admin_browse_jobs(
+    status:                   Optional[str]  = Query(None, description="Include statuses (comma-sep): draft,active,closed,filled"),
+    exclude_status:           Optional[str]  = Query(None, description="Exclude statuses (comma-sep)"),
+    closure_reason:           Optional[str]  = Query(None, description="Include closure reasons (comma-sep): scam,content_violation,admin_override,community_reports"),
+    exclude_closure_reason:   Optional[str]  = Query(None, description="Exclude closure reasons (comma-sep)"),
+    project_type:             Optional[str]  = Query(None, description="Include project types (comma-sep): individual,team"),
+    exclude_project_type:     Optional[str]  = Query(None, description="Exclude project types (comma-sep)"),
+    project_scope:            Optional[str]  = Query(None, description="Include scopes (comma-sep): small,medium,large"),
+    exclude_project_scope:    Optional[str]  = Query(None, description="Exclude scopes (comma-sep)"),
+    experience_level:         Optional[str]  = Query(None, description="Include experience levels (comma-sep): entry,intermediate,expert"),
+    exclude_experience_level: Optional[str]  = Query(None, description="Exclude experience levels (comma-sep)"),
+    project_category:         Optional[str]  = Query(None, description="Partial match on project_category"),
+    is_ai_generated:          Optional[bool] = Query(None, description="Filter by AI-generated flag"),
+    client_id:                Optional[str]  = Query(None, description="Filter by specific client UUID"),
+    search:                   Optional[str]  = Query(None, description="Partial match on job_title"),
+    created_from:             Optional[str]  = Query(None, description="ISO date — created_at >="),
+    created_to:               Optional[str]  = Query(None, description="ISO date — created_at <="),
+    closed_from:              Optional[str]  = Query(None, description="ISO date — closed_at >="),
+    closed_to:                Optional[str]  = Query(None, description="ISO date — closed_at <="),
+    sort_by:   str = Query(default="created_at", description="created_at | closed_at | updated_at | job_title | status | proposal_count | view_count"),
+    sort_dir:  str = Query(default="desc",        description="asc | desc"),
+    page:      int = Query(default=1,  ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    current_user: UserInDB = Depends(get_admin_user),
+):
+    """Browse all job posts with flexible include/exclude filters and sorting."""
+    try:
+        if sort_by not in ("created_at", "closed_at", "updated_at", "job_title", "status", "proposal_count", "view_count"):
+            return ResponseSchema.error("Invalid sort_by value", 400)
+        if sort_dir not in ("asc", "desc"):
+            return ResponseSchema.error("sort_dir must be asc or desc", 400)
+        result = admin_list_jobs(
+            status=status,                       exclude_status=exclude_status,
+            closure_reason=closure_reason,       exclude_closure_reason=exclude_closure_reason,
+            project_type=project_type,           exclude_project_type=exclude_project_type,
+            project_scope=project_scope,         exclude_project_scope=exclude_project_scope,
+            experience_level=experience_level,   exclude_experience_level=exclude_experience_level,
+            project_category=project_category,   is_ai_generated=is_ai_generated,
+            client_id=client_id,                 search=search,
+            created_from=created_from,           created_to=created_to,
+            closed_from=closed_from,             closed_to=closed_to,
+            sort_by=sort_by,                     sort_dir=sort_dir,
+            page=page,                           page_size=page_size,
+        )
+        logger("ADMIN", f"Jobs browse: page={page} status={status!r} search={search!r}", "GET /admin/jobs", "INFO")
+        return ResponseSchema.success(result, 200)
+    except Exception as e:
+        logger("ADMIN", f"Jobs browse error: {e}", "GET /admin/jobs", "ERROR")
+        return ResponseSchema.error(f"Failed to list jobs: {e}", 500)
+
+
+# ─── admin browse: all users ──────────────────────────────────────────────────
+
+@admin_router.get("/users")
+async def admin_browse_users(
+    role:                 Optional[str]  = Query(None, description="Include roles (comma-sep): freelancer,client,admin"),
+    exclude_role:         Optional[str]  = Query(None, description="Exclude roles (comma-sep)"),
+    is_banned:            Optional[bool] = Query(None, description="Filter by report-ban status"),
+    email_verified:       Optional[bool] = Query(None, description="Filter by email verification status"),
+    ban_reason:           Optional[str]  = Query(None, description="Include ban reasons (comma-sep): admin_override,community_reports"),
+    exclude_ban_reason:   Optional[str]  = Query(None, description="Exclude ban reasons (comma-sep)"),
+    search:               Optional[str]  = Query(None, description="Partial match on email or display name"),
+    created_from:         Optional[str]  = Query(None, description="ISO date — created_at >="),
+    created_to:           Optional[str]  = Query(None, description="ISO date — created_at <="),
+    banned_from:          Optional[str]  = Query(None, description="ISO date — report_banned_at >="),
+    banned_to:            Optional[str]  = Query(None, description="ISO date — report_banned_at <="),
+    sort_by:   str = Query(default="created_at",  description="created_at | updated_at | email | report_banned_at | ban_reason"),
+    sort_dir:  str = Query(default="desc",         description="asc | desc"),
+    page:      int = Query(default=1,  ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    current_user: UserInDB = Depends(get_admin_user),
+):
+    """Browse all user accounts with flexible include/exclude filters and sorting."""
+    try:
+        if sort_by not in ("created_at", "updated_at", "email", "report_banned_at", "ban_reason"):
+            return ResponseSchema.error("Invalid sort_by value", 400)
+        if sort_dir not in ("asc", "desc"):
+            return ResponseSchema.error("sort_dir must be asc or desc", 400)
+        result = admin_list_users(
+            role=role,               exclude_role=exclude_role,
+            is_banned=is_banned,     email_verified=email_verified,
+            ban_reason=ban_reason,   exclude_ban_reason=exclude_ban_reason,
+            search=search,
+            created_from=created_from,  created_to=created_to,
+            banned_from=banned_from,    banned_to=banned_to,
+            sort_by=sort_by,            sort_dir=sort_dir,
+            page=page,                  page_size=page_size,
+        )
+        logger("ADMIN", f"Users browse: page={page} role={role!r} is_banned={is_banned} search={search!r}", "GET /admin/users", "INFO")
+        return ResponseSchema.success(result, 200)
+    except Exception as e:
+        logger("ADMIN", f"Users browse error: {e}", "GET /admin/users", "ERROR")
+        return ResponseSchema.error(f"Failed to list users: {e}", 500)
 
 
 # ─── reports (user-facing) ────────────────────────────────────────────────────
