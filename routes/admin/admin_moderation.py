@@ -2,7 +2,7 @@
 Toxicity detection and scam detection utilities.
 
 scan_toxicity_with_ml_fallback() is the primary entry point for toxicity scans.
-It tries the trained DistilBERT ML model first (F1=0.7298 on Jigsaw+ETHOS test set),
+It tries the trained RoBERTa model first (F1=0.8226 on Jigsaw+ETHOS test set),
 then falls back to deterministic keyword matching if the model is unavailable.
 
 Keyword lists, threshold values, and their rationale are documented in

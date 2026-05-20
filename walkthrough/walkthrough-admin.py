@@ -59,7 +59,7 @@ _RUN_ID   = random.randint(1000, 9999)
 _PASSWORD = "SecurePass123!"
 
 _ADMIN_EMAIL    = "admin@admin.com"
-_ADMIN_PASSWORD = "thisisanadminaccountpassword"
+_ADMIN_PASSWORD = " "
 
 # ── Content moderation scenario users ─────────────────────────────────────────
 # job: low total (0.35) → manual approve

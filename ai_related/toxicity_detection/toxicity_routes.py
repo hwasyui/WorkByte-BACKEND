@@ -107,6 +107,6 @@ async def get_available_models() -> Dict[str, Any]:
         })
     return ResponseSchema.success({
         "available_models": available_models,
-        "default": "distilbert",
-        "aliases": {"best": "distilbert"},
+        "default": "roberta",
+        "aliases": {"best": "roberta"},
     })

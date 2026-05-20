@@ -477,7 +477,21 @@ def _flag_client_for_scam(client_id: str):
             """,
             params={"cid": client_id},
         )
-        logger("ADMIN", f"Client {client_id} banned — 3+ confirmed scam jobs", level="WARNING")
+        get_db().execute_query(
+            """
+            UPDATE job_post
+            SET status = 'closed',
+                closure_reason = :reason,
+                closure_note   = :note
+            WHERE client_id = :cid AND status = 'active'
+            """,
+            params={
+                "cid":    client_id,
+                "reason": DEFAULT_CLOSURE_REASON_SCAM,
+                "note":   DEFAULT_CLOSURE_NOTE_SCAM,
+            },
+        )
+        logger("ADMIN", f"Client {client_id} banned — 3+ confirmed scam jobs; active jobs closed", level="WARNING")
 
 
 def _process_auto_remove():
@@ -683,13 +697,28 @@ def _process_report_auto_actions():
         )
         get_db().execute_query(
             """
+            UPDATE job_post
+            SET status = 'closed',
+                closure_reason = :reason,
+                closure_note   = :note
+            WHERE client_id = (SELECT client_id FROM client WHERE user_id = :uid)
+              AND status = 'active'
+            """,
+            params={
+                "uid":    tid,
+                "reason": DEFAULT_CLOSURE_REASON_REPORTS,
+                "note":   DEFAULT_CLOSURE_NOTE_REPORTS,
+            },
+        )
+        get_db().execute_query(
+            """
             INSERT INTO report_auto_actions (target_type, target_id, report_count)
             VALUES ('user', :tid, :cnt)
             ON CONFLICT (target_type, target_id) DO NOTHING
             """,
             params={"tid": tid, "cnt": int(t["report_count"])},
         )
-        logger("ADMIN", f"User {tid} report-banned ({t['report_count']} reports)", level="WARNING")
+        logger("ADMIN", f"User {tid} report-banned ({t['report_count']} reports); active jobs closed", level="WARNING")
 
     # ── job post targets ──────────────────────────────────────────────────────
     job_targets = _rows(get_db().execute_query(
@@ -1119,7 +1148,22 @@ def admin_close_account(
         },
     ))
     if updated:
-        logger("ADMIN", f"Account {user_id} force-closed by admin {admin_user_id}", level="WARNING")
+        get_db().execute_query(
+            """
+            UPDATE job_post
+            SET status = 'closed',
+                closure_reason = :reason,
+                closure_note   = :note
+            WHERE client_id = (SELECT client_id FROM client WHERE user_id = :uid)
+              AND status = 'active'
+            """,
+            params={
+                "uid":    user_id,
+                "reason": DEFAULT_CLOSURE_REASON_ADMIN,
+                "note":   DEFAULT_CLOSURE_NOTE_ADMIN,
+            },
+        )
+        logger("ADMIN", f"Account {user_id} force-closed by admin {admin_user_id}; active jobs closed", level="WARNING")
     return updated
 
 
