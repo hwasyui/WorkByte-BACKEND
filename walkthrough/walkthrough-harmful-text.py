@@ -52,8 +52,8 @@ _CLIENT_EMAIL  = "clientinputjobs@client.com"
 _CLIENT_PASS   = "SecurePass123"
 _CLIENT_NAME   = "Jobs Seeder Client"
 
-_ADMIN_EMAIL   = "psyintann@gmail.com"
-_ADMIN_PASS    = "client123"
+_ADMIN_EMAIL   = "admin@admin.com"
+_ADMIN_PASS    = "thisisanadminaccountpassword"
 
 _POLL_INTERVAL = 2    # seconds between moderation-queue polls
 _POLL_MAX_WAIT = 60   # seconds before giving up on background scan
@@ -140,7 +140,8 @@ def extract(resp):
 
 def login_or_register(email, password, full_name, user_type="client"):
     resp  = _req("post", "/auth/login", body={"email": email, "password": password}, allow_fail=True)
-    token = extract(resp).get("access_token")
+    details = extract(resp)
+    token = details.get("access_token") if isinstance(details, dict) else None
     if token:
         return token
     # Register
@@ -148,7 +149,8 @@ def login_or_register(email, password, full_name, user_type="client"):
         "email": email, "password": password,
         "user_type": user_type, "full_name": full_name,
     }, allow_fail=True)
-    otp = extract(reg).get("verification", {}).get("dev_verification_otp")
+    reg_details = extract(reg)
+    otp = reg_details.get("verification", {}).get("dev_verification_otp") if isinstance(reg_details, dict) else None
     if otp:
         _req("post", "/auth/verify-email", body={"email": email, "otp": otp}, allow_fail=True)
     resp2 = _req("post", "/auth/login", body={"email": email, "password": password})
@@ -345,24 +347,18 @@ def run():
         print("  (Check server logs; ML model may need warm-up or keyword list may differ)")
         mid2 = None
 
-    step("2c — Admin reviews and rejects the flagged job")
+    step("2c — Flag left PENDING for manual admin review")
     if mid2:
-        rejected2 = extract(post(
-            f"/admin/moderation/{mid2}/reject",
-            {"admin_note": "Job description contains insults and demeaning language toward applicants. Rejected per content policy."},
-            tok_admin,
-        ))
-        print(f"  moderation status after reject : {rejected2.get('status')}")
         job2 = get_job(tok_client, jid2)
-        print(f"  job status after reject        : {job2.get('status')}")
-        print(f"  closure_reason                 : {job2.get('closure_reason')}")
-        print(f"  closure_note                   : {job2.get('closure_note')}")
-        if job2.get("status") == "closed" and job2.get("closure_reason") == "content_violation":
-            print("  PASS — job immediately closed by admin rejection")
-        else:
-            print(f"  UNEXPECTED — job status is '{job2.get('status')}'")
+        print(f"  moderation_id : {mid2}")
+        print(f"  flag status   : {flag2.get('status')}  ← pending for you to try")
+        print(f"  job status    : {job2.get('status')}   ← still active until admin acts")
+        print()
+        print("  To test the approve/reject flow yourself:")
+        print(f"    POST /admin/moderation/{mid2}/approve  → flag confirmed, job will be closed")
+        print(f"    POST /admin/moderation/{mid2}/reject   → flag dismissed, job stays active")
     else:
-        print("  SKIP — no flag found in step 2b, cannot reject")
+        print("  SKIP — no flag found in step 2b")
 
 
     # ══════════════════════════════════════════════════════════════════════════
@@ -448,16 +444,72 @@ def run():
 
         if job3.get("status") == "closed" and round(ts, 2) >= 0.85:
             print("  PASS — system auto-closed job after force-expire (total_score >= 0.85)")
+            print(f"  flag status → approved  (flag confirmed by timer)")
         elif job3.get("status") == "closed":
             print("  PASS — job closed (note: ML model scores may differ from keyword estimate)")
-        elif flag3_after and flag3_after.get("status") == "approved":
-            print("  NOTE — flag was auto-approved (total_score < 0.85 per ML model scores)")
+            print(f"  flag status → approved  (flag confirmed by timer)")
+        elif flag3_after and flag3_after.get("status") == "rejected":
+            print("  NOTE — flag was auto-dismissed (total_score < 0.85 per ML model scores)")
             print("         ML model gave lower scores than keyword heuristic; job stays active.")
             print("         In production you would use force-expire on a high-score item.")
         else:
             print(f"  UNEXPECTED — job status: {job3.get('status')}, flag status: {flag3_after.get('status') if flag3_after else 'n/a'}")
     else:
         print("  SKIP — no flag found in step 3b, cannot force-expire")
+
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # SCENARIO 4 — DISMISS TEST  (admin rejects = dismisses flag, job stays)
+    # ══════════════════════════════════════════════════════════════════════════
+    section("SCENARIO 4 — DISMISS FLOW  (expected: flagged → admin dismisses → job stays active)")
+
+    print(f"\n  Title      : {_MILD_TITLE}")
+    print(f"  Preview    : \"{_MILD_DESC[:100]}...\"")
+    print(f"  Action     : admin calls /reject  (dismisses the flag — false positive decision)")
+
+    step("4a — Client posts a mildly toxic job (same text as Scenario 2)")
+    resp4 = extract(post("/job-posts", {
+        "job_title":          _MILD_TITLE,
+        "job_description":    _MILD_DESC,
+        "project_type":       "individual",
+        "project_scope":      "small",
+        "estimated_duration": "3 weeks",
+        "experience_level":   "intermediate",
+        "status":             "active",
+    }, tok_client))
+    jid4 = resp4["job_post_id"]
+    print(f"  job_post_id    : {jid4}")
+    print(f"  status on POST : {resp4['status']}")
+
+    step("4b — Poll admin moderation queue for the flag")
+    flag4 = poll_moderation_flag(tok_admin, jid4)
+    mid4 = None
+    if flag4:
+        mid4 = str(flag4["moderation_id"])
+        print(f"  moderation_id  : {mid4}")
+        print(f"  flag status    : {flag4.get('status')}")
+        print("  PASS — flag visible in admin queue")
+    else:
+        print("  FAIL — no flag found within timeout")
+
+    step("4c — Admin dismisses the flag (POST /reject)")
+    if mid4:
+        dismissed4 = extract(post(
+            f"/admin/moderation/{mid4}/reject",
+            {"admin_note": "Reviewed and determined this is a false positive — job description is acceptable."},
+            tok_admin,
+        ))
+        print(f"  moderation status after dismiss : {dismissed4.get('status')}")
+        job4 = get_job(tok_client, jid4)
+        print(f"  job status after dismiss        : {job4.get('status')}")
+        if dismissed4.get("status") == "rejected" and job4.get("status") != "closed":
+            print("  PASS — flag dismissed (status=rejected), job remains active")
+        else:
+            print(f"  UNEXPECTED — moderation={dismissed4.get('status')}, job={job4.get('status')}")
+    else:
+        print("  SKIP — no flag found in step 4b, cannot dismiss")
+
+    jid4_val = jid4 if 'jid4' in dir() else 'n/a'
 
 
     # ── Summary ───────────────────────────────────────────────────────────────
@@ -474,13 +526,16 @@ def run():
 
     Scenario 2 (mildly toxic)  : job {jid2}
       keywords    → insult + toxic labels
-      flag        → pending in admin queue
-      admin action→ reject → job immediately closed (content_violation)
+      flag        → PENDING in admin queue  ← try approve/reject yourself
 
     Scenario 3 (severely toxic): job {jid3}
       keywords    → identity_hate + threat + obscene + insult
       total_score → >= 0.85 auto-close threshold
-      action      → force-expire timer → system auto-closes job
+      action      → force-expire timer → flag status=approved, job auto-closed
+
+    Scenario 4 (dismiss test)  : job {jid4_val}
+      keywords    → insult + toxic labels
+      admin action→ reject (dismiss) → flag status=rejected, job stays active
 
   Detection flow:
     POST /job-posts         →  job saved, response returned immediately
@@ -488,10 +543,10 @@ def run():
     is_flagged = False      →  nothing; job stays active
     is_flagged = True       →  harmful_text_queue record inserted (status=pending)
     Admin GET /admin/moderation    →  view flag with per-label scores
-    Admin POST .../reject          →  job closed immediately (content_violation)
-    Admin POST .../approve         →  flag dismissed; job stays active
-    Force-expire (30-day timer)    →  total_score >= 0.85 → auto-reject + close
-                                      total_score <  0.85 → auto-approve + dismiss
+    Admin POST .../approve         →  flag CONFIRMED → job closed (content_violation)
+    Admin POST .../reject          →  flag DISMISSED → job stays active
+    Force-expire (30-day timer)    →  total_score >= 0.85 → status=approved + close
+                                      total_score <  0.85 → status=rejected + dismiss
     """)
 
     _stop_tee(tee, out_path)

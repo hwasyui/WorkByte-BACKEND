@@ -155,7 +155,7 @@ async def approve_moderation(
     body: AdminActionBody = AdminActionBody(),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Approve a flagged content item (content is allowed to stay)."""
+    """Approve a flagged content item — confirms the AI flag; harmful content is actioned (job closed, etc.)."""
     try:
         updated = action_moderation_item(
             moderation_id=moderation_id,
@@ -178,7 +178,7 @@ async def reject_moderation(
     body: AdminActionBody = AdminActionBody(),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Reject a flagged content item. Job posts are closed; profile flags are recorded."""
+    """Reject a flagged content item — dismisses the AI flag as a false positive; content is allowed to stay."""
     try:
         updated = action_moderation_item(
             moderation_id=moderation_id,

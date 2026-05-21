@@ -173,8 +173,8 @@ def queue_harmful_text_scan(
 def _auto_approve_expired():
     """
     Process pending moderation items whose 30-day window has closed.
-    High cumulative label score → auto-close (ban user / close job post).
-    Low score → auto-dismiss as false positive (status = 'approved').
+    High cumulative label score → flag confirmed (status='approved') → auto-close job/ban user.
+    Low score → flag dismissed as false positive (status='rejected').
     """
     expired = _rows(get_db().execute_query(
         """
@@ -200,7 +200,7 @@ def _auto_approve_expired():
         )
 
         if total >= threshold:
-            new_status = "rejected"
+            new_status = "approved"  # flag confirmed — harmful content actioned
             if ctype == "job_post":
                 get_db().execute_query(
                     """
@@ -218,7 +218,7 @@ def _auto_approve_expired():
                 )
             logger("ADMIN", f"Auto-closed {ctype} {content_id} — total_score={total:.2f} >= {threshold}", level="WARNING")
         else:
-            new_status = "approved"
+            new_status = "rejected"  # flag dismissed — false positive
             logger("ADMIN", f"Auto-dismissed {ctype} {content_id} — total_score={total:.2f} < {threshold}", level="INFO")
 
         get_db().execute_query(
@@ -327,7 +327,7 @@ def action_moderation_item(
         },
     ))
 
-    if updated and new_status == "rejected":
+    if updated and new_status == "approved":  # approved = flag confirmed → take action
         content_type = updated.get("content_type", "")
         content_id   = str(updated.get("content_id", ""))
         if content_type == "job_post":

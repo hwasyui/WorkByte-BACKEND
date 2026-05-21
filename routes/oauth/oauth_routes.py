@@ -116,13 +116,13 @@ async def google_mobile_login(payload: GoogleMobileTokenRequest):
             full_name=user_info["name"],
         )
         logger("OAUTH", f"Google mobile login: {user_info['email']}", "POST /auth/oauth/google/mobile", "INFO")
-        return JSONResponse(ResponseSchema.success(token_data, 200))
+        return ResponseSchema.success(token_data, 200)
     except Exception as e:
         from fastapi import HTTPException
         if isinstance(e, HTTPException):
             logger("OAUTH", f"Google mobile login failed: {e.detail}", "POST /auth/oauth/google/mobile", "WARNING")
-            return JSONResponse(ResponseSchema.error(e.detail, e.status_code), status_code=e.status_code)
+            return ResponseSchema.error(e.detail, e.status_code)
         logger("OAUTH", f"Google mobile login error: {str(e)}", "POST /auth/oauth/google/mobile", "ERROR")
-        return JSONResponse(ResponseSchema.error("Google authentication failed", 500), status_code=500)
+        return ResponseSchema.error("Google authentication failed", 500)
 
 

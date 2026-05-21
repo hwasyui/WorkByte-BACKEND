@@ -25,7 +25,6 @@ BASE_URL = os.environ.get("BASE_URL", "http://localhost:8000")
 
 _EMAIL_CLIENT    = "clientinputjobs@client.com"
 _PASSWORD_CLIENT = "SecurePass123"
-_NAME_CLIENT     = "Jobs Seeder Client"
 
 
 # ── Output tee ────────────────────────────────────────────────────────────────
@@ -89,7 +88,10 @@ def _call(method: str, endpoint: str, body: dict = None, token: str = None,
     url = f"{BASE_URL}{endpoint}"
     r = requests.request(method, url, json=body, headers=headers,
                          params=params, timeout=60)
-    data = r.json() if r.text else {}
+    try:
+        data = r.json() if r.text else {}
+    except ValueError:
+        data = {"raw_response": r.text[:500]}
     if not silent:
         status = "OK" if r.ok else "FAIL"
         print(f"    {method:4s} {endpoint}  [{r.status_code}] {status}")
@@ -1560,32 +1562,13 @@ def main():
     print(f"  Job count  : {len(JOBS)}")
     print(f"  Output     : {out_path}")
 
-    # ── 1. Register → verify → login ─────────────────────────────────────────
-    step("Register client account")
-    reg_resp = _call("POST", "/auth/register", {
-        "email":     _EMAIL_CLIENT,
-        "password":  _PASSWORD_CLIENT,
-        "user_type": "client",
-        "full_name": _NAME_CLIENT,
-    })
-
-    if reg_resp:
-        otp = (_extract(reg_resp, "verification", "dev_verification_otp")
-               or _extract(reg_resp, "dev_verification_otp"))
-        if otp:
-            print(f"  OTP: {otp}")
-            _call("POST", "/auth/verify-email",
-                  {"email": _EMAIL_CLIENT, "otp": otp})
-        else:
-            print("  (no dev OTP in response — assuming already verified or auto-verified)")
-    else:
-        print("  Registration returned an error — account may already exist, trying login anyway")
-
+    # ── 1. Login using the existing seed client ───────────────────────────────
     step("Login as client")
     login_resp = _call("POST", "/auth/login",
                        {"email": _EMAIL_CLIENT, "password": _PASSWORD_CLIENT})
     if not login_resp:
-        print(f"  ERROR: login failed for {_EMAIL_CLIENT}")
+        print(f"  ERROR: login failed for existing seed client {_EMAIL_CLIENT}")
+        print("  Create or verify this account first, then rerun the walkthrough.")
         _stop_tee(tee, out_path)
         return
 
@@ -1618,7 +1601,6 @@ def main():
 
         # Create job post
         post_body = {
-            "client_id":          client_id,
             "job_title":          job["job_title"],
             "job_description":    job["job_description"],
             "project_type":       job["project_type"],
