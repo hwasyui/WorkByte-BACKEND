@@ -291,10 +291,11 @@ class FreelancerFunctions:
             raise
 
     @staticmethod
-    def create_freelancer(freelancer_id: str, user_id: str, full_name: str, bio: Optional[str] = None,
-                          cv_file_url: Optional[str] = None, profile_picture_url: Optional[str] = None,
-                          estimated_rate: Optional[float] = None, rate_time: str = "hourly",
-                          rate_currency: str = "USD", create_embedding: bool = True) -> Dict:
+    def create_freelancer(freelancer_id: str, user_id: str, full_name: str, title: Optional[str] = None,
+                          bio: Optional[str] = None, cv_file_url: Optional[str] = None,
+                          profile_picture_url: Optional[str] = None, estimated_rate: Optional[float] = None,
+                          rate_time: str = "hourly", rate_currency: str = "USD",
+                          create_embedding: bool = True) -> Dict:
         try:
             db = get_db()
             freelancer_id = str(uuid.uuid4())
@@ -302,6 +303,7 @@ class FreelancerFunctions:
                 "freelancer_id": freelancer_id,
                 "user_id": user_id,
                 "full_name": full_name,
+                "title": title,
                 "bio": bio,
                 "cv_file_url": cv_file_url,
                 "profile_picture_url": profile_picture_url,
@@ -324,7 +326,7 @@ class FreelancerFunctions:
     def update_freelancer(freelancer_id: str, update_data: Dict, update_embedding: bool = True) -> Optional[Dict]:
         try:
             db = get_db()
-            NULLABLE_FIELDS = {"profile_picture_url", "bio", "cv_file_url"}
+            NULLABLE_FIELDS = {"profile_picture_url", "title", "bio", "cv_file_url", "estimated_rate", "rate_time", "rate_currency"}
             update_data = {
                 k: v for k, v in update_data.items()
                 if v is not None or k in NULLABLE_FIELDS
@@ -432,18 +434,6 @@ def get_comprehensive_freelancer_profile(freelancer_id: str) -> Optional[Dict]:
         skills_rows = db.execute_query(skills_query, {"freelancer_id": freelancer_id})
         skills = [dict(row) for row in skills_rows] if skills_rows else []
 
-        specialities_query = """
-            SELECT fsp.freelancer_speciality_id, fsp.is_primary, fsp.created_at,
-                   sp.speciality_id, sp.speciality_name,
-                   sp.created_at as speciality_created_at
-            FROM freelancer_speciality fsp
-            JOIN speciality sp ON fsp.speciality_id = sp.speciality_id
-            WHERE fsp.freelancer_id = :freelancer_id
-            ORDER BY fsp.is_primary DESC, fsp.created_at DESC
-        """
-        specialities_rows = db.execute_query(specialities_query, {"freelancer_id": freelancer_id})
-        specialities = [dict(row) for row in specialities_rows] if specialities_rows else []
-
         education_rows = db.fetch_data(
             table_name="education",
             conditions=[("freelancer_id", "=", freelancer_id)],
@@ -485,7 +475,6 @@ def get_comprehensive_freelancer_profile(freelancer_id: str) -> Optional[Dict]:
         return {
             "freelancer": freelancer,
             "skills": skills,
-            "specialities": specialities,
             "education": education,
             "work_experience": work_experience,
             "portfolio": portfolio,

@@ -2132,7 +2132,7 @@ def sec_admin():
     else:
         fail("admin dashboard failed")
 
-    # ── Toxicity Detection (admin) ─────────────────────────────────────────────
+    # ── Harmful Text Detection (admin) ─────────────────────────────────────────────
     step("GET /admin/moderation — list pending items")
     s, mq = _call("GET", "/admin/moderation", token=admin_tok,
                   params={"status": "pending", "page_size": 5}, expected=(200,))
@@ -2371,11 +2371,11 @@ def sec_admin():
 # SECTION 21 — CONTENT MODERATION (ML API)
 # ═════════════════════════════════════════════════════════════════════════════
 
-def sec_toxicity_detection():
+def sec_harmful_text_detection():
     section("CONTENT MODERATION — Direct ML API")
 
     step("GET /toxicity/models")
-    s, ms = _call("GET", "/toxicity/models", expected=(200,))
+    s, ms = _call("GET", "/harmful-text/models", expected=(200,))
     if s:
         models = _d(ms).get("available_models", [])
         for m in models:
@@ -2385,11 +2385,11 @@ def sec_toxicity_detection():
         fail("models endpoint failed")
 
     step("GET /toxicity/labels")
-    s, ls = _call("GET", "/toxicity/labels", expected=(200,))
+    s, ls = _call("GET", "/harmful-text/labels", expected=(200,))
     ok("labels returned") if s else fail("labels endpoint failed")
 
     step("POST /toxicity/detect — clean text")
-    s, cr = _call("POST", "/toxicity/detect",
+    s, cr = _call("POST", "/harmful-text/detect",
                   body={"text": "I need an experienced developer to build a REST API."},
                   params={"model_type": "best", "threshold": "0.5"}, expected=(200,))
     if s:
@@ -2400,7 +2400,7 @@ def sec_toxicity_detection():
         fail("moderate endpoint failed (clean)")
 
     step("POST /toxicity/detect — toxic text")
-    s, tr = _call("POST", "/toxicity/detect",
+    s, tr = _call("POST", "/harmful-text/detect",
                   body={"text": "You fucking idiot, you are worthless garbage!"},
                   params={"model_type": "best", "threshold": "0.5"}, expected=(200,))
     if s:
@@ -2411,7 +2411,7 @@ def sec_toxicity_detection():
         fail("moderate endpoint failed (toxic)")
 
     step("POST /toxicity/detect-batch — 3 texts")
-    s, br = _call("POST", "/toxicity/detect-batch",
+    s, br = _call("POST", "/harmful-text/detect-batch",
                   body={"texts": [
                       "I need a Python developer.",
                       "You fucking idiot!",
@@ -2527,7 +2527,7 @@ def main():
         sec_embeddings()
         sec_ai_job_matching()
         sec_admin()
-        sec_toxicity_detection()
+        sec_harmful_text_detection()
         sec_cleanup_reference_deletes()
         sec_misc_oauth()
 

@@ -1,0 +1,32 @@
+Toxicity Detection Model — distilbert-base-uncased
+============================================================
+
+Folder    : distilbert
+HF ID     : distilbert-base-uncased
+Num labels: 5
+Labels    : ['toxicity', 'obscene', 'threat', 'insult', 'identity_hate']
+
+Test Metrics (tuned thresholds):
+  f1                  : 0.8137
+  precision           : 0.7986
+  recall              : 0.8295
+  jaccard             : 0.7605
+  hamming_loss        : 0.0596
+  accuracy            : 0.9404
+  subset_accuracy     : 0.7597
+
+Per-Label Detail:
+  toxicity            : F1=0.9229  P=0.9076  R=0.9388  t=0.56
+  obscene             : F1=0.8399  P=0.8198  R=0.8610  t=0.58
+  threat              : F1=0.6599  P=0.6566  R=0.6633  t=0.68
+  insult              : F1=0.7568  P=0.7319  R=0.7833  t=0.58
+  identity_hate       : F1=0.8889  P=0.8772  R=0.9009  t=0.66
+
+Best Thresholds:
+  toxicity            : 0.560
+  obscene             : 0.580
+  threat              : 0.680
+  insult              : 0.580
+  identity_hate       : 0.660
+
+Train time: 11.6 min

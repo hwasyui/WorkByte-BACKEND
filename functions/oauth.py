@@ -21,14 +21,52 @@ GOOGLE_CLIENT_SECRET  = os.getenv("GOOGLE_OAUTH_CLIENT_SECRET")
 GOOGLE_REDIRECT_URI   = os.getenv("GOOGLE_OAUTH_REDIRECT_URI",
                                    "http://localhost:8000/auth/oauth/google/callback")
 
-LINKEDIN_CLIENT_ID     = os.getenv("LINKEDIN_OAUTH_CLIENT_ID")
-LINKEDIN_CLIENT_SECRET = os.getenv("LINKEDIN_OAUTH_CLIENT_SECRET")
-LINKEDIN_REDIRECT_URI  = os.getenv("LINKEDIN_OAUTH_REDIRECT_URI",
-                                    "http://localhost:8000/auth/oauth/linkedin/callback")
-
 FRONTEND_URL = os.getenv("FRONTEND_URL", "")
 
-SUPPORTED_PROVIDERS = {"google", "linkedin"}
+SUPPORTED_PROVIDERS = {"google"}
+
+
+# ── Google mobile (Android / iOS) ID-token verification ──────────────────────
+
+def verify_google_id_token(id_token: str) -> dict:
+    """
+    Verify a Google ID token issued by the mobile google_sign_in SDK.
+    Uses Google's tokeninfo endpoint — simple, no key management needed.
+    Returns {sub, email, name} on success, raises HTTP 401 on failure.
+    """
+    if not GOOGLE_CLIENT_ID:
+        raise HTTPException(status_code=501, detail="Google OAuth is not configured on this server")
+    try:
+        with httpx.Client(timeout=10) as client:
+            resp = client.get(
+                "https://oauth2.googleapis.com/tokeninfo",
+                params={"id_token": id_token},
+            )
+            if resp.status_code != 200:
+                raise HTTPException(status_code=401, detail="Invalid Google ID token")
+            info = resp.json()
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger("OAUTH", f"Google ID token verification error: {str(e)}", level="ERROR")
+        raise HTTPException(status_code=502, detail="Failed to verify Google ID token")
+
+    # Verify the token was issued for our app (prevents tokens from other apps being accepted).
+    aud = info.get("aud", "")
+    if aud != GOOGLE_CLIENT_ID:
+        logger("OAUTH", f"Google ID token aud mismatch: got {aud}", level="WARNING")
+        raise HTTPException(status_code=401, detail="Google ID token audience mismatch")
+
+    email = info.get("email")
+    sub   = info.get("sub")
+    if not email or not sub:
+        raise HTTPException(status_code=401, detail="Google ID token missing email or sub")
+
+    return {
+        "sub":   sub,
+        "email": email,
+        "name":  info.get("name") or info.get("given_name") or email,
+    }
 
 
 # ── CSRF state helpers ────────────────────────────────────────────────────────
@@ -93,52 +131,6 @@ def exchange_google_code(code: str) -> dict:
         raise HTTPException(status_code=502, detail="Google authentication failed")
 
 
-# ── LinkedIn ──────────────────────────────────────────────────────────────────
-
-def get_linkedin_auth_url(state: str) -> str:
-    if not LINKEDIN_CLIENT_ID:
-        raise HTTPException(status_code=501, detail="LinkedIn OAuth is not configured on this server")
-    params = {
-        "response_type": "code",
-        "client_id":     LINKEDIN_CLIENT_ID,
-        "redirect_uri":  LINKEDIN_REDIRECT_URI,
-        "scope":         "openid profile email",
-        "state":         state,
-    }
-    return f"https://www.linkedin.com/oauth/v2/authorization?{urlencode(params)}"
-
-
-def exchange_linkedin_code(code: str) -> dict:
-    """Return {sub, email, name} from a LinkedIn authorization code."""
-    try:
-        with httpx.Client(timeout=15) as client:
-            token_resp = client.post(
-                "https://www.linkedin.com/oauth/v2/accessToken",
-                data={
-                    "grant_type":    "authorization_code",
-                    "code":          code,
-                    "redirect_uri":  LINKEDIN_REDIRECT_URI,
-                    "client_id":     LINKEDIN_CLIENT_ID,
-                    "client_secret": LINKEDIN_CLIENT_SECRET,
-                },
-            )
-            token_resp.raise_for_status()
-            access_token = token_resp.json()["access_token"]
-
-            info_resp = client.get(
-                "https://api.linkedin.com/v2/userinfo",
-                headers={"Authorization": f"Bearer {access_token}"},
-            )
-            info_resp.raise_for_status()
-            return info_resp.json()
-    except httpx.HTTPStatusError as e:
-        logger("OAUTH", f"LinkedIn token exchange failed: {e.response.text}", level="ERROR")
-        raise HTTPException(status_code=502, detail="LinkedIn authentication failed")
-    except Exception as e:
-        logger("OAUTH", f"LinkedIn OAuth error: {str(e)}", level="ERROR")
-        raise HTTPException(status_code=502, detail="LinkedIn authentication failed")
-
-
 # ── Unified user lookup / creation ────────────────────────────────────────────
 
 def find_or_create_oauth_user(
@@ -159,9 +151,22 @@ def find_or_create_oauth_user(
     from functions.authentication import (
         _build_user_from_row,
         create_access_token,
+        create_refresh_token,
         get_password_hash,
         ACCESS_TOKEN_EXPIRE_MINUTES,
+        REFRESH_TOKEN_EXPIRE_DAYS,
     )
+
+    def _token_pair(user_id: str, email: str) -> dict:
+        access  = create_access_token({"sub": email}, timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+        refresh = create_refresh_token(user_id)
+        return {
+            "access_token":  access,
+            "token_type":    "bearer",
+            "expires_in":    ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            "refresh_token": refresh,
+            "refresh_token_expires_in": REFRESH_TOKEN_EXPIRE_DAYS * 86400,
+        }
 
     # ── 1. Existing provider link ─────────────────────────────────────────────
     rows = get_db().execute_query(
@@ -180,9 +185,8 @@ def find_or_create_oauth_user(
     )
     if rows:
         user = _build_user_from_row(rows[0])
-        token = create_access_token({"sub": user.email}, timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
         logger("OAUTH", f"Existing OAuth link used: {provider} → {user.email}", level="INFO")
-        return {"access_token": token, "token_type": "bearer", "is_new_user": False}
+        return {**_token_pair(user.user_id, user.email), "is_new_user": False}
 
     # ── 2. Email already registered (manual or other provider) ───────────────
     existing = get_db().execute_query(
@@ -213,15 +217,13 @@ def find_or_create_oauth_user(
                 "provider_email":   email,
             },
         )
-        # OAuth confirms the email — mark verified if it wasn't already
         if not user.email_verified:
             get_db().execute_query(
                 "UPDATE users SET email_verified = TRUE, email_verified_at = NOW() WHERE user_id = :uid",
                 params={"uid": user.user_id},
             )
-        token = create_access_token({"sub": user.email}, timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
         logger("OAUTH", f"OAuth linked to existing account: {provider} → {user.email}", level="INFO")
-        return {"access_token": token, "token_type": "bearer", "is_new_user": False}
+        return {**_token_pair(user.user_id, user.email), "is_new_user": False}
 
     # ── 3. Brand new user ─────────────────────────────────────────────────────
     # Store a random hash so the password column is never NULL while still
@@ -253,13 +255,11 @@ def find_or_create_oauth_user(
         },
     )
 
-    token = create_access_token({"sub": email}, timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     logger("OAUTH", f"New user created via OAuth: {provider} → {email}", level="INFO")
     return {
-        "access_token": token,
-        "token_type":   "bearer",
-        "is_new_user":  True,
-        "user_id":      user_id,
-        "email":        email,
-        "note":         "No profile yet — call POST /auth/add-role to set up your freelancer or client profile.",
+        **_token_pair(user_id, email),
+        "is_new_user": True,
+        "user_id":     user_id,
+        "email":       email,
+        "note":        "No profile yet — call POST /auth/add-role to set up your freelancer or client profile.",
     }

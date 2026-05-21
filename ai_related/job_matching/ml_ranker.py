@@ -22,9 +22,10 @@ as one where the budget is triple their rate — cosine similarity alone cannot
 distinguish those two situations.
 
 The 13-feature CatBoost model explicitly captures signals that cosine cannot:
+  • Skill coverage            (skill_overlap_pct, skill_required_matched, skill_required_total,
+                               skill_depth, preferred_skill_pct)
   • Budget compatibility      (rate_in_budget, rate_ratio)
-  • Experience alignment      (experience_level_match, exp_delta, recency_score)
-  • Speciality fit            (speciality_match — keyword in job title)
+  • Experience alignment      (experience_level_match, exp_delta)
   • Past-work relevance       (portfolio_relevance — recency-weighted cosine over
                                portfolio_embedding ∪ contract_embedding)
   • Profile depth             (work_exp_count, total_jobs)
@@ -72,11 +73,10 @@ Features (13 model features, all non-NaN for every freelancer)
 
   Semantic         : cosine_sim, portfolio_relevance
   Skill fit        : skill_overlap_pct, skill_required_matched, skill_required_total,
-                     skill_depth (proficiency-weighted)
+                     skill_depth (proficiency-weighted), preferred_skill_pct (bonus)
                      — all computed on the best-matching role only
   Experience fit   : experience_level_match, exp_delta
   Budget fit       : rate_in_budget, rate_ratio (from best-matching role's budget)
-  Context          : speciality_match  (domain_match removed — cosine_sim subsumes it)
   Profile depth    : work_exp_count, total_jobs
 
   recency_score and has_portfolio are computed internally but not passed to the
@@ -269,68 +269,117 @@ import math as _math
 _RECENCY_DECAY_LAMBDA = _math.log(2.0) / _RECENCY_HALF_LIFE_MONTHS
 
 
-# Human-readable labels for SHAP contribution output. Keys must match the
-# feature names in feature_cols.json. Used only for surfacing match_reasons —
-# does not affect scoring.
-_FEATURE_LABELS: dict[str, str] = {
-    "cosine_sim":             "Profile semantically matches the job",
-    "skill_overlap_pct":      "Strong overlap with required skills",
-    "skill_required_matched": "Many required skills matched",
-    "skill_required_total":   "Job's required-skill count fits your profile",
-    "experience_level_match": "Experience level meets the job's requirement",
-    "exp_delta":              "Experience level aligned with the job",
-    "rate_in_budget":         "Your rate fits the job's budget",
-    "rate_ratio":             "Rate-to-budget ratio is favourable",
-    "speciality_match":       "Speciality appears in the job title",
-    "has_portfolio":          "Portfolio strengthens your profile",
-    "work_exp_count":         "Past work experience supports the fit",
-    "total_jobs":             "Track record of completed jobs",
-    "recency_score":          "Recently active in this kind of work",
-    "skill_depth":            "Strong proficiency in the required skills",
-    "portfolio_relevance":    "Past work resembles this job",
+# Positive-context labels: shown when a feature pushes the score UP.
+_FEATURE_LABELS_POS: dict[str, str] = {
+    "cosine_sim":             "Your profile closely matches this job",
+    "skill_overlap_pct":      "You have all the required skills",
+    "skill_required_matched": "You match many of the required skills",
+    "skill_required_total":   "This role has a broad skill set you can cover",
+    "experience_level_match": "Your experience level meets the requirement",
+    "exp_delta":              "You exceed the required experience level",
+    "rate_in_budget":         "Your rate fits within the job's budget",
+    "rate_ratio":             "Your rate is well within the budget",
+    "has_portfolio":          "Your portfolio supports your application",
+    "work_exp_count":         "Your work history strengthens the fit",
+    "total_jobs":             "Your completed jobs build credibility",
+    "recency_score":          "You've recently worked on similar projects",
+    "skill_depth":            "You're highly proficient in the required skills",
+    "portfolio_relevance":    "Your past work closely resembles this project",
+    "preferred_skill_pct":    "You also cover the nice-to-have skills",
+}
+
+# Negative-context labels: shown when a feature pulls the score DOWN.
+_FEATURE_LABELS_NEG: dict[str, str] = {
+    "cosine_sim":             "Your profile doesn't closely match this job description",
+    "skill_overlap_pct":      "You're missing some of the required skills",
+    "skill_required_matched": "Few of your skills match what's required",
+    "skill_required_total":   "This role has many requirements you don't yet cover",
+    "experience_level_match": "Your experience level is below what this job requires",
+    "exp_delta":              "You need more experience to be competitive here",
+    "rate_in_budget":         "Your rate may be above this job's budget",
+    "rate_ratio":             "Your rate significantly exceeds this role's budget",
+    "has_portfolio":          "Adding portfolio examples would strengthen your application",
+    "work_exp_count":         "More work history would improve your chances",
+    "total_jobs":             "Building more completed jobs will boost your ranking",
+    "recency_score":          "You haven't worked on similar projects recently",
+    "skill_depth":            "Your proficiency level may not meet what's needed",
+    "portfolio_relevance":    "Your past work isn't closely related to this project",
+    "preferred_skill_pct":    "You're missing some of the preferred skills",
+}
+
+# Features in the same group represent the same underlying concept.
+# Only the strongest contributor per group is shown across BOTH lists —
+# this prevents contradictory signals like "you have all required skills [+]"
+# and "few skills match [−]" appearing on the same job card.
+_FEATURE_GROUP: dict[str, str] = {
+    "skill_overlap_pct":      "skill_coverage",
+    "skill_required_matched": "skill_coverage",
+    "skill_required_total":   "skill_coverage",
+    "skill_depth":            "skill_proficiency",
+    "preferred_skill_pct":    "skill_preferred",
+    "experience_level_match": "experience",
+    "exp_delta":              "experience",
+    "rate_in_budget":         "budget",
+    "rate_ratio":             "budget",
+    "cosine_sim":             "semantic",
+    "portfolio_relevance":    "portfolio",
+    "work_exp_count":         "track_record",
+    "total_jobs":             "track_record",
+    "recency_score":          "recency",
+    "has_portfolio":          "portfolio_existence",
 }
 
 
-def _top_match_reasons(
+def _build_reason_lists(
     contribs_row: np.ndarray,
     feat_cols: list[str],
-    top_k: int = 3,
-) -> list[dict]:
-    """Top-K positive SHAP contributors (why the job ranked high)."""
-    feat_contribs = contribs_row[: len(feat_cols)]
-    pos_idx = np.where(feat_contribs > 0)[0]
-    if pos_idx.size == 0:
-        return []
-    top_idx = pos_idx[np.argsort(-feat_contribs[pos_idx])[:top_k]]
-    return [
-        {
-            "feature":      feat_cols[i],
-            "label":        _FEATURE_LABELS.get(feat_cols[i], feat_cols[i]),
-            "contribution": round(float(feat_contribs[i]), 4),
-        }
-        for i in top_idx
-    ]
+    pos_k: int = 3,
+    neg_k: int = 2,
+) -> tuple[list[dict], list[dict]]:
+    """
+    Build match_reasons and penalty_reasons together so group deduplication
+    is enforced across both lists.
 
-
-def _top_penalty_reasons(
-    contribs_row: np.ndarray,
-    feat_cols: list[str],
-    top_k: int = 2,
-) -> list[dict]:
-    """Top-K negative SHAP contributors (what is dragging the score down)."""
+    Features are processed by absolute contribution (strongest first). The
+    first feature to claim a group wins it — subsequent features in the same
+    group are skipped regardless of sign. This prevents the same concept
+    (e.g. skill coverage, experience level) from appearing as both a positive
+    and a negative signal on the same job card.
+    """
     feat_contribs = contribs_row[: len(feat_cols)]
-    neg_idx = np.where(feat_contribs < 0)[0]
-    if neg_idx.size == 0:
-        return []
-    top_idx = neg_idx[np.argsort(feat_contribs[neg_idx])[:top_k]]
-    return [
-        {
-            "feature":      feat_cols[i],
-            "label":        _FEATURE_LABELS.get(feat_cols[i], feat_cols[i]),
-            "contribution": round(float(feat_contribs[i]), 4),
-        }
-        for i in top_idx
-    ]
+    sorted_idx    = np.argsort(-np.abs(feat_contribs))
+
+    seen_groups:    set[str]   = set()
+    match_reasons:  list[dict] = []
+    penalty_reasons: list[dict] = []
+
+    for i in sorted_idx:
+        if len(match_reasons) >= pos_k and len(penalty_reasons) >= neg_k:
+            break
+        contrib = float(feat_contribs[i])
+        if contrib == 0:
+            continue
+        feat  = feat_cols[i]
+        group = _FEATURE_GROUP.get(feat, feat)
+        if group in seen_groups:
+            continue
+
+        if contrib > 0 and len(match_reasons) < pos_k:
+            seen_groups.add(group)
+            match_reasons.append({
+                "feature":      feat,
+                "label":        _FEATURE_LABELS_POS.get(feat, feat),
+                "contribution": round(contrib, 4),
+            })
+        elif contrib < 0 and len(penalty_reasons) < neg_k:
+            seen_groups.add(group)
+            penalty_reasons.append({
+                "feature":      feat,
+                "label":        _FEATURE_LABELS_NEG.get(feat, feat),
+                "contribution": round(contrib, 4),
+            })
+
+    return match_reasons, penalty_reasons
 
 
 def _infer_exp_level(total_jobs: int) -> int:
@@ -349,8 +398,8 @@ def _load_freelancer_context(db, freelancer_id: str) -> dict | None:
     """
     Load all freelancer signals needed for feature engineering in one DB pass.
 
-    Fetches rate, job count, skills, specialities, languages, portfolio count,
-    and work experience count. All signals are profile-based — no performance
+    Fetches rate, job count, skills, portfolio count, and work experience count.
+    All signals are profile-based — no performance
     history or rating signals are included, so every freelancer (new or experienced)
     gets an equally complete feature vector.
 
@@ -389,18 +438,6 @@ def _load_freelancer_context(db, freelancer_id: str) -> dict | None:
         skill_ids.add(sid)
         prof = (r.get("proficiency_level") or "").lower()
         skill_prof[sid] = _PROFICIENCY_WEIGHT.get(prof, 0.5)
-
-    # Specialities (lowercased names — used for word-level matching against job title/desc)
-    f_specs = db.execute_query(
-        """
-        SELECT s.speciality_name
-        FROM freelancer_speciality fs
-        JOIN speciality s ON s.speciality_id = fs.speciality_id
-        WHERE fs.freelancer_id = :fid
-        """,
-        {"fid": freelancer_id},
-    )
-    spec_names = {r["speciality_name"].lower() for r in f_specs}
 
     # Portfolio + completed contracts + work experience counts.
     # has_portfolio = 1 if the freelancer has ANY past-work evidence — manual
@@ -462,7 +499,7 @@ def _load_freelancer_context(db, freelancer_id: str) -> dict | None:
     logger(
         "ML_RANKER",
         f"Freelancer context loaded | freelancer_id={freelancer_id} "
-        f"| skills={len(skill_ids)} | specs={list(spec_names)} "
+        f"| skills={len(skill_ids)} "
         f"| rate={row.get('estimated_rate')} {row.get('rate_time')} "
         f"| total_jobs={total_jobs} | exp_level={exp_num} "
         f"| portfolio={port[0]['cnt'] if port else 0} | completed_contracts={completed[0]['cnt'] if completed else 0} "
@@ -480,7 +517,6 @@ def _load_freelancer_context(db, freelancer_id: str) -> dict | None:
         "exp_num":           exp_num,
         "skill_ids":         skill_ids,
         "skill_prof":        skill_prof,
-        "spec_names":        spec_names,
         "has_portfolio": float(
             1 if (port and port[0]["cnt"] > 0) or (completed and completed[0]["cnt"] > 0) else 0
         ),
@@ -592,22 +628,6 @@ def _compute_job_features(db, fc: dict, job: dict) -> dict:
         rate_ratio     = 1.0
         rate_in_budget = 1.0
 
-    # Speciality match: word-level title check
-    # Check if any significant word (>3 chars) from the freelancer's speciality
-    # names appears in the job title. Word-level matching is more robust than
-    # full-phrase substring search — speciality names like "Backend Development"
-    # rarely appear verbatim in titles like "Senior Backend Engineer".
-    # domain_match (title+description check) was removed: cosine_sim already
-    # captures broader semantic domain alignment more accurately.
-    job_title_lower = str(job.get("job_title", "")).lower()
-
-    speciality_match = float(
-        1 if fc["spec_names"] and any(
-            any(word in job_title_lower for word in sp.split() if len(word) > 3)
-            for sp in fc["spec_names"]
-        ) else 0
-    )
-
     # skill_depth: proficiency-weighted overlap on required skills
     # Proficiency-weighted overlap on required skills. Beginner=0.3 → Expert=1.0.
     # If skill_required_total=0, skill_depth=0 (job has no required skills).
@@ -616,6 +636,14 @@ def _compute_job_features(db, fc: dict, job: dict) -> dict:
         sum(fc["skill_prof"].get(sid, 0.5) for sid in matched_ids) / skill_required_total
         if skill_required_total > 0
         else 0.0
+    )
+
+    # preferred_skill_pct: fraction of preferred/nice-to-have skills the freelancer has.
+    # 0.0 when the role lists no preferred skills — treated as neutral, not a penalty.
+    pref_skill_total   = len(pref_skills)
+    pref_skill_matched = len(fc["skill_ids"] & pref_skills)
+    preferred_skill_pct = (
+        pref_skill_matched / pref_skill_total if pref_skill_total > 0 else 0.0
     )
 
     # recency_score: not a model feature, used for cold-start context
@@ -692,11 +720,11 @@ def _compute_job_features(db, fc: dict, job: dict) -> dict:
         f"Features computed | job_post_id={jp_id} | title='{job.get('job_title','')[:40]}' "
         f"| cosine={cosine_sim:.4f} | skill_overlap={skill_overlap_pct:.2%} "
         f"({skill_required_matched}/{skill_required_total}) "
-        f"| skill_depth={skill_depth:.3f} | recency={recency_score:.3f} "
+        f"| skill_depth={skill_depth:.3f} | pref_skill={preferred_skill_pct:.2%} "
+        f"| recency={recency_score:.3f} "
         f"| portfolio_rel={portfolio_relevance:.3f} "
         f"| exp_match={bool(experience_level_match)} | exp_delta={exp_delta:+.0f} "
-        f"| rate_in_budget={bool(rate_in_budget)} | rate_ratio={rate_ratio:.2f} "
-        f"| speciality_match={bool(speciality_match)}",
+        f"| rate_in_budget={bool(rate_in_budget)} | rate_ratio={rate_ratio:.2f}",
         level="DEBUG",
     )
 
@@ -708,11 +736,11 @@ def _compute_job_features(db, fc: dict, job: dict) -> dict:
         "skill_required_matched": float(skill_required_matched),
         "skill_required_total":   float(skill_required_total),
         "skill_depth":            float(skill_depth),
+        "preferred_skill_pct":    float(preferred_skill_pct),
         "experience_level_match": experience_level_match,
         "exp_delta":              exp_delta,
         "rate_in_budget":         rate_in_budget,
         "rate_ratio":             rate_ratio,
-        "speciality_match":       speciality_match,
         "work_exp_count":         fc["work_exp_count"],
         "total_jobs":             float(fc["total_jobs"]),
     }
@@ -787,7 +815,7 @@ def rank_jobs_with_ml(
         # (bias/baseline). Used to attach top-3 match_reasons to each job so the
         # homepage can show "why this ranked high" without a second model call.
         # CatBoost returns shape (n_samples, n_features + 1) matching LightGBM's
-        # pred_contrib=True format, so _top_match_reasons works unchanged.
+        # pred_contrib=True format, so _build_reason_lists works unchanged.
         try:
             from catboost import Pool as _CatPool
             contribs = model.get_feature_importance(_CatPool(X), type="ShapValues")
@@ -807,8 +835,7 @@ def rank_jobs_with_ml(
             job["skill_overlap_pct"] = round(
                 float(feat_df.iloc[i]["skill_overlap_pct"]) * 100, 1
             )
-            job["match_reasons"] = _top_match_reasons(contribs[i], feat_cols, top_k=3)
-            job["penalty_reasons"] = _top_penalty_reasons(contribs[i], feat_cols, top_k=2)
+            job["match_reasons"], job["penalty_reasons"] = _build_reason_lists(contribs[i], feat_cols, pos_k=3, neg_k=2)
 
         ranked = sorted(job_rows, key=lambda j: j["match_probability"], reverse=True)
         top = ranked[:top_n]
@@ -843,4 +870,5 @@ def _cosine_fallback(job_rows: list[dict], top_n: int) -> list[dict]:
         job.setdefault("match_probability", round(float(job.get("similarity_score", 0)) * 100, 1))
         job.setdefault("skill_overlap_pct", 0.0)
         job.setdefault("match_reasons", [])
+        job.setdefault("penalty_reasons", [])
     return sorted_rows

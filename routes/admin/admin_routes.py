@@ -32,15 +32,19 @@ from routes.admin.admin_functions import (
     force_expire_reports,
     force_expire_scam_flags,
     get_admin_dashboard_stats,
+    get_admin_user_detail,
     get_client_scam_record,
+    get_appeal,
+    get_appeal_status,
     get_user_appeals,
+    get_report,
     list_appeals,
     list_moderation_queue,
     list_report_auto_actions,
     list_report_targets,
     list_reports,
     list_scam_flags,
-    queue_toxicity_scan,
+    queue_harmful_text_scan,
     queue_scam_scan,
     resolve_appeal,
     submit_appeal,
@@ -111,7 +115,7 @@ async def admin_dashboard(current_user: UserInDB = Depends(get_admin_user)):
         return ResponseSchema.error(f"Failed to fetch dashboard stats: {e}", 500)
 
 
-# ─── toxicity detection ───────────────────────────────────────────────────────
+# ─── harmful text detection ───────────────────────────────────────────────────
 
 @admin_router.get("/moderation")
 async def list_moderation(
@@ -123,7 +127,7 @@ async def list_moderation(
     page_size:    int = Query(default=20, ge=1, le=100),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """List toxicity detection queue items. Supports filtering by status and content_type, and sorting."""
+    """List harmful text detection queue items. Supports filtering by status and content_type, and sorting."""
     try:
         if status not in ("pending", "approved", "rejected", "all"):
             return ResponseSchema.error("status must be pending, approved, rejected, or all", 400)
@@ -196,11 +200,11 @@ async def trigger_content_scan(
     body: ContentScanBody,
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Manually trigger a toxicity detection scan (admin utility)."""
+    """Manually trigger a harmful text detection scan (admin utility)."""
     try:
         if body.content_type not in ("job_post", "freelancer_profile", "client_profile"):
             return ResponseSchema.error("content_type must be job_post, freelancer_profile, or client_profile", 400)
-        result = queue_toxicity_scan(
+        result = queue_harmful_text_scan(
             content_type=body.content_type,
             content_id=body.content_id,
             user_id=body.user_id,
@@ -496,25 +500,71 @@ async def force_expire_report_target(
         return ResponseSchema.error(f"Force expire failed: {e}", 500)
 
 
+@admin_router.get("/reports/{report_id}")
+async def admin_get_report(
+    report_id: str,
+    current_user: UserInDB = Depends(get_admin_user),
+):
+    """Fetch a single report by ID with full reporter and target details."""
+    try:
+        item = get_report(report_id)
+        if not item:
+            return ResponseSchema.error("Report not found", 404)
+        logger("ADMIN", f"Report {report_id} fetched by {current_user.user_id}", "GET /admin/reports/{report_id}", "INFO")
+        return ResponseSchema.success(item, 200)
+    except Exception as e:
+        logger("ADMIN", f"Get report error: {e}", "GET /admin/reports/{report_id}", "ERROR")
+        return ResponseSchema.error(f"Failed to fetch report: {e}", 500)
+
+
 # ─── appeals (admin view) ─────────────────────────────────────────────────────
 
 @admin_router.get("/appeals")
 async def admin_list_appeals(
-    status:    str = Query(default="pending", description="pending | approved | rejected | all"),
-    page:      int = Query(default=1, ge=1),
-    page_size: int = Query(default=20, ge=1, le=100),
+    status:         str           = Query(default="pending", description="pending | approved | rejected | all"),
+    target_type:    Optional[str] = Query(default=None,      description="user | job_post"),
+    appeal_attempt: Optional[int] = Query(default=None,      description="1 = first appeal, 2 = final attempt", ge=1, le=2),
+    search:         Optional[str] = Query(default=None,      description="Partial match on submitter email"),
+    page:           int           = Query(default=1, ge=1),
+    page_size:      int           = Query(default=20, ge=1, le=100),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """List all user appeals."""
+    """List all user appeals with optional filters by status, target type, attempt number, and submitter email."""
     try:
         if status not in ("pending", "approved", "rejected", "all"):
             return ResponseSchema.error("status must be pending, approved, rejected, or all", 400)
-        items = list_appeals(status=status, page=page, page_size=page_size)
-        logger("ADMIN", f"Appeals fetched: status={status} page={page}", "GET /admin/appeals", "INFO")
+        if target_type and target_type not in ("user", "job_post"):
+            return ResponseSchema.error("target_type must be 'user' or 'job_post'", 400)
+        items = list_appeals(
+            status=status,
+            target_type=target_type,
+            appeal_attempt=appeal_attempt,
+            search=search,
+            page=page,
+            page_size=page_size,
+        )
+        logger("ADMIN", f"Appeals fetched: status={status} target_type={target_type} attempt={appeal_attempt} page={page}", "GET /admin/appeals", "INFO")
         return ResponseSchema.success(items, 200)
     except Exception as e:
         logger("ADMIN", f"Appeals list error: {e}", "GET /admin/appeals", "ERROR")
         return ResponseSchema.error(f"Failed to fetch appeals: {e}", 500)
+
+
+@admin_router.get("/appeals/{appeal_id}")
+async def admin_get_appeal(
+    appeal_id: str,
+    current_user: UserInDB = Depends(get_admin_user),
+):
+    """Fetch a single appeal by ID."""
+    try:
+        item = get_appeal(appeal_id)
+        if not item:
+            return ResponseSchema.error("Appeal not found", 404)
+        logger("ADMIN", f"Appeal {appeal_id} fetched by {current_user.user_id}", "GET /admin/appeals/{appeal_id}", "INFO")
+        return ResponseSchema.success(item, 200)
+    except Exception as e:
+        logger("ADMIN", f"Get appeal error: {e}", "GET /admin/appeals/{appeal_id}", "ERROR")
+        return ResponseSchema.error(f"Failed to fetch appeal: {e}", 500)
 
 
 @admin_router.post("/appeals/{appeal_id}/approve")
@@ -747,12 +797,59 @@ async def admin_browse_users(
         return ResponseSchema.error(f"Failed to list users: {e}", 500)
 
 
+@admin_router.get("/users/{user_id}")
+async def admin_get_user(
+    user_id: str,
+    current_user: UserInDB = Depends(get_admin_user),
+):
+    """Fetch full details for a single user account."""
+    try:
+        item = get_admin_user_detail(user_id)
+        if not item:
+            return ResponseSchema.error("User not found", 404)
+        logger("ADMIN", f"User {user_id} fetched by {current_user.user_id}", "GET /admin/users/{user_id}", "INFO")
+        return ResponseSchema.success(item, 200)
+    except Exception as e:
+        logger("ADMIN", f"Get user detail error: {e}", "GET /admin/users/{user_id}", "ERROR")
+        return ResponseSchema.error(f"Failed to fetch user: {e}", 500)
+
+
 # ─── reports (user-facing) ────────────────────────────────────────────────────
 
 @reports_router.get("/reasons")
 async def get_report_reasons(current_user: UserInDB = Depends(get_current_user)):
     """Return the list of predefined report reasons."""
     return ResponseSchema.success({"reasons": VALID_REPORT_REASONS}, 200)
+
+
+@appeals_router.get("/status")
+async def user_get_appeal_status(
+    target_type: str,
+    target_id: str,
+    current_user: UserInDB = Depends(get_current_user),
+):
+    """
+    Check whether the current user can appeal a specific target and what their status is.
+
+    Query params:
+      target_type: 'user' | 'job_post'
+      target_id:   UUID of the banned user or closed job post
+
+    Response:
+      can_appeal        bool   — whether submitting a new appeal is allowed right now
+      appeals_remaining int    — how many more appeals can be submitted
+      state             str    — never_appealed | pending | rejected_can_retry | rejected_final | approved
+      message           str    — human-readable message for the frontend to display
+      restriction_reason str|null — the reason for the ban/closure, if stored
+    """
+    try:
+        if target_type not in ("user", "job_post"):
+            return ResponseSchema.error("target_type must be 'user' or 'job_post'", 400)
+        result = get_appeal_status(current_user.user_id, target_type, target_id)
+        return ResponseSchema.success(result, 200)
+    except Exception as e:
+        logger("APPEAL", f"Appeal status check error: {e}", "GET /appeals/status", "ERROR")
+        return ResponseSchema.error(f"Failed to check appeal status: {e}", 500)
 
 
 @appeals_router.post("")
@@ -779,6 +876,8 @@ async def user_submit_appeal(
             return ResponseSchema.error("Failed to submit appeal", 500)
         logger("APPEAL", f"User {current_user.user_id} appealed {body.target_type} {body.target_id}", "POST /appeals", "INFO")
         return ResponseSchema.success({"message": "Appeal submitted successfully", "appeal_id": str(appeal["appeal_id"])}, 201)
+    except HTTPException as e:
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("APPEAL", f"Submit appeal error: {e}", "POST /appeals", "ERROR")
         return ResponseSchema.error(f"Failed to submit appeal: {e}", 500)

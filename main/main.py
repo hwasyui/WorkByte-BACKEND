@@ -19,9 +19,7 @@ from routes.users.users_routes import users_router
 from routes.freelancers.freelancer_routes import freelancer_router
 from routes.clients.client_routes import client_router
 from routes.skills.skill_routes import skill_router
-from routes.specialities.speciality_routes import speciality_router
 from routes.freelancer_skills.freelancer_skill_routes import freelancer_skill_router
-from routes.freelancer_specialities.freelancer_speciality_routes import freelancer_speciality_router
 from routes.work_experience.work_experience_routes import work_experience_router
 from routes.education.education_routes import education_router
 from routes.job_posts.job_post_routes import job_post_router
@@ -36,8 +34,6 @@ from routes.saved_jobs.saved_job_routes import saved_job_router
 from routes.ratings.rating_routes import rating_router
 from routes.performance_ratings.performance_rating_routes import performance_rating_router
 from routes.client_trust_scores.client_trust_score_routes import client_trust_score_router
-from routes.freelancer_embeddings.freelancer_embedding_routes import freelancer_embedding_router
-from routes.job_embeddings.job_embedding_routes import job_embedding_router
 from routes.dm.dm_routes import dm_router
 from routes.upload.upload_route import upload_router
 from routes.cv_upload.cv_upload_routes import cv_upload_router
@@ -45,7 +41,7 @@ from routes.contract_submissions.contract_submission_routes import contract_subm
 from routes.reviews.review_routes import review_router
 from routes.dashboard.dashboard_routes import dashboard_router
 from ai_related.cv_analysis.cv_analysis_routes import cv_analysis_router
-from ai_related.toxicity_detection.toxicity_routes import toxicity_router
+from ai_related.harmful_text_detection.harmful_text_routes import harmful_text_router
 from routes.admin.admin_routes import admin_router, reports_router, appeals_router
 from routes.notifications.notification_routes import notification_router
 
@@ -74,13 +70,13 @@ async def lifespan(app: FastAPI):
     # Warm up ML models in background — both load large weights from disk on
     # first use, causing a cold-start delay on the first real request.
     # Running them concurrently at startup means they're ready before any user hits them.
-    def _warmup_toxicity():
+    def _warmup_harmful_text():
         try:
-            from ai_related.toxicity_detection.model_inference import load_model
+            from ai_related.harmful_text_detection.model_inference import load_model
             load_model("best")
-            logger("LIFESPAN", "Toxicity model warmed up (roberta)", level="INFO")
+            logger("LIFESPAN", "Harmful text model warmed up (roberta)", level="INFO")
         except Exception as e:
-            logger("LIFESPAN", f"Toxicity model warm-up failed (non-fatal): {e}", level="WARNING")
+            logger("LIFESPAN", f"Harmful text model warm-up failed (non-fatal): {e}", level="WARNING")
 
     def _warmup_embedding():
         try:
@@ -90,7 +86,7 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             logger("LIFESPAN", f"Embedding model warm-up failed (non-fatal): {e}", level="WARNING")
 
-    asyncio.create_task(asyncio.to_thread(_warmup_toxicity))
+    asyncio.create_task(asyncio.to_thread(_warmup_harmful_text))
     asyncio.create_task(asyncio.to_thread(_warmup_embedding))
 
     yield
@@ -128,16 +124,11 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(oauth_router)
 
-# Users router are not included
-# We are handling user authentication through the auth_router.
-# app.include_router(users_router)
-
+app.include_router(users_router)
 app.include_router(freelancer_router)
 app.include_router(client_router)
 app.include_router(skill_router)
-app.include_router(speciality_router)
 app.include_router(freelancer_skill_router)
-app.include_router(freelancer_speciality_router)
 app.include_router(work_experience_router)
 app.include_router(education_router)
 app.include_router(job_post_router)
@@ -152,8 +143,6 @@ app.include_router(saved_job_router)
 app.include_router(rating_router)
 app.include_router(performance_rating_router)
 app.include_router(client_trust_score_router)
-app.include_router(freelancer_embedding_router)
-app.include_router(job_embedding_router)
 app.include_router(dm_router)
 app.include_router(upload_router)
 app.include_router(cv_upload_router)
@@ -162,7 +151,7 @@ app.include_router(contract_submission_router)
 app.include_router(review_router)
 app.include_router(dashboard_router)
 app.include_router(job_matching_router, prefix="/ai/job_matching")
-app.include_router(toxicity_router)
+app.include_router(harmful_text_router)
 app.include_router(admin_router)
 app.include_router(reports_router)
 app.include_router(appeals_router)

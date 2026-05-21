@@ -103,24 +103,8 @@ designed to complement each other, not agree with each other.
 import os
 import json
 import time
-import httpx
 
 from functions.logger import logger
-
-def _ollama_generate_url() -> str:
-    """
-    Build the Ollama generate endpoint URL from the OLLAMA_URL environment variable.
-
-    Replaces 127.0.0.1 with host.docker.internal so container requests reach the host process.
-
-    Returns:
-        Full URL string for the Ollama /api/generate endpoint.
-    """
-    url = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434/api/generate")
-    if "127.0.0.1" in url:
-        url = url.replace("127.0.0.1", "host.docker.internal")
-    return url
-
 
 _LLM_TIMEOUT = 90.0   # user-triggered, so a longer timeout is fine
 
@@ -195,8 +179,8 @@ def _retrieve_job_context(db, job_post_id: str) -> dict:
 
 def _retrieve_freelancer_context(db, freelancer_id: str, job_post_id: str | None = None) -> dict:
     """
-    Retrieve a freelancer's full profile including skills, specialities,
-    portfolio items, and recent work experience.
+    Retrieve a freelancer's full profile including skills, portfolio items,
+    and recent work experience.
 
     Portfolio items are ranked by cosine similarity to the target job when both
     portfolio_embedding vectors and the job_embedding are available.  This surfaces
@@ -210,20 +194,19 @@ def _retrieve_freelancer_context(db, freelancer_id: str, job_post_id: str | None
             items are ranked by relevance to the job instead of by recency.
 
     Returns:
-        Dict with profile fields plus ``skills``, ``specialities``,
-        ``portfolio`` (up to 3), ``portfolio_retrieval_method``, and
-        ``work_experience`` (up to 3) lists.
+        Dict with profile fields plus ``skills``, ``portfolio`` (up to 3),
+        ``portfolio_retrieval_method``, and ``work_experience`` (up to 3) lists.
         Returns an empty dict if the freelancer is not found.
     """
     logger("RAG_ANALYSER", f"Retrieving freelancer context | freelancer_id={freelancer_id}", level="DEBUG")
 
     f_rows = db.execute_query(
         """
-        SELECT f.full_name, f.bio, f.estimated_rate, f.rate_time, f.rate_currency,
+        SELECT f.full_name, f.title, f.bio, f.estimated_rate, f.rate_time, f.rate_currency,
                f.total_jobs
         FROM freelancer f
         WHERE f.freelancer_id = :fid
-""",
+        """,
         {"fid": freelancer_id},
     )
     if not f_rows:
@@ -243,18 +226,6 @@ def _retrieve_freelancer_context(db, freelancer_id: str, job_post_id: str | None
         {"fid": freelancer_id},
     )
     fc["skills"] = [dict(s) for s in skills]
-
-    # Specialities
-    specs = db.execute_query(
-        """
-        SELECT s.speciality_name, fs.is_primary
-        FROM freelancer_speciality fs
-        JOIN speciality s ON s.speciality_id = fs.speciality_id
-        WHERE fs.freelancer_id = :fid
-        """,
-        {"fid": freelancer_id},
-    )
-    fc["specialities"] = [r["speciality_name"] for r in specs]
 
     # Portfolio — ranked by cosine similarity to the target job when embeddings
     # are ready; otherwise fall back to most-recent-first.
@@ -357,7 +328,7 @@ def _retrieve_freelancer_context(db, freelancer_id: str, job_post_id: str | None
     logger(
         "RAG_ANALYSER",
         f"Freelancer context retrieved | freelancer_id={freelancer_id} | name='{fc.get('full_name', '?')}' "
-        f"| skills={len(fc['skills'])} | specialities={fc['specialities']} "
+        f"| skills={len(fc['skills'])} "
         f"| portfolio={len(fc['portfolio'])} ({portfolio_method}) "
         f"| work_exp={len(fc['work_experience'])} | jobs={fc.get('total_jobs', 0)}",
         level="DEBUG",
@@ -560,6 +531,8 @@ def _build_prompt(job: dict, fc: dict, past_contracts: list[dict]) -> tuple[str,
 
     lines.append("\n=== FREELANCER PROFILE ===")
     lines.append(f"Name:         {fc.get('full_name', '')}")
+    if fc.get("title"):
+        lines.append(f"Title:        {fc['title']}")
     lines.append(f"Jobs done:    {fc.get('total_jobs', 0)} completed")
     lines.append(f"Experience:   {_EXP_LABEL_RAG[fl_exp_num]} (inferred from {total_jobs} completed jobs)")
     lines.append(f"Experience fit: {exp_fit_str}")
@@ -570,8 +543,6 @@ def _build_prompt(job: dict, fc: dict, past_contracts: list[dict]) -> tuple[str,
     bio = (fc.get("bio") or "")[:250]
     if bio:
         lines.append(f"Bio:          {bio}")
-    if fc.get("specialities"):
-        lines.append(f"Specialities: {', '.join(fc['specialities'])}")
     if fc.get("skills"):
         skill_strs = [
             f"{s['skill_name']}[{s['proficiency_level']}]" if s.get("proficiency_level")
@@ -751,7 +722,7 @@ def _parse_llm_json(raw: str, source: str) -> dict:
 
     Args:
         raw: Raw string returned by the LLM.
-        source: Label of the LLM source (e.g. "ollama", "gemini") used in debug logging.
+        source: Label of the LLM source (e.g. "gemini") used in debug logging.
 
     Returns:
         Parsed JSON as a dict. Raises ``json.JSONDecodeError`` if no valid JSON is found.
@@ -787,45 +758,6 @@ def _parse_llm_json(raw: str, source: str) -> dict:
 
     # 4. Nothing worked — let it raise
     return json.loads(raw)
-
-
-async def _call_ollama(prompt: str) -> str:
-    """
-    Send a prompt to the local Ollama /api/generate endpoint and return the raw text response.
-
-    Args:
-        prompt: Full prompt string to send to the model.
-
-    Returns:
-        Raw response text from Ollama. Raises ``RuntimeError`` on non-200 status
-        and ``httpx`` exceptions on network failures.
-    """
-    url   = _ollama_generate_url()
-    model = os.getenv("OLLAMA_LLM", "gemma4:e2b")
-
-    logger(
-        "RAG_ANALYSER",
-        f"Calling Ollama | url={url} | model={model} | prompt_chars={len(prompt)}",
-        level="INFO",
-    )
-    payload = {
-        "model": model,
-        "prompt": prompt,
-        "stream": False,
-        "options": {"temperature": 0.15, "num_predict": 4096},
-    }
-    async with httpx.AsyncClient(timeout=_LLM_TIMEOUT) as client:
-        resp = await client.post(url, json=payload)
-
-    if resp.status_code != 200:
-        raise RuntimeError(f"Ollama HTTP {resp.status_code}: {resp.text[:200]}")
-
-    raw = resp.json().get("response", "").strip()
-    logger("RAG_ANALYSER", f"Ollama response received | chars={len(raw)}", level="INFO")
-    if not raw:
-        raise RuntimeError("Ollama returned empty response — falling back to Gemini")
-    logger("RAG_ANALYSER", f"Ollama raw response (full) |\n{raw}", level="DEBUG")
-    return raw
 
 
 async def _call_google(prompt: str) -> str:
@@ -866,45 +798,24 @@ async def _call_google(prompt: str) -> str:
 
 
 async def _call_llm(prompt: str) -> dict:
-    """
-    Call the LLM and return the parsed JSON result.
-    LLM="local" tries Ollama first and falls back to Google Gemini on any error.
-    LLM="api" goes straight to Gemini.
-    """
-    mode = os.getenv("LLM", "local").strip().lower()
+    """Call Google Gemini and return the parsed JSON result."""
     logger(
         "RAG_ANALYSER",
-        f"LLM call started | mode={mode} | prompt_chars={len(prompt)} | timeout={_LLM_TIMEOUT}s",
+        f"LLM call started | source=gemini | prompt_chars={len(prompt)} | timeout={_LLM_TIMEOUT}s",
         level="INFO",
     )
 
     t0 = time.perf_counter()
     raw = ""
-    source = ""
 
     try:
-        if mode == "local":
-            try:
-                raw = await _call_ollama(prompt)
-                source = "ollama"
-            except Exception as ollama_err:
-                logger(
-                    "RAG_ANALYSER",
-                    f"Ollama failed ({type(ollama_err).__name__}: {ollama_err}) — falling back to Gemini",
-                    level="WARNING",
-                )
-                raw = await _call_google(prompt)
-                source = "gemini_fallback"
-        else:
-            raw = await _call_google(prompt)
-            source = "gemini"
-
+        raw = await _call_google(prompt)
         llm_ms = (time.perf_counter() - t0) * 1000
-        result = _parse_llm_json(raw, source)
+        result = _parse_llm_json(raw, "gemini")
 
         logger(
             "RAG_ANALYSER",
-            f"LLM JSON parsed | source={source} | time={llm_ms:.0f}ms "
+            f"LLM JSON parsed | source=gemini | time={llm_ms:.0f}ms "
             f"| overall_match_score={result.get('overall_match_score', result.get('match_score'))} "
             f"| overall_recommendation={result.get('overall_recommendation', result.get('recommendation'))} "
             f"| roles={len(result.get('roles', []))}",
@@ -912,7 +823,7 @@ async def _call_llm(prompt: str) -> dict:
         )
         logger(
             "RAG_ANALYSER",
-            f"LLM result (full JSON) | source={source} |\n{json.dumps(result, indent=2, default=str)}",
+            f"LLM result (full JSON) | source=gemini |\n{json.dumps(result, indent=2, default=str)}",
             level="DEBUG",
         )
         return result
@@ -921,21 +832,14 @@ async def _call_llm(prompt: str) -> dict:
         elapsed = (time.perf_counter() - t0) * 1000
         logger(
             "RAG_ANALYSER",
-            f"JSON parse error | source={source} | time={elapsed:.0f}ms "
+            f"JSON parse error | source=gemini | time={elapsed:.0f}ms "
             f"| error={exc} | raw_preview={raw[:300]}",
             level="ERROR",
         )
         return {"error": "LLM returned non-JSON output", "raw_preview": raw[:200]}
-    except httpx.TimeoutException:
-        elapsed = (time.perf_counter() - t0) * 1000
-        logger("RAG_ANALYSER", f"Ollama timed out after {elapsed:.0f}ms", level="ERROR")
-        return {"error": "LLM request timed out — try again"}
-    except httpx.ConnectError as exc:
-        logger("RAG_ANALYSER", f"Cannot connect to Ollama | error={exc}", level="ERROR")
-        return {"error": "Cannot connect to Ollama. Is it running?"}
     except Exception as exc:
         elapsed = (time.perf_counter() - t0) * 1000
-        logger("RAG_ANALYSER", f"LLM call failed | source={source} | time={elapsed:.0f}ms | error={exc}", level="ERROR")
+        logger("RAG_ANALYSER", f"LLM call failed | source=gemini | time={elapsed:.0f}ms | error={exc}", level="ERROR")
         return {"error": str(exc)}
 
 

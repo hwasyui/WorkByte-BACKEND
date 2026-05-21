@@ -1,7 +1,7 @@
 """
 Builds natural-language "profile documents" from DB data for embedding.
 
-Freelancer: joins freelancer + specialities + skills +
+Freelancer: joins freelancer + skills +
             work_experience + education + portfolio.
 Job:        joins job_post + job_role(s) + job_role_skill(s).
 
@@ -24,7 +24,7 @@ def build_freelancer_source_text(freelancer_id: str) -> Optional[str]:
         db = get_db()
 
         rows = db.execute_query(
-            """SELECT full_name, bio, estimated_rate, rate_time, rate_currency
+            """SELECT full_name, title, bio, estimated_rate, rate_time, rate_currency
                FROM freelancer WHERE freelancer_id = :fid""",
             {"fid": freelancer_id},
         )
@@ -36,24 +36,9 @@ def build_freelancer_source_text(freelancer_id: str) -> Optional[str]:
 
         parts: list[str] = []
 
-        # specialities
-        spec_rows = db.execute_query(
-            """SELECT s.speciality_name, fs.is_primary
-               FROM freelancer_speciality fs
-               JOIN speciality s ON s.speciality_id = fs.speciality_id
-               WHERE fs.freelancer_id = :fid
-               ORDER BY fs.is_primary DESC, s.speciality_name ASC""",
-            {"fid": freelancer_id},
-        )
-        if spec_rows:
-            specs = [
-                f"{r['speciality_name']}{' (primary)' if r['is_primary'] else ''}"
-                for r in spec_rows
-            ]
-            parts.append(f"Specialities: {', '.join(specs)}")
-            logger("SOURCE_TEXT_BUILDER", f"  {len(spec_rows)} speciality(s) added", level="DEBUG")
-        else:
-            logger("SOURCE_TEXT_BUILDER", "  No specialities found", level="DEBUG")
+        if f.get("title"):
+            parts.append(f"Title: {f['title']}")
+            logger("SOURCE_TEXT_BUILDER", f"  Title added: {f['title']}", level="DEBUG")
 
         # skills
         skill_rows = db.execute_query(

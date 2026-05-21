@@ -1,0 +1,32 @@
+Toxicity Detection Model — bert-base-uncased
+============================================================
+
+Folder    : bert
+HF ID     : bert-base-uncased
+Num labels: 5
+Labels    : ['toxicity', 'obscene', 'threat', 'insult', 'identity_hate']
+
+Test Metrics (tuned thresholds):
+  f1                  : 0.8201
+  precision           : 0.7802
+  recall              : 0.8655
+  jaccard             : 0.7648
+  hamming_loss        : 0.0597
+  accuracy            : 0.9403
+  subset_accuracy     : 0.7579
+
+Per-Label Detail:
+  toxicity            : F1=0.9204  P=0.8976  R=0.9444  t=0.56
+  obscene             : F1=0.8328  P=0.7936  R=0.8760  t=0.5
+  threat              : F1=0.6759  P=0.6186  R=0.7449  t=0.5
+  insult              : F1=0.7684  P=0.7152  R=0.8301  t=0.48
+  identity_hate       : F1=0.9030  P=0.8758  R=0.9319  t=0.5
+
+Best Thresholds:
+  toxicity            : 0.560
+  obscene             : 0.500
+  threat              : 0.500
+  insult              : 0.480
+  identity_hate       : 0.500
+
+Train time: 26.0 min

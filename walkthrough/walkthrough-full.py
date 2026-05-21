@@ -1,5 +1,5 @@
 """
-Full Walkthrough — Forgot Password + Heuristic Job Matching + Toxicity Detection
+Full Walkthrough — Forgot Password + Heuristic Job Matching + Harmful Text Detection
 
 Covers three systems end-to-end in one script. All sections run sequentially;
 individual step failures are printed but do not abort later sections.
@@ -26,7 +26,7 @@ SECTION 2  Heuristic Job Matching (3-stage pipeline)
        penalty_reasons (NOT match_probability from old ML ranker)
   2.8  GET /ai/job_matching/analyse/job/{id} (RAG/LLM analysis)
 
-SECTION 3  Toxicity Detection
+SECTION 3  Harmful Text Detection
   3A  Direct ML API (no auth required)
       GET  /toxicity/models   — verify RoBERTa available
       GET  /toxicity/labels   — show 6 harm labels
@@ -562,7 +562,7 @@ def section_job_matching():
 
 
 # ---------------------------------------------------------------------------
-# SECTION 3: Toxicity Detection
+# SECTION 3: Harmful Text Detection
 # ---------------------------------------------------------------------------
 
 CLEAN_TEXT = "I am looking for an experienced Python developer to build a REST API."
@@ -571,14 +571,14 @@ SCAM_TEXT  = "guaranteed income easy money get rich quick no experience needed e
 TOXIC_BIO  = "You are such an idiot! I hate everyone, you're all worthless morons and complete losers."
 
 
-def section_toxicity_detection():
+def section_harmful_text_detection():
     section("CONTENT MODERATION  (ML-first with keyword fallback)")
 
     # ── 3A: Direct ML API ────────────────────────────────────────────────────
     print("\n  [3A] Direct ML API  (/toxicity/*)")
 
     step("GET /toxicity/models — verify RoBERTa is available")
-    s, ms = _call("GET", "/toxicity/models", expected=(200,))
+    s, ms = _call("GET", "/harmful-text/models", expected=(200,))
     if s:
         available = _d(ms).get("available_models", [])
         for m in available:
@@ -591,7 +591,7 @@ def section_toxicity_detection():
         fail("models endpoint failed")
 
     step("GET /toxicity/labels — list the 6 harm labels")
-    s, ls = _call("GET", "/toxicity/labels", expected=(200,))
+    s, ls = _call("GET", "/harmful-text/labels", expected=(200,))
     if s:
         labels = _d(ls)
         info("labels: " + ", ".join(v.get("name", k) for k, v in labels.items() if isinstance(v, dict)))
@@ -600,7 +600,7 @@ def section_toxicity_detection():
         fail("labels endpoint failed")
 
     step("POST /toxicity/detect — CLEAN text (expect is_harmful=False)")
-    s, cr = _call("POST", "/toxicity/detect",
+    s, cr = _call("POST", "/harmful-text/detect",
                   body={"text": CLEAN_TEXT},
                   params={"model_type": "best", "threshold": "0.5"},
                   expected=(200,))
@@ -616,7 +616,7 @@ def section_toxicity_detection():
         fail("moderate endpoint failed for clean text")
 
     step("POST /toxicity/detect — TOXIC text (expect is_harmful=True)")
-    s, tr = _call("POST", "/toxicity/detect",
+    s, tr = _call("POST", "/harmful-text/detect",
                   body={"text": TOXIC_TEXT},
                   params={"model_type": "best", "threshold": "0.5"},
                   expected=(200,))
@@ -633,7 +633,7 @@ def section_toxicity_detection():
 
     step("POST /toxicity/detect-batch — mixed texts (clean + toxic + scam)")
     batch_texts = [CLEAN_TEXT, TOXIC_TEXT, SCAM_TEXT]
-    s, br = _call("POST", "/toxicity/detect-batch",
+    s, br = _call("POST", "/harmful-text/detect-batch",
                   body={"texts": batch_texts},
                   params={"model_type": "best", "threshold": "0.5"},
                   expected=(200,))
@@ -924,7 +924,7 @@ def main():
     try:
         print("=" * 72)
         print("  Capstone API — Full Walkthrough")
-        print("  Forgot Password | Heuristic Job Matching | Toxicity Detection")
+        print("  Forgot Password | Heuristic Job Matching | Harmful Text Detection")
         print("=" * 72)
         print(f"  BASE_URL     : {BASE_URL}")
         print(f"  Timestamp ID : {_TS}")
@@ -934,7 +934,7 @@ def main():
 
         section_forgot_password()
         section_job_matching()
-        section_toxicity_detection()
+        section_harmful_text_detection()
 
         elapsed = time.perf_counter() - t_start
 
@@ -953,7 +953,7 @@ def main():
         print("    Fields verified: heuristic_score, skill_overlap_pct, match_reasons, penalty_reasons")
         print("    match_probability (old ML) confirmed absent")
         print()
-        print("  Section 3 — Toxicity Detection")
+        print("  Section 3 — Harmful Text Detection")
         print("    3A  Direct ML API: /toxicity/detect + moderate_batch")
         print("    3B  Admin manual scan: ML-first with keyword fallback, approve/reject flow")
         print("    3C  Auto-triggered on profile PUT (freelancer_profile + client_profile)")

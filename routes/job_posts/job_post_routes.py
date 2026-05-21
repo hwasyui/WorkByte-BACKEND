@@ -21,7 +21,7 @@ from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.job_posts.job_post_functions import JobPostFunctions
 from ai_related.job_matching.embedding_manager import mark_job_dirty
-from routes.admin.admin_functions import queue_toxicity_scan, queue_scam_scan
+from routes.admin.admin_functions import queue_harmful_text_scan, queue_scam_scan
 
 job_post_router = APIRouter(prefix="/job-posts", tags=["Job Posts"])
 
@@ -219,7 +219,7 @@ async def create_job_post(job_post: JobPostCreate, current_user: UserInDB = Depe
         _title    = job_post.job_title
         _desc     = job_post.job_description
         _scan_text = f"{_title} {_desc}"
-        asyncio.create_task(asyncio.to_thread(queue_toxicity_scan, "job_post", _jp_id, _usr_id, _scan_text))
+        asyncio.create_task(asyncio.to_thread(queue_harmful_text_scan, "job_post", _jp_id, _usr_id, _scan_text))
         asyncio.create_task(asyncio.to_thread(
             queue_scam_scan, _jp_id, _cl_id, _scan_text, _title, _desc,
         ))

@@ -6,16 +6,13 @@ Job matching routes, all mounted under /ai/job_matching (set in main.py).
   POST /embed/freelancer/{id}           — queue freelancer re-embedding
   POST /embed/job/{id}                  — queue job re-embedding
   POST /sweep                           — run dirty-embedding sweep immediately
-  GET  /test_ai_local                   — Ollama connectivity check
 
 Client-side candidate search (cosine only) lives at:
   GET /job-posts/{job_post_id}/candidates
 """
 
-import os
 import time
 import uuid
-import httpx
 from fastapi import APIRouter, Depends, Query
 from typing import Optional
 
@@ -73,8 +70,8 @@ async def match_freelancer_to_jobs(
              across 13 features and returns a calibrated match_probability (0–100).
              Features: cosine_sim, portfolio_relevance, skill_overlap_pct,
              skill_required_matched, skill_required_total, skill_depth,
-             experience_level_match, exp_delta, rate_in_budget, rate_ratio,
-             speciality_match, work_exp_count, total_jobs.
+             preferred_skill_pct, experience_level_match, exp_delta,
+             rate_in_budget, rate_ratio, work_exp_count, total_jobs.
              Returns the top-N sorted by match_probability, each with
              match_reasons (up to 3 positive SHAP contributors) and
              penalty_reasons (up to 2 negative SHAP contributors).
@@ -232,7 +229,17 @@ async def match_freelancer_to_jobs(
                 f"No candidates passed Stage 2 filter | freelancer_id={fid} | total_time={total_ms:.1f}ms",
                 level="WARNING",
             )
-            return ResponseSchema.success({"matches": [], "count": 0, "stage": "pre-filter_empty"}, 200)
+            return ResponseSchema.success({
+                "matches": [],
+                "count": 0,
+                "stage": "pre-filter_empty",
+                "_debug": {
+                    "stage1_candidates": len(candidates),
+                    "stage2_dropped_overlap": dropped_overlap,
+                    "stage2_dropped_no_skills": dropped_no_skills,
+                    "freelancer_skill_count": len(f_skill_ids),
+                },
+            }, 200)
 
         # Stage 3: ML re-rank
         t3 = time.perf_counter()
@@ -381,29 +388,3 @@ async def trigger_sweep(current_user: UserInDB = Depends(get_current_user)):
         return ResponseSchema.error(str(e), 500)
 
 
-@router.get("/test_ai_local")
-async def test_ai_local():
-    """Test the local Ollama instance by sending a simple prompt."""
-    ollama_url = os.getenv("OLLAMA_URL")
-    if not ollama_url:
-        return ResponseSchema.error("OLLAMA_URL not set in environment", 500)
-    if "127.0.0.1" in ollama_url:
-        ollama_url = ollama_url.replace("127.0.0.1", "host.docker.internal")
-
-    payload = {
-        "model": os.getenv("OLLAMA_LLM", "gemma4:e2b"),
-        "prompt": "Hello, can you respond with a simple greeting?",
-        "stream": False,
-    }
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(ollama_url, json=payload, timeout=30.0)
-            if response.status_code == 200:
-                return ResponseSchema.success({"response": response.json().get("response", "")})
-            return ResponseSchema.error(f"Ollama error: {response.status_code}", response.status_code)
-    except httpx.ConnectError:
-        return ResponseSchema.error("Cannot connect to Ollama. Ensure it is running.", 503)
-    except httpx.TimeoutException:
-        return ResponseSchema.error("Ollama request timed out.", 504)
-    except Exception as e:
-        return ResponseSchema.error(str(e), 500)

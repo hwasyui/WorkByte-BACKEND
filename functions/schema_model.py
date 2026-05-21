@@ -1,4 +1,4 @@
-from fastapi import File, Form, UploadFile
+from fastapi import File, Form, Request, UploadFile
 from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional, Any, Dict, List
 from datetime import date, datetime
@@ -81,6 +81,23 @@ class ResetPasswordRequest(BaseModel):
             raise ValueError('Password must be at least 8 characters long')
         return v
 
+class RefreshRequest(BaseModel):
+    refresh_token: str
+
+class GoogleMobileTokenRequest(BaseModel):
+    id_token: str
+
+class ChangePasswordRequest(BaseModel):
+    old_password: str
+    new_password: str
+
+    @field_validator('new_password')
+    @classmethod
+    def password_strength(cls, v):
+        if len(v) < 8:
+            raise ValueError('Password must be at least 8 characters long')
+        return v
+
 class UserResponse(BaseModel):
     user_id: str
     email: str
@@ -138,6 +155,7 @@ class FreelancerCreate(BaseModel):
     freelancer_id: Optional[str] = Form(None)
     user_id: str = Form(...)
     full_name: str = Form(...)
+    title: Optional[str] = Form(None)
     bio: Optional[str] = Form(None)
     profile_picture: Optional[UploadFile] = File(None)
     estimated_rate: Optional[float] = Form(None)
@@ -158,11 +176,13 @@ class FreelancerCreate(BaseModel):
 
 class FreelancerUpdate(BaseModel):
     full_name: Optional[str] = Form(None)
+    title: Optional[str] = Form(None)
     bio: Optional[str] = Form(None)
     profile_picture: Optional[UploadFile] = File(None)
-    estimated_rate: Optional[float] = Form(None)
+    estimated_rate: Optional[float] = None
     rate_time: Optional[str] = Form(None)
     rate_currency: Optional[str] = Form(None)
+    cv_file_url: Optional[str] = None
 
     model_config = {"extra": "forbid"}
 
@@ -177,7 +197,7 @@ class FreelancerUpdate(BaseModel):
         return v
 
     @classmethod
-    def as_form(
+    async def as_form(
         cls,
         full_name: Optional[str] = Form(None),
         bio: Optional[str] = Form(None),
@@ -185,20 +205,35 @@ class FreelancerUpdate(BaseModel):
         estimated_rate: Optional[float] = Form(None),
         rate_time: Optional[str] = Form(None),
         rate_currency: Optional[str] = Form(None),
+        cv_file_url: Optional[str] = Form(None),
+        request: Request = None,
     ) -> "FreelancerUpdate":
-        return cls(
-            full_name=full_name,
-            bio=bio,
-            profile_picture=profile_picture,
-            estimated_rate=estimated_rate,
-            rate_time=rate_time,
-            rate_currency=rate_currency,
-        )
+        form_data = await request.form()
+        form_fields = set(form_data.keys())
+
+        data = {}
+        if "full_name" in form_fields:
+            data["full_name"] = full_name
+        if "bio" in form_fields:
+            data["bio"] = bio
+        if "profile_picture" in form_fields:
+            data["profile_picture"] = profile_picture
+        if "estimated_rate" in form_fields:
+            data["estimated_rate"] = estimated_rate
+        if "rate_time" in form_fields:
+            data["rate_time"] = rate_time
+        if "rate_currency" in form_fields:
+            data["rate_currency"] = rate_currency
+        if "cv_file_url" in form_fields:
+            data["cv_file_url"] = None if not cv_file_url or not cv_file_url.strip() else cv_file_url
+
+        return cls(**data)
 
 class FreelancerResponse(BaseModel):
     freelancer_id: str
     user_id: str
     full_name: str
+    title: Optional[str] = None
     bio: Optional[str] = None
     cv_file_url: Optional[str] = None
     profile_picture_url: Optional[str] = None
@@ -291,26 +326,6 @@ class SkillResponse(BaseModel):
         from_attributes = True
 
 
-# ==================== SPECIALITIES ====================
-class SpecialityCreate(BaseModel):
-    speciality_id: Optional[str] = None  # Auto-generated if not provided
-    speciality_name: str
-    description: Optional[str] = None
-
-class SpecialityUpdate(BaseModel):
-    speciality_name: Optional[str] = None
-    description: Optional[str] = None
-
-class SpecialityResponse(BaseModel):
-    speciality_id: str
-    speciality_name: str
-    description: Optional[str] = None
-    created_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
-
-
 # ==================== FREELANCER SKILLS ====================
 class FreelancerSkillCreate(BaseModel):
     freelancer_skill_id: Optional[str] = None
@@ -326,27 +341,6 @@ class FreelancerSkillResponse(BaseModel):
     freelancer_id: str
     skill_id: str
     proficiency_level: Optional[str] = None
-    created_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
-
-
-# ==================== FREELANCER SPECIALITIES ====================
-class FreelancerSpecialityCreate(BaseModel):
-    freelancer_speciality_id: Optional[str] = None
-    freelancer_id: str
-    speciality_id: str
-    is_primary: Optional[bool] = False
-
-class FreelancerSpecialityUpdate(BaseModel):
-    is_primary: Optional[bool] = None
-
-class FreelancerSpecialityResponse(BaseModel):
-    freelancer_speciality_id: str
-    freelancer_id: str
-    speciality_id: str
-    is_primary: Optional[bool] = False
     created_at: Optional[datetime] = None
 
     class Config:
@@ -1083,19 +1077,9 @@ class FreelancerSkillWithDetails(BaseModel):
     class Config:
         from_attributes = True
 
-class FreelancerSpecialityWithDetails(BaseModel):
-    freelancer_speciality_id: str
-    speciality: SpecialityResponse
-    is_primary: bool
-    created_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
-
 class FreelancerProfileComplete(BaseModel):
     freelancer: FreelancerResponse
     skills: List[FreelancerSkillWithDetails] = []
-    specialities: List[FreelancerSpecialityWithDetails] = []
     education: List[EducationResponse] = []
     work_experience: List[WorkExperienceResponse] = []
     portfolio: List[PortfolioResponse] = []
@@ -1192,3 +1176,37 @@ class NotificationResponse(BaseModel):
     data: Optional[Any] = None
     is_read: bool
     created_at: datetime
+
+
+# ── Apply Profile ──────────────────────────────────────────────────────────────────
+
+class CVApplyWorkExperienceRequest(BaseModel):
+    company_name: str
+    job_title: str
+    location: Optional[str] = None
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    is_current: bool = False
+    description: Optional[str] = None
+
+
+class CVApplyEducationRequest(BaseModel):
+    institution_name: str
+    degree: str
+    field_of_study: Optional[str] = None
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    is_current: bool = False
+    grade: Optional[str] = None
+
+
+class CVApplyRequest(BaseModel):
+    apply_bio: bool = True
+    apply_skills: bool = True
+    apply_work_experience: bool = True
+    apply_education: bool = True
+
+    suggested_bio: Optional[str] = None
+    skills: List[str] = []
+    work_experience: List[CVApplyWorkExperienceRequest] = []
+    education: List[CVApplyEducationRequest] = []

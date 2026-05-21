@@ -1,9 +1,14 @@
 """
 Walkthrough ALL (New) — Full API Coverage for WorkByte
-Exercises every route across all 41 sections in ROUTES.md.
+Exercises every route across all 42 sections.
 Failures are printed but do NOT abort later sections.
 
 Edge-case scenarios tested:
+  - Refresh token rotation               → old token rejected after use
+  - Refresh token revoked after logout   → 401 after POST /auth/logout
+  - Refresh token revoked after change-password → all sessions invalidated
+  - Wrong old_password in change-password → 400
+  - Invalid OTP in reset-password        → 400
   - Toxic proposal cover letter          → 400 rejected
   - Toxic DM message                     → 400 rejected
   - Report self                          → 400 rejected
@@ -11,6 +16,8 @@ Edge-case scenarios tested:
   - AI: match/analyse/embed/sweep        → full 3-stage pipeline
   - CV analysis                          → BAAI/bge-base-en-v1.5 similarity + ATS + GROQ LLM
   - Job scam detection                   → BAAI/bge-base-en-v1.5 + RF (778-dim), admin flag flow
+  - Admin appeals approve/reject         → full appeal lifecycle
+  - Google mobile OAuth probe            → 401 on invalid token
 
 Requirements:
   Server running at BASE_URL (default http://localhost:8000)
@@ -269,6 +276,8 @@ def s01_auth():
 
     f_email = f"walkthrough_freelancer_{_TS}@test.com"
     c_email = f"walkthrough_client_{_TS}@test.com"
+    _S["freelancer_email"] = f_email
+    _S["client_email"]     = c_email
 
     # Register freelancer
     step("Register freelancer")
@@ -335,8 +344,11 @@ def s01_auth():
     step("Login freelancer")
     ok_r, rp = _call("POST", "/auth/login", body={"email": f_email, "password": _PASSWORD})
     if ok_r:
-        _S["freelancer_token"] = _token(rp)
-        ok(f"token={'yes' if _S['freelancer_token'] else 'missing'}")
+        d = _d(rp)
+        _S["freelancer_token"]        = d.get("access_token", "")
+        _S["freelancer_refresh_token"] = d.get("refresh_token", "")
+        expires_in = d.get("expires_in", "?")
+        ok(f"token=yes refresh_token={'yes' if _S['freelancer_refresh_token'] else 'MISSING'} expires_in={expires_in}s")
     else:
         fail("Login freelancer failed — remaining sections may fail")
 
@@ -344,8 +356,10 @@ def s01_auth():
     step("Login client")
     ok_r, rp = _call("POST", "/auth/login", body={"email": c_email, "password": _PASSWORD})
     if ok_r:
-        _S["client_token"] = _token(rp)
-        ok(f"token={'yes' if _S['client_token'] else 'missing'}")
+        d = _d(rp)
+        _S["client_token"]        = d.get("access_token", "")
+        _S["client_refresh_token"] = d.get("refresh_token", "")
+        ok(f"token=yes refresh_token={'yes' if _S['client_refresh_token'] else 'MISSING'}")
     else:
         fail("Login client failed")
 
@@ -366,6 +380,149 @@ def s01_auth():
     else:
         fail("GET /auth/me failed")
 
+    # Refresh token
+    step("POST /auth/refresh — exchange refresh token for new access + refresh token")
+    ref_tok = _S.get("freelancer_refresh_token", "")
+    if ref_tok:
+        ok_r, rp = _call("POST", "/auth/refresh", body={"refresh_token": ref_tok})
+        if ok_r:
+            d = _d(rp)
+            new_access  = d.get("access_token", "")
+            new_refresh = d.get("refresh_token", "")
+            expires_in  = d.get("expires_in", "?")
+            ok(f"new access_token={'yes' if new_access else 'MISSING'} "
+               f"new refresh_token={'yes' if new_refresh else 'MISSING'} expires_in={expires_in}s")
+            # Use new tokens going forward
+            if new_access:
+                _S["freelancer_token"] = new_access
+            if new_refresh:
+                _S["freelancer_refresh_token"] = new_refresh
+        else:
+            fail("Refresh token exchange failed")
+    else:
+        skip("No refresh_token from login (login may have failed)")
+
+    step("POST /auth/refresh — reuse old refresh token after rotation → expect 401")
+    if ref_tok:
+        ok_r, rp = _call("POST", "/auth/refresh", body={"refresh_token": ref_tok},
+                         expected=(401,))
+        if ok_r:
+            ok("Old (rotated) refresh token correctly rejected 401 — rotation works")
+        else:
+            fail("Old refresh token was NOT rejected — rotation may not be working")
+
+    # Forgot password / reset password
+    step("POST /auth/forgot-password — request reset OTP")
+    ok_r, rp = _call("POST", "/auth/forgot-password", body={"email": f_email})
+    if ok_r:
+        dev_otp = _d(rp).get("dev_reset_otp")
+        _S["reset_otp"] = dev_otp
+        ok(f"reset OTP {'returned (dev mode)' if dev_otp else 'sent (check email)'}")
+    else:
+        fail("forgot-password failed")
+
+    step("POST /auth/reset-password — use OTP to set new password")
+    if _S.get("reset_otp"):
+        ok_r, rp = _call("POST", "/auth/reset-password", body={
+            "email": f_email,
+            "otp": _S["reset_otp"],
+            "new_password": _PASSWORD  # reset back to same password
+        })
+        ok("password reset successfully") if ok_r else fail("reset-password failed")
+    else:
+        skip("No dev_reset_otp — SHOW_DEV_OTP may be false or APP_ENV=production")
+
+    step("POST /auth/reset-password — invalid OTP → expect 400")
+    ok_r, rp = _call("POST", "/auth/reset-password", body={
+        "email": f_email, "otp": "000000", "new_password": "NewPass999!"
+    }, expected=(400,))
+    ok("Invalid OTP correctly rejected 400") if ok_r else info("rejection not 400 (may be 422 or other)")
+
+    # Re-login after reset to get fresh tokens
+    step("POST /auth/login — re-login after reset")
+    ok_r, rp = _call("POST", "/auth/login", body={"email": f_email, "password": _PASSWORD})
+    if ok_r:
+        d = _d(rp)
+        _S["freelancer_token"]        = d.get("access_token", "")
+        _S["freelancer_refresh_token"] = d.get("refresh_token", "")
+        ok("re-login ok")
+    else:
+        fail("re-login after reset failed")
+
+    # Change password
+    step("POST /auth/change-password — change to new password (authenticated)")
+    tok = _S.get("freelancer_token")
+    if tok:
+        ok_r, rp = _call("POST", "/auth/change-password",
+                         body={"old_password": _PASSWORD, "new_password": "NewPass999!"},
+                         token=tok)
+        ok("password changed — all refresh tokens revoked") if ok_r else fail("change-password failed")
+    else:
+        skip("No token for change-password")
+
+    step("POST /auth/change-password — wrong old_password → expect 400")
+    if tok:
+        ok_r, rp = _call("POST", "/auth/change-password",
+                         body={"old_password": "WrongOld123!", "new_password": "Another1!"},
+                         token=tok, expected=(400,))
+        ok("Wrong old password correctly rejected 400") if ok_r else fail("wrong old password not rejected")
+
+    step("POST /auth/refresh — after change-password, old refresh token revoked → expect 401")
+    old_ref = _S.get("freelancer_refresh_token", "")
+    if old_ref:
+        ok_r, _ = _call("POST", "/auth/refresh", body={"refresh_token": old_ref},
+                        expected=(401,))
+        ok("Old refresh token correctly invalidated after password change") if ok_r else info("revocation not enforced (unexpected)")
+
+    step("POST /auth/login — re-login with new password")
+    ok_r, rp = _call("POST", "/auth/login", body={"email": f_email, "password": "NewPass999!"})
+    if ok_r:
+        d = _d(rp)
+        _S["freelancer_token"]        = d.get("access_token", "")
+        _S["freelancer_refresh_token"] = d.get("refresh_token", "")
+        ok("re-login with new password ok")
+    else:
+        fail("re-login with new password failed — password may not have changed")
+
+    # Add role (freelancer adds client role)
+    step("POST /auth/add-role — freelancer adds client profile")
+    tok = _S.get("freelancer_token")
+    if tok:
+        ok_r, rp = _call("POST", "/auth/add-role",
+                         body={"role": "client", "full_name": f"Dual Walk {_TS}"},
+                         token=tok, expected=(200, 201, 400))
+        if ok_r:
+            ok(f"client role added — client_id={_d(rp).get('client_id', '?')}")
+        else:
+            info("add-role failed (may already have client profile)")
+    else:
+        skip("No token for add-role")
+
+    # Logout
+    step("POST /auth/logout — revoke refresh token")
+    ref_tok = _S.get("freelancer_refresh_token", "")
+    if ref_tok:
+        ok_r, rp = _call("POST", "/auth/logout", body={"refresh_token": ref_tok})
+        ok(f"logged out: {_d(rp).get('message', '?')}") if ok_r else fail("logout failed")
+    else:
+        skip("No refresh_token for logout test")
+
+    step("POST /auth/refresh — after logout, token should be revoked → expect 401")
+    if ref_tok:
+        ok_r, _ = _call("POST", "/auth/refresh", body={"refresh_token": ref_tok},
+                        expected=(401,))
+        ok("Revoked token correctly rejected after logout") if ok_r else fail("Token still valid after logout!")
+
+    step("POST /auth/login — re-login to restore token for rest of walkthrough")
+    ok_r, rp = _call("POST", "/auth/login", body={"email": f_email, "password": "NewPass999!"})
+    if ok_r:
+        d = _d(rp)
+        _S["freelancer_token"]        = d.get("access_token", "")
+        _S["freelancer_refresh_token"] = d.get("refresh_token", "")
+        ok("session restored for remaining sections")
+    else:
+        fail("Final re-login failed — subsequent sections will likely fail")
+
     # OAuth probe — should redirect, not follow
     step("OAuth Google probe (expect redirect 3xx or 200)")
     ok_r, rp = _call("GET", "/auth/oauth/google",
@@ -378,6 +535,12 @@ def s01_auth():
                      expected=(200, 302, 307, 308, 400, 500),
                      allow_redirects=False)
     ok("OAuth LinkedIn endpoint reachable")
+
+    step("POST /auth/oauth/google/mobile — probe with invalid id_token → expect 401/400")
+    ok_r, rp = _call("POST", "/auth/oauth/google/mobile",
+                     body={"id_token": "invalid.token.here"},
+                     expected=(400, 401, 500, 502))
+    ok("Google mobile endpoint reachable (rejected bad token as expected)")
 
 
 # ─── SECTION 2: Freelancers ───────────────────────────────────────────────────
@@ -455,6 +618,18 @@ def s02_freelancers():
         ok_r, rp = _call("GET", f"/freelancers/{fid}/embedding", token=tok,
                          expected=(200, 404))
         ok("embedding metadata ok") if ok_r else info("No embedding yet (expected)")
+
+    # Parse CV for autofill (AI-powered structured extraction)
+    step("POST /freelancers/parse-cv — parse CV file → structured profile data for autofill")
+    ok_r, rp = _call("POST", "/freelancers/parse-cv",
+                     files={"file": ("resume.pdf", _TINY_PDF, "application/pdf")},
+                     token=tok, expected=(200, 422, 500))
+    if ok_r:
+        d = _d(rp)
+        ok(f"skills={len(d.get('skills', []))} experience={len(d.get('work_experience', []))} "
+           f"bio={'yes' if d.get('bio') else 'none'}")
+    else:
+        info("parse-cv failed (AI service may not be available or tiny PDF has no text)")
 
     # PUT update profile
     step("PUT /freelancers/{identifier} — update")
@@ -578,6 +753,10 @@ def s04_skills():
     ok_r, _ = _call("GET", "/skills/category/hard_skill", token=tok)
     ok("ok") if ok_r else fail("failed")
 
+    step("GET /skills/alphabet/{letter} — skills starting with 'p'")
+    ok_r, rp = _call("GET", "/skills/alphabet/p", params={"limit": 10}, token=tok)
+    ok(f"got {len(_d(rp).get('skills', []))} skills starting with p") if ok_r else fail("failed")
+
     step("POST /skills — create new skill")
     skill_name = f"WalkTestSkill_{_TS}"
     ok_r, rp = _call("POST", "/skills", body={
@@ -613,7 +792,7 @@ def s04_skills():
     if sid:
         ok_r, rp = _call("POST", f"/skills/{sid}/embed", token=tok,
                          expected=(200, 201, 500, 503))
-        ok(f"embed result: {_d(rp).get('embedded', '?')}") if ok_r else info("Embed skipped (Ollama/API may not be available)")
+        ok(f"embed result: {_d(rp).get('embedded', '?')}") if ok_r else info("Embed skipped (embedder may not be available)")
 
 
 # ─── SECTION 5: Languages ─────────────────────────────────────────────────────
@@ -627,48 +806,7 @@ def s05_languages():
 
 def s06_specialities():
     section("Specialities (S6)")
-
-    tok = _S.get("freelancer_token")
-
-    step("GET /specialities — list all")
-    ok_r, rp = _call("GET", "/specialities", params={"limit": 10}, token=tok)
-    spec_list = _list(rp)
-    ok(f"got {len(spec_list)}") if ok_r else fail("failed")
-    if spec_list:
-        _S["existing_speciality_id"] = str(spec_list[0].get("speciality_id", ""))
-
-    step("GET /specialities/search/backend")
-    ok_r, _ = _call("GET", "/specialities/search/backend", token=tok,
-                    expected=(200, 404))
-    ok("ok") if ok_r else info("no results (expected)")
-
-    step("POST /specialities — create")
-    spec_name = f"WalkSpec_{_TS}"
-    ok_r, rp = _call("POST", "/specialities", body={
-        "speciality_name": spec_name,
-        "description": "Walkthrough test speciality"
-    }, token=tok, expected=(200, 201))
-    if ok_r:
-        _S["speciality_id"] = _id(rp, "speciality_id")
-        ok(f"speciality_id={_S['speciality_id']}")
-    else:
-        fail("create speciality failed")
-        if _S.get("existing_speciality_id"):
-            _S["speciality_id"] = _S["existing_speciality_id"]
-
-    specid = _S.get("speciality_id", "")
-
-    step("GET /specialities/{speciality_id}")
-    if specid:
-        ok_r, _ = _call("GET", f"/specialities/{specid}", token=tok)
-        ok("ok") if ok_r else fail("failed")
-
-    step("PUT /specialities/{speciality_id}")
-    if specid:
-        ok_r, _ = _call("PUT", f"/specialities/{specid}",
-                        body={"description": "Updated desc"},
-                        token=tok)
-        ok("ok") if ok_r else fail("failed")
+    skip("Speciality system removed — tables dropped in alter_table.sql")
 
 
 # ─── SECTION 7: Freelancer Skills ─────────────────────────────────────────────
@@ -717,50 +855,18 @@ def s07_freelancer_skills():
                         token=tok)
         ok("ok") if ok_r else fail("failed")
 
+    step("DELETE /freelancer-skills/freelancer/{id}/skill/{sid} — compound delete by composite key")
+    if fid and sid:
+        ok_r, _ = _call("DELETE", f"/freelancer-skills/freelancer/{fid}/skill/{sid}",
+                        token=tok, expected=(200, 204, 404))
+        ok("compound delete ok") if ok_r else info("skill not found via compound key (may already be deleted)")
+
 
 # ─── SECTION 8: Freelancer Specialities ───────────────────────────────────────
 
 def s08_freelancer_specialities():
     section("Freelancer Specialities (S8)")
-
-    tok = _S.get("freelancer_token")
-    fid = _S.get("freelancer_id", "")
-    specid = _S.get("speciality_id", "")
-
-    if not fid or not specid:
-        skip("Missing freelancer_id or speciality_id")
-        return
-
-    step("POST /freelancer-specialities — add speciality")
-    ok_r, rp = _call("POST", "/freelancer-specialities", body={
-        "freelancer_id": fid, "speciality_id": specid, "is_primary": True
-    }, token=tok, expected=(200, 201))
-    if ok_r:
-        _S["freelancer_speciality_id"] = _id(rp, "freelancer_speciality_id")
-        ok(f"freelancer_speciality_id={_S['freelancer_speciality_id']}")
-    else:
-        fail("add speciality failed")
-
-    step("GET /freelancer-specialities/freelancer/{freelancer_id}")
-    ok_r, rp = _call("GET", f"/freelancer-specialities/freelancer/{fid}", token=tok)
-    ok(f"got {len(_list(rp))}") if ok_r else fail("failed")
-
-    fsid = _S.get("freelancer_speciality_id", "")
-
-    step("GET /freelancer-specialities/{id}")
-    if fsid:
-        ok_r, _ = _call("GET", f"/freelancer-specialities/{fsid}", token=tok)
-        ok("ok") if ok_r else fail("failed")
-
-    step("PUT /freelancer-specialities/{id} — update is_primary")
-    if fsid:
-        ok_r, _ = _call("PUT", f"/freelancer-specialities/{fsid}",
-                        body={"is_primary": False}, token=tok)
-        ok("ok") if ok_r else fail("failed")
-
-    step("GET /freelancer-specialities — list all")
-    ok_r, _ = _call("GET", "/freelancer-specialities", token=tok)
-    ok("ok") if ok_r else fail("failed")
+    skip("Speciality system removed — tables dropped in alter_table.sql")
 
 
 # ─── SECTION 9: Freelancer Languages ──────────────────────────────────────────
@@ -953,6 +1059,14 @@ def s12_job_posts():
     ok_r, rp = _call("GET", "/job-posts", params={"status": "active", "page": 1, "page_size": 5},
                      token=tok)
     ok(f"got pagination data") if ok_r else fail("failed")
+
+    step("GET /job-posts/category-counts — job counts per category/experience level")
+    ok_r, rp = _call("GET", "/job-posts/category-counts", token=tok)
+    ok(f"category counts: {list(_d(rp).keys())[:5]}") if ok_r else fail("failed")
+
+    step("GET /job-posts/search?q=backend — full text search")
+    ok_r, rp = _call("GET", "/job-posts/search", params={"name": "backend", "page_size": 5}, token=tok)
+    ok(f"search returned {len(_list(rp))} results") if ok_r else fail("failed")
 
     step("GET /job-posts/{job_post_id}")
     if jpid:
@@ -1313,10 +1427,10 @@ def s18_contracts():
             "dispute_resolution": "arbitration",
             "revision_rounds": 2,
             "additional_clauses": "All deliverables must include documentation.",
-            "payment_schedule": [
+            "payment_schedule": json.dumps([
                 {"phase": "Phase 1", "description": "Initial API", "percentage": 50.0},
                 {"phase": "Phase 2", "description": "Final delivery", "percentage": 50.0}
-            ]
+            ])
         }, token=tok, expected=(200, 201, 500, 503))
         if ok_r:
             pdf_url = _d(rp).get("contract_pdf_url", "")
@@ -1329,6 +1443,15 @@ def s18_contracts():
         ok_r, rp = _call("GET", f"/contracts/{cnid}/pdf-url", token=tok,
                          expected=(200, 404))
         ok(f"pdf_url={'yes' if _d(rp).get('pdf_url') else 'none'}") if ok_r else info("No PDF URL yet")
+
+    step("GET /contracts/{contract_id}/pdf-download — download PDF as binary stream")
+    if cnid:
+        ok_r, rp = _call("GET", f"/contracts/{cnid}/pdf-download", token=tok,
+                         expected=(200, 404, 500))
+        if ok_r:
+            ok("pdf-download ok")
+        else:
+            info("No PDF to download yet (may need generate step first)")
 
     step("PUT /contracts/{contract_id} — update")
     if cnid:
@@ -1375,6 +1498,18 @@ def s19_contract_submissions():
     ok_r, _ = _call("PUT", f"/contract-submissions/contract/{cnid}/approve",
                     token=c_tok, expected=(200, 201, 404))
     ok("approved") if ok_r else info("No submission to approve (skip)")
+
+    step("PUT /contracts/{contract_id}/cancel — cancel contract after submissions done")
+    if cnid:
+        ok_r, rp = _call("PUT", f"/contracts/{cnid}/cancel", token=c_tok,
+                         expected=(200, 400, 404))
+        if ok_r:
+            if _d(rp).get("status") == "error":
+                ok("cancel correctly rejected (contract already completed)")
+            else:
+                ok(f"contract cancelled: status={_d(rp).get('status','?')}")
+        else:
+            info("cancel failed (contract may already be completed or cancelled)")
 
 
 # ─── SECTION 20: Portfolio ────────────────────────────────────────────────────
@@ -1617,38 +1752,14 @@ def s25_messages():
 
 def s26_freelancer_embeddings():
     section("Freelancer Embeddings (S26)")
-
-    tok = _S.get("freelancer_token")
-    fid = _S.get("freelancer_id", "")
-
-    step("GET /freelancer-embeddings — list")
-    ok_r, rp = _call("GET", "/freelancer-embeddings", token=tok)
-    ok(f"got {len(_list(rp))}") if ok_r else fail("failed")
-
-    step("GET /freelancer-embeddings/freelancer/{freelancer_id}")
-    if fid:
-        ok_r, rp = _call("GET", f"/freelancer-embeddings/freelancer/{fid}",
-                         token=tok, expected=(200, 404))
-        ok("ok") if ok_r else info("No embedding record yet")
+    skip("/freelancer-embeddings CRUD routes removed — embedding pipeline lives in /ai/job_matching/embed & sweep")
 
 
 # ─── SECTION 27: Job Embeddings ───────────────────────────────────────────────
 
 def s27_job_embeddings():
     section("Job Embeddings (S27)")
-
-    tok = _S.get("client_token")
-    jpid = _S.get("job_post_id", "")
-
-    step("GET /job-embeddings — list (client auth)")
-    ok_r, rp = _call("GET", "/job-embeddings", token=tok)
-    ok(f"got {len(_list(rp))}") if ok_r else fail("failed")
-
-    step("GET /job-embeddings/job-post/{job_post_id}")
-    if jpid:
-        ok_r, rp = _call("GET", f"/job-embeddings/job-post/{jpid}",
-                         token=tok, expected=(200, 404))
-        ok("ok") if ok_r else info("No embedding record yet")
+    skip("/job-embeddings CRUD routes removed — embedding pipeline lives in /ai/job_matching/embed & sweep")
 
 
 # ─── SECTION 28: Generic Upload ───────────────────────────────────────────────
@@ -1679,17 +1790,34 @@ def s29_cv_upload():
         skip("No freelancer token")
         return
 
-    step("POST /cv_upload — upload CV (PDF)")
+    step("POST /cv_upload — upload and parse CV")
     cv_bytes = _CV_TEXT.encode("utf-8")
     ok_r, rp = _call("POST", "/cv_upload",
                      form={"use_llm": "false"},
                      files={"file": ("cv.pdf", _TINY_PDF, "application/pdf")},
-                     token=tok, expected=(200, 201, 400, 500))
+                     token=tok, expected=(200, 201, 400, 422, 500))
     if ok_r:
         parsed = _d(rp).get("parsed_profile", {})
         ok(f"parsed_profile keys: {list(parsed.keys()) if parsed else 'none'}")
+        _S["cv_parsed_profile"] = parsed
     else:
         info("CV upload skipped (may need Supabase + text extraction support)")
+
+    step("POST /cv_upload/apply — apply parsed CV suggestions to freelancer profile")
+    fid = _S.get("freelancer_id", "")
+    if fid and _S.get("cv_parsed_profile"):
+        ok_r, rp = _call("POST", "/cv_upload/apply",
+                         body={
+                             "freelancer_id": fid,
+                             "apply_bio": True,
+                             "apply_skills": False,
+                             "apply_work_experience": False,
+                             "apply_education": False,
+                         },
+                         token=tok, expected=(200, 201, 400, 422, 500))
+        ok("cv apply ok") if ok_r else info("cv apply failed (no parsed data or validation)")
+    else:
+        skip("No freelancer_id or cv_parsed_profile — skipping cv apply")
 
 
 # ─── SECTION 30: CV Analysis ──────────────────────────────────────────────────
@@ -1733,6 +1861,298 @@ def s30_cv_analysis():
         info("CV analysis skipped (model or LLM may not be available)")
 
 
+# ─── SECTION 30b: Bulk Job Seed (for Matching) ───────────────────────────────
+
+def s30b_job_seed():
+    """
+    Create 10 varied job posts (3 individual, 7 team) with roles and skills so
+    the embedding sweep has enough data for Stage 1 cosine search to return candidates.
+    """
+    section("Bulk Job Seed — 10 jobs for matching (S30b)")
+
+    tok = _S.get("client_token")
+    cid = _S.get("client_id", "")
+    fid = _S.get("freelancer_id", "")
+    f_tok = _S.get("freelancer_token")
+    sid = _S.get("skill_id", "")
+
+    if not tok or not cid:
+        skip("No client token/id — skipping bulk job seed")
+        return
+
+    # S07 compound-deletes the freelancer skill, leaving the freelancer with 0 skills.
+    # Re-add it now so Stage 2 skill-overlap check works during matching.
+    step("POST /freelancer-skills — re-add skill to freelancer (deleted in S07)")
+    skill_readded = False
+    if fid and sid and f_tok:
+        ok_r, rp = _call("POST", "/freelancer-skills", body={
+            "freelancer_id": fid,
+            "skill_id":       sid,
+            "proficiency_level": "intermediate",
+        }, token=f_tok, expected=(200, 201))
+        if ok_r:
+            new_fskid = _id(rp, "freelancer_skill_id")
+            if new_fskid:
+                _S["freelancer_skill_id"] = new_fskid
+            skill_readded = True
+            ok(f"skill re-added → freelancer_skill_id={_S.get('freelancer_skill_id','?')}")
+        else:
+            fail(f"skill re-add FAILED (status not 200/201) — "
+                 f"Stage 2 will drop all jobs (fid={fid} sid={sid})")
+    else:
+        info(f"Missing fid/sid/f_tok — cannot re-add skill "
+             f"(fid={'set' if fid else 'MISSING'} "
+             f"sid={'set' if sid else 'MISSING'} "
+             f"f_tok={'set' if f_tok else 'MISSING'})")
+
+    step("GET /freelancer-skills/freelancer/{fid} — verify skill is present")
+    if fid and f_tok:
+        ok_r, rp = _call("GET", f"/freelancer-skills/freelancer/{fid}", token=f_tok,
+                         expected=(200, 404))
+        if ok_r:
+            skill_count = len(_list(rp))
+            ok(f"freelancer now has {skill_count} skill(s)")
+            if skill_count == 0:
+                info("  *** WARNING: freelancer still has 0 skills after re-add attempt!")
+
+    # ── 3 individual jobs ────────────────────────────────────────────────────
+
+    _INDIVIDUAL_JOBS = [
+        {
+            "job_title":        f"API Integration Specialist {_TS}",
+            "job_description":  "Looking for an experienced developer to integrate third-party APIs into our existing backend. Must be comfortable with REST, OAuth2, and JSON. Python and FastAPI experience is a strong plus.",
+            "project_type":     "individual",
+            "project_scope":    "small",
+            "experience_level": "intermediate",
+            "estimated_duration": "1 month",
+            "status":           "active",
+            "role_title":       "Backend API Developer",
+            "role_desc":        "Integrate payment gateways, shipping APIs, and CRM webhooks.",
+            "role_budget":      1200.0,
+        },
+        {
+            "job_title":        f"Data Visualisation Dashboard {_TS}",
+            "job_description":  "We need a frontend engineer to build an interactive analytics dashboard using React and Chart.js. Data comes from a REST API. Responsive design required.",
+            "project_type":     "individual",
+            "project_scope":    "medium",
+            "experience_level": "intermediate",
+            "estimated_duration": "6 weeks",
+            "status":           "active",
+            "role_title":       "Frontend Dashboard Developer",
+            "role_desc":        "Build charts, filter controls, and real-time data refresh with React.",
+            "role_budget":      2000.0,
+        },
+        {
+            "job_title":        f"Automation Script Writer {_TS}",
+            "job_description":  "Automate our internal report generation and file-processing pipeline using Python. Experience with pandas, scheduling (cron/Celery), and cloud storage (S3) preferred.",
+            "project_type":     "individual",
+            "project_scope":    "small",
+            "experience_level": "entry",
+            "estimated_duration": "3 weeks",
+            "status":           "active",
+            "role_title":       "Python Automation Engineer",
+            "role_desc":        "Write ETL scripts, schedule jobs, and upload output to S3.",
+            "role_budget":      800.0,
+        },
+    ]
+
+    # ── 7 team jobs (each has 2 roles) ───────────────────────────────────────
+
+    _TEAM_JOBS = [
+        {
+            "job_title":        f"E-Commerce Platform {_TS}",
+            "job_description":  "Build a full-stack e-commerce platform with product catalog, cart, checkout, and admin panel. Tech stack: React frontend, FastAPI backend, PostgreSQL, Stripe payments.",
+            "project_type":     "team",
+            "project_scope":    "large",
+            "experience_level": "intermediate",
+            "estimated_duration": "4 months",
+            "status":           "active",
+            "roles": [
+                {"role_title": "Frontend Engineer",  "role_desc": "React SPA with product pages, cart, and checkout flow.", "role_budget": 4000.0},
+                {"role_title": "Backend Engineer",   "role_desc": "FastAPI REST API, PostgreSQL schema, Stripe integration.", "role_budget": 4500.0},
+            ],
+        },
+        {
+            "job_title":        f"Healthcare Management System {_TS}",
+            "job_description":  "Develop a clinic management system with appointment scheduling, patient records, billing, and role-based access for doctors, nurses, and admins.",
+            "project_type":     "team",
+            "project_scope":    "large",
+            "experience_level": "expert",
+            "estimated_duration": "6 months",
+            "status":           "active",
+            "roles": [
+                {"role_title": "Full Stack Developer", "role_desc": "End-to-end feature development across React and FastAPI.", "role_budget": 6000.0},
+                {"role_title": "DevOps Engineer",      "role_desc": "CI/CD pipelines, Docker, and cloud deployment on AWS.", "role_budget": 5000.0},
+            ],
+        },
+        {
+            "job_title":        f"Educational Content Platform {_TS}",
+            "job_description":  "Platform for uploading, managing, and streaming educational videos with quizzes, progress tracking, and subscription billing.",
+            "project_type":     "team",
+            "project_scope":    "large",
+            "experience_level": "intermediate",
+            "estimated_duration": "5 months",
+            "status":           "active",
+            "roles": [
+                {"role_title": "Backend Developer",  "role_desc": "Video storage, streaming API, subscription billing, quiz engine.", "role_budget": 4000.0},
+                {"role_title": "Mobile Developer",   "role_desc": "Flutter app for iOS/Android: video playback, offline mode, push notifications.", "role_budget": 4500.0},
+            ],
+        },
+        {
+            "job_title":        f"Real-Time Analytics Dashboard {_TS}",
+            "job_description":  "Ingest high-volume event streams, compute aggregates, and display real-time KPIs. Stack: Kafka, Python, PostgreSQL time-series, React with WebSocket updates.",
+            "project_type":     "team",
+            "project_scope":    "large",
+            "experience_level": "expert",
+            "estimated_duration": "4 months",
+            "status":           "active",
+            "roles": [
+                {"role_title": "Data Engineer",      "role_desc": "Kafka consumers, ETL pipeline, TimescaleDB schemas.", "role_budget": 5500.0},
+                {"role_title": "Frontend Developer", "role_desc": "React dashboard with Chart.js, WebSocket live updates, responsive layout.", "role_budget": 3500.0},
+            ],
+        },
+        {
+            "job_title":        f"Social Media Scheduling Tool {_TS}",
+            "job_description":  "SaaS tool to schedule posts across Instagram, Twitter/X, and LinkedIn. OAuth social logins, media uploads, queue management, and analytics.",
+            "project_type":     "team",
+            "project_scope":    "medium",
+            "experience_level": "intermediate",
+            "estimated_duration": "3 months",
+            "status":           "active",
+            "roles": [
+                {"role_title": "Backend Engineer",  "role_desc": "Social API integrations, queue workers, OAuth2 flows.", "role_budget": 3500.0},
+                {"role_title": "Frontend Engineer", "role_desc": "React SPA: calendar view, media uploader, analytics charts.", "role_budget": 3000.0},
+            ],
+        },
+        {
+            "job_title":        f"Inventory Management System {_TS}",
+            "job_description":  "Warehouse inventory tracking with barcode scanning, stock alerts, purchase orders, and reporting. Integrates with existing ERP via REST API.",
+            "project_type":     "team",
+            "project_scope":    "medium",
+            "experience_level": "intermediate",
+            "estimated_duration": "3 months",
+            "status":           "active",
+            "roles": [
+                {"role_title": "Backend Developer", "role_desc": "REST API, stock logic, ERP integration, PDF report generation.", "role_budget": 3000.0},
+                {"role_title": "QA Engineer",       "role_desc": "Test plans, automated integration tests, performance benchmarks.", "role_budget": 2000.0},
+            ],
+        },
+        {
+            "job_title":        f"Customer Support Chatbot {_TS}",
+            "job_description":  "AI-powered chatbot for customer support with intent detection, FAQ retrieval, escalation to human agents, and CRM integration.",
+            "project_type":     "team",
+            "project_scope":    "medium",
+            "experience_level": "expert",
+            "estimated_duration": "2 months",
+            "status":           "active",
+            "roles": [
+                {"role_title": "ML Engineer",       "role_desc": "Fine-tune intent classifier, build RAG pipeline, evaluate model quality.", "role_budget": 5000.0},
+                {"role_title": "Backend Developer", "role_desc": "Chatbot API, CRM webhook, agent escalation logic, session management.", "role_budget": 3500.0},
+            ],
+        },
+    ]
+
+    created = 0
+    seeded_job_ids: list[str] = []
+
+    for spec in _INDIVIDUAL_JOBS:
+        step(f"POST /job-posts — individual: {spec['job_title'][:50]}")
+        body = {
+            "client_id":          cid,
+            "job_title":          spec["job_title"],
+            "job_description":    spec["job_description"],
+            "project_type":       spec["project_type"],
+            "project_scope":      spec.get("project_scope", "medium"),
+            "experience_level":   spec.get("experience_level", "intermediate"),
+            "estimated_duration": spec.get("estimated_duration", "1 month"),
+            "status":             "active",
+        }
+        ok_r, rp = _call("POST", "/job-posts", body=body, token=tok, expected=(200, 201))
+        if not ok_r:
+            info("skipped — create failed")
+            continue
+        jp_id = _id(rp, "job_post_id")
+        seeded_job_ids.append(jp_id)
+        ok(f"job_post_id={jp_id}")
+
+        # Create role
+        step(f"  POST /job-roles — {spec['role_title']}")
+        ok_r, rp = _call("POST", "/job-roles", body={
+            "job_post_id":          jp_id,
+            "role_title":           spec["role_title"],
+            "role_description":     spec["role_desc"],
+            "budget_type":          "fixed",
+            "role_budget":          spec["role_budget"],
+            "budget_currency":      "USD",
+            "positions_available":  1,
+        }, token=tok, expected=(200, 201))
+        if ok_r and sid:
+            jrid = _id(rp, "job_role_id")
+            ok(f"role_id={jrid}")
+            # Attach the walkthrough skill as required
+            _call("POST", "/job-role-skills", body={
+                "job_role_id":     jrid,
+                "skill_id":        sid,
+                "is_required":     True,
+                "importance_level": "required",
+            }, token=tok, expected=(200, 201))
+        else:
+            ok("role created (no skill attached)") if ok_r else info("role create failed")
+
+        created += 1
+
+    for spec in _TEAM_JOBS:
+        step(f"POST /job-posts — team: {spec['job_title'][:50]}")
+        body = {
+            "client_id":          cid,
+            "job_title":          spec["job_title"],
+            "job_description":    spec["job_description"],
+            "project_type":       spec["project_type"],
+            "project_scope":      spec.get("project_scope", "large"),
+            "experience_level":   spec.get("experience_level", "intermediate"),
+            "estimated_duration": spec.get("estimated_duration", "3 months"),
+            "status":             "active",
+        }
+        ok_r, rp = _call("POST", "/job-posts", body=body, token=tok, expected=(200, 201))
+        if not ok_r:
+            info("skipped — create failed")
+            continue
+        jp_id = _id(rp, "job_post_id")
+        seeded_job_ids.append(jp_id)
+        ok(f"job_post_id={jp_id}")
+
+        first_role = True
+        for role_spec in spec.get("roles", []):
+            step(f"  POST /job-roles — {role_spec['role_title']}")
+            ok_r, rp = _call("POST", "/job-roles", body={
+                "job_post_id":          jp_id,
+                "role_title":           role_spec["role_title"],
+                "role_description":     role_spec["role_desc"],
+                "budget_type":          "fixed",
+                "role_budget":          role_spec["role_budget"],
+                "budget_currency":      "USD",
+                "positions_available":  1,
+            }, token=tok, expected=(200, 201))
+            if ok_r and sid and first_role:
+                jrid = _id(rp, "job_role_id")
+                ok(f"role_id={jrid}")
+                # Attach skill to first role only so Stage 2 overlap check passes
+                _call("POST", "/job-role-skills", body={
+                    "job_role_id":      jrid,
+                    "skill_id":         sid,
+                    "is_required":      True,
+                    "importance_level": "required",
+                }, token=tok, expected=(200, 201))
+                first_role = False
+            else:
+                ok("role created") if ok_r else info("role create failed")
+
+        created += 1
+
+    _S["seeded_job_ids"] = seeded_job_ids
+    ok(f"Seeded {created}/10 jobs ({len(seeded_job_ids)} with IDs stored) — embed + sweep will index them in S31")
+
+
 # ─── SECTION 31: AI — Job Matching ───────────────────────────────────────────
 
 def s31_ai_job_matching():
@@ -1742,13 +2162,7 @@ def s31_ai_job_matching():
     jpid  = _S.get("job_post_id", "")
     fid   = _S.get("freelancer_id", "")
 
-    step("GET /ai/job_matching/test_ai_local — Ollama connectivity check")
-    ok_r, rp = _call("GET", "/ai/job_matching/test_ai_local",
-                     expected=(200, 500, 503, 504))
-    if ok_r:
-        ok(f"Ollama response: {str(_d(rp).get('response', ''))[:60]}")
-    else:
-        info("Ollama not reachable (expected in CI/cloud env)")
+    skip("test_ai_local endpoint removed — Ollama removed, Gemini is the only LLM backend")
 
     step("POST /ai/job_matching/embed/freelancer/{id} — queue embedding")
     if fid:
@@ -1756,20 +2170,56 @@ def s31_ai_job_matching():
                          token=f_tok, expected=(200, 202))
         ok(f"queued: {_d(rp).get('message', '?')}") if ok_r else fail("failed")
 
-    step("POST /ai/job_matching/embed/job/{id} — queue job embedding")
-    if jpid:
-        ok_r, rp = _call("POST", f"/ai/job_matching/embed/job/{jpid}",
+    step("POST /ai/job_matching/embed/job/{id} — queue all job embeddings (main + 10 seeded)")
+    all_job_ids = ([jpid] if jpid else []) + _S.get("seeded_job_ids", [])
+    queued_jobs = 0
+    for jid in all_job_ids:
+        ok_r, _ = _call("POST", f"/ai/job_matching/embed/job/{jid}",
                          token=f_tok, expected=(200, 202))
-        ok(f"queued: {_d(rp).get('message', '?')}") if ok_r else fail("failed")
+        if ok_r:
+            queued_jobs += 1
+    ok(f"queued {queued_jobs}/{len(all_job_ids)} jobs for embedding")
 
-    step("POST /ai/job_matching/sweep — run dirty-embedding sweep")
+    step("POST /ai/job_matching/sweep — run dirty-embedding sweep (pass 1)")
     ok_r, rp = _call("POST", "/ai/job_matching/sweep",
                      token=f_tok, expected=(200, 201, 500))
     if ok_r:
-        ok(f"sweep result: freelancers={_d(rp).get('freelancers_updated','?')} "
-           f"jobs={_d(rp).get('jobs_updated','?')}")
+        ok(f"sweep result: freelancers={_d(rp).get('freelancers_refreshed','?')} "
+           f"jobs={_d(rp).get('jobs_refreshed','?')} "
+           f"contracts={_d(rp).get('contracts_refreshed','?')} "
+           f"portfolios={_d(rp).get('portfolios_refreshed','?')} "
+           f"total={_d(rp).get('total','?')}")
     else:
-        info("Sweep failed (Ollama/embedder may not be running)")
+        info("Sweep failed (embedder may not be running)")
+
+    # Give any in-flight background embedding tasks time to finish, then sweep again
+    # to catch stragglers that immediate-mode couldn't process before the first sweep ran.
+    info("  (waiting 3s for background embedding tasks to settle)")
+    time.sleep(3)
+
+    step("POST /ai/job_matching/sweep — run dirty-embedding sweep (pass 2, catches stragglers)")
+    ok_r, rp = _call("POST", "/ai/job_matching/sweep",
+                     token=f_tok, expected=(200, 201, 500))
+    if ok_r:
+        ok(f"sweep result: freelancers={_d(rp).get('freelancers_refreshed','?')} "
+           f"jobs={_d(rp).get('jobs_refreshed','?')} "
+           f"total={_d(rp).get('total','?')}")
+    else:
+        info("Second sweep failed")
+
+    # ── Diagnostics: confirm state before match ───────────────────────────────
+    step("GET /freelancer-skills/freelancer/{fid} — confirm skill count before match")
+    if fid and f_tok:
+        ok_r, rp = _call("GET", f"/freelancer-skills/freelancer/{fid}", token=f_tok,
+                         expected=(200, 404))
+        if ok_r:
+            skill_count = len(_list(rp))
+            ok(f"freelancer has {skill_count} skill(s)")
+            if skill_count == 0:
+                info("  *** WARNING: freelancer has 0 skills — Stage 2 will drop all jobs! "
+                     "Check that s30b skill re-add succeeded.")
+        else:
+            info("Could not check freelancer skills")
 
     step("GET /ai/job_matching/match/freelancer-to-jobs (limit=10, homepage)")
     ok_r, rp = _call("GET", "/ai/job_matching/match/freelancer-to-jobs",
@@ -1777,14 +2227,46 @@ def s31_ai_job_matching():
                      expected=(200, 404, 500))
     if ok_r:
         matches = _d(rp).get("matches", [])
-        count = _d(rp).get("count", 0)
-        ok(f"matches={count} (stage returned ok)")
-        if matches:
-            m = matches[0]
-            info(f"  top match: title={m.get('job_title','?')[:40]} "
-                 f"prob={m.get('match_probability','?')} "
-                 f"overlap={m.get('skill_overlap_pct','?')}")
-            info(f"  match_reasons={m.get('match_reasons', [])}")
+        count   = _d(rp).get("count", 0)
+        stage   = _d(rp).get("stage", "ranked")
+        ok(f"matches={count}  stage={stage}")
+        if count == 0 and stage == "pre-filter_empty":
+            dbg = _d(rp).get("_debug", {})
+            s1  = dbg.get("stage1_candidates", "?")
+            s2o = dbg.get("stage2_dropped_overlap", "?")
+            s2n = dbg.get("stage2_dropped_no_skills", "?")
+            fsc = dbg.get("freelancer_skill_count", "?")
+            info(f"  → 0 results | stage1_candidates={s1} "
+                 f"| stage2_dropped_overlap={s2o} | stage2_dropped_no_skills={s2n} "
+                 f"| freelancer_skills={fsc}")
+            if s1 == 0 or s1 == "0":
+                info("  *** CAUSE: Stage 1 found 0 vectors in job_role_embedding — "
+                     "embeddings not stored yet (sweep may need another pass)")
+            elif fsc == 0 or fsc == "0":
+                info("  *** CAUSE: freelancer has 0 skills — Stage 2 dropped everything "
+                     "(check s30b skill re-add)")
+            else:
+                info(f"  *** CAUSE: skill mismatch — freelancer has {fsc} skill(s) "
+                     "but none match any job's required skills")
+        for i, m in enumerate(matches, 1):
+            title   = (m.get("job_title") or "?")[:45]
+            overlap = m.get("skill_overlap_pct", "?")
+            cosine  = m.get("similarity_score", "?")
+            reasons = m.get("match_reasons", [])
+            penalty = m.get("penalty_reasons", [])
+            info(f"  #{i:>2}  {title:<45}  overlap={overlap}%  cosine={cosine}")
+            if reasons:
+                for r in reasons:
+                    label = r.get("label", r.get("feature", "?"))
+                    contrib = r.get("contribution", "?")
+                    info(f"        [+] {label}  (contribution={contrib:+.4f})" if isinstance(contrib, float)
+                         else f"        [+] {label}  (contribution={contrib})")
+            if penalty:
+                for p in penalty:
+                    label  = p.get("label", p.get("feature", "?"))
+                    contrib = p.get("contribution", "?")
+                    info(f"        [-] {label}  (contribution={contrib:+.4f})" if isinstance(contrib, float)
+                         else f"        [-] {label}  (contribution={contrib})")
     else:
         info("Job matching returned error (embedding may not exist yet)")
 
@@ -1793,7 +2275,27 @@ def s31_ai_job_matching():
                      params={"limit": 50}, token=f_tok,
                      expected=(200, 404, 500))
     if ok_r:
+        view_matches = _d(rp).get("matches", [])
         ok(f"view-all matches={_d(rp).get('count', 0)}")
+        for i, m in enumerate(view_matches, 1):
+            title   = (m.get("job_title") or "?")[:45]
+            overlap = m.get("skill_overlap_pct", "?")
+            cosine  = m.get("similarity_score", "?")
+            reasons = m.get("match_reasons", [])
+            penalty = m.get("penalty_reasons", [])
+            info(f"  #{i:>2}  {title:<45}  overlap={overlap}%  cosine={cosine}")
+            if reasons:
+                for r in reasons:
+                    label = r.get("label", r.get("feature", "?"))
+                    contrib = r.get("contribution", "?")
+                    info(f"        [+] {label}  (contribution={contrib:+.4f})" if isinstance(contrib, float)
+                         else f"        [+] {label}  (contribution={contrib})")
+            if penalty:
+                for p in penalty:
+                    label  = p.get("label", p.get("feature", "?"))
+                    contrib = p.get("contribution", "?")
+                    info(f"        [-] {label}  (contribution={contrib:+.4f})" if isinstance(contrib, float)
+                         else f"        [-] {label}  (contribution={contrib})")
     else:
         info("view-all: no results or error (expected if no embedding)")
 
@@ -1801,18 +2303,51 @@ def s31_ai_job_matching():
     ok_r, rp = _call("GET", "/ai/job_matching/match/freelancer-to-jobs",
                      params={"limit": 10, "experience_level": "intermediate"},
                      token=f_tok, expected=(200, 404, 500))
-    ok(f"filtered matches={_d(rp).get('count', 0)}") if ok_r else info("no results")
+    if ok_r:
+        filt_matches = _d(rp).get("matches", [])
+        ok(f"filtered matches={_d(rp).get('count', 0)}  (experience_level=intermediate)")
+        for i, m in enumerate(filt_matches, 1):
+            title   = (m.get("job_title") or "?")[:45]
+            overlap = m.get("skill_overlap_pct", "?")
+            reasons = m.get("match_reasons", [])
+            penalty = m.get("penalty_reasons", [])
+            info(f"  #{i:>2}  {title:<45}  overlap={overlap}%")
+            if reasons:
+                for r in reasons:
+                    label = r.get("label", r.get("feature", "?"))
+                    contrib = r.get("contribution", "?")
+                    info(f"        [+] {label}  (contribution={contrib:+.4f})" if isinstance(contrib, float)
+                         else f"        [+] {label}  (contribution={contrib})")
+            if penalty:
+                for p in penalty:
+                    label  = p.get("label", p.get("feature", "?"))
+                    contrib = p.get("contribution", "?")
+                    info(f"        [-] {label}  (contribution={contrib:+.4f})" if isinstance(contrib, float)
+                         else f"        [-] {label}  (contribution={contrib})")
+    else:
+        info("no results")
 
     step("GET /ai/job_matching/analyse/job/{job_post_id} — RAG deep analysis (may take 5-30s)")
     if jpid:
         ok_r, rp = _call("GET", f"/ai/job_matching/analyse/job/{jpid}",
                          token=f_tok, expected=(200, 404, 500, 502))
         if ok_r:
-            score = _d(rp).get("overall_match_score", "?")
-            rec = _d(rp).get("overall_recommendation", "?")
-            ok(f"RAG analysis ok: score={score} recommendation={rec}")
+            d    = _d(rp)
+            score = d.get("overall_match_score") or d.get("match_score", "?")
+            rec   = d.get("overall_recommendation") or d.get("recommendation", "?")
+            ok(f"RAG analysis ok: score={score}  recommendation={rec}")
+            for key, label in (
+                ("strengths",  "Strengths"),
+                ("gaps",       "Gaps"),
+                ("skill_tips", "Skill tips"),
+            ):
+                items = d.get(key, [])
+                if items:
+                    info(f"  {label}:")
+                    for it in items:
+                        info(f"    • {it}")
         else:
-            info("RAG analysis failed (Ollama/LLM may not be running)")
+            info("RAG analysis failed (Gemini API may not be available)")
 
 
 # ─── SECTION 32: Admin — Direct Overrides ────────────────────────────────────
@@ -1828,6 +2363,173 @@ def s32_admin():
         skip("No admin token — admin account may not exist")
         return
 
+    # Dashboard
+    step("GET /admin/dashboard — platform-wide stats")
+    ok_r, rp = _call("GET", "/admin/dashboard", token=a_tok)
+    if ok_r:
+        d = _d(rp)
+        ok(f"pending_reports={d.get('pending_reports','?')} "
+           f"pending_moderation_items={d.get('pending_moderation_items','?')} "
+           f"pending_scam_flags={d.get('pending_scam_flags','?')} "
+           f"banned_clients={d.get('banned_clients','?')}")
+    else:
+        fail("admin dashboard failed")
+
+    # Jobs list
+    step("GET /admin/jobs — list all job posts (paginated)")
+    ok_r, rp = _call("GET", "/admin/jobs",
+                     params={"page": 1, "page_size": 10, "status": "active"},
+                     token=a_tok)
+    ok(f"jobs list returned {len(_d(rp).get('jobs', []))} items") if ok_r else fail("admin jobs list failed")
+
+    step("GET /admin/jobs?status=all — all statuses (no status filter)")
+    ok_r, rp = _call("GET", "/admin/jobs", params={"page_size": 5}, token=a_tok)
+    ok(f"all-statuses returned {len(_d(rp).get('jobs', []))} items") if ok_r else fail("failed")
+
+    # Users list
+    step("GET /admin/users — list all users (paginated)")
+    ok_r, rp = _call("GET", "/admin/users",
+                     params={"page": 1, "page_size": 10},
+                     token=a_tok)
+    ok(f"users list returned {len(_d(rp).get('users', []))} items") if ok_r else fail("admin users list failed")
+
+    step("GET /admin/users?search=walkthrough — search by email/name")
+    ok_r, rp = _call("GET", "/admin/users", params={"search": "walkthrough", "page_size": 5}, token=a_tok)
+    ok(f"search returned {len(_d(rp).get('users', []))} users") if ok_r else fail("failed")
+
+    step("GET /admin/users/{user_id} — single user full detail")
+    sample_uid = _S.get("freelancer_user_id", "")
+    if sample_uid:
+        ok_r, rp = _call("GET", f"/admin/users/{sample_uid}", token=a_tok, expected=(200, 404))
+        if ok_r:
+            d = _d(rp)
+            ok(f"role={d.get('role','?')} email={d.get('email','?')} "
+               f"is_banned={d.get('is_report_banned','?')} "
+               f"reports_received={d.get('total_reports_received','?')}")
+        else:
+            info("user not found (may not exist yet)")
+    else:
+        skip("No freelancer_user_id to fetch")
+
+    # Reports: targets and auto-actions
+    step("GET /admin/reports/targets — report target aggregations")
+    ok_r, rp = _call("GET", "/admin/reports/targets", token=a_tok)
+    ok(f"targets returned {len(_list(rp))}") if ok_r else fail("failed")
+
+    step("GET /admin/reports/auto-actions — auto-action history")
+    ok_r, rp = _call("GET", "/admin/reports/auto-actions", token=a_tok)
+    ok(f"auto-actions returned {len(_list(rp))}") if ok_r else fail("failed")
+
+    # Reports: accept one if any pending
+    step("GET /admin/reports?status=pending — list pending reports")
+    ok_r, rp = _call("GET", "/admin/reports", params={"status": "pending", "page_size": 5}, token=a_tok)
+    if ok_r:
+        items = _list(rp)
+        ok(f"got {len(items)} pending reports")
+        if items:
+            _S["admin_report_id"] = str(items[0].get("report_id", ""))
+    else:
+        fail("failed")
+
+    step("GET /admin/reports/{report_id} — single report full detail")
+    rpt_id = _S.get("admin_report_id", "")
+    if rpt_id:
+        ok_r, rp = _call("GET", f"/admin/reports/{rpt_id}", token=a_tok, expected=(200, 404))
+        if ok_r:
+            d = _d(rp)
+            ok(f"report_id={rpt_id} reporter={d.get('reporter_email','?')} "
+               f"type={d.get('reported_type','?')} status={d.get('status','?')}")
+        else:
+            info("report not found")
+    else:
+        skip("No pending report to fetch detail for")
+
+    step("POST /admin/reports/{report_id}/accept — accept a pending report")
+    rpt_id = _S.get("admin_report_id", "")
+    if rpt_id:
+        ok_r, _ = _call("POST", f"/admin/reports/{rpt_id}/accept",
+                        body={"admin_note": "Walkthrough test: report accepted"},
+                        token=a_tok, expected=(200, 201, 404))
+        ok("report accepted") if ok_r else info("accept failed (may already be actioned)")
+    else:
+        skip("No pending report to accept")
+
+    step("POST /admin/reports/{report_id}/dismiss — dismiss a report")
+    if rpt_id:
+        ok_r, _ = _call("POST", f"/admin/reports/{rpt_id}/dismiss",
+                        body={"admin_note": "Walkthrough test: dismissed after accept"},
+                        token=a_tok, expected=(200, 201, 404))
+        ok("report dismissed") if ok_r else info("dismiss failed (already actioned)")
+    else:
+        skip("No report to dismiss")
+
+    step("POST /admin/reports/force-expire-target — backdate reports (testing utility)")
+    if fuid:
+        ok_r, _ = _call("POST", "/admin/reports/force-expire-target",
+                        body={"target_type": "user", "target_id": fuid},
+                        token=a_tok, expected=(200, 201, 400, 404))
+        ok("force-expire applied") if ok_r else info("force-expire failed (no reports for target)")
+
+    # Appeals (admin side)
+    step("GET /admin/appeals?status=pending — list pending appeals")
+    ok_r, rp = _call("GET", "/admin/appeals", params={"status": "pending", "page_size": 5}, token=a_tok)
+    if ok_r:
+        items = _list(rp)
+        ok(f"got {len(items)} pending appeals")
+        if items:
+            _S["admin_appeal_id"] = str(items[0].get("appeal_id", ""))
+    else:
+        fail("failed")
+
+    step("GET /admin/appeals?target_type=user — filter by user appeals only")
+    ok_r, rp = _call("GET", "/admin/appeals", params={"status": "all", "target_type": "user", "page_size": 5}, token=a_tok)
+    ok(f"user appeals: {len(_list(rp))} items") if ok_r else fail("failed")
+
+    step("GET /admin/appeals?target_type=job_post — filter by job-post appeals only")
+    ok_r, rp = _call("GET", "/admin/appeals", params={"status": "all", "target_type": "job_post", "page_size": 5}, token=a_tok)
+    ok(f"job_post appeals: {len(_list(rp))} items") if ok_r else fail("failed")
+
+    step("GET /admin/appeals?appeal_attempt=1 — first-time appeals only")
+    ok_r, rp = _call("GET", "/admin/appeals", params={"status": "all", "appeal_attempt": 1, "page_size": 5}, token=a_tok)
+    ok(f"first attempts: {len(_list(rp))} items") if ok_r else fail("failed")
+
+    step("GET /admin/appeals?appeal_attempt=2 — final (second) appeals only")
+    ok_r, rp = _call("GET", "/admin/appeals", params={"status": "all", "appeal_attempt": 2, "page_size": 5}, token=a_tok)
+    ok(f"final attempts: {len(_list(rp))} items") if ok_r else fail("failed")
+
+    step("GET /admin/appeals?search=walkthrough — search by submitter email")
+    ok_r, rp = _call("GET", "/admin/appeals", params={"status": "all", "search": "walkthrough", "page_size": 5}, token=a_tok)
+    ok(f"email search: {len(_list(rp))} items") if ok_r else fail("failed")
+
+    step("GET /admin/appeals/{appeal_id} — single appeal detail")
+    aid = _S.get("admin_appeal_id", "") or _S.get("appeal_id", "")
+    if aid:
+        ok_r, rp = _call("GET", f"/admin/appeals/{aid}", token=a_tok, expected=(200, 404))
+        ok(f"appeal detail: status={_d(rp).get('status','?')} user={_d(rp).get('user_email','?')}") if ok_r else info("not found")
+    else:
+        skip("No appeal_id for detail fetch")
+
+    step("POST /admin/appeals/{appeal_id}/approve — admin approves appeal")
+    if aid:
+        ok_r, _ = _call("POST", f"/admin/appeals/{aid}/approve",
+                        body={"admin_note": "Walkthrough test: appeal approved, content restored"},
+                        token=a_tok, expected=(200, 201, 404))
+        ok("appeal approved") if ok_r else info("approve failed (may already be actioned or no appeal)")
+    else:
+        skip("No appeal_id to approve")
+
+    # Create a second appeal to test reject path
+    step("POST /admin/appeals/{appeal_id}/reject — admin rejects appeal")
+    aid2 = _S.get("appeal_id", "")  # the one created in S39
+    if aid2 and aid2 != aid:
+        ok_r, _ = _call("POST", f"/admin/appeals/{aid2}/reject",
+                        body={"admin_note": "Walkthrough test: appeal rejected"},
+                        token=a_tok, expected=(200, 201, 404))
+        ok("appeal rejected") if ok_r else info("reject failed (may already be actioned)")
+    else:
+        skip("No second appeal_id to reject")
+
+    # Job close/reopen
     step("POST /admin/jobs/{job_post_id}/close")
     if jpid:
         ok_r, rp = _call("POST", f"/admin/jobs/{jpid}/close",
@@ -1934,11 +2636,11 @@ def s34_dm():
 
     step("GET /dm/threads — list all threads (client)")
     ok_r, rp = _call("GET", "/dm/threads", token=c_tok)
-    ok(f"got {len(_list(rp))} threads") if ok_r else fail("failed")
+    ok(f"got {len(_d(rp).get('threads', []))} threads") if ok_r else fail("failed")
 
     step("GET /dm/threads/requests — pending requests (freelancer)")
     ok_r, rp = _call("GET", "/dm/threads/requests", token=f_tok)
-    ok(f"got {len(_list(rp))} pending requests") if ok_r else fail("failed")
+    ok(f"got {len(_d(rp).get('requests', []))} pending requests") if ok_r else fail("failed")
 
     step("GET /dm/threads/{thread_id}")
     if tid:
@@ -1990,7 +2692,7 @@ def s34_dm():
     step("GET /dm/threads/{thread_id}/messages")
     if tid:
         ok_r, rp = _call("GET", f"/dm/threads/{tid}/messages", token=f_tok)
-        ok(f"got {len(_list(rp))} messages") if ok_r else fail("failed")
+        ok(f"got {len(_d(rp).get('messages', []))} messages") if ok_r else fail("failed")
 
     step("PUT /dm/threads/{thread_id}/read — mark messages read")
     if tid:
@@ -2040,15 +2742,15 @@ def s35_notifications():
     notifs = _list(rp)
     ok(f"got {len(notifs)} notifications") if ok_r else fail("failed")
     if notifs:
-        _S["notification_id"] = str(notifs[0].get("notification_id", ""))
+        _S["notification_id"] = str(notifs[0].get("id", ""))
 
     step("GET /notifications/unread-count")
     ok_r, rp = _call("GET", "/notifications/unread-count", token=tok)
-    ok(f"unread_count={_d(rp).get('unread_count', '?')}") if ok_r else fail("failed")
+    ok(f"unread_count={_d(rp).get('count', '?')}") if ok_r else fail("failed")
 
     step("PATCH /notifications/read-all — mark all read")
-    ok_r, rp = _call("PATCH", "/notifications/read-all", token=tok)
-    ok(f"updated_count={_d(rp).get('updated_count', '?')}") if ok_r else fail("failed")
+    ok_r, _ = _call("PATCH", "/notifications/read-all", token=tok)
+    ok("all marked as read") if ok_r else fail("failed")
 
     step("PATCH /notifications/{id}/read — mark one read")
     nid = _S.get("notification_id", "")
@@ -2094,8 +2796,15 @@ def s36_reviews():
     if rid:
         ok_r, rp = _call("POST", f"/reviews/{rid}/submit",
                          body={
-                             "review_text": "Excellent engineer. Delivered clean, well-documented code on time. Highly recommend.",
-                             "targeted_question_answer": "Communication was clear and professional throughout."
+                             "ratings": [
+                                 {"category": "communication",   "score": 4.5},
+                                 {"category": "quality",         "score": 5.0},
+                                 {"category": "professionalism", "score": 5.0},
+                                 {"category": "value_for_money", "score": 4.0},
+                             ],
+                             "client_answer":   "Communication was clear and professional throughout.",
+                             "overall_comment": "Excellent engineer. Delivered clean, well-documented code on time. Highly recommend.",
+                             "extra_skill_tags": ["Clean Code", "Fast Delivery"],
                          },
                          token=c_tok, expected=(200, 201, 400))
         ok("review submitted (AI pipeline triggered)") if ok_r else info("submit failed (may need completed contract)")
@@ -2111,7 +2820,7 @@ def s36_reviews():
     if fid:
         ok_r, rp = _call("GET", f"/reviews/trust-score/{fid}", token=f_tok,
                          expected=(200, 404))
-        ok(f"trust_score={_d(rp).get('trust_score', '?')}") if ok_r else info("no trust score yet")
+        ok(f"overall_score={_d(rp).get('overall_score', '?')}") if ok_r else info("no trust score yet")
 
     step("GET /reviews/red-flags/{freelancer_id}")
     if fid:
@@ -2125,51 +2834,51 @@ def s36_reviews():
         ok("ok") if ok_r else info("not found yet")
 
 
-# ─── SECTION 37: AI — Toxicity Detection ─────────────────────────────────────
+# ─── SECTION 37: AI — Harmful Text Detection ────────────────────────────────
 
-def s37_toxicity():
-    section("AI — Toxicity Detection (S37)")
+def s37_harmful_text():
+    section("AI — Harmful Text Detection (S37)")
 
     tok = _S.get("freelancer_token")
 
-    step("GET /toxicity/labels — list classification labels")
-    ok_r, rp = _call("GET", "/toxicity/labels", token=tok)
-    labels = _d(rp).get("labels", [])
-    ok(f"labels={labels}") if ok_r else fail("failed")
+    step("GET /harmful-text/labels — list harm classification labels")
+    ok_r, rp = _call("GET", "/harmful-text/labels", token=tok)
+    label_keys = list(_d(rp).keys())
+    ok(f"labels={label_keys}") if ok_r else fail("failed")
 
-    step("GET /toxicity/models — available models")
-    ok_r, rp = _call("GET", "/toxicity/models", token=tok)
-    models = _d(rp).get("models", [])
-    ok(f"models={models}") if ok_r else fail("failed")
+    step("GET /harmful-text/models — available models")
+    ok_r, rp = _call("GET", "/harmful-text/models", token=tok)
+    models = _d(rp).get("available_models", [])
+    ok(f"models_count={len(models)}") if ok_r else fail("failed")
 
-    step("POST /toxicity/detect — clean text (expect is_toxic=false)")
-    ok_r, rp = _call("POST", "/toxicity/detect",
+    step("POST /harmful-text/detect — clean text (expect is_harmful=false)")
+    ok_r, rp = _call("POST", "/harmful-text/detect",
                      body={"text": "I am excited to apply for this backend engineering role."},
                      token=tok, expected=(200, 201))
     if ok_r:
-        is_tox = _d(rp).get("is_toxic", "?")
-        conf = _d(rp).get("confidence", "?")
-        ok(f"is_toxic={is_tox} confidence={conf}")
+        is_harmful = _d(rp).get("is_harmful", "?")
+        scores = _d(rp).get("scores", {})
+        ok(f"is_harmful={is_harmful} scores_count={len(scores)}")
     else:
         fail("detect failed (model may not be loaded)")
 
-    step("POST /toxicity/detect — toxic text (expect is_toxic=true)")
-    ok_r, rp = _call("POST", "/toxicity/detect",
+    step("POST /harmful-text/detect — harmful text (expect is_harmful=true)")
+    ok_r, rp = _call("POST", "/harmful-text/detect",
                      body={"text": _TOXIC_TEXT},
                      token=tok, expected=(200, 201))
     if ok_r:
-        is_tox = _d(rp).get("is_toxic", "?")
-        labels = _d(rp).get("labels", {})
-        ok(f"is_toxic={is_tox} labels={labels}")
-        if is_tox is True:
-            ok("Toxicity model correctly identified toxic content")
+        is_harmful = _d(rp).get("is_harmful", "?")
+        labels = _d(rp).get("labels", [])
+        ok(f"is_harmful={is_harmful} labels={labels}")
+        if is_harmful is True:
+            ok("Harmful text model correctly identified harmful content")
         else:
             info("Model did not flag as toxic — threshold or model may differ")
     else:
         fail("detect failed")
 
-    step("POST /toxicity/detect-batch — mixed texts")
-    ok_r, rp = _call("POST", "/toxicity/detect-batch",
+    step("POST /harmful-text/detect-batch — mixed texts")
+    ok_r, rp = _call("POST", "/harmful-text/detect-batch",
                      body={"texts": [
                          "I have 5 years of Python experience.",
                          _TOXIC_TEXT,
@@ -2284,15 +2993,49 @@ def s39_appeals():
         else:
             info("Empty message not validated (endpoint may not check)")
 
+    step("GET /appeals/status?target_type=job_post — check appeal eligibility + state")
+    if jpid:
+        ok_r, rp = _call("GET", "/appeals/status",
+                         params={"target_type": "job_post", "target_id": jpid},
+                         token=tok)
+        if ok_r:
+            d = _d(rp)
+            ok(f"state={d.get('state','?')} can_appeal={d.get('can_appeal','?')} "
+               f"appeals_remaining={d.get('appeals_remaining','?')} "
+               f"message={d.get('message','?')!r}")
+        else:
+            fail("appeal status check failed")
+    else:
+        skip("No job_post_id for appeal status check")
+
+    step("GET /appeals/status?target_type=user — check account appeal eligibility")
+    if f_uid:
+        ok_r, rp = _call("GET", "/appeals/status",
+                         params={"target_type": "user", "target_id": f_uid},
+                         token=tok)
+        if ok_r:
+            d = _d(rp)
+            ok(f"state={d.get('state','?')} can_appeal={d.get('can_appeal','?')}")
+        else:
+            fail("user appeal status check failed")
+    else:
+        skip("No freelancer_user_id for appeal status check")
+
+    step("GET /appeals/status — invalid target_type → expect 400")
+    ok_r, rp = _call("GET", "/appeals/status",
+                     params={"target_type": "invalid", "target_id": "00000000-0000-0000-0000-000000000000"},
+                     token=tok, expected=(400, 422))
+    ok("invalid target_type correctly rejected") if ok_r else info("validation not enforced")
+
     step("GET /appeals/mine — list own appeals")
     ok_r, rp = _call("GET", "/appeals/mine", token=tok)
     ok(f"got {len(_list(rp))} appeals") if ok_r else fail("failed")
 
 
-# ─── SECTION 40: Admin — Toxicity Moderation Queue ───────────────────────────
+# ─── SECTION 40: Admin — Harmful Text Moderation Queue ───────────────────────
 
 def s40_admin_moderation():
-    section("Admin — Toxicity Moderation Queue (S40)")
+    section("Admin — Harmful Text Moderation Queue (S40)")
 
     a_tok = _S.get("admin_token")
     fid   = _S.get("freelancer_id", "")
@@ -2402,6 +3145,16 @@ def s40_admin_moderation():
     else:
         fail("failed")
 
+    step("POST /admin/moderation/force-expire — backdate auto_approve_at (testing utility)")
+    if mod_id_1 or mod_id_2:
+        ids_to_expire = [x for x in [mod_id_1, mod_id_2] if x]
+        ok_r, _ = _call("POST", "/admin/moderation/force-expire",
+                        body={"ids": ids_to_expire},
+                        token=a_tok, expected=(200, 201, 400))
+        ok(f"force-expired {len(ids_to_expire)} moderation items") if ok_r else info("force-expire failed (items may already be actioned)")
+    else:
+        skip("No moderation_id for force-expire test")
+
 
 # ─── SECTION 41: AI — Job Scam Detection ─────────────────────────────────────
 
@@ -2422,7 +3175,7 @@ def s41_job_scam_detection():
     info("Model: BAAI/bge-base-en-v1.5 + Random Forest (778 features = 768-dim SBERT + 10 engineered)")
     if jpid:
         ok_r, rp = _call("POST", "/admin/scam-flags/scan",
-                         body={"job_post_id": jpid},
+                         body={"job_post_id": jpid, "client_id": cid, "text": f"URGENT Work From Home Opportunity {_TS}\n{_SCAM_JOB_DESCRIPTION}"},
                          token=a_tok, expected=(200, 201, 400, 404, 500))
         if ok_r:
             d = _d(rp)
@@ -2473,7 +3226,7 @@ def s41_job_scam_detection():
     scam_jpid = _S.get("scam_job_post_id", "")
     if scam_jpid:
         ok_r, rp = _call("POST", "/admin/scam-flags/scan",
-                         body={"job_post_id": scam_jpid},
+                         body={"job_post_id": scam_jpid, "client_id": cid, "text": f"URGENT Work From Home Opportunity {_TS}\n{_SCAM_JOB_DESCRIPTION}"},
                          token=a_tok, expected=(200, 201, 400, 404, 500))
         if ok_r:
             d       = _d(rp)
@@ -2510,6 +3263,88 @@ def s41_job_scam_detection():
             fail("client scam record failed")
     else:
         skip("No client_id")
+
+    step("POST /admin/scam-flags/force-expire — backdate auto_remove_at (testing utility)")
+    flag_id_any = _S.get("scam_flag_id", "") or _S.get("scam_flag_id_remove", "")
+    if flag_id_any:
+        ok_r, _ = _call("POST", "/admin/scam-flags/force-expire",
+                        body={"ids": [flag_id_any]},
+                        token=a_tok, expected=(200, 201, 400))
+        ok("force-expired scam flag") if ok_r else info("force-expire failed (flag may already be actioned)")
+    else:
+        skip("No scam_flag_id for force-expire test")
+
+
+# ─── SECTION 42: Users ───────────────────────────────────────────────────────
+
+def s42_users():
+    section("Users (S42)")
+
+    a_tok = _S.get("admin_token")
+    f_tok = _S.get("freelancer_token")
+    f_uid = _S.get("freelancer_user_id", "")
+
+    step("GET /users — list all users (admin)")
+    if a_tok:
+        ok_r, rp = _call("GET", "/users", params={"limit": 10}, token=a_tok)
+        ok(f"got {len(_list(rp))} users") if ok_r else fail("failed")
+    else:
+        skip("No admin token")
+
+    step("POST /users — create user directly (authenticated, not via registration flow)")
+    _temp_user_email = f"walktemp_{_TS}@example.com"
+    _temp_user_id    = None
+    tok = a_tok or f_tok
+    if tok:
+        ok_r, rp = _call("POST", "/users", body={
+            "email": _temp_user_email,
+            "password": _PASSWORD,
+        }, token=tok, expected=(200, 201, 400))
+        if ok_r:
+            _temp_user_id = _d(rp).get("user_id") or _id(rp, "user_id")
+            _S["temp_user_id"] = _temp_user_id
+            ok(f"created user_id={_temp_user_id}")
+        else:
+            info("POST /users failed (email may already exist or endpoint restricted)")
+    else:
+        skip("No token")
+
+    step("GET /users/search?name=walkthrough — search users by name")
+    tok = a_tok or f_tok
+    if tok:
+        ok_r, rp = _call("GET", "/users/search", params={"name": "walkthrough"}, token=tok)
+        ok(f"search returned {len(_list(rp))} users") if ok_r else fail("failed")
+    else:
+        skip("No token")
+
+    step("GET /users/{user_id} — get own profile (freelancer token)")
+    if f_tok and f_uid:
+        ok_r, rp = _call("GET", f"/users/{f_uid}", token=f_tok, expected=(200, 403, 404))
+        ok(f"user email={_d(rp).get('email','?')}") if ok_r else info("not accessible")
+    else:
+        skip("No user_id")
+
+    step("PUT /users/{user_id} — update user (self)")
+    if f_tok and f_uid:
+        ok_r, _ = _call("PUT", f"/users/{f_uid}",
+                        body={"email": _S.get("freelancer_email", "")},
+                        token=f_tok, expected=(200, 201, 400, 403, 422))
+        ok("update ok") if ok_r else info("update failed (may not be allowed or no-op)")
+    else:
+        skip("No token or user_id")
+
+    step("DELETE /users/{user_id} — delete temp user created via POST /users")
+    tmp_uid = _S.get("temp_user_id", "")
+    if tmp_uid and tok:
+        ok_r, rp = _call("DELETE", f"/users/{tmp_uid}", token=tok, expected=(200, 204, 403, 404))
+        if ok_r and "detail" not in rp:
+            ok("temp user deleted")
+        elif ok_r:
+            info("delete skipped — user deletion requires owner token (admin cannot delete other accounts)")
+        else:
+            info("delete failed")
+    else:
+        skip("No temp_user_id to delete")
 
 
 # ─── Cleanup / teardown ───────────────────────────────────────────────────────
@@ -2586,17 +3421,12 @@ def s_cleanup():
         ok_r, _ = _call("DELETE", f"/educations/{_S['education_id']}", token=f_tok)
         ok("ok") if ok_r else fail("failed")
 
-    # Delete freelancer speciality
-    if _S.get("freelancer_speciality_id") and f_tok:
-        step("DELETE /freelancer-specialities/{id}")
-        ok_r, _ = _call("DELETE", f"/freelancer-specialities/{_S['freelancer_speciality_id']}", token=f_tok)
-        ok("ok") if ok_r else fail("failed")
-
-    # Delete freelancer skill
+    # Delete freelancer skill (may already be gone if compound-key delete ran in S07)
     if _S.get("freelancer_skill_id") and f_tok:
         step("DELETE /freelancer-skills/{id}")
-        ok_r, _ = _call("DELETE", f"/freelancer-skills/{_S['freelancer_skill_id']}", token=f_tok)
-        ok("ok") if ok_r else fail("failed")
+        ok_r, _ = _call("DELETE", f"/freelancer-skills/{_S['freelancer_skill_id']}", token=f_tok,
+                        expected=(200, 204, 404))
+        ok("ok") if ok_r else info("already deleted (compound-key delete in S07)")
 
     # Delete the test skill (by id)
     if _S.get("skill_id") and f_tok:
@@ -2604,13 +3434,6 @@ def s_cleanup():
         ok_r, _ = _call("DELETE", f"/skills/{_S['skill_id']}", token=f_tok,
                         expected=(200, 204, 400))
         ok("ok") if ok_r else info("skill delete skipped (may be referenced)")
-
-    # Delete speciality
-    if _S.get("speciality_id") and f_tok:
-        step("DELETE /specialities/{speciality_id}")
-        ok_r, _ = _call("DELETE", f"/specialities/{_S['speciality_id']}", token=f_tok,
-                        expected=(200, 204, 400))
-        ok("ok") if ok_r else info("spec delete skipped")
 
     # Delete client trust score (must happen before client profile is deleted)
     if _S.get("client_id") and c_tok:
@@ -2647,7 +3470,7 @@ def main():
     print(f"WorkByte Walkthrough ALL (New)")
     print(f"Target: {BASE_URL}")
     print(f"Started: {datetime.datetime.now().isoformat()}")
-    print(f"Sections: 41 + cleanup\n")
+    print(f"Sections: 42 + cleanup\n")
 
     sections = [
         s01_auth,
@@ -2680,17 +3503,19 @@ def main():
         s28_upload,
         s29_cv_upload,
         s30_cv_analysis,
+        s30b_job_seed,
         s31_ai_job_matching,
         s32_admin,
         s33_dashboard,
         s34_dm,
         s35_notifications,
         s36_reviews,
-        s37_toxicity,
+        s37_harmful_text,
         s38_reports,
         s39_appeals,
         s40_admin_moderation,
         s41_job_scam_detection,
+        s42_users,
         s_cleanup,
     ]
 

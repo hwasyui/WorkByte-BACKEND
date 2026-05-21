@@ -60,7 +60,8 @@ def _extract_text_from_pdf(file_bytes: bytes) -> str:
     if plumber_text:
         logger("CV_UPLOAD", "Using pdfplumber result (richer)", level="DEBUG")
         return plumber_text
-    raise RuntimeError("Failed to extract text from PDF (both pdfplumber and EasyOCR failed)")
+    logger("CV_UPLOAD", "Both pdfplumber and EasyOCR returned empty text", level="DEBUG")
+    return ""
 
 
 def _extract_text_from_docx(file_bytes: bytes) -> str:

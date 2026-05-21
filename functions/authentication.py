@@ -1,3 +1,4 @@
+import hashlib
 import os
 import sys
 import secrets
@@ -24,6 +25,7 @@ if not SECRET_KEY:
     raise ValueError("SECRET_KEY environment variable is not set")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
+REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "30"))
 OTP_EXPIRE_MINUTES = int(os.getenv("EMAIL_OTP_EXPIRE_MINUTES", "10"))
 MAX_OTP_ATTEMPTS = int(os.getenv("EMAIL_OTP_MAX_ATTEMPTS", "5"))
 APP_ENV = os.getenv("APP_ENV", os.getenv("ENVIRONMENT", "development")).lower()
@@ -72,6 +74,83 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
 def generate_otp() -> str:
     """Generate a six-digit verification code."""
     return f"{secrets.randbelow(1_000_000):06d}"
+
+def _hash_refresh_token(raw: str) -> str:
+    return hashlib.sha256(raw.encode()).hexdigest()
+
+def create_refresh_token(user_id: str) -> str:
+    """Issue a new opaque refresh token, store its hash, return the raw token."""
+    raw = secrets.token_urlsafe(64)
+    token_hash = _hash_refresh_token(raw)
+    expires_at = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    get_db().execute_query(
+        """
+        INSERT INTO refresh_tokens (user_id, token_hash, expires_at)
+        VALUES (:user_id, :token_hash, :expires_at)
+        """,
+        params={"user_id": user_id, "token_hash": token_hash, "expires_at": expires_at},
+    )
+    return raw
+
+def use_refresh_token(raw: str) -> tuple:
+    """
+    Validate a refresh token, rotate it (revoke old, issue new), return (UserInDB, new_raw).
+    Raises HTTP 401 if the token is invalid, expired, or already revoked.
+    """
+    token_hash = _hash_refresh_token(raw)
+    rows = get_db().execute_query(
+        """
+        SELECT t.token_id, t.user_id, t.expires_at
+        FROM refresh_tokens t
+        WHERE t.token_hash = :token_hash AND t.revoked_at IS NULL
+        """,
+        params={"token_hash": token_hash},
+    )
+    if not rows:
+        raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
+
+    token = rows[0]
+    if token["expires_at"] < datetime.utcnow():
+        raise HTTPException(status_code=401, detail="Refresh token has expired")
+
+    # Revoke the used token before issuing the replacement (rotation).
+    get_db().execute_query(
+        "UPDATE refresh_tokens SET revoked_at = NOW() WHERE token_id = :tid",
+        params={"tid": str(token["token_id"])},
+    )
+
+    user_id = str(token["user_id"])
+    user_rows = get_db().execute_query(
+        """
+        SELECT u.user_id, u.email, u.password, u.is_admin, u.email_verified,
+               u.is_report_banned, u.ban_message, u.report_banned_at,
+               f.freelancer_id,
+               c.client_id
+        FROM users u
+        LEFT JOIN freelancer f ON f.user_id = u.user_id
+        LEFT JOIN client     c ON c.user_id = u.user_id
+        WHERE u.user_id = :user_id
+        """,
+        params={"user_id": user_id},
+    )
+    if not user_rows:
+        raise HTTPException(status_code=401, detail="User not found")
+
+    user = _build_user_from_row(user_rows[0])
+    new_raw = create_refresh_token(user_id)
+    return user, new_raw
+
+def revoke_refresh_token(raw: str) -> None:
+    """Revoke a single refresh token (logout). Silently ignores unknown tokens."""
+    token_hash = _hash_refresh_token(raw)
+    get_db().execute_query(
+        """
+        UPDATE refresh_tokens
+        SET revoked_at = NOW()
+        WHERE token_hash = :token_hash AND revoked_at IS NULL
+        """,
+        params={"token_hash": token_hash},
+    )
 
 def create_email_verification_otp(user_id: str, email: str) -> dict:
     """Create, store, and email a new verification OTP."""
@@ -430,6 +509,23 @@ def reset_password(email: str, otp_code: str, new_password: str) -> dict:
     logger("AUTH", f"Password reset successful for {email}", level="INFO")
     return {"message": "Password reset successfully"}
 
+
+def change_password(user: UserInDB, old_password: str, new_password: str) -> dict:
+    """Change password for an already-authenticated user."""
+    if not verify_password(old_password, user.password):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    new_hash = get_password_hash(new_password)
+    get_db().execute_query(
+        "UPDATE users SET password = :password WHERE user_id = :user_id",
+        params={"password": new_hash, "user_id": user.user_id},
+    )
+    # Revoke all existing refresh tokens so other devices are logged out.
+    get_db().execute_query(
+        "UPDATE refresh_tokens SET revoked_at = NOW() WHERE user_id = :uid AND revoked_at IS NULL",
+        params={"uid": user.user_id},
+    )
+    logger("AUTH", f"Password changed for {user.email}", level="INFO")
+    return {"message": "Password changed successfully"}
 
 def resend_email_verification(email: str) -> dict:
     """Send a fresh verification OTP for an unverified account."""

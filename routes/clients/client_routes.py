@@ -15,7 +15,7 @@ from functions.response_utils import ResponseSchema
 from routes.clients.client_functions import ClientFunctions
 from functions.supabase_client import upload_client_profile_picture, delete_file, BUCKET_USER_ASSETS
 from mimetypes import guess_type as guess_mime
-from routes.admin.admin_functions import queue_toxicity_scan
+from routes.admin.admin_functions import queue_harmful_text_scan
 
 client_router = APIRouter(prefix="/clients", tags=["Clients"])
 
@@ -146,7 +146,7 @@ async def create_client(
         _scan_text = " ".join(filter(None, [client.full_name, client.bio]))
         if _scan_text.strip():
             asyncio.create_task(asyncio.to_thread(
-                queue_toxicity_scan,
+                queue_harmful_text_scan,
                 "client_profile",
                 str(new_client["client_id"]),
                 str(current_user.user_id),
@@ -207,7 +207,7 @@ async def update_client(
         ]))
         if _scan_text.strip():
             asyncio.create_task(asyncio.to_thread(
-                queue_toxicity_scan,
+                queue_harmful_text_scan,
                 "client_profile",
                 str(client_id),
                 str(current_user.user_id),

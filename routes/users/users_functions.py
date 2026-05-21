@@ -180,7 +180,7 @@ class UserFunctions:
         """Search users by email"""
         try:
             db = get_db()
-            query = f"SELECT user_id, email, type, email_verified, email_verified_at, created_at, updated_at FROM users WHERE email ILIKE '%' || :search_term || '%'"
+            query = f"SELECT user_id, email, email_verified, email_verified_at, created_at, updated_at FROM users WHERE email ILIKE '%' || :search_term || '%'"
             rows = db.execute_query(query, {"search_term": search_term})
             
             logger("USERS_FUNCTIONS", f"Search found {len(rows)} users", level="INFO")

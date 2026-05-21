@@ -9,6 +9,8 @@ import time
 import uuid
 from typing import Optional
 
+from sqlalchemy.exc import IntegrityError as _IntegrityError
+
 from functions.db_manager import get_db
 from functions.logger import logger
 from ai_related.job_matching.embedding_service import get_embedding
@@ -88,19 +90,31 @@ def _schedule_immediate(coro) -> None:
 def mark_freelancer_dirty(freelancer_id: str) -> None:
     """
     Flag a freelancer's embedding as stale, or embed immediately if below the size threshold.
+    Always upserts the dirty row so the sweep can recover even if the immediate embed fails.
     Swallows exceptions so a dirty-flag failure never breaks the calling mutation.
     """
     try:
+        db = get_db()
+        existing = db.execute_query(
+            "SELECT embedding_id FROM freelancer_embedding WHERE freelancer_id = :fid",
+            {"fid": freelancer_id},
+        )
+        if existing:
+            db.execute_query(
+                "UPDATE freelancer_embedding SET embedding_dirty = TRUE WHERE freelancer_id = :fid",
+                {"fid": freelancer_id},
+            )
+        else:
+            db.execute_query(
+                """INSERT INTO freelancer_embedding (embedding_id, freelancer_id, embedding_dirty)
+                   VALUES (:eid, :fid, TRUE)""",
+                {"eid": str(uuid.uuid4()), "fid": freelancer_id},
+            )
         if _should_embed_immediately():
             logger("EMBEDDING_MANAGER", f"Immediate embed scheduled | freelancer_id={freelancer_id}", level="INFO")
             _schedule_immediate(upsert_freelancer_embedding(freelancer_id))
-            return
-        db = get_db()
-        db.execute_query(
-            "UPDATE freelancer_embedding SET embedding_dirty = TRUE WHERE freelancer_id = :fid",
-            {"fid": freelancer_id},
-        )
-        logger("EMBEDDING_MANAGER", f"Marked dirty | freelancer_id={freelancer_id}", level="DEBUG")
+        else:
+            logger("EMBEDDING_MANAGER", f"Marked dirty | freelancer_id={freelancer_id}", level="DEBUG")
     except Exception as e:
         logger("EMBEDDING_MANAGER", f"Could not mark freelancer dirty | freelancer_id={freelancer_id} | error={e}", level="ERROR")
 
@@ -142,11 +156,10 @@ def mark_job_dirty(job_post_id: str) -> None:
 
         for role in role_rows:
             jrid = str(role["job_role_id"])
+            _upsert_role_dirty_row(db, jrid, job_post_id)
             if _should_embed_immediately():
                 logger("EMBEDDING_MANAGER", f"Immediate embed scheduled | job_role_id={jrid}", level="INFO")
                 _schedule_immediate(upsert_job_role_embedding(jrid))
-            else:
-                _upsert_role_dirty_row(db, jrid, job_post_id)
 
         logger("EMBEDDING_MANAGER", f"Marked dirty | job_post_id={job_post_id} | roles={len(role_rows)}", level="DEBUG")
     except Exception as e:
@@ -170,11 +183,11 @@ def mark_job_dirty_by_role(job_role_id: str) -> None:
             return
         job_post_id = str(role_rows[0]["job_post_id"])
 
+        _upsert_role_dirty_row(db, job_role_id, job_post_id)
         if _should_embed_immediately():
             logger("EMBEDDING_MANAGER", f"Immediate embed scheduled | job_role_id={job_role_id}", level="INFO")
             _schedule_immediate(upsert_job_role_embedding(job_role_id))
         else:
-            _upsert_role_dirty_row(db, job_role_id, job_post_id)
             logger("EMBEDDING_MANAGER", f"Marked dirty | job_role_id={job_role_id}", level="DEBUG")
     except Exception as e:
         logger("EMBEDDING_MANAGER", f"Could not mark role dirty | job_role_id={job_role_id} | error={e}", level="ERROR")
@@ -184,19 +197,38 @@ def mark_contract_dirty(contract_id: str) -> None:
     """
     Flag a contract's embedding as stale, or embed immediately if below the size threshold.
     Called when a contract is completed or when a rating is added/updated.
+    Always upserts the dirty row so the sweep can recover even if the immediate embed fails.
     Swallows exceptions.
     """
     try:
+        db = get_db()
+        existing = db.execute_query(
+            "SELECT embedding_id FROM contract_embedding WHERE contract_id = :cid",
+            {"cid": contract_id},
+        )
+        if existing:
+            db.execute_query(
+                "UPDATE contract_embedding SET embedding_dirty = TRUE WHERE contract_id = :cid",
+                {"cid": contract_id},
+            )
+        else:
+            fid_rows = db.execute_query(
+                "SELECT freelancer_id FROM contract WHERE contract_id = :cid",
+                {"cid": contract_id},
+            )
+            if not fid_rows:
+                logger("EMBEDDING_MANAGER", f"Contract {contract_id} not found — cannot create dirty row", level="WARNING")
+                return
+            db.execute_query(
+                """INSERT INTO contract_embedding (embedding_id, contract_id, freelancer_id, embedding_dirty)
+                   VALUES (:eid, :cid, :fid, TRUE)""",
+                {"eid": str(uuid.uuid4()), "cid": contract_id, "fid": str(fid_rows[0]["freelancer_id"])},
+            )
         if _should_embed_immediately():
             logger("EMBEDDING_MANAGER", f"Immediate embed scheduled | contract_id={contract_id}", level="INFO")
             _schedule_immediate(upsert_contract_embedding(contract_id))
-            return
-        db = get_db()
-        db.execute_query(
-            "UPDATE contract_embedding SET embedding_dirty = TRUE WHERE contract_id = :cid",
-            {"cid": contract_id},
-        )
-        logger("EMBEDDING_MANAGER", f"Marked dirty | contract_id={contract_id}", level="DEBUG")
+        else:
+            logger("EMBEDDING_MANAGER", f"Marked dirty | contract_id={contract_id}", level="DEBUG")
     except Exception as e:
         logger("EMBEDDING_MANAGER", f"Could not mark contract dirty | contract_id={contract_id} | error={e}", level="ERROR")
 
@@ -254,6 +286,14 @@ async def upsert_freelancer_embedding(freelancer_id: str) -> dict:
             logger("EMBEDDING_MANAGER", f"Freelancer embedding CREATED | freelancer_id={freelancer_id} | dim={len(vector)}", level="INFO")
             return {"status": "created", "freelancer_id": freelancer_id, "dim": len(vector)}
 
+    except _IntegrityError as e:
+        if "ForeignKeyViolation" in type(e.__cause__).__name__:
+            logger("EMBEDDING_MANAGER",
+                   f"Freelancer deleted before embedding task ran — skipping | freelancer_id={freelancer_id}",
+                   level="DEBUG")
+            return {"status": "skipped", "reason": "entity_deleted"}
+        logger("EMBEDDING_MANAGER", f"Error upserting freelancer embedding | freelancer_id={freelancer_id} | error={e}", level="ERROR")
+        raise
     except Exception as e:
         logger("EMBEDDING_MANAGER", f"Error upserting freelancer embedding | freelancer_id={freelancer_id} | error={e}", level="ERROR")
         raise
@@ -315,6 +355,14 @@ async def upsert_job_role_embedding(job_role_id: str) -> dict:
             logger("EMBEDDING_MANAGER", f"Job role embedding CREATED | job_role_id={job_role_id} | dim={len(vector)}", level="INFO")
             return {"status": "created", "job_role_id": job_role_id, "job_post_id": job_post_id, "dim": len(vector)}
 
+    except _IntegrityError as e:
+        if "ForeignKeyViolation" in type(e.__cause__).__name__:
+            logger("EMBEDDING_MANAGER",
+                   f"Job role deleted before embedding task ran — skipping | job_role_id={job_role_id}",
+                   level="DEBUG")
+            return {"status": "skipped", "reason": "entity_deleted"}
+        logger("EMBEDDING_MANAGER", f"Error upserting job role embedding | job_role_id={job_role_id} | error={e}", level="ERROR")
+        raise
     except Exception as e:
         logger("EMBEDDING_MANAGER", f"Error upserting job role embedding | job_role_id={job_role_id} | error={e}", level="ERROR")
         raise
@@ -418,6 +466,7 @@ def mark_portfolio_dirty(portfolio_id: str) -> None:
     Flag a manual portfolio entry's embedding as stale, or embed immediately
     if below the size threshold. Auto-generated rows are skipped silently —
     their semantic content lives in contract_embedding.
+    Always upserts the dirty row so the sweep can recover even if the immediate embed fails.
     Swallows exceptions so a dirty-flag failure never breaks the calling mutation.
     """
     try:
@@ -430,16 +479,34 @@ def mark_portfolio_dirty(portfolio_id: str) -> None:
             )
             return
 
+        db = get_db()
+        existing = db.execute_query(
+            "SELECT embedding_id FROM portfolio_embedding WHERE portfolio_id = :pid",
+            {"pid": portfolio_id},
+        )
+        if existing:
+            db.execute_query(
+                "UPDATE portfolio_embedding SET embedding_dirty = TRUE WHERE portfolio_id = :pid",
+                {"pid": portfolio_id},
+            )
+        else:
+            fid_rows = db.execute_query(
+                "SELECT freelancer_id FROM portfolio WHERE portfolio_id = :pid",
+                {"pid": portfolio_id},
+            )
+            if not fid_rows:
+                logger("EMBEDDING_MANAGER", f"Portfolio {portfolio_id} not found — cannot create dirty row", level="WARNING")
+                return
+            db.execute_query(
+                """INSERT INTO portfolio_embedding (embedding_id, portfolio_id, freelancer_id, embedding_dirty)
+                   VALUES (:eid, :pid, :fid, TRUE)""",
+                {"eid": str(uuid.uuid4()), "pid": portfolio_id, "fid": str(fid_rows[0]["freelancer_id"])},
+            )
         if _should_embed_immediately():
             logger("EMBEDDING_MANAGER", f"Immediate embed scheduled | portfolio_id={portfolio_id}", level="INFO")
             _schedule_immediate(upsert_portfolio_embedding(portfolio_id))
-            return
-        db = get_db()
-        db.execute_query(
-            "UPDATE portfolio_embedding SET embedding_dirty = TRUE WHERE portfolio_id = :pid",
-            {"pid": portfolio_id},
-        )
-        logger("EMBEDDING_MANAGER", f"Marked dirty | portfolio_id={portfolio_id}", level="DEBUG")
+        else:
+            logger("EMBEDDING_MANAGER", f"Marked dirty | portfolio_id={portfolio_id}", level="DEBUG")
     except Exception as e:
         logger("EMBEDDING_MANAGER", f"Could not mark portfolio dirty | portfolio_id={portfolio_id} | error={e}", level="ERROR")
 

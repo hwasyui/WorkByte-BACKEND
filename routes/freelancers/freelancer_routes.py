@@ -3,7 +3,7 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from fastapi import APIRouter, Depends, Query, UploadFile, File
+from fastapi import APIRouter, Depends, Form, Query, Request, UploadFile, File
 from typing import List, Optional, Dict
 import uuid
 from functions.schema_model import FreelancerCreate, FreelancerUpdate, FreelancerResponse, FreelancerProfileComplete
@@ -13,7 +13,7 @@ from functions.access_control import assert_freelancer_owns, get_freelancer_prof
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.freelancers.freelancer_functions import FreelancerFunctions, get_comprehensive_freelancer_profile
-from ai_related.job_matching.embedding_manager import upsert_freelancer_embedding, mark_freelancer_dirty
+from ai_related.job_matching.embedding_manager import mark_freelancer_dirty
 from functions.supabase_client import upload_freelancer_profile_picture, delete_file, BUCKET_USER_ASSETS
 from mimetypes import guess_type as guess_mime
 from ai_related.cv_analysis.cv_analysis import parse_cv_for_profile
@@ -22,12 +22,52 @@ from routes.cv_upload.cv_upload_functions import (
     _extract_text_from_docx,
     _extract_text_from_image,
 )
-from routes.admin.admin_functions import queue_toxicity_scan
+from routes.admin.admin_functions import queue_harmful_text_scan
 
 _DOCX_MIMES = {
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "application/msword",
 }
+
+async def freelancer_update_form(
+    request: Request,
+    full_name: Optional[str] = Form(None),
+    title: Optional[str] = Form(None),
+    bio: Optional[str] = Form(None),
+    profile_picture: Optional[UploadFile] = File(None),
+    estimated_rate: Optional[str] = Form(None),
+    rate_time: Optional[str] = Form(None),
+    rate_currency: Optional[str] = Form(None),
+    cv_file_url: Optional[str] = Form(None),
+) -> FreelancerUpdate:
+    form_data = await request.form()
+    form_fields = set(form_data.keys())
+
+    def empty_to_none(v):
+        if isinstance(v, str) and v.strip() == '':
+            return None
+        return v
+
+    data = {}
+    if "full_name" in form_fields:
+        data["full_name"] = full_name
+    if "title" in form_fields:
+        data["title"] = empty_to_none(title)
+    if "bio" in form_fields:
+        data["bio"] = bio
+    if "profile_picture" in form_fields:
+        data["profile_picture"] = profile_picture
+    if "estimated_rate" in form_fields:
+        raw = empty_to_none(estimated_rate)
+        data["estimated_rate"] = float(raw) if raw is not None else None
+    if "rate_time" in form_fields:
+        data["rate_time"] = rate_time
+    if "rate_currency" in form_fields:
+        data["rate_currency"] = rate_currency
+    if "cv_file_url" in form_fields:
+        data["cv_file_url"] = empty_to_none(cv_file_url)
+
+    return FreelancerUpdate(**data)
 
 freelancer_router = APIRouter(prefix="/freelancers", tags=["Freelancers"])
 
@@ -78,6 +118,7 @@ async def create_freelancer(
             freelancer_id=freelancer_id,
             user_id=current_user.user_id,
             full_name=freelancer.full_name,
+            title=freelancer.title,
             bio=freelancer.bio,
             cv_file_url=None,
             profile_picture_url=profile_picture_url,
@@ -86,12 +127,12 @@ async def create_freelancer(
             rate_currency=freelancer.rate_currency,
             create_embedding=True
         )
-        asyncio.create_task(upsert_freelancer_embedding(str(new_freelancer["freelancer_id"])))
+        mark_freelancer_dirty(str(new_freelancer["freelancer_id"]))
 
-        _scan_text = " ".join(filter(None, [freelancer.full_name, freelancer.bio]))
+        _scan_text = " ".join(filter(None, [freelancer.full_name, freelancer.title, freelancer.bio]))
         if _scan_text.strip():
             asyncio.create_task(asyncio.to_thread(
-                queue_toxicity_scan,
+                queue_harmful_text_scan,
                 "freelancer_profile",
                 str(new_freelancer["freelancer_id"]),
                 str(current_user.user_id),
@@ -171,7 +212,6 @@ async def update_freelancer(
         update_data = freelancer_update.model_dump(
             exclude={"profile_picture"},
             exclude_unset=True,
-            exclude_none=True,
         )
 
         if freelancer_update.profile_picture is not None:
@@ -195,11 +235,12 @@ async def update_freelancer(
 
         _scan_text = " ".join(filter(None, [
             updated_freelancer.get("full_name", ""),
+            updated_freelancer.get("title", ""),
             updated_freelancer.get("bio", ""),
         ]))
         if _scan_text.strip():
             asyncio.create_task(asyncio.to_thread(
-                queue_toxicity_scan,
+                queue_harmful_text_scan,
                 "freelancer_profile",
                 str(freelancer_id),
                 str(current_user.user_id),

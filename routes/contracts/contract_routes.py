@@ -27,7 +27,7 @@ from routes.clients.client_functions import ClientFunctions
 from routes.freelancers.freelancer_functions import FreelancerFunctions
 from routes.dm.dm_functions import DMFunctions, _contract_accepted_default
 from routes.notifications.notification_functions import NotificationFunctions
-from ai_related.job_matching.embedding_manager import upsert_contract_embedding
+from ai_related.job_matching.embedding_manager import mark_contract_dirty
 
 
 _DEFAULT_CONTRACT_NOTIFICATION = (
@@ -385,7 +385,7 @@ async def update_contract(contract_id: str, contract_update: ContractUpdate, bac
         updated_contract = ContractFunctions.update_contract(contract_id, update_data)
 
         if update_data.get("status") == "completed" and existing_contract.get("status") != "completed":
-            asyncio.create_task(upsert_contract_embedding(contract_id))
+            mark_contract_dirty(contract_id)
             db = get_db()
             db.execute_query(
                 "UPDATE freelancer SET total_jobs = total_jobs + 1 WHERE freelancer_id = :fid",

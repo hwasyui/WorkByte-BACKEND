@@ -5,13 +5,18 @@ import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from functions.authentication import (
     authenticate_user,
+    change_password,
     create_access_token,
+    create_refresh_token,
+    use_refresh_token,
+    revoke_refresh_token,
     register_user,
     add_role,
     verify_token,
     TokenData,
     UserInDB,
     ACCESS_TOKEN_EXPIRE_MINUTES,
+    REFRESH_TOKEN_EXPIRE_DAYS,
     get_user,
     get_current_user,
     get_password_hash,
@@ -24,7 +29,9 @@ from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from functions.schema_model import (
     AddRoleRequest,
+    ChangePasswordRequest,
     EmailVerificationRequest,
+    RefreshRequest,
     ResendVerificationRequest,
     ForgotPasswordRequest,
     ResetPasswordRequest,
@@ -105,11 +112,15 @@ async def login(credentials: UserLogin):
         access_token = create_access_token(
             data={"sub": user.email}, expires_delta=access_token_expires
         )
-        
+        refresh_token = create_refresh_token(user.user_id)
+
         logger("AUTH", f"Login successful for {credentials.email}", "POST /auth/login", "INFO")
         return ResponseSchema.success({
-            "access_token": access_token,
-            "token_type": "bearer"
+            "access_token":  access_token,
+            "token_type":    "bearer",
+            "expires_in":    ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            "refresh_token": refresh_token,
+            "refresh_token_expires_in": REFRESH_TOKEN_EXPIRE_DAYS * 86400,
         }, 200)
 
     except HTTPException as e:
@@ -191,4 +202,72 @@ async def add_second_role(
     except Exception as e:
         error_msg = f"Add role failed: {str(e)}"
         logger("AUTH", error_msg, "POST /auth/add-role", "ERROR")
+        return ResponseSchema.error(error_msg, 500)
+
+
+@auth_router.post("/refresh", response_model=dict)
+async def refresh_token_endpoint(payload: RefreshRequest):
+    """
+    Exchange a valid refresh token for a new access token + rotated refresh token.
+    The old refresh token is revoked immediately — each token can only be used once.
+    """
+    try:
+        user, new_refresh = use_refresh_token(payload.refresh_token)
+        access_token = create_access_token(
+            data={"sub": user.email},
+            expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
+        )
+        logger("AUTH", f"Token refreshed for {user.email}", "POST /auth/refresh", "INFO")
+        return ResponseSchema.success({
+            "access_token":  access_token,
+            "token_type":    "bearer",
+            "expires_in":    ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            "refresh_token": new_refresh,
+            "refresh_token_expires_in": REFRESH_TOKEN_EXPIRE_DAYS * 86400,
+        }, 200)
+    except HTTPException as e:
+        logger("AUTH", f"Token refresh failed: {e.detail}", "POST /auth/refresh", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
+    except Exception as e:
+        error_msg = f"Token refresh error: {str(e)}"
+        logger("AUTH", error_msg, "POST /auth/refresh", "ERROR")
+        return ResponseSchema.error(error_msg, 500)
+
+
+@auth_router.post("/change-password", response_model=dict)
+async def change_password_endpoint(
+    payload: ChangePasswordRequest,
+    current_user: UserInDB = Depends(get_current_user),
+):
+    """
+    Change password for the currently authenticated user.
+    Requires the current password for verification.
+    All existing refresh tokens are revoked on success — other devices are logged out.
+    """
+    try:
+        result = change_password(current_user, payload.old_password, payload.new_password)
+        logger("AUTH", f"Password changed for {current_user.email}", "POST /auth/change-password", "INFO")
+        return ResponseSchema.success(result, 200)
+    except HTTPException as e:
+        logger("AUTH", f"Change password failed for {current_user.email}: {e.detail}", "POST /auth/change-password", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
+    except Exception as e:
+        error_msg = f"Change password error: {str(e)}"
+        logger("AUTH", error_msg, "POST /auth/change-password", "ERROR")
+        return ResponseSchema.error(error_msg, 500)
+
+
+@auth_router.post("/logout", response_model=dict)
+async def logout(payload: RefreshRequest):
+    """
+    Revoke the given refresh token so it can no longer be used to obtain new access tokens.
+    The current access token remains valid until it naturally expires (max 30 min).
+    """
+    try:
+        revoke_refresh_token(payload.refresh_token)
+        logger("AUTH", "Refresh token revoked via logout", "POST /auth/logout", "INFO")
+        return ResponseSchema.success({"message": "Logged out successfully"}, 200)
+    except Exception as e:
+        error_msg = f"Logout error: {str(e)}"
+        logger("AUTH", error_msg, "POST /auth/logout", "ERROR")
         return ResponseSchema.error(error_msg, 500)

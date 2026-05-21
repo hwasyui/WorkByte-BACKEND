@@ -2,7 +2,7 @@ import os
 import sys
 import json
 from sqlalchemy import create_engine, text
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError as _IntegrityError
 from sqlalchemy.pool import QueuePool
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -250,6 +250,13 @@ class Database:
                 logger("DATABASE", "Query executed successfully", level="INFO")
 
             return None
+
+        except _IntegrityError as e:
+            if "ForeignKeyViolation" in type(e.__cause__).__name__:
+                logger("DATABASE", f"Query FK violation (entity deleted): {str(e.__cause__).splitlines()[0]}", level="DEBUG")
+            else:
+                logger("DATABASE", f"Query database error: {str(e)}", level="ERROR")
+            raise
 
         except SQLAlchemyError as e:
             logger("DATABASE", f"Query database error: {str(e)}", level="ERROR")

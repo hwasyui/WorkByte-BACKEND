@@ -20,7 +20,7 @@ from routes.dm.dm_functions import DMFunctions
 from routes.notifications.notification_functions import NotificationFunctions
 from routes.freelancers.freelancer_functions import FreelancerFunctions
 from routes.clients.client_functions import ClientFunctions
-from routes.admin.admin_moderation import scan_toxicity_with_ml_fallback
+from routes.admin.admin_moderation import scan_harmful_text_with_ml_fallback
 
 
 dm_router = APIRouter(prefix="/dm", tags=["Direct Messages"])
@@ -315,9 +315,9 @@ async def send_message(
         if not payload.message_text.strip():
             return ResponseSchema.error("message_text cannot be empty", 400)
 
-        toxicity = scan_toxicity_with_ml_fallback(payload.message_text)
-        if toxicity["is_flagged"]:
-            labels = toxicity.get("detected_labels", [])
+        harm_result = scan_harmful_text_with_ml_fallback(payload.message_text)
+        if harm_result["is_flagged"]:
+            labels = harm_result.get("detected_labels", [])
             logger("DM", f"Blocked toxic message from {current_user.user_id} in thread {thread_id} — labels={labels}", "POST /dm/threads/{thread_id}/messages", "WARNING")
             return ResponseSchema.error(
                 f"Your message was not sent. It was detected as harmful ({', '.join(labels)}).",

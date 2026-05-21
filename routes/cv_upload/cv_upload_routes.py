@@ -7,11 +7,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from typing import Optional
 
 from functions.authentication import get_freelancer_user
-from functions.schema_model import CVUploadRequest, UserInDB
+from functions.schema_model import CVUploadRequest, CVApplyRequest, UserInDB
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from functions.supabase_client import upload_cv_file, guess_mime
 from routes.freelancers.freelancer_functions import FreelancerFunctions
+from routes.skills.skill_functions import SkillFunctions
 from routes.freelancer_skills.freelancer_skill_functions import FreelancerSkillFunctions
 from routes.work_experience.work_experience_functions import WorkExperienceFunctions
 from routes.education.education_functions import EducationFunctions
@@ -211,3 +212,148 @@ async def upload_and_analyze_cv(
         logger("CV_UPLOAD", f"CV upload/analyze failed: {str(e)}", level="ERROR")
         return ResponseSchema.error(f"CV upload/analyze failed: {str(e)}", 500)
 
+
+@cv_upload_router.post("/apply")
+async def apply_cv_profile(
+    request: CVApplyRequest,
+    current_user: UserInDB = Depends(get_freelancer_user),
+):
+    """
+    Apply confirmed CV suggestions to the current freelancer profile.
+    Matches the Flutter payload from CvAnalysisService.applyProfile().
+    """
+    logger("CV_UPLOAD", f"Apply CV profile from user {current_user.user_id}", level="DEBUG")
+
+    try:
+        freelancer = FreelancerFunctions.get_freelancer_by_user_id(current_user.user_id)
+        if not freelancer:
+            raise HTTPException(status_code=404, detail="Freelancer profile not found for current user")
+
+        freelancer_id = freelancer["freelancer_id"]
+
+        applied_bio = False
+        applied_skills = 0
+        applied_work_experience = 0
+        applied_education = 0
+
+        if request.apply_bio and request.suggested_bio and request.suggested_bio.strip():
+            FreelancerFunctions.update_freelancer(
+                freelancer_id=freelancer_id,
+                update_data={"bio": request.suggested_bio.strip()},
+            )
+            applied_bio = True
+
+        if request.apply_skills and request.skills:
+            existing_freelancer_skills = FreelancerSkillFunctions.get_freelancer_skills_by_freelancer_id(freelancer_id)
+            existing_skill_ids = {
+                str(item.get("skill_id"))
+                for item in existing_freelancer_skills
+                if item.get("skill_id") is not None
+            }
+
+            for raw_skill in request.skills:
+                skill_name = format_skill_name(raw_skill)
+                if not skill_name:
+                    continue
+
+                skill = SkillFunctions.get_skill_by_name(skill_name)
+                if not skill:
+                    skill = SkillFunctions.create_skill(skill_name)
+
+                skill_id = str(skill["skill_id"])
+                if skill_id in existing_skill_ids:
+                    continue
+
+                FreelancerSkillFunctions.create_freelancer_skill(
+                    freelancer_id,
+                    skill_id,
+                    "intermediate",
+                )
+                existing_skill_ids.add(skill_id)
+                applied_skills += 1
+
+        if request.apply_work_experience and request.work_experience:
+            for exp in request.work_experience:
+                WorkExperienceFunctions.create_work_experience(
+                    freelancer_id=freelancer_id,
+                    company_name=exp.company_name,
+                    job_title=exp.job_title,
+                    location=exp.location,
+                    start_date=normalize_partial_date(exp.start_date),
+                    end_date=None if exp.is_current else normalize_partial_date(exp.end_date),
+                    is_current=exp.is_current,
+                    description=exp.description,
+                )
+                applied_work_experience += 1
+
+        if request.apply_education and request.education:
+            for edu in request.education:
+                EducationFunctions.create_education(
+                    freelancer_id=freelancer_id,
+                    institution_name=edu.institution_name,
+                    degree=edu.degree,
+                    field_of_study=edu.field_of_study,
+                    start_date=normalize_partial_date(edu.start_date),
+                    end_date=None if edu.is_current else normalize_partial_date(edu.end_date),
+                    is_current=edu.is_current,
+                    grade=edu.grade if edu.grade and str(edu.grade).strip() else None,
+                )
+                applied_education += 1
+
+        logger(
+            "CV_UPLOAD",
+            f"CV profile applied | freelancer={freelancer_id} | "
+            f"bio={applied_bio} | skills={applied_skills} | "
+            f"work_experience={applied_work_experience} | education={applied_education}",
+            level="INFO",
+        )
+
+        return ResponseSchema.success(
+            {
+                "message": "Profile updated successfully from CV suggestions",
+                "applied": {
+                    "bio": applied_bio,
+                    "skills": applied_skills,
+                    "work_experience": applied_work_experience,
+                    "education": applied_education,
+                },
+            },
+            200,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger("CV_UPLOAD", f"Apply CV profile failed: {str(e)}", level="ERROR")
+        return ResponseSchema.error(f"Apply CV profile failed: {str(e)}", 500)
+
+
+def normalize_partial_date(value: str | None) -> str | None:
+    if not value:
+        return None
+
+    value = value.strip()
+    if not value:
+        return None
+
+    if re.fullmatch(r"\d{4}", value):
+        return f"{value}-01-01"
+
+    if re.fullmatch(r"\d{4}-\d{2}", value):
+        return f"{value}-01"
+
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+        return value
+
+    return None
+
+def format_skill_name(value: str) -> str:
+    acronyms = {"UI", "UX", "API", "SQL", "HTML", "CSS", "PHP", "AI", "ML", "NLP"}
+    words = []
+    for word in value.strip().split():
+        upper = word.upper()
+        if upper in acronyms:
+            words.append(upper)
+        else:
+            words.append(word.capitalize())
+    return " ".join(words)

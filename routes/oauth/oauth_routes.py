@@ -9,14 +9,14 @@ from functions.logger import logger
 from functions.oauth import (
     FRONTEND_URL,
     exchange_google_code,
-    exchange_linkedin_code,
     find_or_create_oauth_user,
     generate_state,
     get_google_auth_url,
-    get_linkedin_auth_url,
+    verify_google_id_token,
     verify_state,
 )
 from functions.response_utils import ResponseSchema
+from functions.schema_model import GoogleMobileTokenRequest
 
 oauth_router = APIRouter(prefix="/auth/oauth", tags=["OAuth"])
 
@@ -95,52 +95,34 @@ async def google_callback(code: str = None, state: str = None, error: str = None
         return _error_response("Google authentication failed")
 
 
-# ── LinkedIn ──────────────────────────────────────────────────────────────────
+# ── Google (mobile — Android / iOS) ──────────────────────────────────────────
 
-@oauth_router.get("/linkedin")
-async def linkedin_login():
-    """Redirect the browser to LinkedIn's OAuth consent screen."""
+@oauth_router.post("/google/mobile")
+async def google_mobile_login(payload: GoogleMobileTokenRequest):
+    """
+    Verify a Google ID token obtained by the Flutter google_sign_in SDK and
+    return a WorkByte JWT + refresh token.
+
+    Flutter usage:
+      final auth = await googleUser.authentication;
+      POST /auth/oauth/google/mobile  { "id_token": auth.idToken }
+    """
     try:
-        state = generate_state()
-        url = get_linkedin_auth_url(state)
-        return RedirectResponse(url, status_code=302)
-    except Exception as e:
-        logger("OAUTH", f"LinkedIn login initiation failed: {str(e)}", "GET /auth/oauth/linkedin", "ERROR")
-        return _error_response(str(e), 501)
-
-
-@oauth_router.get("/linkedin/callback")
-async def linkedin_callback(code: str = None, state: str = None, error: str = None):
-    """Handle LinkedIn's redirect back with an authorization code."""
-    if error:
-        logger("OAUTH", f"LinkedIn OAuth denied: {error}", "GET /auth/oauth/linkedin/callback", "WARNING")
-        return _error_response("LinkedIn login was cancelled or denied")
-
-    if not code:
-        return _error_response("Missing authorization code from LinkedIn")
-
-    if not state or not verify_state(state):
-        logger("OAUTH", "LinkedIn callback received invalid state", "GET /auth/oauth/linkedin/callback", "WARNING")
-        return _error_response("Invalid state parameter — possible CSRF attempt", 400)
-
-    try:
-        user_info = exchange_linkedin_code(code)
-        email     = user_info.get("email")
-        sub       = user_info.get("sub")
-        name      = user_info.get("name") or email
-
-        if not email or not sub:
-            return _error_response("LinkedIn did not return an email address")
-
+        user_info = verify_google_id_token(payload.id_token)
         token_data = find_or_create_oauth_user(
-            provider="linkedin",
-            provider_user_id=sub,
-            email=email,
-            full_name=name,
+            provider="google",
+            provider_user_id=user_info["sub"],
+            email=user_info["email"],
+            full_name=user_info["name"],
         )
-        logger("OAUTH", f"LinkedIn login success: {email}", "GET /auth/oauth/linkedin/callback", "INFO")
-        return _success_response(token_data)
-
+        logger("OAUTH", f"Google mobile login: {user_info['email']}", "POST /auth/oauth/google/mobile", "INFO")
+        return JSONResponse(ResponseSchema.success(token_data, 200))
     except Exception as e:
-        logger("OAUTH", f"LinkedIn callback error: {str(e)}", "GET /auth/oauth/linkedin/callback", "ERROR")
-        return _error_response("LinkedIn authentication failed")
+        from fastapi import HTTPException
+        if isinstance(e, HTTPException):
+            logger("OAUTH", f"Google mobile login failed: {e.detail}", "POST /auth/oauth/google/mobile", "WARNING")
+            return JSONResponse(ResponseSchema.error(e.detail, e.status_code), status_code=e.status_code)
+        logger("OAUTH", f"Google mobile login error: {str(e)}", "POST /auth/oauth/google/mobile", "ERROR")
+        return JSONResponse(ResponseSchema.error("Google authentication failed", 500), status_code=500)
+
+

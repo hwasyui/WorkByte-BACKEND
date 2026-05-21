@@ -12,10 +12,10 @@ from typing import Dict, List, Optional
 from functions.db_manager import get_db
 from functions.logger import logger
 from routes.admin.admin_moderation import (
-    scan_toxicity,
+    scan_harmful_text,
     scan_for_scam,
     scan_for_scam_with_ml_fallback,
-    scan_toxicity_with_ml_fallback,
+    scan_harmful_text_with_ml_fallback,
     SCAM_AUTO_REMOVE_THRESHOLD,
 )
 
@@ -66,7 +66,7 @@ DEFAULT_BAN_MESSAGE_ADMIN      = (
 # ── Sort-column whitelists (safe f-string interpolation — values are hardcoded) ──
 _MOD_SORT_COLS = {
     "created_at":   "cmq.created_at",
-    "total_score":  "(cmq.toxic_score + cmq.severe_toxic_score + cmq.obscene_score + cmq.threat_score + cmq.insult_score + cmq.identity_hate_score)",
+    "total_score":  "(cmq.toxic_score + cmq.obscene_score + cmq.threat_score + cmq.insult_score + cmq.identity_hate_score)",
     "content_type": "cmq.content_type",
     "status":       "cmq.status",
 }
@@ -110,20 +110,20 @@ def _row(result) -> Optional[Dict]:
     return dict(result[0])
 
 
-# ─── toxicity detection ───────────────────────────────────────────────────────
+# ─── harmful text detection ───────────────────────────────────────────────────
 
-def queue_toxicity_scan(
+def queue_harmful_text_scan(
     content_type: str,
     content_id: str,
     user_id: str,
     text: str,
 ) -> Optional[Dict]:
     """
-    Run keyword scan on text and insert a pending record if any label is triggered.
+    Run harmful text scan and insert a pending moderation record if any label is triggered.
     content_type: 'job_post' | 'freelancer_profile' | 'client_profile'
     Returns the inserted row dict, or None if content is clean.
     """
-    result = scan_toxicity_with_ml_fallback(text)
+    result = scan_harmful_text_with_ml_fallback(text)
     if not result["is_flagged"]:
         return None
 
@@ -132,14 +132,14 @@ def queue_toxicity_scan(
     try:
         row = _row(get_db().execute_query(
             """
-            INSERT INTO toxicity_queue (
+            INSERT INTO harmful_text_queue (
                 content_type, content_id, user_id,
-                toxic_score, severe_toxic_score, obscene_score,
+                toxic_score, obscene_score,
                 threat_score, insult_score, identity_hate_score,
                 detected_labels, flagged_text, auto_approve_at
             ) VALUES (
                 :content_type, :content_id, :user_id,
-                :toxic_score, :severe_toxic_score, :obscene_score,
+                :toxic_score, :obscene_score,
                 :threat_score, :insult_score, :identity_hate_score,
                 CAST(:detected_labels AS JSONB), :flagged_text, :auto_approve_at
             )
@@ -150,7 +150,6 @@ def queue_toxicity_scan(
                 "content_id":           content_id,
                 "user_id":              user_id,
                 "toxic_score":          result["toxic_score"],
-                "severe_toxic_score":   result["severe_toxic_score"],
                 "obscene_score":        result["obscene_score"],
                 "threat_score":         result["threat_score"],
                 "insult_score":         result["insult_score"],
@@ -180,9 +179,9 @@ def _auto_approve_expired():
     expired = _rows(get_db().execute_query(
         """
         SELECT *,
-               (toxic_score + severe_toxic_score + obscene_score +
+               (toxic_score + obscene_score +
                 threat_score + insult_score + identity_hate_score) AS total_score
-        FROM toxicity_queue
+        FROM harmful_text_queue
         WHERE status = 'pending' AND auto_approve_at <= NOW()
         """,
         params={},
@@ -224,7 +223,7 @@ def _auto_approve_expired():
 
         get_db().execute_query(
             """
-            UPDATE toxicity_queue
+            UPDATE harmful_text_queue
             SET status = :status, actioned_at = NOW()
             WHERE moderation_id = :mid
             """,
@@ -240,7 +239,7 @@ def force_expire_moderation(moderation_ids: List[str]) -> None:
     params = {f"id_{i}": mid for i, mid in enumerate(moderation_ids)}
     get_db().execute_query(
         f"""
-        UPDATE toxicity_queue
+        UPDATE harmful_text_queue
         SET auto_approve_at = NOW() - INTERVAL '1 minute'
         WHERE moderation_id IN ({placeholders}) AND status = 'pending'
         """,
@@ -281,10 +280,10 @@ def list_moderation_queue(
     return _rows(get_db().execute_query(
         f"""
         SELECT cmq.*,
-               (cmq.toxic_score + cmq.severe_toxic_score + cmq.obscene_score +
+               (cmq.toxic_score + cmq.obscene_score +
                 cmq.threat_score + cmq.insult_score + cmq.identity_hate_score) AS total_score,
                u.email AS user_email
-        FROM toxicity_queue cmq
+        FROM harmful_text_queue cmq
         JOIN users u ON u.user_id = cmq.user_id
         WHERE (:status = 'all' OR cmq.status = :status)
           AND (:content_type = 'all' OR cmq.content_type = :content_type)
@@ -314,7 +313,7 @@ def action_moderation_item(
     new_status = "approved" if action == "approve" else "rejected"
     updated = _row(get_db().execute_query(
         """
-        UPDATE toxicity_queue
+        UPDATE harmful_text_queue
         SET status = :status, admin_user_id = :admin_id,
             admin_note = :note, actioned_at = NOW()
         WHERE moderation_id = :mid AND status = 'pending'
@@ -867,8 +866,48 @@ def force_expire_reports(target_type: str, target_id: str) -> None:
 
 # ─── appeals ──────────────────────────────────────────────────────────────────
 
+_MAX_APPEALS_PER_TARGET = 2
+
 def submit_appeal(user_id: str, target_type: str, target_id: str, message: str) -> Optional[Dict]:
-    """User submits an appeal against a ban (target_type='user') or job post closure."""
+    """
+    User submits an appeal against a ban or job-post closure.
+
+    Rules:
+      - Cannot appeal while a pending appeal already exists for the same target.
+      - Cannot appeal if the target was already approved (resolved positively).
+      - Maximum of _MAX_APPEALS_PER_TARGET (2) appeals per (user, target).
+        The second appeal is the user's one retry after a rejection.
+    """
+    from fastapi import HTTPException
+
+    existing = _rows(get_db().execute_query(
+        """
+        SELECT status FROM appeals
+        WHERE user_id = :uid AND target_type = :tt AND target_id = :tid
+        ORDER BY created_at DESC
+        """,
+        params={"uid": user_id, "tt": target_type, "tid": target_id},
+    ))
+
+    if existing:
+        statuses = [r["status"] for r in existing]
+
+        if "pending" in statuses:
+            raise HTTPException(
+                status_code=400,
+                detail="You already have a pending appeal for this item. Wait for it to be reviewed.",
+            )
+        if "approved" in statuses:
+            raise HTTPException(
+                status_code=400,
+                detail="Your previous appeal was approved — no further appeal is needed.",
+            )
+        if len(existing) >= _MAX_APPEALS_PER_TARGET:
+            raise HTTPException(
+                status_code=400,
+                detail="You have reached the maximum number of appeals for this item.",
+            )
+
     try:
         row = _row(get_db().execute_query(
             """
@@ -883,11 +922,104 @@ def submit_appeal(user_id: str, target_type: str, target_id: str, message: str) 
                 "message":     message,
             },
         ))
-        logger("ADMIN", f"Appeal submitted by user {user_id} for {target_type} {target_id}", level="INFO")
+        attempt = len(existing) + 1
+        logger("ADMIN", f"Appeal #{attempt} submitted by user {user_id} for {target_type} {target_id}", level="INFO")
         return row
+    except HTTPException:
+        raise
     except Exception as e:
         logger("ADMIN", f"Failed to submit appeal: {e}", level="ERROR")
         return None
+
+
+def get_appeal_status(user_id: str, target_type: str, target_id: str) -> Dict:
+    """
+    Return the current appeal eligibility and a frontend-ready message for a given target.
+
+    States:
+      never_appealed       → can appeal, 2 chances left
+      pending              → cannot appeal, waiting for review
+      rejected_can_retry   → can appeal, 1 chance left
+      rejected_final       → cannot appeal, exhausted
+      approved             → cannot appeal, already resolved positively
+    """
+    existing = _rows(get_db().execute_query(
+        """
+        SELECT status, admin_note, actioned_at, created_at
+        FROM appeals
+        WHERE user_id = :uid AND target_type = :tt AND target_id = :tid
+        ORDER BY created_at DESC
+        """,
+        params={"uid": user_id, "tt": target_type, "tid": target_id},
+    ))
+
+    rejection_count = sum(1 for r in existing if r["status"] == "rejected")
+    has_pending     = any(r["status"] == "pending"  for r in existing)
+    has_approved    = any(r["status"] == "approved" for r in existing)
+    total           = len(existing)
+    appeals_remaining = max(0, _MAX_APPEALS_PER_TARGET - total)
+
+    # Fetch the restriction reason from the target itself
+    restriction_reason = None
+    if target_type == "user":
+        row = _row(get_db().execute_query(
+            "SELECT ban_message, ban_reason FROM users WHERE user_id = :tid",
+            params={"tid": target_id},
+        ))
+        if row:
+            restriction_reason = row.get("ban_message") or row.get("ban_reason")
+    elif target_type == "job_post":
+        row = _row(get_db().execute_query(
+            "SELECT closure_reason, closure_note FROM job_post WHERE job_post_id = :tid",
+            params={"tid": target_id},
+        ))
+        if row:
+            restriction_reason = row.get("closure_note") or row.get("closure_reason")
+
+    if has_approved:
+        return {
+            "can_appeal":        False,
+            "appeals_remaining": 0,
+            "state":             "approved",
+            "message":           "Your previous appeal was approved. No further appeal is needed.",
+            "restriction_reason": None,
+        }
+
+    if has_pending:
+        return {
+            "can_appeal":        False,
+            "appeals_remaining": appeals_remaining,
+            "state":             "pending",
+            "message":           "You already have a pending appeal for this case. Please wait for the admin to review it.",
+            "restriction_reason": restriction_reason,
+        }
+
+    if rejection_count == 0:
+        return {
+            "can_appeal":        True,
+            "appeals_remaining": _MAX_APPEALS_PER_TARGET,
+            "state":             "never_appealed",
+            "message":           f"You can submit an appeal. Appeal chances: {_MAX_APPEALS_PER_TARGET}.",
+            "restriction_reason": restriction_reason,
+        }
+
+    if rejection_count < _MAX_APPEALS_PER_TARGET:
+        return {
+            "can_appeal":        True,
+            "appeals_remaining": appeals_remaining,
+            "state":             "rejected_can_retry",
+            "message":           f"Your previous appeal was rejected. You have {appeals_remaining} last chance(s) to re-appeal.",
+            "restriction_reason": restriction_reason,
+        }
+
+    # rejection_count >= _MAX_APPEALS_PER_TARGET
+    return {
+        "can_appeal":        False,
+        "appeals_remaining": 0,
+        "state":             "rejected_final",
+        "message":           "You have exhausted all appeals for this case. No further appeal is possible.",
+        "restriction_reason": restriction_reason,
+    }
 
 
 def get_user_appeals(user_id: str) -> List[Dict]:
@@ -905,10 +1037,63 @@ def get_user_appeals(user_id: str) -> List[Dict]:
     ))
 
 
-def list_appeals(status: str = "pending", page: int = 1, page_size: int = 20) -> List[Dict]:
-    """Admin: list all appeals with submitter email and optional job title."""
+def list_appeals(
+    status:         str = "pending",
+    target_type:    Optional[str] = None,
+    appeal_attempt: Optional[int] = None,
+    search:         Optional[str] = None,
+    page:           int = 1,
+    page_size:      int = 20,
+) -> List[Dict]:
+    """
+    Admin: list appeals with optional filters.
+
+    appeal_attempt  1 = first appeal for that target, 2 = second/final attempt.
+    target_type     'user' | 'job_post'
+    search          partial match on submitter email
+    """
     offset = (page - 1) * page_size
-    return _rows(get_db().execute_query(
+
+    # ROW_NUMBER per (user, target) ordered by created_at gives the attempt number.
+    rows = _rows(get_db().execute_query(
+        """
+        SELECT a.*,
+               u.email      AS user_email,
+               jp.job_title AS job_title,
+               ROW_NUMBER() OVER (
+                   PARTITION BY a.user_id, a.target_type, a.target_id
+                   ORDER BY a.created_at
+               ) AS appeal_attempt
+        FROM appeals a
+        JOIN users u        ON u.user_id          = a.user_id
+        LEFT JOIN job_post jp ON jp.job_post_id   = a.target_id
+                              AND a.target_type   = 'job_post'
+        WHERE (:status      = 'all'  OR a.status      = :status)
+          AND (:target_type IS NULL  OR a.target_type = :target_type)
+          AND (:search       IS NULL OR u.email ILIKE :search_pat)
+        ORDER BY a.created_at DESC
+        LIMIT :limit OFFSET :offset
+        """,
+        params={
+            "status":      status,
+            "target_type": target_type,
+            "search":      search,
+            "search_pat":  f"%{search}%" if search else None,
+            "limit":       page_size,
+            "offset":      offset,
+        },
+    ))
+
+    # Filter by appeal_attempt in Python (window func result not filterable in WHERE).
+    if appeal_attempt is not None:
+        rows = [r for r in rows if r.get("appeal_attempt") == appeal_attempt]
+
+    return rows
+
+
+def get_appeal(appeal_id: str) -> Optional[Dict]:
+    """Fetch a single appeal by ID with submitter email and job title."""
+    return _row(get_db().execute_query(
         """
         SELECT a.*,
                u.email      AS user_email,
@@ -916,11 +1101,9 @@ def list_appeals(status: str = "pending", page: int = 1, page_size: int = 20) ->
         FROM appeals a
         JOIN users u    ON u.user_id        = a.user_id
         LEFT JOIN job_post jp ON jp.job_post_id = a.target_id AND a.target_type = 'job_post'
-        WHERE (:status = 'all' OR a.status = :status)
-        ORDER BY a.created_at DESC
-        LIMIT :limit OFFSET :offset
+        WHERE a.appeal_id = :aid
         """,
-        params={"status": status, "limit": page_size, "offset": offset},
+        params={"aid": appeal_id},
     ))
 
 
@@ -1044,6 +1227,60 @@ def list_reports(
             "limit":         page_size,
             "offset":        offset,
         },
+    ))
+
+
+def get_report(report_id: str) -> Optional[Dict]:
+    """Fetch a single report by ID with reporter and reported entity details."""
+    return _row(get_db().execute_query(
+        """
+        SELECT ur.*,
+               reporter.email          AS reporter_email,
+               reported.email          AS reported_email,
+               jp.job_title            AS job_post_title
+        FROM user_reports ur
+        JOIN users reporter ON reporter.user_id = ur.reporter_id
+        LEFT JOIN users    reported ON reported.user_id  = ur.reported_user_id
+        LEFT JOIN job_post jp       ON jp.job_post_id    = ur.job_post_id
+        WHERE ur.report_id = :rid
+        """,
+        params={"rid": report_id},
+    ))
+
+
+def get_admin_user_detail(user_id: str) -> Optional[Dict]:
+    """Fetch a single user with full profile details for admin review."""
+    return _row(get_db().execute_query(
+        """
+        SELECT
+            u.user_id, u.email, u.is_admin, u.email_verified, u.email_verified_at,
+            u.is_report_banned, u.report_banned_at, u.ban_reason, u.ban_message,
+            u.created_at, u.updated_at,
+            f.freelancer_id,
+            f.full_name             AS freelancer_name,
+            f.profile_picture_url   AS freelancer_avatar,
+            f.bio,
+            c.client_id,
+            c.full_name             AS client_name,
+            c.profile_picture_url   AS client_avatar,
+            c.total_jobs_posted,
+            CASE
+                WHEN u.is_admin              THEN 'admin'
+                WHEN f.freelancer_id IS NOT NULL THEN 'freelancer'
+                WHEN c.client_id     IS NOT NULL THEN 'client'
+                ELSE 'unassigned'
+            END AS role,
+            csr.total_scam_confirmed,
+            csr.is_banned AS is_scam_banned,
+            (SELECT COUNT(*) FROM user_reports WHERE reported_user_id = u.user_id) AS total_reports_received,
+            (SELECT COUNT(*) FROM appeals       WHERE user_id          = u.user_id) AS total_appeals_submitted
+        FROM users u
+        LEFT JOIN freelancer         f   ON f.user_id    = u.user_id
+        LEFT JOIN client             c   ON c.user_id    = u.user_id
+        LEFT JOIN client_scam_record csr ON csr.client_id = c.client_id
+        WHERE u.user_id = :uid
+        """,
+        params={"uid": user_id},
     ))
 
 
@@ -1204,7 +1441,7 @@ def get_admin_dashboard_stats() -> Dict:
 
     return {
         "pending_moderation_items": _count(
-            "SELECT COUNT(*) AS cnt FROM toxicity_queue WHERE status = 'pending'"
+            "SELECT COUNT(*) AS cnt FROM harmful_text_queue WHERE status = 'pending'"
         ),
         "pending_scam_flags": _count(
             "SELECT COUNT(*) AS cnt FROM scam_job_flags WHERE status = 'pending'"
@@ -1217,7 +1454,7 @@ def get_admin_dashboard_stats() -> Dict:
         ),
         "auto_approved_last_24h": _count(
             """
-            SELECT COUNT(*) AS cnt FROM toxicity_queue
+            SELECT COUNT(*) AS cnt FROM harmful_text_queue
             WHERE status = 'approved'
               AND admin_user_id IS NULL
               AND actioned_at >= NOW() - INTERVAL '24 hours'

@@ -1,7 +1,7 @@
 """
-Toxicity detection and scam detection utilities.
+Harmful text detection and scam detection utilities.
 
-scan_toxicity_with_ml_fallback() is the primary entry point for toxicity scans.
+scan_harmful_text_with_ml_fallback() is the primary entry point for harmful text scans.
 It tries the trained RoBERTa model first (F1=0.8226 on Jigsaw+ETHOS test set),
 then falls back to deterministic keyword matching if the model is unavailable.
 
@@ -36,10 +36,9 @@ _SCAM_KEYWORDS: List[str] = _kw_data["scam_keywords"]
 SCAM_FLAG_THRESHOLD: float = 0.10       # ≥ 1 keyword match → admin review queue
 SCAM_AUTO_REMOVE_THRESHOLD: float = 0.85  # ≥ 5 matches + 30 days → auto-remove
 
-# ML label names → DB/keyword naming convention (only the two that differ)
+# ML label names → DB/keyword naming convention
 _ML_LABEL_REMAP = {
     "toxicity": "toxic",
-    "severe_toxicity": "severe_toxic",
 }
 
 
@@ -55,15 +54,15 @@ def _normalize(text: str) -> str:
 # Keyword-based scan (fallback / standalone)
 # ---------------------------------------------------------------------------
 
-def scan_toxicity(text: str) -> Dict:
+def scan_harmful_text(text: str) -> Dict:
     """
-    Deterministic keyword scan across 6 harm labels.
+    Deterministic keyword scan across 5 harm labels.
     Scoring: score = min(hit_count × 0.35, 1.0)
       — 1 keyword hit → 0.35 (flags for admin review)
       — 2 hits → 0.70
       — 3+ hits → 1.0
     Used directly when called explicitly, or as fallback by
-    scan_toxicity_with_ml_fallback() when the ML model is unavailable.
+    scan_harmful_text_with_ml_fallback() when the ML model is unavailable.
     """
     normalized = _normalize(text)
     scores: Dict[str, float] = {}
@@ -78,7 +77,6 @@ def scan_toxicity(text: str) -> Dict:
 
     return {
         "toxic_score":          scores["toxic"],
-        "severe_toxic_score":   scores["severe_toxic"],
         "obscene_score":        scores["obscene"],
         "threat_score":         scores["threat"],
         "insult_score":         scores["insult"],
@@ -145,9 +143,9 @@ def scan_for_scam_with_ml_fallback(title: str, description: str) -> Dict:
 # ML-first scan (primary entry point)
 # ---------------------------------------------------------------------------
 
-def scan_toxicity_with_ml_fallback(text: str) -> Dict:
+def scan_harmful_text_with_ml_fallback(text: str) -> Dict:
     """
-    Primary toxicity scan entry point.
+    Primary harmful text scan entry point.
 
     1. Attempts inference with the trained RoBERTa model (threshold=0.5).
        Model metrics on Jigsaw+ETHOS test set: F1=0.71, precision=0.70,
@@ -155,11 +153,11 @@ def scan_toxicity_with_ml_fallback(text: str) -> Dict:
     2. On any failure (model files missing, CUDA OOM, etc.) logs a WARNING
        and transparently falls back to keyword matching.
 
-    Return shape is identical to scan_toxicity() plus a 'scan_method' key
+    Return shape is identical to scan_harmful_text() plus a 'scan_method' key
     ('ml' or 'keyword') so callers can log which path was taken.
     """
     try:
-        from ai_related.toxicity_detection.model_inference import predict
+        from ai_related.harmful_text_detection.model_inference import predict
 
         ml = predict(text, model_type="best", threshold=0.5)
 
@@ -168,7 +166,6 @@ def scan_toxicity_with_ml_fallback(text: str) -> Dict:
 
         return {
             "toxic_score":          round(ml["scores"].get("toxicity", 0.0), 4),
-            "severe_toxic_score":   round(ml["scores"].get("severe_toxicity", 0.0), 4),
             "obscene_score":        round(ml["scores"].get("obscene", 0.0), 4),
             "threat_score":         round(ml["scores"].get("threat", 0.0), 4),
             "insult_score":         round(ml["scores"].get("insult", 0.0), 4),
@@ -180,8 +177,8 @@ def scan_toxicity_with_ml_fallback(text: str) -> Dict:
 
     except Exception as exc:
         logger(
-            "TOXICITY",
-            f"ML toxicity scan failed ({type(exc).__name__}: {exc}); falling back to keyword scan",
+            "HARMFUL_TEXT",
+            f"ML harmful text scan failed ({type(exc).__name__}: {exc}); falling back to keyword scan",
             level="WARNING",
         )
-        return scan_toxicity(text)
+        return scan_harmful_text(text)

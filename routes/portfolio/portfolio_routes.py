@@ -12,7 +12,7 @@ from functions.access_control import assert_freelancer_owns, get_freelancer_prof
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.portfolio.portfolio_functions import PortfolioFunctions
-from ai_related.job_matching.embedding_manager import mark_freelancer_dirty
+from ai_related.job_matching.embedding_manager import mark_freelancer_dirty, mark_portfolio_dirty
 
 portfolio_router = APIRouter(prefix="/portfolios", tags=["Portfolio"])
 
@@ -81,6 +81,7 @@ async def create_portfolio(portfolio: PortfolioCreate, current_user: UserInDB = 
         )
         
         mark_freelancer_dirty(str(portfolio.freelancer_id))
+        mark_portfolio_dirty(str(new_portfolio["portfolio_id"]))
         success_msg = f"Created portfolio {portfolio_id} for freelancer {portfolio.freelancer_id}"
         logger("PORTFOLIO", success_msg, "POST /portfolios", "INFO")
         return ResponseSchema.success(new_portfolio, 201)
@@ -109,6 +110,7 @@ async def update_portfolio(portfolio_id: str, portfolio_update: PortfolioUpdate,
         updated_portfolio = PortfolioFunctions.update_portfolio(portfolio_id, update_data)
         
         mark_freelancer_dirty(str(existing_portfolio["freelancer_id"]))
+        mark_portfolio_dirty(portfolio_id)
         success_msg = f"Updated portfolio {portfolio_id}"
         logger("PORTFOLIO", success_msg, "PUT /portfolios/{portfolio_id}", "INFO")
         return ResponseSchema.success(updated_portfolio, 200)

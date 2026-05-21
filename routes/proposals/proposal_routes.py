@@ -15,7 +15,7 @@ from routes.proposals.proposal_functions import ProposalFunctions
 from routes.freelancers.freelancer_functions import FreelancerFunctions
 from routes.clients.client_functions import ClientFunctions
 from routes.notifications.notification_functions import NotificationFunctions
-from routes.admin.admin_moderation import scan_toxicity_with_ml_fallback
+from routes.admin.admin_moderation import scan_harmful_text_with_ml_fallback
 
 
 proposal_router = APIRouter(prefix="/proposals", tags=["Proposals"])
@@ -142,9 +142,9 @@ async def create_proposal(
             return ResponseSchema.error(duplicate_message, 409)
 
         if proposal.cover_letter and proposal.cover_letter.strip():
-            toxicity = scan_toxicity_with_ml_fallback(proposal.cover_letter)
-            if toxicity["is_flagged"]:
-                labels = toxicity.get("detected_labels", [])
+            harm_result = scan_harmful_text_with_ml_fallback(proposal.cover_letter)
+            if harm_result["is_flagged"]:
+                labels = harm_result.get("detected_labels", [])
                 logger("PROPOSAL", f"Blocked toxic proposal from freelancer {freelancer_id} — labels={labels}", "POST /proposals", "WARNING")
                 return ResponseSchema.error(
                     f"Your proposal was not submitted. The cover letter was detected as harmful ({', '.join(labels)}).",
