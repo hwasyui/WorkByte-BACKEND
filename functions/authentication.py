@@ -122,7 +122,8 @@ def use_refresh_token(raw: str) -> tuple:
     user_id = str(token["user_id"])
     user_rows = get_db().execute_query(
         """
-        SELECT u.user_id, u.email, u.password, u.is_admin, u.email_verified,
+        SELECT u.user_id, u.email, u.password, u.password_login_enabled,
+               u.is_admin, u.email_verified,
                u.is_report_banned, u.ban_message, u.report_banned_at,
                f.freelancer_id,
                c.client_id
@@ -205,6 +206,7 @@ def _build_user_from_row(row: dict) -> UserInDB:
         user_id=str(row['user_id']),
         email=row['email'],
         password=row['password'],
+        password_login_enabled=bool(row.get('password_login_enabled', True)),
         email_verified=bool(row['email_verified']),
         is_admin=bool(row.get('is_admin', False)),
         freelancer_id=str(row['freelancer_id']) if row.get('freelancer_id') else None,
@@ -215,7 +217,8 @@ def _build_user_from_row(row: dict) -> UserInDB:
     )
 
 _USER_QUERY = """
-    SELECT u.user_id, u.email, u.password, u.is_admin, u.email_verified,
+    SELECT u.user_id, u.email, u.password, u.password_login_enabled,
+           u.is_admin, u.email_verified,
            u.is_report_banned, u.ban_message, u.report_banned_at,
            f.freelancer_id,
            c.client_id
@@ -232,6 +235,8 @@ def authenticate_user(email: str, password: str):
         if not result or len(result) == 0:
             return False
         user = result[0]
+        if not user.get('password_login_enabled', True):
+            raise HTTPException(status_code=403, detail="Password login is not enabled for this account")
         if not verify_password(password, user['password']):
             return False
         if EMAIL_VERIFICATION_REQUIRED and not user['email_verified']:
@@ -266,7 +271,11 @@ def register_user(email: str, password: str, user_type: str = "freelancer", full
         hashed_password = get_password_hash(password)
 
         user_result = get_db().execute_query(
-            "INSERT INTO users (email, password) VALUES (:email, :password) RETURNING user_id",
+            """
+            INSERT INTO users (email, password, password_login_enabled)
+            VALUES (:email, :password, TRUE)
+            RETURNING user_id
+            """,
             params={"email": email, "password": hashed_password}
         )
         if not user_result:
@@ -498,7 +507,11 @@ def reset_password(email: str, otp_code: str, new_password: str) -> dict:
 
     new_hash = get_password_hash(new_password)
     get_db().execute_query(
-        "UPDATE users SET password = :password WHERE user_id = :user_id",
+        """
+        UPDATE users
+        SET password = :password, password_login_enabled = TRUE
+        WHERE user_id = :user_id
+        """,
         params={"password": new_hash, "user_id": user.user_id}
     )
     get_db().execute_query(
@@ -512,11 +525,17 @@ def reset_password(email: str, otp_code: str, new_password: str) -> dict:
 
 def change_password(user: UserInDB, old_password: str, new_password: str) -> dict:
     """Change password for an already-authenticated user."""
+    if not user.password_login_enabled:
+        raise HTTPException(status_code=400, detail="Password login is not enabled. Set a password first.")
     if not verify_password(old_password, user.password):
         raise HTTPException(status_code=400, detail="Current password is incorrect")
     new_hash = get_password_hash(new_password)
     get_db().execute_query(
-        "UPDATE users SET password = :password WHERE user_id = :user_id",
+        """
+        UPDATE users
+        SET password = :password, password_login_enabled = TRUE
+        WHERE user_id = :user_id
+        """,
         params={"password": new_hash, "user_id": user.user_id},
     )
     # Revoke all existing refresh tokens so other devices are logged out.
@@ -526,6 +545,23 @@ def change_password(user: UserInDB, old_password: str, new_password: str) -> dic
     )
     logger("AUTH", f"Password changed for {user.email}", level="INFO")
     return {"message": "Password changed successfully"}
+
+
+def set_password(user: UserInDB, new_password: str) -> dict:
+    """Enable password login for an authenticated OAuth-only account."""
+    if user.password_login_enabled:
+        raise HTTPException(status_code=400, detail="Password login is already enabled. Use change-password instead.")
+    new_hash = get_password_hash(new_password)
+    get_db().execute_query(
+        """
+        UPDATE users
+        SET password = :password, password_login_enabled = TRUE
+        WHERE user_id = :user_id
+        """,
+        params={"password": new_hash, "user_id": user.user_id},
+    )
+    logger("AUTH", f"Password login enabled for {user.email}", level="INFO")
+    return {"message": "Password login enabled successfully"}
 
 def resend_email_verification(email: str) -> dict:
     """Send a fresh verification OTP for an unverified account."""

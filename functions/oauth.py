@@ -171,7 +171,8 @@ def find_or_create_oauth_user(
     # ── 1. Existing provider link ─────────────────────────────────────────────
     rows = get_db().execute_query(
         """
-        SELECT u.user_id, u.email, u.password, u.is_admin, u.email_verified,
+        SELECT u.user_id, u.email, u.password, u.password_login_enabled,
+               u.is_admin, u.email_verified,
                u.is_report_banned, u.ban_message, u.report_banned_at,
                f.freelancer_id,
                c.client_id
@@ -191,7 +192,8 @@ def find_or_create_oauth_user(
     # ── 2. Email already registered (manual or other provider) ───────────────
     existing = get_db().execute_query(
         """
-        SELECT u.user_id, u.email, u.password, u.is_admin, u.email_verified,
+        SELECT u.user_id, u.email, u.password, u.password_login_enabled,
+               u.is_admin, u.email_verified,
                u.is_report_banned, u.ban_message, u.report_banned_at,
                f.freelancer_id,
                c.client_id
@@ -231,8 +233,8 @@ def find_or_create_oauth_user(
     random_hash = get_password_hash(secrets.token_urlsafe(32))
     user_rows = get_db().execute_query(
         """
-        INSERT INTO users (email, password, email_verified, email_verified_at)
-        VALUES (:email, :password, TRUE, NOW())
+        INSERT INTO users (email, password, password_login_enabled, email_verified, email_verified_at)
+        VALUES (:email, :password, FALSE, TRUE, NOW())
         RETURNING user_id
         """,
         params={"email": email, "password": random_hash},

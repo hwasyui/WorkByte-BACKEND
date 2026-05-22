@@ -15,6 +15,7 @@ class UserInDB(BaseModel):
     user_id: str
     email: str
     password: str
+    password_login_enabled: bool = True
     email_verified: bool = False
     is_admin: bool = False
     freelancer_id: Optional[str] = None
@@ -98,9 +99,20 @@ class ChangePasswordRequest(BaseModel):
             raise ValueError('Password must be at least 8 characters long')
         return v
 
+class SetPasswordRequest(BaseModel):
+    new_password: str
+
+    @field_validator('new_password')
+    @classmethod
+    def password_strength(cls, v):
+        if len(v) < 8:
+            raise ValueError('Password must be at least 8 characters long')
+        return v
+
 class UserResponse(BaseModel):
     user_id: str
     email: str
+    password_login_enabled: bool = True
     email_verified: bool = False
     is_admin: bool = False
     freelancer_id: Optional[str] = None

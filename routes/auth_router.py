@@ -24,6 +24,7 @@ from functions.authentication import (
     verify_email_otp,
     request_password_reset,
     reset_password,
+    set_password,
 )
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
@@ -35,6 +36,7 @@ from functions.schema_model import (
     ResendVerificationRequest,
     ForgotPasswordRequest,
     ResetPasswordRequest,
+    SetPasswordRequest,
     UserRegister,
     UserLogin,
     Token,
@@ -139,6 +141,7 @@ async def get_me(current_user: UserInDB = Depends(get_current_user)):
         response = UserResponse(
             user_id=current_user.user_id,
             email=current_user.email,
+            password_login_enabled=current_user.password_login_enabled,
             email_verified=current_user.email_verified,
             is_admin=current_user.is_admin,
             freelancer_id=current_user.freelancer_id,
@@ -254,6 +257,25 @@ async def change_password_endpoint(
     except Exception as e:
         error_msg = f"Change password error: {str(e)}"
         logger("AUTH", error_msg, "POST /auth/change-password", "ERROR")
+        return ResponseSchema.error(error_msg, 500)
+
+
+@auth_router.post("/set-password", response_model=dict)
+async def set_password_endpoint(
+    payload: SetPasswordRequest,
+    current_user: UserInDB = Depends(get_current_user),
+):
+    """Set the first real password for an authenticated OAuth-only account."""
+    try:
+        result = set_password(current_user, payload.new_password)
+        logger("AUTH", f"Password login enabled for {current_user.email}", "POST /auth/set-password", "INFO")
+        return ResponseSchema.success(result, 200)
+    except HTTPException as e:
+        logger("AUTH", f"Set password failed for {current_user.email}: {e.detail}", "POST /auth/set-password", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
+    except Exception as e:
+        error_msg = f"Set password error: {str(e)}"
+        logger("AUTH", error_msg, "POST /auth/set-password", "ERROR")
         return ResponseSchema.error(error_msg, 500)
 
 
