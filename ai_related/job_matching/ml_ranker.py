@@ -269,6 +269,18 @@ import math as _math
 _RECENCY_DECAY_LAMBDA = _math.log(2.0) / _RECENCY_HALF_LIFE_MONTHS
 
 
+# Minimum actual feature value required to show a positive label.
+# Features below this threshold are suppressed even when SHAP is positive —
+# a 0.49 portfolio cosine vs social media shouldn't say "closely resembles".
+_POS_LABEL_MIN_VALUE: dict[str, float] = {
+    "cosine_sim":          0.65,
+    "portfolio_relevance": 0.65,
+}
+
+# Minimum absolute SHAP contribution to show a reason at all.
+# Stops weak contributors from padding the card to 3 when the match isn't strong.
+_MIN_POS_SHAP = 0.02
+
 # Positive-context labels: shown when a feature pushes the score UP.
 _FEATURE_LABELS_POS: dict[str, str] = {
     "cosine_sim":             "Your profile closely matches this job",
@@ -333,6 +345,7 @@ _FEATURE_GROUP: dict[str, str] = {
 def _build_reason_lists(
     contribs_row: np.ndarray,
     feat_cols: list[str],
+    feat_vals: dict[str, float] | None = None,
     pos_k: int = 3,
     neg_k: int = 2,
 ) -> tuple[list[dict], list[dict]]:
@@ -345,6 +358,9 @@ def _build_reason_lists(
     group are skipped regardless of sign. This prevents the same concept
     (e.g. skill coverage, experience level) from appearing as both a positive
     and a negative signal on the same job card.
+
+    feat_vals: actual feature values used to suppress positive labels whose
+    raw value falls below _POS_LABEL_MIN_VALUE, even when SHAP is positive.
     """
     feat_contribs = contribs_row[: len(feat_cols)]
     sorted_idx    = np.argsort(-np.abs(feat_contribs))
@@ -365,6 +381,12 @@ def _build_reason_lists(
             continue
 
         if contrib > 0 and len(match_reasons) < pos_k:
+            if contrib < _MIN_POS_SHAP:
+                continue  # contribution too weak — don't pad with noise
+            min_val = _POS_LABEL_MIN_VALUE.get(feat)
+            if min_val is not None and feat_vals is not None:
+                if float(feat_vals.get(feat, 0.0)) < min_val:
+                    continue  # value too low — suppress positive label, leave slot open
             seen_groups.add(group)
             match_reasons.append({
                 "feature":      feat,
@@ -835,7 +857,9 @@ def rank_jobs_with_ml(
             job["skill_overlap_pct"] = round(
                 float(feat_df.iloc[i]["skill_overlap_pct"]) * 100, 1
             )
-            job["match_reasons"], job["penalty_reasons"] = _build_reason_lists(contribs[i], feat_cols, pos_k=3, neg_k=2)
+            job["match_reasons"], job["penalty_reasons"] = _build_reason_lists(
+                contribs[i], feat_cols, feat_vals=feat_df.iloc[i].to_dict(), pos_k=3, neg_k=2
+            )
 
         ranked = sorted(job_rows, key=lambda j: j["match_probability"], reverse=True)
         top = ranked[:top_n]

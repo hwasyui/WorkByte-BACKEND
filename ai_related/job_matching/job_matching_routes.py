@@ -28,6 +28,8 @@ from ai_related.job_matching.rag_analyser import analyse_job_match
 
 # Stage 2 minimum skill overlap — jobs below this are dropped before Stage 3.
 _MIN_SKILL_OVERLAP = 0.20  # 20%
+# Freelancers with fewer skills than this bypass the overlap filter entirely.
+_SPARSE_SKILL_THRESHOLD = 5
 
 router = APIRouter()
 
@@ -126,6 +128,7 @@ async def match_freelancer_to_jobs(
                     jp.deadline,
                     jp.proposal_count,
                     jre.source_text,
+                    c.full_name AS client_name,
                     ROUND((1 - (jre.embedding_vector <=> CAST(:vec AS vector)))::numeric, 4) AS similarity_score
                 FROM (
                     SELECT job_role_id, source_text, embedding_vector
@@ -136,6 +139,7 @@ async def match_freelancer_to_jobs(
                 ) jre
                 JOIN job_role jr ON jr.job_role_id = jre.job_role_id
                 JOIN job_post jp ON jp.job_post_id = jr.job_post_id
+                LEFT JOIN client c ON c.client_id = jp.client_id
                 WHERE jp.status = 'active' {exp_filter}
                 ORDER BY jp.job_post_id, similarity_score DESC
             ) deduped
@@ -165,62 +169,76 @@ async def match_freelancer_to_jobs(
             {"fid": fid},
         )
         f_skill_ids = {str(r["skill_id"]) for r in f_skills}
+        sparse_profile = len(f_skill_ids) < _SPARSE_SKILL_THRESHOLD
         logger(
             "JOB_MATCHING",
             f"Stage 2 started | freelancer_id={fid} | freelancer_skill_count={len(f_skill_ids)} "
-            f"| min_overlap_threshold={_MIN_SKILL_OVERLAP:.0%}",
+            f"| min_overlap_threshold={_MIN_SKILL_OVERLAP:.0%}"
+            + (" | skill_filter=bypassed (sparse profile)" if sparse_profile else ""),
             level="DEBUG",
         )
 
-        filtered = []
-        dropped_no_skills = 0
-        dropped_overlap = 0
-        for job in candidates:
-            jp_id = str(job["job_post_id"])
-
-            role_rows = db.execute_query(
-                "SELECT job_role_id FROM job_role WHERE job_post_id = :jpid",
-                {"jpid": jp_id},
-            )
-
-            best_overlap = 0.0
-            has_any_required_skills = False
-            for role in (role_rows or []):
-                role_req = db.execute_query(
-                    "SELECT skill_id FROM job_role_skill WHERE job_role_id = :rid AND is_required = TRUE",
-                    {"rid": str(role["job_role_id"])},
-                )
-                role_req_ids = {str(r["skill_id"]) for r in role_req}
-                if role_req_ids:
-                    has_any_required_skills = True
-                    role_overlap = len(f_skill_ids & role_req_ids) / len(role_req_ids)
-                    best_overlap = max(best_overlap, role_overlap)
-
-            if has_any_required_skills:
-                if best_overlap < _MIN_SKILL_OVERLAP:
-                    logger(
-                        "JOB_MATCHING",
-                        f"Stage 2 drop | job_post_id={jp_id} | title='{job.get('job_title','?')[:40]}' "
-                        f"| best_role_overlap={best_overlap:.2%} < {_MIN_SKILL_OVERLAP:.0%}",
-                        level="DEBUG",
-                    )
-                    dropped_overlap += 1
-                    continue
-                job["skill_overlap_pct"] = round(best_overlap * 100, 1)
-            else:
-                dropped_no_skills += 1
+        if sparse_profile:
+            for job in candidates:
                 job["skill_overlap_pct"] = None
+            filtered = candidates
+            stage2_ms = (time.perf_counter() - t2) * 1000
+            logger(
+                "JOB_MATCHING",
+                f"Stage 2 complete | freelancer_id={fid} | passed={len(filtered)} "
+                f"| dropped_low_overlap=0 | dropped_no_skills_job=0 | time={stage2_ms:.1f}ms",
+                level="INFO",
+            )
+        else:
+            filtered = []
+            dropped_no_skills = 0
+            dropped_overlap = 0
+            for job in candidates:
+                jp_id = str(job["job_post_id"])
 
-            filtered.append(job)
+                role_rows = db.execute_query(
+                    "SELECT job_role_id FROM job_role WHERE job_post_id = :jpid",
+                    {"jpid": jp_id},
+                )
 
-        stage2_ms = (time.perf_counter() - t2) * 1000
-        logger(
-            "JOB_MATCHING",
-            f"Stage 2 complete | freelancer_id={fid} | passed={len(filtered)} "
-            f"| dropped_low_overlap={dropped_overlap} | dropped_no_skills_job={dropped_no_skills} "
-            f"| time={stage2_ms:.1f}ms",
-            level="INFO",
-        )
+                best_overlap = 0.0
+                has_any_required_skills = False
+                for role in (role_rows or []):
+                    role_req = db.execute_query(
+                        "SELECT skill_id FROM job_role_skill WHERE job_role_id = :rid AND is_required = TRUE",
+                        {"rid": str(role["job_role_id"])},
+                    )
+                    role_req_ids = {str(r["skill_id"]) for r in role_req}
+                    if role_req_ids:
+                        has_any_required_skills = True
+                        role_overlap = len(f_skill_ids & role_req_ids) / len(role_req_ids)
+                        best_overlap = max(best_overlap, role_overlap)
+
+                if has_any_required_skills:
+                    if best_overlap < _MIN_SKILL_OVERLAP:
+                        logger(
+                            "JOB_MATCHING",
+                            f"Stage 2 drop | job_post_id={jp_id} | title='{job.get('job_title','?')[:40]}' "
+                            f"| best_role_overlap={best_overlap:.2%} < {_MIN_SKILL_OVERLAP:.0%}",
+                            level="DEBUG",
+                        )
+                        dropped_overlap += 1
+                        continue
+                    job["skill_overlap_pct"] = round(best_overlap * 100, 1)
+                else:
+                    dropped_no_skills += 1
+                    job["skill_overlap_pct"] = None
+
+                filtered.append(job)
+
+            stage2_ms = (time.perf_counter() - t2) * 1000
+            logger(
+                "JOB_MATCHING",
+                f"Stage 2 complete | freelancer_id={fid} | passed={len(filtered)} "
+                f"| dropped_low_overlap={dropped_overlap} | dropped_no_skills_job={dropped_no_skills} "
+                f"| time={stage2_ms:.1f}ms",
+                level="INFO",
+            )
 
         if not filtered:
             total_ms = (time.perf_counter() - t_request) * 1000
