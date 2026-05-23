@@ -103,6 +103,10 @@ designed to complement each other, not agree with each other.
 import os
 import json
 import time
+import asyncio
+import random
+
+import httpx
 
 from functions.logger import logger
 
@@ -760,6 +764,66 @@ def _parse_llm_json(raw: str, source: str) -> dict:
     return json.loads(raw)
 
 
+_GROQ_CHAT_URL = "https://api.groq.com/openai/v1/chat/completions"
+_GROQ_RAG_MODELS = [
+    "llama-3.3-70b-versatile",
+    "llama-3.1-8b-instant",
+    "gemma2-9b-it",
+    "deepseek-r1-distill-llama-70b",
+]
+
+
+async def _call_groq_rag(prompt: str) -> str:
+    """Call GROQ LLM for RAG analysis; returns raw JSON-mode response text."""
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        raise RuntimeError("GROQ_API_KEY not set")
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    max_retries = 3
+    base_delay = 2.0
+
+    async with httpx.AsyncClient(timeout=_LLM_TIMEOUT) as client:
+        for model in _GROQ_RAG_MODELS:
+            for attempt in range(1, max_retries + 1):
+                try:
+                    body = {
+                        "model": model,
+                        "messages": [{"role": "user", "content": prompt}],
+                        "temperature": 0.15,
+                        "response_format": {"type": "json_object"},
+                    }
+                    resp = await client.post(_GROQ_CHAT_URL, headers=headers, json=body)
+                    resp.raise_for_status()
+                    content = resp.json()["choices"][0]["message"]["content"].strip()
+                    logger("RAG_ANALYSER", f"GROQ response received | model={model} | chars={len(content)}", level="INFO")
+                    return content
+                except httpx.HTTPStatusError as e:
+                    status = e.response.status_code if e.response is not None else None
+                    text = e.response.text if e.response is not None else ""
+                    if status == 429 and attempt < max_retries:
+                        delay = base_delay * (2 ** (attempt - 1)) + random.uniform(0.0, 0.5)
+                        logger("RAG_ANALYSER", f"GROQ rate limit on {model}, retry {attempt}/{max_retries} after {delay:.1f}s", level="WARNING")
+                        await asyncio.sleep(delay)
+                        continue
+                    if status == 400 and any(k in text.lower() for k in ("decommissioned", "model_not_found", "not supported")):
+                        logger("RAG_ANALYSER", f"GROQ model {model} unavailable, trying next", level="WARNING")
+                        break
+                    raise
+                except httpx.RequestError as e:
+                    if attempt < max_retries:
+                        delay = base_delay * (2 ** (attempt - 1)) + random.uniform(0.0, 0.5)
+                        logger("RAG_ANALYSER", f"GROQ request error on {model}, retry {attempt}/{max_retries}: {e}", level="WARNING")
+                        await asyncio.sleep(delay)
+                        continue
+                    raise
+
+    raise RuntimeError("No GROQ model succeeded for RAG analysis")
+
+
 async def _call_google(prompt: str) -> str:
     """
     Send a prompt to Google Gemini via Vertex AI and return the raw text response.
@@ -798,21 +862,35 @@ async def _call_google(prompt: str) -> str:
 
 
 async def _call_llm(prompt: str) -> dict:
-    """Call Google Gemini and return the parsed JSON result."""
-    logger(
-        "RAG_ANALYSER",
-        f"LLM call started | source=gemini | prompt_chars={len(prompt)} | timeout={_LLM_TIMEOUT}s",
-        level="INFO",
-    )
-
+    """Call GROQ (primary) then Google Gemini (fallback) and return parsed JSON result."""
     t0 = time.perf_counter()
     raw = ""
 
+    # --- GROQ (primary) ---
     try:
+        logger("RAG_ANALYSER", f"LLM call started | source=groq | prompt_chars={len(prompt)} | timeout={_LLM_TIMEOUT}s", level="INFO")
+        raw = await _call_groq_rag(prompt)
+        llm_ms = (time.perf_counter() - t0) * 1000
+        result = _parse_llm_json(raw, "groq")
+        logger(
+            "RAG_ANALYSER",
+            f"LLM JSON parsed | source=groq | time={llm_ms:.0f}ms "
+            f"| overall_match_score={result.get('overall_match_score', result.get('match_score'))} "
+            f"| overall_recommendation={result.get('overall_recommendation', result.get('recommendation'))} "
+            f"| roles={len(result.get('roles', []))}",
+            level="INFO",
+        )
+        logger("RAG_ANALYSER", f"LLM result (full JSON) | source=groq |\n{json.dumps(result, indent=2, default=str)}", level="DEBUG")
+        return result
+    except Exception as groq_exc:
+        logger("RAG_ANALYSER", f"GROQ failed ({groq_exc}), falling back to Gemini", level="WARNING")
+
+    # --- Gemini (fallback) ---
+    try:
+        logger("RAG_ANALYSER", f"LLM call started | source=gemini | prompt_chars={len(prompt)} | timeout={_LLM_TIMEOUT}s", level="INFO")
         raw = await _call_google(prompt)
         llm_ms = (time.perf_counter() - t0) * 1000
         result = _parse_llm_json(raw, "gemini")
-
         logger(
             "RAG_ANALYSER",
             f"LLM JSON parsed | source=gemini | time={llm_ms:.0f}ms "
@@ -821,21 +899,11 @@ async def _call_llm(prompt: str) -> dict:
             f"| roles={len(result.get('roles', []))}",
             level="INFO",
         )
-        logger(
-            "RAG_ANALYSER",
-            f"LLM result (full JSON) | source=gemini |\n{json.dumps(result, indent=2, default=str)}",
-            level="DEBUG",
-        )
+        logger("RAG_ANALYSER", f"LLM result (full JSON) | source=gemini |\n{json.dumps(result, indent=2, default=str)}", level="DEBUG")
         return result
-
     except json.JSONDecodeError as exc:
         elapsed = (time.perf_counter() - t0) * 1000
-        logger(
-            "RAG_ANALYSER",
-            f"JSON parse error | source=gemini | time={elapsed:.0f}ms "
-            f"| error={exc} | raw_preview={raw[:300]}",
-            level="ERROR",
-        )
+        logger("RAG_ANALYSER", f"JSON parse error | source=gemini | time={elapsed:.0f}ms | error={exc} | raw_preview={raw[:300]}", level="ERROR")
         return {"error": "LLM returned non-JSON output", "raw_preview": raw[:200]}
     except Exception as exc:
         elapsed = (time.perf_counter() - t0) * 1000
