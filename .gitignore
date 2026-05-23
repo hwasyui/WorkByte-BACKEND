@@ -17,21 +17,29 @@ venv
 *.bin
 *.zip
 
-ai_related/toxicity_detection/machine_learning/*.ipynb
-ai_related/toxicity_detection/machine_learning/models/bert/
-ai_related/toxicity_detection/machine_learning/models/roberta/
-ai_related/toxicity_detection/machine_learning/models/distilbert/
-ai_related/toxicity_detection/machine_learning/toxicity_augmented.csv
+ai_related/harmful_text_detection/machine_learning/*.ipynb
+ai_related/harmful_text_detection/machine_learning/models/bert/
+ai_related/harmful_text_detection/machine_learning/models/roberta/
+ai_related/harmful_text_detection/machine_learning/models/distilbert/
+ai_related/harmful_text_detection/machine_learning/toxicity_augmented.csv
+ai_related/harmful_text_detection/machine_learning/models/*.png
 
 ai_related/job_matching/machine_learning/*.ipynb
 ai_related/job_matching/machine_learning/data/
+ai_related/job_matching/machine_learning/MODEL_COMPLETE.md
+ai_related/job_matching/machine_learning/rank_demo.py
 ai_related/job_matching/machine_learning/models/model_catboost/
 ai_related/job_matching/machine_learning/models/model_lightgbm/
 ai_related/job_matching/machine_learning/models/model_logistic_regression/
+ai_related/job_matching/machine_learning/models/*.png
 *.parquet
 
 ai_related/job_scam_detection/model1_sbert_rf_complete
 
+CAPSTONE_*.md
+
+walkthrough/*.py
+walkthrough/__pycache__/
 walkthrough/*.md
 walkthrough/*.pdf
 walkthrough/*.jpeg
