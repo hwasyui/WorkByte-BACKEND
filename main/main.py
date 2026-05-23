@@ -87,8 +87,26 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             logger("LIFESPAN", f"Embedding model warm-up failed (non-fatal): {e}", level="WARNING")
 
+    def _warmup_job_ranker():
+        try:
+            from ai_related.job_matching.ml_ranker import _load_model
+            _load_model()
+            logger("LIFESPAN", "Job matching ranker warmed up (CatBoost)", level="INFO")
+        except Exception as e:
+            logger("LIFESPAN", f"Job matching ranker warm-up failed (non-fatal): {e}", level="WARNING")
+
+    def _warmup_scam_detector():
+        try:
+            from ai_related.job_scam_detection.scam_detector import _load_models
+            _load_models()
+            logger("LIFESPAN", "Scam detector warmed up (SBERT + Random Forest)", level="INFO")
+        except Exception as e:
+            logger("LIFESPAN", f"Scam detector warm-up failed (non-fatal): {e}", level="WARNING")
+
     asyncio.create_task(asyncio.to_thread(_warmup_harmful_text))
     asyncio.create_task(asyncio.to_thread(_warmup_embedding))
+    asyncio.create_task(asyncio.to_thread(_warmup_job_ranker))
+    asyncio.create_task(asyncio.to_thread(_warmup_scam_detector))
 
     yield
 

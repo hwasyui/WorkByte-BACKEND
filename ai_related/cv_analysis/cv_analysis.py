@@ -216,55 +216,25 @@ def check_ats_compliance(raw_text: str) -> dict:
     return {"ats_score": score, "ats_flags": flags}
 
 
-def _call_gemini(system_prompt: str, user_prompt: str, json_mode: bool = False, max_tokens: int = 1500) -> Any:
-    """Call Gemini as fallback when GROQ is unavailable."""
-    from google import genai as google_genai
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        raise RuntimeError("GEMINI_API_KEY not set")
-    client = google_genai.Client(api_key=api_key)
-    model  = os.getenv("GOOGLE_LLM", "gemini-2.5-flash")
-    config: Dict[str, Any] = {
-        "system_instruction": system_prompt,
+def _call_groq(system_prompt: str, user_prompt: str, json_mode: bool = False, max_tokens: int = 1500) -> Any:
+    """Call GROQ LLM and return the response."""
+    client = Groq()
+    kwargs: Dict[str, Any] = {
+        "model": "openai/gpt-oss-20b",
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
         "temperature": 0.3,
-        "max_output_tokens": max_tokens,
+        "max_tokens": max_tokens,
     }
     if json_mode:
-        config["response_mime_type"] = "application/json"
-    response = client.models.generate_content(
-        model=model,
-        contents=[user_prompt],
-        config=config,
-    )
-    content = response.text.strip()
+        kwargs["response_format"] = {"type": "json_object"}
+    completion = client.chat.completions.create(**kwargs)
+    content = completion.choices[0].message.content.strip()
     if json_mode:
         return json.loads(content)
     return content
-
-
-def _call_groq(system_prompt: str, user_prompt: str, json_mode: bool = False, max_tokens: int = 1500) -> Any:
-    """Call GROQ LLM; falls back to Gemini on any connection/API error."""
-    try:
-        client = Groq()
-        kwargs: Dict[str, Any] = {
-            "model": "openai/gpt-oss-20b",
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-            "temperature": 0.3,
-            "max_tokens": max_tokens,
-        }
-        if json_mode:
-            kwargs["response_format"] = {"type": "json_object"}
-        completion = client.chat.completions.create(**kwargs)
-        content = completion.choices[0].message.content.strip()
-        if json_mode:
-            return json.loads(content)
-        return content
-    except Exception as groq_err:
-        logger("CV_ANALYSIS", f"GROQ failed ({groq_err}), falling back to Gemini", level="WARNING")
-        return _call_gemini(system_prompt, user_prompt, json_mode=json_mode, max_tokens=max_tokens)
 
 
 async def analyze_cv_with_llm(

@@ -24,7 +24,7 @@ def _extract_text_from_pdf(file_bytes: bytes) -> str:
     yields more characters. pdfplumber handles selectable text (fast, preserves order);
     EasyOCR captures text embedded in images or complex layouts that pdfplumber misses.
     """
-    # --- pdfplumber ---
+    # pdfplumber
     plumber_text = ""
     try:
         logger("CV_UPLOAD", "Extracting PDF text with pdfplumber", level="DEBUG")
@@ -35,7 +35,7 @@ def _extract_text_from_pdf(file_bytes: bytes) -> str:
     except Exception as e:
         logger("CV_UPLOAD", f"pdfplumber failed: {e}", level="DEBUG")
 
-    # --- EasyOCR (always runs) ---
+    # EasyOCR (always runs alongside pdfplumber)
     ocr_text = ""
     try:
         import numpy as np
@@ -88,7 +88,7 @@ def _extract_text_from_docx(file_bytes: bytes) -> str:
 
 
 def _extract_text_from_image(file_bytes: bytes) -> str:
-    """OCR chain for image file uploads (PNG/JPG/etc): EasyOCR → Tesseract → Gemini."""
+    """OCR chain for image file uploads (PNG/JPG/etc): EasyOCR → Tesseract."""
     logger("CV_UPLOAD", "Starting image OCR extraction", level="DEBUG")
 
     try:
@@ -123,35 +123,4 @@ def _extract_text_from_image(file_bytes: bytes) -> str:
     except Exception as e:
         logger("CV_UPLOAD", f"Tesseract OCR failed: {e}", level="DEBUG")
 
-    try:
-        import os
-        from google import genai
-        from PIL import Image
-        logger("CV_UPLOAD", "Attempting Gemini OCR", level="DEBUG")
-        project_id = os.getenv("GOOGLE_PROJECT_ID")
-        if project_id:
-            client = genai.Client(
-                vertexai=True,
-                project=project_id,
-                location=os.getenv("GOOGLE_LOCATION", "us-central1"),
-            )
-        else:
-            api_key = os.getenv("GEMINI_API_KEY")
-            if not api_key:
-                raise RuntimeError("No Gemini credentials configured")
-            client = genai.Client(api_key=api_key)
-        image = Image.open(io.BytesIO(file_bytes))
-        response = client.models.generate_content(
-            model=os.getenv("GOOGLE_LLM", "gemini-2.5-flash"),
-            contents=["Extract all visible text from this image. Return only the extracted text.", image],
-            config={"temperature": 0.0, "max_output_tokens": 2048},
-        )
-        text = response.text.strip()
-        if text:
-            logger("CV_UPLOAD", f"Gemini OCR extracted {len(text)} chars", level="DEBUG")
-            return text
-        logger("CV_UPLOAD", "Gemini OCR returned empty text", level="DEBUG")
-    except Exception as e:
-        logger("CV_UPLOAD", f"Gemini OCR failed: {e}", level="DEBUG")
-
-    raise RuntimeError("All OCR methods failed (EasyOCR, Tesseract, Gemini).")
+    raise RuntimeError("All OCR methods failed — EasyOCR and Tesseract both returned empty text.")

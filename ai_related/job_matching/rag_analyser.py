@@ -6,9 +6,7 @@ the freelancer's profile, and their most relevant past contracts from the DB,
 builds a grounded prompt, and asks the LLM to return a structured JSON with
 match_score, strengths, gaps, recommendation, and skill_tips.
 
-─────────────────────────────────────────────────────────────────────────────
 WHY THE RAG match_score DIFFERS FROM THE HOMEPAGE ML match_probability
-─────────────────────────────────────────────────────────────────────────────
 
 A freelancer will often see a different number on the homepage card than on
 the job detail page. This is intentional — the two scores answer fundamentally
@@ -726,7 +724,7 @@ def _parse_llm_json(raw: str, source: str) -> dict:
 
     Args:
         raw: Raw string returned by the LLM.
-        source: Label of the LLM source (e.g. "gemini") used in debug logging.
+        source: Label of the LLM source (e.g. "groq") used in debug logging.
 
     Returns:
         Parsed JSON as a dict. Raises ``json.JSONDecodeError`` if no valid JSON is found.
@@ -824,49 +822,11 @@ async def _call_groq_rag(prompt: str) -> str:
     raise RuntimeError("No GROQ model succeeded for RAG analysis")
 
 
-async def _call_google(prompt: str) -> str:
-    """
-    Send a prompt to Google Gemini via Vertex AI and return the raw text response.
-
-    Args:
-        prompt: Full prompt string to send to the model.
-
-    Returns:
-        Raw response text from Gemini (trimmed). Raises on network or API errors.
-    """
-    from google import genai
-
-    project_id = os.getenv("GOOGLE_PROJECT_ID")
-    location   = os.getenv("GOOGLE_LOCATION", "us-central1")
-    model      = os.getenv("GOOGLE_LLM", "gemini-2.5-flash")
-
-    logger(
-        "RAG_ANALYSER",
-        f"Calling Google Gemini | project={project_id} | model={model} | prompt_chars={len(prompt)}",
-        level="INFO",
-    )
-    client = genai.Client(vertexai=True, project=project_id, location=location)
-    response = await client.aio.models.generate_content(
-        model=model,
-        contents=prompt,
-        config={
-            "temperature": 0.15,
-            "max_output_tokens": 8192,
-            "response_mime_type": "application/json",
-        },
-    )
-    raw = response.text.strip()
-    logger("RAG_ANALYSER", f"Gemini response received | chars={len(raw)}", level="INFO")
-    logger("RAG_ANALYSER", f"Gemini raw response (full) |\n{raw}", level="DEBUG")
-    return raw
-
 
 async def _call_llm(prompt: str) -> dict:
-    """Call GROQ (primary) then Google Gemini (fallback) and return parsed JSON result."""
+    """Call GROQ LLM and return parsed JSON result."""
     t0 = time.perf_counter()
     raw = ""
-
-    # --- GROQ (primary) ---
     try:
         logger("RAG_ANALYSER", f"LLM call started | source=groq | prompt_chars={len(prompt)} | timeout={_LLM_TIMEOUT}s", level="INFO")
         raw = await _call_groq_rag(prompt)
@@ -882,32 +842,13 @@ async def _call_llm(prompt: str) -> dict:
         )
         logger("RAG_ANALYSER", f"LLM result (full JSON) | source=groq |\n{json.dumps(result, indent=2, default=str)}", level="DEBUG")
         return result
-    except Exception as groq_exc:
-        logger("RAG_ANALYSER", f"GROQ failed ({groq_exc}), falling back to Gemini", level="WARNING")
-
-    # --- Gemini (fallback) ---
-    try:
-        logger("RAG_ANALYSER", f"LLM call started | source=gemini | prompt_chars={len(prompt)} | timeout={_LLM_TIMEOUT}s", level="INFO")
-        raw = await _call_google(prompt)
-        llm_ms = (time.perf_counter() - t0) * 1000
-        result = _parse_llm_json(raw, "gemini")
-        logger(
-            "RAG_ANALYSER",
-            f"LLM JSON parsed | source=gemini | time={llm_ms:.0f}ms "
-            f"| overall_match_score={result.get('overall_match_score', result.get('match_score'))} "
-            f"| overall_recommendation={result.get('overall_recommendation', result.get('recommendation'))} "
-            f"| roles={len(result.get('roles', []))}",
-            level="INFO",
-        )
-        logger("RAG_ANALYSER", f"LLM result (full JSON) | source=gemini |\n{json.dumps(result, indent=2, default=str)}", level="DEBUG")
-        return result
     except json.JSONDecodeError as exc:
         elapsed = (time.perf_counter() - t0) * 1000
-        logger("RAG_ANALYSER", f"JSON parse error | source=gemini | time={elapsed:.0f}ms | error={exc} | raw_preview={raw[:300]}", level="ERROR")
+        logger("RAG_ANALYSER", f"JSON parse error | source=groq | time={elapsed:.0f}ms | error={exc} | raw_preview={raw[:300]}", level="ERROR")
         return {"error": "LLM returned non-JSON output", "raw_preview": raw[:200]}
     except Exception as exc:
         elapsed = (time.perf_counter() - t0) * 1000
-        logger("RAG_ANALYSER", f"LLM call failed | source=gemini | time={elapsed:.0f}ms | error={exc}", level="ERROR")
+        logger("RAG_ANALYSER", f"LLM call failed | source=groq | time={elapsed:.0f}ms | error={exc}", level="ERROR")
         return {"error": str(exc)}
 
 
