@@ -8,7 +8,7 @@ from typing import List, Optional, Dict
 import uuid
 
 def convert_uuids_to_str(data: Dict) -> Dict:
-    """Convert all UUID objects in dict to strings"""
+    """Convert all UUID objects in dict to strings."""
     if not data:
         return data
     result = {}
@@ -21,11 +21,11 @@ def convert_uuids_to_str(data: Dict) -> Dict:
 
 
 class SkillFunctions:
-    """Handle all skill-related database operations with simple string matching"""
+    """Handle all skill-related database operations with simple string matching."""
 
     @staticmethod
     def get_all_skills(limit: Optional[int] = None) -> List[Dict]:
-        """Fetch all skills with optional limit"""
+        """Fetch all skills with optional limit."""
         try:
             db = get_db()
             rows = db.fetch_data(
@@ -44,7 +44,7 @@ class SkillFunctions:
 
     @staticmethod
     def get_skill_by_id(skill_id: str) -> Optional[Dict]:
-        """Fetch a single skill by ID"""
+        """Fetch a single skill by ID."""
         try:
             db = get_db()
             conditions = [("skill_id", "=", skill_id)]
@@ -66,14 +66,14 @@ class SkillFunctions:
 
     @staticmethod
     def get_skill_by_name(skill_name: str) -> Optional[Dict]:
-        """Fetch a skill by name (case-insensitive)"""
+        """Fetch a skill by name (case-insensitive)."""
         try:
             db = get_db()
             query = """
                 SELECT skill_id, skill_name, skill_category, search_tokens, created_at
                 FROM skill
                 WHERE LOWER(skill_name) = LOWER(:name)
-                LIMIT 1
+                LIMIT 1.
             """
             rows = db.execute_query(query, {"name": skill_name})
 
@@ -88,7 +88,7 @@ class SkillFunctions:
     @staticmethod
     def create_skill(skill_name: str, skill_category: Optional[str] = None,
                     description: Optional[str] = None) -> Dict:
-        """Create a new skill"""
+        """Create a new skill."""
         try:
             db = get_db()
 
@@ -119,7 +119,7 @@ class SkillFunctions:
 
     @staticmethod
     def update_skill(skill_id: str, update_data: Dict) -> Optional[Dict]:
-        """Update skill information"""
+        """Update skill information."""
         try:
             db = get_db()
             update_data = {k: v for k, v in update_data.items() if v is not None}
@@ -146,7 +146,7 @@ class SkillFunctions:
 
     @staticmethod
     def delete_skill(skill_id: str) -> bool:
-        """Delete a skill"""
+        """Delete a skill."""
         try:
             db = get_db()
             conditions = [("skill_id", "=", skill_id)]
@@ -183,7 +183,7 @@ class SkillFunctions:
                 ORDER BY
                     CASE WHEN LOWER(skill_name) LIKE :prefix THEN 0 ELSE 1 END,
                     skill_name ASC
-                LIMIT :limit
+                LIMIT :limit.
             """
 
             rows = db.execute_query(
@@ -205,7 +205,7 @@ class SkillFunctions:
 
     @staticmethod
     def get_skills_by_category(category: str, limit: Optional[int] = None) -> List[Dict]:
-        """Get all skills in a category"""
+        """Get all skills in a category."""
         try:
             db = get_db()
             conditions = [("skill_category", "=", category)]
@@ -225,14 +225,14 @@ class SkillFunctions:
 
     @staticmethod
     def get_skills_by_alphabet(letter: str, limit: Optional[int] = None) -> List[Dict]:
-        """Get skills starting with a specific letter (case-insensitive)"""
+        """Get skills starting with a specific letter (case-insensitive)."""
         try:
             db = get_db()
             query = """
                 SELECT skill_id, skill_name, skill_category, search_tokens, created_at
                 FROM skill
                 WHERE LOWER(skill_name) LIKE :prefix
-                ORDER BY skill_name ASC
+                ORDER BY skill_name ASC.
             """
 
             params = {"prefix": f"{letter.lower()}%"}

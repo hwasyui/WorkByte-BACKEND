@@ -20,7 +20,7 @@ from routes.clients.client_functions import ClientFunctions as _ClientFunctions
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.job_posts.job_post_functions import JobPostFunctions
-from ai_related.job_matching.embedding_manager import mark_job_dirty
+from ai_related.job_engine.embedding_manager import mark_job_dirty
 from routes.admin.admin_functions import queue_harmful_text_scan, queue_scam_scan
 
 job_post_router = APIRouter(prefix="/job-posts", tags=["Job Posts"])
@@ -138,7 +138,7 @@ async def search_job_posts(
 
 @job_post_router.get("/client/{client_id}", response_model=List[JobPostResponse])
 async def get_job_posts_by_client(client_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch all job posts for a specific client - Authenticated users only - JSON response"""
+    """Fetch all job posts for a specific client - Authenticated users only - JSON response."""
     try:
         job_posts = JobPostFunctions.get_job_posts_by_client_id(client_id)
         success_msg = f"Retrieved {len(job_posts)} job posts for client {client_id}"
@@ -152,7 +152,7 @@ async def get_job_posts_by_client(client_id: str, current_user: UserInDB = Depen
 
 @job_post_router.get("/{job_post_id}", response_model=JobPostResponse)
 async def get_job_post(job_post_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch a single job post by ID - Authenticated users only - JSON response"""
+    """Fetch a single job post by ID - Authenticated users only - JSON response."""
     try:
         job_post = JobPostFunctions.get_job_post_by_id(job_post_id)
         if not job_post:
@@ -170,7 +170,7 @@ async def get_job_post(job_post_id: str, current_user: UserInDB = Depends(get_cu
 
 @job_post_router.post("", response_model=JobPostResponse, status_code=201)
 async def create_job_post(job_post: JobPostCreate, current_user: UserInDB = Depends(get_current_user)):
-    """Create a new job post - Authenticated users only - JSON body accepted"""
+    """Create a new job post - Authenticated users only - JSON body accepted."""
     try:
         job_post_id = job_post.job_post_id or str(uuid.uuid4())
         client = get_client_profile_for_user(current_user)
@@ -239,7 +239,7 @@ async def create_job_post(job_post: JobPostCreate, current_user: UserInDB = Depe
 
 @job_post_router.put("/{job_post_id}", response_model=JobPostResponse)
 async def update_job_post(job_post_id: str, job_post_update: JobPostUpdate, current_user: UserInDB = Depends(get_current_user)):
-    """Update job post information - Authenticated users only"""
+    """Update job post information - Authenticated users only."""
     try:
         existing_job_post = JobPostFunctions.get_job_post_by_id(job_post_id)
         if not existing_job_post:
@@ -263,7 +263,7 @@ async def update_job_post(job_post_id: str, job_post_update: JobPostUpdate, curr
 
 @job_post_router.delete("/{job_post_id}", status_code=200)
 async def delete_job_post(job_post_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Delete a job post - Authenticated users only"""
+    """Delete a job post - Authenticated users only."""
     try:
         existing_job_post = JobPostFunctions.get_job_post_by_id(job_post_id)
         if not existing_job_post:

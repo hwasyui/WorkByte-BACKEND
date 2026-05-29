@@ -5,6 +5,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 
 import json
 from fastapi import APIRouter, Body, Depends, Response, BackgroundTasks
+from functions.supabase_client import download_file
 from routes.reviews.review_routes import trigger_review_pipeline_on_completion
 from typing import List, Optional
 import uuid
@@ -27,7 +28,7 @@ from routes.clients.client_functions import ClientFunctions
 from routes.freelancers.freelancer_functions import FreelancerFunctions
 from routes.dm.dm_functions import DMFunctions, _contract_accepted_default
 from routes.notifications.notification_functions import NotificationFunctions
-from ai_related.job_matching.embedding_manager import mark_contract_dirty
+from ai_related.job_engine.embedding_manager import mark_contract_dirty
 
 
 _DEFAULT_CONTRACT_NOTIFICATION = (
@@ -51,7 +52,7 @@ def _render_notification(template: str, subs: dict) -> str:
 contract_router = APIRouter(prefix="/contracts", tags=["Contracts"])
 
 
-# ── GET /contracts ────────────────────────────────────────────────────────────
+# GET /contracts
 
 
 @contract_router.get("", response_model=List[ContractResponse])
@@ -74,7 +75,7 @@ async def get_all_contracts(limit: Optional[int] = None, current_user: UserInDB 
         return ResponseSchema.error(f"Failed to fetch contracts: {str(e)}", 500)
 
 
-# ── Specific sub-paths BEFORE /{contract_id} so they are not shadowed ─────────
+# Specific sub-paths BEFORE /{contract_id} so they are not shadowed
 
 
 @contract_router.get("/freelancer/{freelancer_id}", response_model=List[ContractResponse])
@@ -157,7 +158,6 @@ async def download_contract_pdf(contract_id: str, current_user: UserInDB = Depen
         if not pdf_path:
             return ResponseSchema.error("Contract PDF has not been generated yet", 404)
 
-        from functions.supabase_client import download_file
         pdf_bytes = download_file("contract-assets", pdf_path)
 
         return Response(
@@ -170,7 +170,7 @@ async def download_contract_pdf(contract_id: str, current_user: UserInDB = Depen
         return ResponseSchema.error(f"Failed to download PDF for contract {contract_id}: {str(e)}", 500)
 
 
-# ── Generic /{contract_id} GET — must come AFTER all literal sub-paths ────────
+# Generic /{contract_id} GET, must come AFTER all literal sub-paths
 
 
 @contract_router.get("/{contract_id}", response_model=ContractResponse)
@@ -188,7 +188,7 @@ async def get_contract(contract_id: str, current_user: UserInDB = Depends(get_cu
         return ResponseSchema.error(f"Failed to fetch contract {contract_id}: {str(e)}", 500)
 
 
-# ── Mutations ─────────────────────────────────────────────────────────────────
+# Mutations
 
 
 @contract_router.post("", response_model=ContractResponse, status_code=201)
@@ -397,7 +397,7 @@ async def update_contract(contract_id: str, contract_update: ContractUpdate, bac
             )
             await trigger_review_pipeline_on_completion(contract_id, background_tasks)
 
-        # ── Status-change notifications ────────────────────────────────────
+        # Status-change notifications
         new_status = update_data.get("status")
         old_status = existing_contract.get("status")
 
@@ -447,7 +447,7 @@ async def update_contract(contract_id: str, contract_update: ContractUpdate, bac
         return ResponseSchema.error(f"Failed to update contract {contract_id}: {str(e)}", 500)
 
 
-# ── Cancel endpoint ───────────────────────────────────────────────────────────
+# Cancel endpoint
 
 
 @contract_router.put("/{contract_id}/cancel")
@@ -506,7 +506,7 @@ async def cancel_contract(
         return ResponseSchema.error(f"Failed to cancel contract {contract_id}: {str(e)}", 500)
 
 
-# ── DELETE ────────────────────────────────────────────────────────────────────
+# DELETE
 
 
 @contract_router.delete("/{contract_id}", status_code=200)

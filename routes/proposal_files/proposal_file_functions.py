@@ -8,7 +8,7 @@ from typing import List, Optional, Dict
 import uuid
 
 def convert_uuids_to_str(data: Dict) -> Dict:
-    """Convert all UUID objects in dict to strings"""
+    """Convert all UUID objects in dict to strings."""
     if not data:
         return data
     result = {}
@@ -21,11 +21,11 @@ def convert_uuids_to_str(data: Dict) -> Dict:
 
 
 class ProposalFileFunctions:
-    """Handle all proposal file-related database operations"""
+    """Handle all proposal file-related database operations."""
 
     @staticmethod
     def get_all_proposal_files(limit: Optional[int] = None) -> List[Dict]:
-        """Fetch all proposal files"""
+        """Fetch all proposal files."""
         try:
             db = get_db()
             rows = db.fetch_data(
@@ -44,7 +44,7 @@ class ProposalFileFunctions:
 
     @staticmethod
     def get_proposal_file_by_id(proposal_file_id: str) -> Optional[Dict]:
-        """Fetch a proposal file by ID"""
+        """Fetch a proposal file by ID."""
         try:
             db = get_db()
             conditions = [("proposal_file_id", "=", proposal_file_id)]
@@ -66,7 +66,7 @@ class ProposalFileFunctions:
 
     @staticmethod
     def get_proposal_files_by_proposal_id(proposal_id: str) -> List[Dict]:
-        """Fetch all files for a proposal"""
+        """Fetch all files for a proposal."""
         try:
             db = get_db()
             conditions = [("proposal_id", "=", proposal_id)]
@@ -86,7 +86,7 @@ class ProposalFileFunctions:
     @staticmethod
     def create_proposal_file(proposal_id: str, file_url: str, file_type: str,
                              file_name: str, file_size: Optional[int] = None) -> Dict:
-        """Create a new proposal file"""
+        """Create a new proposal file."""
         try:
             db = get_db()
             proposal_file_id = str(uuid.uuid4())
@@ -111,7 +111,7 @@ class ProposalFileFunctions:
 
     @staticmethod
     def update_proposal_file(proposal_file_id: str, update_data: Dict) -> Optional[Dict]:
-        """Update proposal file information"""
+        """Update proposal file information."""
         try:
             db = get_db()
             update_data = {k: v for k, v in update_data.items() if v is not None}
@@ -132,7 +132,7 @@ class ProposalFileFunctions:
 
     @staticmethod
     def delete_proposal_file(proposal_file_id: str) -> bool:
-        """Delete a proposal file"""
+        """Delete a proposal file."""
         try:
             db = get_db()
             conditions = [("proposal_file_id", "=", proposal_file_id)]

@@ -123,4 +123,4 @@ def _extract_text_from_image(file_bytes: bytes) -> str:
     except Exception as e:
         logger("CV_UPLOAD", f"Tesseract OCR failed: {e}", level="DEBUG")
 
-    raise RuntimeError("All OCR methods failed — EasyOCR and Tesseract both returned empty text.")
+    raise RuntimeError("All OCR methods failed; EasyOCR and Tesseract both returned empty text.")

@@ -22,7 +22,7 @@ def convert_uuids_to_str(data: Dict) -> Dict:
 
 class ReviewFunctions:
 
-    # ── Helpers ───────────────────────────────────────────────────────────────
+    # Helpers
 
     @staticmethod
     def get_review_by_id(review_id: str) -> Optional[Dict]:
@@ -96,7 +96,7 @@ class ReviewFunctions:
             logger("REVIEW_FUNCTIONS", f"Error fetching reviews: {str(e)}", level="ERROR")
             raise
 
-    # ── Step 2: Create pending review record ──────────────────────────────────
+    # Step 2: Create pending review record
 
     @staticmethod
     def create_pending_review(
@@ -128,7 +128,7 @@ class ReviewFunctions:
             logger("REVIEW_FUNCTIONS", f"Error creating review: {str(e)}", level="ERROR")
             raise
 
-    # ── Step 3: Save AI targeted question ────────────────────────────────────
+    # Step 3: Save AI targeted question
 
     @staticmethod
     def save_ai_question(review_id: str, ai_question: str) -> None:
@@ -148,7 +148,7 @@ class ReviewFunctions:
             logger("REVIEW_FUNCTIONS", f"Error saving AI question: {str(e)}", level="ERROR")
             raise
 
-    # ── Step 4: Save performance pre-scores ──────────────────────────────────
+    # Step 4: Save performance pre-scores
 
     @staticmethod
     def save_performance_scores(
@@ -192,7 +192,7 @@ class ReviewFunctions:
         communication_summary: Optional[str] = None,
     ) -> None:
         try:
-            # Explicit per-field check — 0.0 and False are valid values, not "missing"
+            # Explicit per-field check: 0.0 and False are valid values, not "missing"
             update_data = {}
             if communication_sentiment_score is not None:
                 update_data["communication_sentiment_score"] = communication_sentiment_score
@@ -216,7 +216,7 @@ class ReviewFunctions:
             logger("REVIEW_FUNCTIONS", f"Error updating performance scores: {str(e)}", level="ERROR")
             raise
 
-    # ── Step 5: Save client review submission ────────────────────────────────
+    # Step 5: Save client review submission
 
     @staticmethod
     def save_client_review(
@@ -274,7 +274,7 @@ class ReviewFunctions:
             logger("REVIEW_FUNCTIONS", f"Error saving client review: {str(e)}", level="ERROR")
             raise
 
-    # ── Step 6: Save AI analysis results ─────────────────────────────────────
+    # Step 6: Save AI analysis results
 
     @staticmethod
     def save_ai_analysis(
@@ -314,7 +314,7 @@ class ReviewFunctions:
             logger("REVIEW_FUNCTIONS", f"Error saving AI analysis: {str(e)}", level="ERROR")
             raise
 
-    # ── Step 7: Publish or flag the review ───────────────────────────────────
+    # Step 7: Publish or flag the review
 
     @staticmethod
     def publish_review(review_id: str) -> None:
@@ -343,7 +343,7 @@ class ReviewFunctions:
             logger("REVIEW_FUNCTIONS", f"Error flagging review: {str(e)}", level="ERROR")
             raise
 
-    # ── Step 8: Trust score upsert ────────────────────────────────────────────
+    # Step 8: Trust score upsert
 
     @staticmethod
     def upsert_trust_score(
@@ -402,7 +402,7 @@ class ReviewFunctions:
             logger("REVIEW_FUNCTIONS", f"Error upserting trust score: {str(e)}", level="ERROR")
             raise
 
-    # ── Step 9: Red flag detection ────────────────────────────────────────────
+    # Step 9: Red flag detection
 
     @staticmethod
     def check_and_create_red_flag(freelancer_id: str, new_score: float) -> None:
@@ -445,7 +445,7 @@ class ReviewFunctions:
             logger("REVIEW_FUNCTIONS", f"Error checking red flag: {str(e)}", level="ERROR")
             raise
 
-    # ── Getters ───────────────────────────────────────────────────────────────
+    # Getters
 
     @staticmethod
     def get_review_detail(review_id: str) -> Optional[Dict]:

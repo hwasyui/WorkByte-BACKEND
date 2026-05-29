@@ -18,7 +18,7 @@ saved_job_router = APIRouter(prefix="/saved-jobs", tags=["Saved Jobs"])
 
 @saved_job_router.get("", response_model=List[SavedJobResponse])
 async def get_all_saved_jobs(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch all saved jobs - Authenticated users only - JSON response"""
+    """Fetch all saved jobs - Authenticated users only - JSON response."""
     try:
         freelancer = get_freelancer_profile_for_user(current_user)
         saved_jobs = SavedJobFunctions.get_saved_jobs_by_freelancer_id(freelancer["freelancer_id"], limit=limit)
@@ -33,7 +33,7 @@ async def get_all_saved_jobs(limit: Optional[int] = None, current_user: UserInDB
 
 @saved_job_router.get("/{saved_job_id}", response_model=SavedJobResponse)
 async def get_saved_job(saved_job_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch a single saved job by ID - Authenticated users only - JSON response"""
+    """Fetch a single saved job by ID - Authenticated users only - JSON response."""
     try:
         saved_job = SavedJobFunctions.get_saved_job_by_id(saved_job_id)
         if not saved_job:
@@ -52,7 +52,7 @@ async def get_saved_job(saved_job_id: str, current_user: UserInDB = Depends(get_
 
 @saved_job_router.get("/freelancer/{freelancer_id}", response_model=List[SavedJobResponse])
 async def get_saved_jobs_by_freelancer(freelancer_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch all saved jobs for a specific freelancer - Authenticated users only - JSON response"""
+    """Fetch all saved jobs for a specific freelancer - Authenticated users only - JSON response."""
     try:
         assert_freelancer_owns(current_user, freelancer_id)
         saved_jobs = SavedJobFunctions.get_saved_jobs_by_freelancer_id(freelancer_id)
@@ -67,7 +67,7 @@ async def get_saved_jobs_by_freelancer(freelancer_id: str, current_user: UserInD
 
 @saved_job_router.post("", response_model=SavedJobResponse, status_code=201)
 async def create_saved_job(saved_job: SavedJobCreate, current_user: UserInDB = Depends(get_current_user)):
-    """Create a new saved job - Authenticated users only - JSON body accepted"""
+    """Create a new saved job - Authenticated users only - JSON body accepted."""
     try:
         assert_freelancer_owns(current_user, saved_job.freelancer_id)
         new_saved_job = SavedJobFunctions.create_saved_job(
@@ -91,7 +91,7 @@ async def create_saved_job(saved_job: SavedJobCreate, current_user: UserInDB = D
 
 @saved_job_router.delete("/{saved_job_id}", status_code=200)
 async def delete_saved_job(saved_job_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Delete a saved job - Authenticated users only"""
+    """Delete a saved job - Authenticated users only."""
     try:
         existing_saved_job = SavedJobFunctions.get_saved_job_by_id(saved_job_id)
         if not existing_saved_job:

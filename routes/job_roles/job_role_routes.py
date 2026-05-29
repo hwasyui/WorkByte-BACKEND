@@ -13,14 +13,14 @@ from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.job_posts.job_post_functions import JobPostFunctions
 from routes.job_roles.job_role_functions import JobRoleFunctions
-from ai_related.job_matching.embedding_manager import mark_job_dirty, mark_job_dirty_by_role
+from ai_related.job_engine.embedding_manager import mark_job_dirty, mark_job_dirty_by_role
 
 job_role_router = APIRouter(prefix="/job-roles", tags=["Job Roles"])
 
 
 @job_role_router.get("", response_model=List[JobRoleResponse])
 async def get_all_job_roles(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch all job roles - Authenticated users only - JSON response"""
+    """Fetch all job roles - Authenticated users only - JSON response."""
     try:
         client = get_client_profile_for_user(current_user)
         job_roles = JobRoleFunctions.get_job_roles_by_client_id(client["client_id"])
@@ -35,7 +35,7 @@ async def get_all_job_roles(limit: Optional[int] = None, current_user: UserInDB 
 
 @job_role_router.get("/{job_role_id}", response_model=JobRoleResponse)
 async def get_job_role(job_role_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch a single job role by ID - Authenticated users only - JSON response"""
+    """Fetch a single job role by ID - Authenticated users only - JSON response."""
     try:
         job_role = JobRoleFunctions.get_job_role_by_id(job_role_id)
         if not job_role:
@@ -55,7 +55,7 @@ async def get_job_role(job_role_id: str, current_user: UserInDB = Depends(get_cu
 
 @job_role_router.get("/job-post/{job_post_id}", response_model=List[JobRoleResponse])
 async def get_job_roles_by_job_post(job_post_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch all job roles for a specific job post - Authenticated users only - JSON response"""
+    """Fetch all job roles for a specific job post - Authenticated users only - JSON response."""
     try:
         job_roles = JobRoleFunctions.get_job_roles_by_job_post_id(job_post_id)
         success_msg = f"Retrieved {len(job_roles)} job roles for job post {job_post_id}"
@@ -69,7 +69,7 @@ async def get_job_roles_by_job_post(job_post_id: str, current_user: UserInDB = D
 
 @job_role_router.post("", response_model=JobRoleResponse, status_code=201)
 async def create_job_role(job_role: JobRoleCreate, current_user: UserInDB = Depends(get_current_user)):
-    """Create a new job role - Authenticated users only - JSON body accepted"""
+    """Create a new job role - Authenticated users only - JSON body accepted."""
     try:
         job_role_id = job_role.job_role_id or str(uuid.uuid4())
         job_post = JobPostFunctions.get_job_post_by_id(job_role.job_post_id)
@@ -103,7 +103,7 @@ async def create_job_role(job_role: JobRoleCreate, current_user: UserInDB = Depe
 
 @job_role_router.put("/{job_role_id}", response_model=JobRoleResponse)
 async def update_job_role(job_role_id: str, job_role_update: JobRoleUpdate, current_user: UserInDB = Depends(get_current_user)):
-    """Update job role information - Authenticated users only"""
+    """Update job role information - Authenticated users only."""
     try:
         existing_job_role = JobRoleFunctions.get_job_role_by_id(job_role_id)
         if not existing_job_role:
@@ -128,7 +128,7 @@ async def update_job_role(job_role_id: str, job_role_update: JobRoleUpdate, curr
 
 @job_role_router.delete("/{job_role_id}", status_code=200)
 async def delete_job_role(job_role_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Delete a job role - Authenticated users only"""
+    """Delete a job role - Authenticated users only."""
     try:
         existing_job_role = JobRoleFunctions.get_job_role_by_id(job_role_id)
         if not existing_job_role:

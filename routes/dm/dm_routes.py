@@ -52,7 +52,7 @@ def _get_sender_name(current_user: UserInDB) -> str:
     return "Someone"
 
 
-# ── WebSocket connection manager ──────────────────────────────────────────────
+# WebSocket connection manager
 
 
 class _DMConnectionManager:
@@ -79,7 +79,7 @@ class _DMConnectionManager:
 _manager = _DMConnectionManager()
 
 
-# ── Auth helpers ──────────────────────────────────────────────────────────────
+# Auth helpers
 
 
 def _is_participant(thread: dict, user_id: str) -> bool:
@@ -92,7 +92,7 @@ def _is_receiver(thread: dict, user_id: str) -> bool:
     return str(user_id) != str(thread.get("initiator_id", ""))
 
 
-# ── POST /dm/threads ──────────────────────────────────────────────────────────
+# POST /dm/threads
 
 
 @dm_router.post("/threads", status_code=201)
@@ -136,7 +136,7 @@ async def start_thread(
         return ResponseSchema.error(str(e), 500)
 
 
-# ── GET /dm/threads ───────────────────────────────────────────────────────────
+# GET /dm/threads
 
 
 @dm_router.get("/threads")
@@ -158,7 +158,7 @@ async def list_threads(
         return ResponseSchema.error(str(e), 500)
 
 
-# ── GET /dm/threads/requests ──────────────────────────────────────────────────
+# GET /dm/threads/requests
 
 
 @dm_router.get("/threads/requests")
@@ -177,7 +177,7 @@ async def list_requests(
         return ResponseSchema.error(str(e), 500)
 
 
-# ── GET /dm/threads/{thread_id} ───────────────────────────────────────────────
+# GET /dm/threads/{thread_id}
 
 
 @dm_router.get("/threads/{thread_id}")
@@ -197,7 +197,7 @@ async def get_thread(
         return ResponseSchema.error(str(e), 500)
 
 
-# ── PUT /dm/threads/{thread_id}/accept ───────────────────────────────────────
+# PUT /dm/threads/{thread_id}/accept
 
 
 @dm_router.put("/threads/{thread_id}/accept")
@@ -243,7 +243,7 @@ async def accept_thread(
         return ResponseSchema.error(str(e), 500)
 
 
-# ── PUT /dm/threads/{thread_id}/decline ──────────────────────────────────────
+# PUT /dm/threads/{thread_id}/decline
 
 
 @dm_router.put("/threads/{thread_id}/decline")
@@ -269,7 +269,7 @@ async def decline_thread(
         return ResponseSchema.error(str(e), 500)
 
 
-# ── GET /dm/threads/{thread_id}/messages ─────────────────────────────────────
+# GET /dm/threads/{thread_id}/messages
 
 
 @dm_router.get("/threads/{thread_id}/messages")
@@ -297,7 +297,7 @@ async def get_messages(
         return ResponseSchema.error(str(e), 500)
 
 
-# ── POST /dm/threads/{thread_id}/messages ────────────────────────────────────
+# POST /dm/threads/{thread_id}/messages
 
 
 @dm_router.post("/threads/{thread_id}/messages", status_code=201)
@@ -318,7 +318,7 @@ async def send_message(
         harm_result = scan_harmful_text_with_ml_fallback(payload.message_text)
         if harm_result["is_flagged"]:
             labels = harm_result.get("detected_labels", [])
-            logger("DM", f"Blocked toxic message from {current_user.user_id} in thread {thread_id} — labels={labels}", "POST /dm/threads/{thread_id}/messages", "WARNING")
+            logger("DM", f"Blocked toxic message from {current_user.user_id} in thread {thread_id}, labels={labels}", "POST /dm/threads/{thread_id}/messages", "WARNING")
             return ResponseSchema.error(
                 f"Your message was not sent. It was detected as harmful ({', '.join(labels)}).",
                 400,
@@ -359,7 +359,7 @@ async def send_message(
         return ResponseSchema.error(str(e), 500)
 
 
-# ── POST /dm/threads/{thread_id}/messages/upload ─────────────────────────────
+# POST /dm/threads/{thread_id}/messages/upload
 
 
 @dm_router.post("/threads/{thread_id}/messages/upload", status_code=201)
@@ -439,7 +439,7 @@ async def send_message_with_attachment(
         return ResponseSchema.error(str(e), 500)
 
 
-# ── PUT /dm/threads/{thread_id}/read ─────────────────────────────────────────
+# PUT /dm/threads/{thread_id}/read
 
 
 @dm_router.put("/threads/{thread_id}/read")
@@ -462,7 +462,7 @@ async def mark_read(
         return ResponseSchema.error(str(e), 500)
 
 
-# ── WS /dm/ws/{thread_id} ─────────────────────────────────────────────────────
+# WS /dm/ws/{thread_id}
 
 
 @dm_router.websocket("/ws/{thread_id}")

@@ -8,7 +8,7 @@ from typing import List, Optional, Dict
 import uuid
 
 def convert_uuids_to_str(data: Dict) -> Dict:
-    """Convert all UUID objects in dict to strings"""
+    """Convert all UUID objects in dict to strings."""
     if not data:
         return data
     result = {}
@@ -21,11 +21,11 @@ def convert_uuids_to_str(data: Dict) -> Dict:
 
 
 class PerformanceRatingFunctions:
-    """Handle all performance rating-related database operations"""
+    """Handle all performance rating-related database operations."""
 
     @staticmethod
     def get_all_performance_ratings(limit: Optional[int] = None) -> List[Dict]:
-        """Fetch all performance ratings"""
+        """Fetch all performance ratings."""
         try:
             db = get_db()
             rows = db.fetch_data(
@@ -46,7 +46,7 @@ class PerformanceRatingFunctions:
 
     @staticmethod
     def get_performance_rating_by_freelancer_id(freelancer_id: str) -> Optional[Dict]:
-        """Fetch performance rating for a freelancer"""
+        """Fetch performance rating for a freelancer."""
         try:
             db = get_db()
             conditions = [("freelancer_id", "=", freelancer_id)]
@@ -69,7 +69,7 @@ class PerformanceRatingFunctions:
     @staticmethod
     def create_performance_rating(freelancer_id: str, overall_performance_score: float,
                                   confidence_score: float, total_ratings_received: int = 0) -> Dict:
-        """Create a new performance rating"""
+        """Create a new performance rating."""
         try:
             db = get_db()
             
@@ -96,7 +96,7 @@ class PerformanceRatingFunctions:
 
     @staticmethod
     def update_performance_rating(freelancer_id: str, update_data: Dict) -> Optional[Dict]:
-        """Update performance rating information"""
+        """Update performance rating information."""
         try:
             db = get_db()
             update_data = {k: v for k, v in update_data.items() if v is not None}
@@ -117,7 +117,7 @@ class PerformanceRatingFunctions:
 
     @staticmethod
     def delete_performance_rating(freelancer_id: str) -> bool:
-        """Delete a performance rating"""
+        """Delete a performance rating."""
         try:
             db = get_db()
             conditions = [("freelancer_id", "=", freelancer_id)]

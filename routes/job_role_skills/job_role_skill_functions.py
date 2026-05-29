@@ -8,7 +8,7 @@ from typing import List, Optional, Dict
 import uuid
 
 def convert_uuids_to_str(data: Dict) -> Dict:
-    """Convert all UUID objects in dict to strings"""
+    """Convert all UUID objects in dict to strings."""
     if not data:
         return data
     result = {}
@@ -21,11 +21,11 @@ def convert_uuids_to_str(data: Dict) -> Dict:
 
 
 class JobRoleSkillFunctions:
-    """Handle all job role skill-related database operations"""
+    """Handle all job role skill-related database operations."""
 
     @staticmethod
     def get_all_job_role_skills(limit: Optional[int] = None) -> List[Dict]:
-        """Fetch all job role skills"""
+        """Fetch all job role skills."""
         try:
             db = get_db()
             rows = db.fetch_data(
@@ -44,7 +44,7 @@ class JobRoleSkillFunctions:
 
     @staticmethod
     def get_job_role_skill_by_id(job_role_skill_id: str) -> Optional[Dict]:
-        """Fetch a job role skill by ID"""
+        """Fetch a job role skill by ID."""
         try:
             db = get_db()
             conditions = [("job_role_skill_id", "=", job_role_skill_id)]
@@ -66,7 +66,7 @@ class JobRoleSkillFunctions:
 
     @staticmethod
     def get_job_role_skills_by_job_role_id(job_role_id: str) -> List[Dict]:
-        """Fetch all skills for a job role"""
+        """Fetch all skills for a job role."""
         try:
             db = get_db()
             conditions = [("job_role_id", "=", job_role_id)]
@@ -87,7 +87,7 @@ class JobRoleSkillFunctions:
     def create_job_role_skill(job_role_id: str, skill_id: str, 
                               is_required: Optional[bool] = True,
                               importance_level: Optional[str] = None) -> Dict:
-        """Create a new job role skill"""
+        """Create a new job role skill."""
         try:
             db = get_db()
             job_role_skill_id = str(uuid.uuid4())
@@ -111,7 +111,7 @@ class JobRoleSkillFunctions:
 
     @staticmethod
     def update_job_role_skill(job_role_skill_id: str, update_data: Dict) -> Optional[Dict]:
-        """Update job role skill information"""
+        """Update job role skill information."""
         try:
             db = get_db()
             update_data = {k: v for k, v in update_data.items() if v is not None}
@@ -132,7 +132,7 @@ class JobRoleSkillFunctions:
 
     @staticmethod
     def delete_job_role_skill(job_role_skill_id: str) -> bool:
-        """Delete a job role skill"""
+        """Delete a job role skill."""
         try:
             db = get_db()
             conditions = [("job_role_skill_id", "=", job_role_skill_id)]

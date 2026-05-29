@@ -8,7 +8,7 @@ from typing import List, Optional, Dict
 import uuid
 
 def convert_uuids_to_str(data: Dict) -> Dict:
-    """Convert all UUID objects in dict to strings"""
+    """Convert all UUID objects in dict to strings."""
     if not data:
         return data
     result = {}
@@ -21,11 +21,11 @@ def convert_uuids_to_str(data: Dict) -> Dict:
 
 
 class PortfolioFunctions:
-    """Handle all portfolio-related database operations"""
+    """Handle all portfolio-related database operations."""
 
     @staticmethod
     def get_all_portfolios(limit: Optional[int] = None) -> List[Dict]:
-        """Fetch all portfolios"""
+        """Fetch all portfolios."""
         try:
             db = get_db()
             rows = db.fetch_data(
@@ -45,7 +45,7 @@ class PortfolioFunctions:
 
     @staticmethod
     def get_portfolio_by_id(portfolio_id: str) -> Optional[Dict]:
-        """Fetch a portfolio by ID"""
+        """Fetch a portfolio by ID."""
         try:
             db = get_db()
             conditions = [("portfolio_id", "=", portfolio_id)]
@@ -67,7 +67,7 @@ class PortfolioFunctions:
 
     @staticmethod
     def get_portfolios_by_freelancer_id(freelancer_id: str) -> List[Dict]:
-        """Fetch all portfolios for a freelancer"""
+        """Fetch all portfolios for a freelancer."""
         try:
             db = get_db()
             conditions = [("freelancer_id", "=", freelancer_id)]
@@ -88,7 +88,7 @@ class PortfolioFunctions:
     def create_portfolio(freelancer_id: str, project_title: str, project_description: str,
                          project_url: Optional[str] = None, completion_date=None,
                          is_auto_generated: Optional[bool] = False, contract_id: Optional[str] = None) -> Dict:
-        """Create a new portfolio"""
+        """Create a new portfolio."""
         try:
             db = get_db()
             portfolio_id = str(uuid.uuid4())
@@ -115,7 +115,7 @@ class PortfolioFunctions:
 
     @staticmethod
     def update_portfolio(portfolio_id: str, update_data: Dict) -> Optional[Dict]:
-        """Update portfolio information"""
+        """Update portfolio information."""
         try:
             db = get_db()
             update_data = {k: v for k, v in update_data.items() if v is not None}
@@ -136,7 +136,7 @@ class PortfolioFunctions:
 
     @staticmethod
     def delete_portfolio(portfolio_id: str) -> bool:
-        """Delete a portfolio"""
+        """Delete a portfolio."""
         try:
             db = get_db()
             conditions = [("portfolio_id", "=", portfolio_id)]

@@ -12,14 +12,14 @@ from functions.access_control import assert_freelancer_owns, get_freelancer_prof
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.work_experience.work_experience_functions import WorkExperienceFunctions
-from ai_related.job_matching.embedding_manager import mark_freelancer_dirty
+from ai_related.job_engine.embedding_manager import mark_freelancer_dirty
 
 work_experience_router = APIRouter(prefix="/work-experiences", tags=["Work Experiences"])
 
 
 @work_experience_router.get("", response_model=List[WorkExperienceResponse])
 async def get_all_work_experiences(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch all work experiences - Authenticated users only - JSON response"""
+    """Fetch all work experiences - Authenticated users only - JSON response."""
     try:
         freelancer = get_freelancer_profile_for_user(current_user)
         experiences = WorkExperienceFunctions.get_work_experiences_by_freelancer_id(freelancer["freelancer_id"])
@@ -34,7 +34,7 @@ async def get_all_work_experiences(limit: Optional[int] = None, current_user: Us
 
 @work_experience_router.get("/{work_experience_id}", response_model=WorkExperienceResponse)
 async def get_work_experience(work_experience_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch a single work experience by ID - Authenticated users only - JSON response"""
+    """Fetch a single work experience by ID - Authenticated users only - JSON response."""
     try:
         experience = WorkExperienceFunctions.get_work_experience_by_id(work_experience_id)
         if not experience:
@@ -52,7 +52,7 @@ async def get_work_experience(work_experience_id: str, current_user: UserInDB = 
 
 @work_experience_router.get("/freelancer/{freelancer_id}", response_model=List[WorkExperienceResponse])
 async def get_work_experiences_by_freelancer(freelancer_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch all work experiences for a specific freelancer - Authenticated users only - JSON response"""
+    """Fetch all work experiences for a specific freelancer - Authenticated users only - JSON response."""
     try:
         experiences = WorkExperienceFunctions.get_work_experiences_by_freelancer_id(freelancer_id)
         success_msg = f"Retrieved {len(experiences)} work experiences for freelancer {freelancer_id}"
@@ -66,7 +66,7 @@ async def get_work_experiences_by_freelancer(freelancer_id: str, current_user: U
 
 @work_experience_router.post("", response_model=WorkExperienceResponse, status_code=201)
 async def create_work_experience(work_experience: WorkExperienceCreate, current_user: UserInDB = Depends(get_current_user)):
-    """Create a new work experience - Authenticated users only - JSON body accepted"""
+    """Create a new work experience - Authenticated users only - JSON body accepted."""
     try:
         work_experience_id = work_experience.work_experience_id or str(uuid.uuid4())
         assert_freelancer_owns(current_user, work_experience.freelancer_id)
@@ -97,7 +97,7 @@ async def create_work_experience(work_experience: WorkExperienceCreate, current_
 
 @work_experience_router.put("/{work_experience_id}", response_model=WorkExperienceResponse)
 async def update_work_experience(work_experience_id: str, work_experience_update: WorkExperienceUpdate, current_user: UserInDB = Depends(get_current_user)):
-    """Update work experience information - Authenticated users only"""
+    """Update work experience information - Authenticated users only."""
     try:
         existing_experience = WorkExperienceFunctions.get_work_experience_by_id(work_experience_id)
         if not existing_experience:
@@ -121,7 +121,7 @@ async def update_work_experience(work_experience_id: str, work_experience_update
 
 @work_experience_router.delete("/{work_experience_id}", status_code=200)
 async def delete_work_experience(work_experience_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Delete a work experience - Authenticated users only"""
+    """Delete a work experience - Authenticated users only."""
     try:
         existing_experience = WorkExperienceFunctions.get_work_experience_by_id(work_experience_id)
         if not existing_experience:

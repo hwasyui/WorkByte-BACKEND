@@ -8,7 +8,7 @@ from typing import List, Optional, Dict
 import uuid
 
 def convert_uuids_to_str(data: Dict) -> Dict:
-    """Convert all UUID objects in dict to strings"""
+    """Convert all UUID objects in dict to strings."""
     if not data:
         return data
     result = {}
@@ -21,11 +21,11 @@ def convert_uuids_to_str(data: Dict) -> Dict:
 
 
 class JobRoleFunctions:
-    """Handle all job role-related database operations"""
+    """Handle all job role-related database operations."""
 
     @staticmethod
     def get_all_job_roles(limit: Optional[int] = None) -> List[Dict]:
-        """Fetch all job roles"""
+        """Fetch all job roles."""
         try:
             db = get_db()
             rows = db.fetch_data(
@@ -46,7 +46,7 @@ class JobRoleFunctions:
 
     @staticmethod
     def get_job_role_by_id(job_role_id: str) -> Optional[Dict]:
-        """Fetch a job role by ID"""
+        """Fetch a job role by ID."""
         try:
             db = get_db()
             conditions = [("job_role_id", "=", job_role_id)]
@@ -68,7 +68,7 @@ class JobRoleFunctions:
 
     @staticmethod
     def get_job_roles_by_job_post_id(job_post_id: str) -> List[Dict]:
-        """Fetch all job roles for a job post"""
+        """Fetch all job roles for a job post."""
         try:
             db = get_db()
             conditions = [("job_post_id", "=", job_post_id)]
@@ -87,7 +87,7 @@ class JobRoleFunctions:
 
     @staticmethod
     def get_job_roles_by_client_id(client_id: str) -> List[Dict]:
-        """Fetch all job roles belonging to a client's job posts"""
+        """Fetch all job roles belonging to a client's job posts."""
         try:
             db = get_db()
             rows = db.execute_query(
@@ -111,7 +111,7 @@ class JobRoleFunctions:
                         role_budget: Optional[float] = None, budget_currency: Optional[str] = "USD",
                         role_description: Optional[str] = None, positions_available: Optional[int] = 1,
                         is_required: Optional[bool] = True, display_order: Optional[int] = 0) -> Dict:
-        """Create a new job role"""
+        """Create a new job role."""
         try:
             db = get_db()
             job_role_id = str(uuid.uuid4())
@@ -140,7 +140,7 @@ class JobRoleFunctions:
 
     @staticmethod
     def update_job_role(job_role_id: str, update_data: Dict) -> Optional[Dict]:
-        """Update job role information"""
+        """Update job role information."""
         try:
             db = get_db()
             update_data = {k: v for k, v in update_data.items() if v is not None}
@@ -161,7 +161,7 @@ class JobRoleFunctions:
 
     @staticmethod
     def delete_job_role(job_role_id: str) -> bool:
-        """Delete a job role"""
+        """Delete a job role."""
         try:
             db = get_db()
             conditions = [("job_role_id", "=", job_role_id)]

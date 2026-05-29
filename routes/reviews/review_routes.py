@@ -21,31 +21,19 @@ from ai_related.review_analysis.review_pipeline import (
 review_router = APIRouter(prefix="/reviews", tags=["Reviews"])
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# INTERNAL HELPER — import and call this from contract_routes.py
-# ─────────────────────────────────────────────────────────────────────────────
+# INTERNAL HELPER: import and call this from contract_routes.py
 
 async def trigger_review_pipeline_on_completion(
     contract_id: str,
     background_tasks: BackgroundTasks,
 ) -> None:
-    """
-    Call this from your contract PUT /{contract_id} route
-    when status transitions to 'completed'.
+    """Queue the post-completion review pipeline as a background task.
 
-    In contract_routes.py:
-        from routes.reviews.review_routes import trigger_review_pipeline_on_completion
-
-        # Inside update_contract(), in the status == 'completed' branch:
-        await trigger_review_pipeline_on_completion(contract_id, background_tasks)
+    Call this from contract_routes when a contract status transitions to 'completed'.
     """
     background_tasks.add_task(run_post_completion_pipeline, contract_id)
     logger("REVIEW", f"Post-completion pipeline queued for contract {contract_id}", level="INFO")
 
-
-# ─────────────────────────────────────────────────────────────────────────────
-# GET /reviews/contract/{contract_id}
-# ─────────────────────────────────────────────────────────────────────────────
 
 @review_router.get("/contract/{contract_id}")
 async def get_review_for_contract(
@@ -81,9 +69,7 @@ async def get_review_for_contract(
         return ResponseSchema.error(str(e), 500)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 # POST /reviews/{review_id}/submit
-# ─────────────────────────────────────────────────────────────────────────────
 
 @review_router.post("/{review_id}/submit")
 async def submit_review(
@@ -140,7 +126,7 @@ async def submit_review(
         # Fetch pre-suggested tags from job_role_skill
         suggested_tags = ReviewFunctions.get_suggested_skill_tags(review["contract_id"])
 
-        # Step 5 — Save the client review
+        # Step 5: Save the client review
         ReviewFunctions.save_client_review(
             review_id=review_id,
             ratings=ratings,
@@ -150,7 +136,7 @@ async def submit_review(
             extra_skill_tags=extra_tags,
         )
 
-        # Steps 6–9 — Queue AI analysis + publish pipeline in background
+        # Steps 6-9: Queue AI analysis + publish pipeline in background
         background_tasks.add_task(run_post_review_pipeline, review_id)
 
         logger("REVIEW", f"Review {review_id} submitted. AI pipeline queued.", "POST /reviews/{review_id}/submit", "INFO")
@@ -162,9 +148,7 @@ async def submit_review(
         logger("REVIEW", f"Error: {str(e)}", "POST /reviews/{review_id}/submit", "ERROR")
         return ResponseSchema.error(str(e), 500)
 
-# ─────────────────────────────────────────────────────────────────────────────
 # GET /reviews/freelancer/{freelancer_id}
-# ─────────────────────────────────────────────────────────────────────────────
 
 @review_router.get("/freelancer/{freelancer_id}")
 async def get_freelancer_reviews(
@@ -187,9 +171,7 @@ async def get_freelancer_reviews(
         return ResponseSchema.error(str(e), 500)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 # GET /reviews/trust-score/{freelancer_id}
-# ─────────────────────────────────────────────────────────────────────────────
 
 @review_router.get("/trust-score/{freelancer_id}")
 async def get_trust_score(
@@ -220,9 +202,7 @@ async def get_trust_score(
         return ResponseSchema.error(str(e), 500)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 # GET /reviews/red-flags/{freelancer_id}
-# ─────────────────────────────────────────────────────────────────────────────
 
 @review_router.get("/red-flags/{freelancer_id}")
 async def get_red_flags(
@@ -244,9 +224,7 @@ async def get_red_flags(
         logger("REVIEW", f"Error: {str(e)}", "GET /reviews/red-flags/{freelancer_id}", "ERROR")
         return ResponseSchema.error(str(e), 500)
 
-# ─────────────────────────────────────────────────────────────────────────────
 # GET /reviews/{review_id}  ← wildcard last so specific routes above match first
-# ─────────────────────────────────────────────────────────────────────────────
 @review_router.get("/{review_id}")
 async def get_review(
     review_id: str,

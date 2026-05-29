@@ -1,5 +1,3 @@
-"""Helpers for building standardized API responses."""
-
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from typing import Any

@@ -13,14 +13,14 @@ from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.ratings.rating_functions import RatingFunctions
 from routes.contracts.contract_functions import ContractFunctions
-from ai_related.job_matching.embedding_manager import mark_contract_dirty
+from ai_related.job_engine.embedding_manager import mark_contract_dirty
 
 rating_router = APIRouter(prefix="/ratings", tags=["Ratings"])
 
 
 @rating_router.get("", response_model=List[RatingResponse])
 async def get_all_ratings(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch all ratings - Authenticated users only - JSON response"""
+    """Fetch all ratings - Authenticated users only - JSON response."""
     try:
         ratings = RatingFunctions.get_all_ratings(limit=limit)
         success_msg = f"Retrieved {len(ratings)} ratings" + (f" (limit: {limit})" if limit else "")
@@ -34,7 +34,7 @@ async def get_all_ratings(limit: Optional[int] = None, current_user: UserInDB = 
 
 @rating_router.get("/{rating_id}", response_model=RatingResponse)
 async def get_rating(rating_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch a single rating by ID - Authenticated users only - JSON response"""
+    """Fetch a single rating by ID - Authenticated users only - JSON response."""
     try:
         rating = RatingFunctions.get_rating_by_id(rating_id)
         if not rating:
@@ -52,7 +52,7 @@ async def get_rating(rating_id: str, current_user: UserInDB = Depends(get_curren
 
 @rating_router.get("/freelancer/{freelancer_id}", response_model=List[RatingResponse])
 async def get_ratings_by_freelancer(freelancer_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch all ratings for a specific freelancer - Authenticated users only - JSON response"""
+    """Fetch all ratings for a specific freelancer - Authenticated users only - JSON response."""
     try:
         ratings = RatingFunctions.get_ratings_by_freelancer_id(freelancer_id)
         success_msg = f"Retrieved {len(ratings)} ratings for freelancer {freelancer_id}"
@@ -66,7 +66,7 @@ async def get_ratings_by_freelancer(freelancer_id: str, current_user: UserInDB =
 
 @rating_router.get("/client/{client_id}", response_model=List[RatingResponse])
 async def get_ratings_by_client(client_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch all ratings given by a specific client - Authenticated users only - JSON response"""
+    """Fetch all ratings given by a specific client - Authenticated users only - JSON response."""
     try:
         ratings = RatingFunctions.get_ratings_by_client_id(client_id)
         success_msg = f"Retrieved {len(ratings)} ratings from client {client_id}"
@@ -80,7 +80,7 @@ async def get_ratings_by_client(client_id: str, current_user: UserInDB = Depends
 
 @rating_router.post("", response_model=RatingResponse, status_code=201)
 async def create_rating(rating: RatingCreate, current_user: UserInDB = Depends(get_current_user)):
-    """Create a new rating - only contract owner client can rate; contract must be complete/cancelled/disputed"""
+    """Create a new rating - only contract owner client can rate; contract must be complete/cancelled/disputed."""
     try:
         if not current_user.client_id:
             return ResponseSchema.error("Only clients can create ratings", 403)
@@ -128,7 +128,7 @@ async def create_rating(rating: RatingCreate, current_user: UserInDB = Depends(g
 
 @rating_router.put("/{rating_id}", response_model=RatingResponse)
 async def update_rating(rating_id: str, rating_update: RatingUpdate, current_user: UserInDB = Depends(get_current_user)):
-    """Update rating information - only contract owner client can update once"""
+    """Update rating information - only contract owner client can update once."""
     try:
         existing_rating = RatingFunctions.get_rating_by_id(rating_id)
         if not existing_rating:
@@ -165,7 +165,7 @@ async def update_rating(rating_id: str, rating_update: RatingUpdate, current_use
 
 @rating_router.delete("/{rating_id}", status_code=200)
 async def delete_rating(rating_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Delete a rating - Authenticated users only"""
+    """Delete a rating - Authenticated users only."""
     try:
         existing_rating = RatingFunctions.get_rating_by_id(rating_id)
         if not existing_rating:

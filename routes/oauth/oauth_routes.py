@@ -1,7 +1,7 @@
 import os
 import sys
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse, RedirectResponse
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -44,8 +44,6 @@ def _error_response(message: str, status_code: int = 400):
     return JSONResponse(ResponseSchema.error(message, status_code), status_code=status_code)
 
 
-# ── Google ────────────────────────────────────────────────────────────────────
-
 @oauth_router.get("/google")
 async def google_login():
     """Redirect the browser to Google's OAuth consent screen."""
@@ -70,7 +68,7 @@ async def google_callback(code: str = None, state: str = None, error: str = None
 
     if not state or not verify_state(state):
         logger("OAUTH", "Google callback received invalid state", "GET /auth/oauth/google/callback", "WARNING")
-        return _error_response("Invalid state parameter — possible CSRF attempt", 400)
+        return _error_response("Invalid state parameter, possible CSRF attempt", 400)
 
     try:
         user_info = exchange_google_code(code)
@@ -95,18 +93,9 @@ async def google_callback(code: str = None, state: str = None, error: str = None
         return _error_response("Google authentication failed")
 
 
-# ── Google (mobile — Android / iOS) ──────────────────────────────────────────
-
 @oauth_router.post("/google/mobile")
 async def google_mobile_login(payload: GoogleMobileTokenRequest):
-    """
-    Verify a Google ID token obtained by the Flutter google_sign_in SDK and
-    return a WorkByte JWT + refresh token.
-
-    Flutter usage:
-      final auth = await googleUser.authentication;
-      POST /auth/oauth/google/mobile  { "id_token": auth.idToken }
-    """
+    """Verify a Google ID token from the Flutter google_sign_in SDK and return a WorkByte JWT."""
     try:
         user_info = verify_google_id_token(payload.id_token)
         token_data = find_or_create_oauth_user(
@@ -118,7 +107,6 @@ async def google_mobile_login(payload: GoogleMobileTokenRequest):
         logger("OAUTH", f"Google mobile login: {user_info['email']}", "POST /auth/oauth/google/mobile", "INFO")
         return ResponseSchema.success(token_data, 200)
     except Exception as e:
-        from fastapi import HTTPException
         if isinstance(e, HTTPException):
             logger("OAUTH", f"Google mobile login failed: {e.detail}", "POST /auth/oauth/google/mobile", "WARNING")
             return ResponseSchema.error(e.detail, e.status_code)

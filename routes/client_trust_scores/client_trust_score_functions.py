@@ -8,7 +8,7 @@ from typing import List, Optional, Dict
 import uuid
 
 def convert_uuids_to_str(data: Dict) -> Dict:
-    """Convert all UUID objects in dict to strings"""
+    """Convert all UUID objects in dict to strings."""
     if not data:
         return data
     result = {}
@@ -21,11 +21,11 @@ def convert_uuids_to_str(data: Dict) -> Dict:
 
 
 class ClientTrustScoreFunctions:
-    """Handle all client trust score-related database operations"""
+    """Handle all client trust score-related database operations."""
 
     @staticmethod
     def get_all_client_trust_scores(limit: Optional[int] = None) -> List[Dict]:
-        """Fetch all client trust scores"""
+        """Fetch all client trust scores."""
         try:
             db = get_db()
             rows = db.fetch_data(
@@ -45,7 +45,7 @@ class ClientTrustScoreFunctions:
 
     @staticmethod
     def get_client_trust_score_by_id(client_id: str) -> Optional[Dict]:
-        """Fetch client trust score by ID"""
+        """Fetch client trust score by ID."""
         try:
             db = get_db()
             conditions = [("client_id", "=", client_id)]
@@ -67,7 +67,7 @@ class ClientTrustScoreFunctions:
 
     @staticmethod
     def create_client_trust_score(client_id: str, trust_score: float = 0.0) -> Dict:
-        """Create a new client trust score"""
+        """Create a new client trust score."""
         try:
             db = get_db()
             
@@ -92,7 +92,7 @@ class ClientTrustScoreFunctions:
 
     @staticmethod
     def update_client_trust_score(client_id: str, update_data: Dict) -> Optional[Dict]:
-        """Update client trust score information"""
+        """Update client trust score information."""
         try:
             db = get_db()
             update_data = {k: v for k, v in update_data.items() if v is not None}
@@ -113,7 +113,7 @@ class ClientTrustScoreFunctions:
 
     @staticmethod
     def delete_client_trust_score(client_id: str) -> bool:
-        """Delete a client trust score"""
+        """Delete a client trust score."""
         try:
             db = get_db()
             conditions = [("client_id", "=", client_id)]

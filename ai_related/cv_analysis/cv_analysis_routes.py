@@ -24,6 +24,7 @@ from ai_related.cv_analysis.cv_analysis import (
     analyze_cv_with_llm,
     parse_cv_for_profile,
 )
+from routes.freelancers.freelancer_functions import FreelancerFunctions
 
 cv_analysis_router = APIRouter(prefix="/cv_analysis", tags=["CV Analysis"])
 
@@ -39,7 +40,6 @@ async def analyze_cv(
         if not cv_text:
             raise HTTPException(status_code=400, detail="Unable to extract text from CV")
 
-        from routes.freelancers.freelancer_functions import FreelancerFunctions
         freelancer = FreelancerFunctions.get_freelancer_by_user_id(current_user.user_id)
         if not freelancer:
             raise HTTPException(status_code=404, detail="Freelancer profile not found")

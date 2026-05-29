@@ -67,7 +67,7 @@ class ContractGenerationFunctions:
                     revision_rounds = EXCLUDED.revision_rounds,
                     additional_clauses = EXCLUDED.additional_clauses,
                     payment_schedule = EXCLUDED.payment_schedule
-                RETURNING *
+                RETURNING *.
             """
             payload = {
                 "contract_terms_id": str(uuid.uuid4()),

@@ -1,4 +1,5 @@
 import os
+import random
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
@@ -26,12 +27,11 @@ def convert_uuids_to_str(data: Dict) -> Dict:
 
 
 class EmbeddingFunctions:
-    """Helper functions for managing embeddings with pgvector"""
+    """Helper functions for managing embeddings with pgvector."""
 
     @staticmethod
     def get_embedding_vector(text: str) -> List[float]:
         try:
-            import random
             return [random.random() for _ in range(1536)]
         except Exception as e:
             logger("EMBEDDING_FUNCTIONS", f"Error generating embedding: {str(e)}", level="ERROR")
@@ -53,7 +53,7 @@ class EmbeddingFunctions:
                     SET embedding_vector = :vector::vector,
                         source_text = :source_text,
                         embedding_metadata = :metadata
-                    WHERE embedding_id = :embedding_id
+                    WHERE embedding_id = :embedding_id.
                 """
                 db.execute_query(update_query, {
                     "vector": vector_str,
@@ -113,7 +113,7 @@ class EmbeddingFunctions:
                         source_text = :source_text,
                         embedding_metadata = :metadata,
                         embedding_dirty = FALSE
-                    WHERE embedding_id = :embedding_id
+                    WHERE embedding_id = :embedding_id.
                 """
                 db.execute_query(update_query, {
                     "vector": vector_str,
@@ -159,7 +159,7 @@ class EmbeddingFunctions:
 
 
 class FreelancerFunctions:
-    """Handle all freelancer-related database operations"""
+    """Handle all freelancer-related database operations."""
 
     _FREELANCER_SORT_FIELDS = {
     "created_at":           "f.created_at",
@@ -399,7 +399,7 @@ class FreelancerFunctions:
                 FROM freelancer_skill fs
                 JOIN skill s ON fs.skill_id = s.skill_id
                 WHERE fs.freelancer_id = :freelancer_id
-                ORDER BY fs.created_at DESC
+                ORDER BY fs.created_at DESC.
             """
             rows = db.execute_query(query, {"freelancer_id": freelancer_id})
             logger("FREELANCER_FUNCTIONS", f"Fetched skills for freelancer {freelancer_id}", level="INFO")
@@ -409,7 +409,7 @@ class FreelancerFunctions:
             raise
 
 def get_comprehensive_freelancer_profile(freelancer_id: str) -> Optional[Dict]:
-    """Get complete freelancer profile with all related data"""
+    """Get complete freelancer profile with all related data."""
     try:
         db = get_db()
 
@@ -429,7 +429,7 @@ def get_comprehensive_freelancer_profile(freelancer_id: str) -> Optional[Dict]:
             FROM freelancer_skill fs
             JOIN skill s ON fs.skill_id = s.skill_id
             WHERE fs.freelancer_id = :freelancer_id
-            ORDER BY fs.created_at DESC
+            ORDER BY fs.created_at DESC.
         """
         skills_rows = db.execute_query(skills_query, {"freelancer_id": freelancer_id})
         skills = [dict(row) for row in skills_rows] if skills_rows else []
@@ -461,7 +461,7 @@ def get_comprehensive_freelancer_profile(freelancer_id: str) -> Optional[Dict]:
                    r.timeline_compliance_score, r.overall_rating, r.review_text, r.created_at
             FROM rating r
             WHERE r.freelancer_id = :freelancer_id
-            ORDER BY r.created_at DESC
+            ORDER BY r.created_at DESC.
         """
         ratings_rows = db.execute_query(ratings_query, {"freelancer_id": freelancer_id})
         ratings = [dict(row) for row in ratings_rows] if ratings_rows else []

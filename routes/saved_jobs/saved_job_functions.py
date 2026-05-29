@@ -8,7 +8,7 @@ from typing import List, Optional, Dict
 import uuid
 
 def convert_uuids_to_str(data: Dict) -> Dict:
-    """Convert all UUID objects in dict to strings"""
+    """Convert all UUID objects in dict to strings."""
     if not data:
         return data
     result = {}
@@ -21,11 +21,11 @@ def convert_uuids_to_str(data: Dict) -> Dict:
 
 
 class SavedJobFunctions:
-    """Handle all saved job-related database operations"""
+    """Handle all saved job-related database operations."""
 
     @staticmethod
     def get_all_saved_jobs(limit: Optional[int] = None) -> List[Dict]:
-        """Fetch all saved jobs"""
+        """Fetch all saved jobs."""
         try:
             db = get_db()
             rows = db.fetch_data(
@@ -44,7 +44,7 @@ class SavedJobFunctions:
 
     @staticmethod
     def get_saved_job_by_id(saved_job_id: str) -> Optional[Dict]:
-        """Fetch a saved job by ID"""
+        """Fetch a saved job by ID."""
         try:
             db = get_db()
             conditions = [("saved_job_id", "=", saved_job_id)]
@@ -66,7 +66,7 @@ class SavedJobFunctions:
 
     @staticmethod
     def get_saved_jobs_by_freelancer_id(freelancer_id: str, limit: Optional[int] = None) -> List[Dict]:
-        """Fetch all saved jobs for a freelancer"""
+        """Fetch all saved jobs for a freelancer."""
         try:
             db = get_db()
             conditions = [("freelancer_id", "=", freelancer_id)]
@@ -86,7 +86,7 @@ class SavedJobFunctions:
 
     @staticmethod
     def create_saved_job(freelancer_id: str, job_post_id: str, notes: Optional[str] = None) -> Dict:
-        """Create a new saved job"""
+        """Create a new saved job."""
         try:
             db = get_db()
             saved_job_id = str(uuid.uuid4())
@@ -109,7 +109,7 @@ class SavedJobFunctions:
 
     @staticmethod
     def update_saved_job(saved_job_id: str, update_data: Dict) -> Optional[Dict]:
-        """Update saved job information"""
+        """Update saved job information."""
         try:
             db = get_db()
             update_data = {k: v for k, v in update_data.items() if v is not None}
@@ -130,7 +130,7 @@ class SavedJobFunctions:
 
     @staticmethod
     def delete_saved_job(saved_job_id: str) -> bool:
-        """Delete a saved job"""
+        """Delete a saved job."""
         try:
             db = get_db()
             conditions = [("saved_job_id", "=", saved_job_id)]

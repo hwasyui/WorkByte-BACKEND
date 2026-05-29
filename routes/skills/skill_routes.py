@@ -20,7 +20,7 @@ async def get_all_skills(
     limit: Optional[int] = None,
     current_user: UserInDB = Depends(get_current_user)
 ):
-    """Fetch all skills with optional limit"""
+    """Fetch all skills with optional limit."""
     try:
         skills = SkillFunctions.get_all_skills(limit=limit)
         success_msg = f"Retrieved {len(skills)} skills" + (f" (limit: {limit})" if limit else "")
@@ -38,7 +38,7 @@ async def search_skills(
     limit: int = Query(10, ge=1, le=50, description="Max results"),
     current_user: UserInDB = Depends(get_current_user),
 ):
-    """Search and autocomplete skills - matches prefix and contains (case-insensitive)"""
+    """Search and autocomplete skills - matches prefix and contains (case-insensitive)."""
     try:
         results = SkillFunctions.search_skills_autocomplete(q, limit=limit)
         logger("SKILL", f"Search '{q}' found {len(results)} results", "GET /skills/search", "INFO")
@@ -55,7 +55,7 @@ async def get_skills_by_alphabet(
     limit: Optional[int] = None,
     current_user: UserInDB = Depends(get_current_user)
 ):
-    """Get skills starting with a specific letter"""
+    """Get skills starting with a specific letter."""
     try:
         skills = SkillFunctions.get_skills_by_alphabet(letter, limit=limit)
         logger("SKILL", f"Found {len(skills)} skills starting with '{letter}'", "GET /skills/alphabet/{letter}", "INFO")
@@ -72,7 +72,7 @@ async def get_skills_by_category(
     limit: Optional[int] = None,
     current_user: UserInDB = Depends(get_current_user)
 ):
-    """Get all skills in a category (hard_skill, soft_skill, tool)"""
+    """Get all skills in a category (hard_skill, soft_skill, tool)."""
     try:
         skills = SkillFunctions.get_skills_by_category(category, limit=limit)
         success_msg = f"Retrieved {len(skills)} skills in category '{category}'"
@@ -102,7 +102,7 @@ async def autocomplete_skills(
 
 @skill_router.get("/{skill_id}", response_model=SkillResponse)
 async def get_skill(skill_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch a single skill by ID"""
+    """Fetch a single skill by ID."""
     try:
         skill = SkillFunctions.get_skill_by_id(skill_id)
         if not skill:
@@ -120,7 +120,7 @@ async def get_skill(skill_id: str, current_user: UserInDB = Depends(get_current_
 
 @skill_router.post("", response_model=SkillResponse, status_code=201)
 async def create_skill(skill: SkillCreate, current_user: UserInDB = Depends(get_current_user)):
-    """Create a new skill"""
+    """Create a new skill."""
     try:
         new_skill = SkillFunctions.create_skill(
             skill_name=skill.skill_name,
@@ -143,7 +143,7 @@ async def create_skill(skill: SkillCreate, current_user: UserInDB = Depends(get_
 
 @skill_router.put("/{skill_id}", response_model=SkillResponse)
 async def update_skill(skill_id: str, skill_update: SkillUpdate, current_user: UserInDB = Depends(get_current_user)):
-    """Update skill information"""
+    """Update skill information."""
     try:
         existing = SkillFunctions.get_skill_by_id(skill_id)
         if not existing:
@@ -169,7 +169,7 @@ async def update_skill(skill_id: str, skill_update: SkillUpdate, current_user: U
 
 @skill_router.delete("/{skill_id}", status_code=200)
 async def delete_skill(skill_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Delete a skill"""
+    """Delete a skill."""
     try:
         existing = SkillFunctions.get_skill_by_id(skill_id)
         if not existing:

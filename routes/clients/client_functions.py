@@ -10,7 +10,7 @@ import uuid
 from datetime import datetime
 
 def convert_uuids_to_str(data: Dict) -> Dict:
-    """Convert all UUID and datetime objects in dict to strings"""
+    """Convert all UUID and datetime objects in dict to strings."""
     if not data:
         return data
     result = {}
@@ -24,7 +24,7 @@ def convert_uuids_to_str(data: Dict) -> Dict:
     return result
 
 class ClientFunctions:
-    """Handle all client-related database operations"""
+    """Handle all client-related database operations."""
 
     _CLIENT_SORT_FIELDS = {
         "created_at":          "created_at",
@@ -81,7 +81,7 @@ class ClientFunctions:
 
     @staticmethod
     def get_all_clients(limit: Optional[int] = None, offset: int = 0) -> List[Dict]:
-        """Fetch all clients"""
+        """Fetch all clients."""
         try:
             db = get_db()
             rows = db.fetch_data(
@@ -102,7 +102,7 @@ class ClientFunctions:
 
     @staticmethod
     def get_client_by_id(client_id: str) -> Optional[Dict]:
-        """Fetch a single client by ID"""
+        """Fetch a single client by ID."""
         try:
             db = get_db()
             conditions = [("client_id", "=", client_id)]
@@ -124,7 +124,7 @@ class ClientFunctions:
 
     @staticmethod
     def get_client_by_user_id(user_id: str) -> Optional[Dict]:
-        """Fetch a client by user ID"""
+        """Fetch a client by user ID."""
         try:
             db = get_db()
             conditions = [("user_id", "=", user_id)]
@@ -146,7 +146,7 @@ class ClientFunctions:
 
     @staticmethod
     def get_client_by_id_or_user_id(identifier: str) -> Optional[Dict]:
-        """Fetch a client by either client_id or user_id"""
+        """Fetch a client by either client_id or user_id."""
         try:
             # Try client_id first
             result = ClientFunctions.get_client_by_id(identifier)
@@ -167,7 +167,7 @@ class ClientFunctions:
     def create_client(client_id: str, user_id: str, full_name: Optional[str] = None,
                      bio: Optional[str] = None, website_url: Optional[str] = None,
                      profile_picture_url: Optional[str] = None) -> Dict:
-        """Create a new client profile"""
+        """Create a new client profile."""
         try:
             db = get_db()
             client_id = str(uuid.uuid4())
@@ -194,7 +194,7 @@ class ClientFunctions:
 
     @staticmethod
     def update_client(client_id: str, update_data: Dict) -> Optional[Dict]:
-        """Update client information"""
+        """Update client information."""
         try:
             db = get_db()
             # Remove None values
@@ -216,7 +216,7 @@ class ClientFunctions:
 
     @staticmethod
     def delete_client(client_id: str) -> bool:
-        """Delete a client profile"""
+        """Delete a client profile."""
         try:
             db = get_db()
             conditions = [("client_id", "=", client_id)]
@@ -231,7 +231,7 @@ class ClientFunctions:
 
     @staticmethod
     def search_clients_by_full_name(search_term: str) -> List[Dict]:
-        """Search clients by full name"""
+        """Search clients by full name."""
         try:
             db = get_db()
             query = "SELECT * FROM client WHERE full_name ILIKE '%' || :search_term || '%' ORDER BY created_at DESC"

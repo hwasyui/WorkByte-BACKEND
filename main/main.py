@@ -11,11 +11,11 @@ from functions.functions import get_table_testing
 from functions.logger import logger
 from functions.db_manager import init_db, close_db
 from functions.response_utils import ResponseSchema
-from ai_related.job_matching.embedding_manager import _should_embed_immediately
+from ai_related.job_engine.embedding_manager import _should_embed_immediately
 from routes.auth_router import auth_router
 from routes.oauth.oauth_routes import oauth_router
-from ai_related.job_matching.job_matching_routes import router as job_matching_router
-from ai_related.job_matching.sweep_worker import embedding_sweep_loop
+from ai_related.job_engine.job_engine_routes import router as job_engine_router
+from ai_related.job_engine.sweep_worker import embedding_sweep_loop
 from routes.users.users_routes import users_router
 from routes.freelancers.freelancer_routes import freelancer_router
 from routes.clients.client_routes import client_router
@@ -49,7 +49,7 @@ from routes.notifications.notification_routes import notification_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """FastAPI lifespan context manager for startup and shutdown events"""
+    """Manage startup (database init, model warmup, sweep worker) and shutdown."""
     # Startup: Initialize database
     try:
         init_db()
@@ -61,14 +61,14 @@ async def lifespan(app: FastAPI):
     immediate = _should_embed_immediately()
     logger(
         "LIFESPAN",
-        f"Embedding mode: {'immediate — embeddings fire on each mutation (below threshold)' if immediate else 'sweep — dirty records processed by background worker (above threshold)'}",
+        f"Embedding mode: {'immediate: embeddings fire on each mutation (below threshold)' if immediate else 'sweep: dirty records processed by background worker (above threshold)'}",
         level="INFO",
     )
 
     sweep_task = asyncio.create_task(embedding_sweep_loop())
     logger("LIFESPAN", "Embedding sweep worker started (handles dirty records and manual /embed/ calls regardless of mode)", level="INFO")
 
-    # Warm up ML models in background — both load large weights from disk on
+    # Warm up ML models in background; both load large weights from disk on
     # first use, causing a cold-start delay on the first real request.
     # Running them concurrently at startup means they're ready before any user hits them.
     def _warmup_harmful_text():
@@ -81,15 +81,15 @@ async def lifespan(app: FastAPI):
 
     def _warmup_embedding():
         try:
-            from ai_related.job_matching.embedding_service import _get_model
+            from ai_related.job_engine.embedding_service import _get_model
             _get_model()
-            logger("LIFESPAN", "Embedding model warmed up (BAAI/bge-base-en-v1.5)", level="INFO")
+            logger("LIFESPAN", "Embedding model warmed up (nomic-ai/nomic-embed-text-v1.5)", level="INFO")
         except Exception as e:
             logger("LIFESPAN", f"Embedding model warm-up failed (non-fatal): {e}", level="WARNING")
 
     def _warmup_job_ranker():
         try:
-            from ai_related.job_matching.ml_ranker import _load_model
+            from ai_related.job_engine.ml_ranker import _load_model
             _load_model()
             logger("LIFESPAN", "Job matching ranker warmed up (CatBoost)", level="INFO")
         except Exception as e:
@@ -173,7 +173,7 @@ app.include_router(cv_analysis_router)
 app.include_router(contract_submission_router)
 app.include_router(review_router)
 app.include_router(dashboard_router)
-app.include_router(job_matching_router, prefix="/ai/job_matching")
+app.include_router(job_engine_router)
 app.include_router(harmful_text_router)
 app.include_router(admin_router)
 app.include_router(reports_router)
@@ -183,10 +183,7 @@ app.include_router(notification_router)
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    """
-    Custom handler for Pydantic validation errors
-    Returns structured response with detailed error information
-    """
+    """Return a structured 422 response for Pydantic validation errors."""
     errors = []
     for error in exc.errors():
         loc = error.get("loc", ())

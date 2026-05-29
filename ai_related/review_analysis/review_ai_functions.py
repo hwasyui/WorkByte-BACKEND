@@ -18,13 +18,10 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 GROQ_CHAT_URL = "https://api.groq.com/openai/v1/chat/completions"
 GROQ_MODELS_URL = "https://api.groq.com/openai/v1/models"
 
-DEFAULT_MODEL = "llama-3.1-8b-instant"
+DEFAULT_MODEL = "llama-3.3-70b-versatile"
 MODEL_FALLBACKS = [
-    "llama-3.1-8b-instant",
-    "llama-3.3-70b-versatile",
-    "gemma2-9b-it",
-    "deepseek-r1-distill-llama-70b",
-    "openai/gpt-oss-20b",
+    "llama-3.3-70b-versatile",  # primary: best quality available on Groq free tier
+    "llama-3.1-8b-instant",     # fallback: separate rate-limit bucket, fast
 ]
 
 LLM_CONCURRENCY_LIMIT = 2
@@ -230,7 +227,7 @@ def get_targeted_question(category: str) -> str:
             FROM ai_review_prompts
             WHERE project_category = 'general' AND is_active = TRUE
             ORDER BY RANDOM()
-            LIMIT 1
+            LIMIT 1.
             """
         )
         return fallback[0]["question_text"] if fallback else "How satisfied are you with the overall project outcome?"
@@ -308,15 +305,15 @@ def _blend_communication_score(
     Blends all available communication signals into a single 0–1 score.
 
     Signal weights (with client star rating):
-      45% — client's explicit communication star rating (1–5, normalized to 0–1)
-      30% — AI assessment of the message thread
-      20% — reply speed (computed from message timestamps)
-       5% — overall review sentiment (weakest, indirect signal)
+      45%: client's explicit communication star rating (1-5, normalized to 0-1)
+      30%: AI assessment of the message thread
+      20%: reply speed (computed from message timestamps)
+       5%: overall review sentiment (weakest, indirect signal)
 
     Without client star rating (fallback):
-      50% — AI thread assessment
-      35% — reply speed
-      15% — overall review sentiment
+      50%: AI thread assessment
+      35%: reply speed
+      15%: overall review sentiment.
     """
     sentiment_component = max(0.0, min(1.0, 0.5 + sentiment_score / 2.0))
 
@@ -350,25 +347,25 @@ async def analyze_review_full(
     system = (
         "You are a review analysis expert. "
         "Analyze the provided review data and return your own independent assessment as valid JSON only. "
-        "Do not copy, echo, or mirror any values from the schema description — produce original analysis. "
+        "Do not copy, echo, or mirror any values from the schema description, produce original analysis. "
         "Do not include markdown fences, explanation, or extra text."
     )
 
     schema_description = {
-        "sentiment_score": "float between -1.0 and 1.0 — how positive or negative the review text is",
+        "sentiment_score": "float between -1.0 and 1.0, how positive or negative the review text is",
         "sentiment_label": "one of: 'positive', 'neutral', 'negative'",
-        "sentiment_mismatch": "boolean — true if sentiment_label contradicts the star rating (e.g. negative text with 5 stars)",
-        "authenticity_score": "float between 0.0 and 1.0 — likelihood the review is genuine and not fabricated",
-        "is_flagged_fake": "boolean — true if review appears fabricated or templated",
-        "is_flagged_coerced": "boolean — true if review appears pressured or coerced",
+        "sentiment_mismatch": "boolean, true if sentiment_label contradicts the star rating (e.g. negative text with 5 stars)",
+        "authenticity_score": "float between 0.0 and 1.0, likelihood the review is genuine and not fabricated",
+        "is_flagged_fake": "boolean, true if review appears fabricated or templated",
+        "is_flagged_coerced": "boolean, true if review appears pressured or coerced",
         "flag_reasons": "list of strings describing specific red flags, empty list if none",
-        "bias_score": "float between 0.0 and 1.0 — degree of detected bias in the review",
+        "bias_score": "float between 0.0 and 1.0, degree of detected bias in the review",
         "bias_flags": {
-            "rating_vs_performance_inconsistency": "boolean — true if star rating sharply contradicts objective performance metrics",
-            "name_bias": "boolean — true if freelancer name appears to influence the review tone",
+            "rating_vs_performance_inconsistency": "boolean, true if star rating sharply contradicts objective performance metrics",
+            "name_bias": "boolean, true if freelancer name appears to influence the review tone",
         },
-        "communication_quality_score": "float between 0.0 and 1.0 — quality of freelancer communication judged from the message thread ONLY, not the review text",
-        "communication_summary": "string — 1-2 sentence summary of communication quality based on the message thread",
+        "communication_quality_score": "float between 0.0 and 1.0, quality of freelancer communication judged from the message thread ONLY, not the review text",
+        "communication_summary": "string, 1-2 sentence summary of communication quality based on the message thread",
     }
 
     comm_star_line = (
@@ -389,7 +386,7 @@ async def analyze_review_full(
         "\nMessage thread from the project (use this to assess communication_quality_score):\n"
         f"{message_thread[:3000]}\n\n"
         "Assess the review for sentiment, authenticity, bias, and communication quality. "
-        "Base your analysis entirely on the data above — do not invent or assume anything.\n"
+        "Base your analysis entirely on the data above, do not invent or assume anything.\n"
         "Return exactly one JSON object matching this schema:\n"
         f"{json.dumps(schema_description, ensure_ascii=False, indent=2)}"
     )
@@ -470,10 +467,10 @@ def calculate_trust_score(
     communication_sentiment = float(communication_sentiment) if communication_sentiment is not None else 0.5
     conflict_score = float(conflict_score) if conflict_score is not None else 0.0
 
-    score  = (weighted_review_avg / 5.0) * 50   # 50% — recency-weighted client star ratings
-    score += revision_rate_score         * 20   # 20% — revision frequency (fewer = better)
-    score += responsiveness_score        * 20   # 20% — reply speed from message thread
-    score += communication_sentiment     * 10   # 10% — blended communication quality score
+    score  = (weighted_review_avg / 5.0) * 50   # 50%: recency-weighted client star ratings
+    score += revision_rate_score         * 20   # 20%: revision frequency (fewer = better)
+    score += responsiveness_score        * 20   # 20%: reply speed from message thread
+    score += communication_sentiment     * 10   # 10%: blended communication quality score
 
     if conflict_score > 0.7:
         score -= 5  # penalty for coercion-flagged reviews

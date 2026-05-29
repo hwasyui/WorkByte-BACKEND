@@ -1,5 +1,3 @@
-"""Global Database Manager for application-wide database engine initialization"""
-
 import os
 from dotenv import load_dotenv
 from functions.database import Database
@@ -12,7 +10,7 @@ db: Database = None
 
 
 def init_db() -> Database:
-    """Initialize the global database connection pool"""
+    """Initialize the global database connection pool."""
     global db
     
     try:
@@ -32,7 +30,7 @@ def init_db() -> Database:
 
 
 def get_db() -> Database:
-    """Get the global database instance"""
+    """Get the global database instance."""
     global db
     if db is None:
         raise RuntimeError("Database not initialized. Call init_db() first.")
@@ -40,7 +38,7 @@ def get_db() -> Database:
 
 
 def close_db():
-    """Close all database connections"""
+    """Close all database connections."""
     global db
     try:
         if db is not None:

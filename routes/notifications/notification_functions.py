@@ -27,8 +27,6 @@ def convert_uuids_to_str(data: Dict) -> Dict:
 
 class NotificationFunctions:
 
-    # ── FCM ───────────────────────────────────────────────────────────────────
-
     @staticmethod
     def _get_fcm_access_token() -> str:
         credentials = service_account.Credentials.from_service_account_file(
@@ -59,8 +57,6 @@ class NotificationFunctions:
         except Exception as e:
             logger("NOTIFICATION_FUNCTIONS", f"FCM send failed (non-fatal): {str(e)}", level="WARNING")
 
-    # ── Core notify() — call this from any route ──────────────────────────────
-
     @staticmethod
     async def notify(
         recipient_user_id: str,
@@ -89,7 +85,7 @@ class NotificationFunctions:
             )
             logger("NOTIFICATION_FUNCTIONS", f"Notification saved for user {recipient_user_id}: {notif_type}", level="INFO")
 
-            # Best-effort FCM — never block the main flow
+            # Best-effort FCM; never block the main flow
             row = db.fetch_data(
                 table_name="users",
                 columns=["fcm_token"],
@@ -102,7 +98,6 @@ class NotificationFunctions:
         except Exception as e:
             logger("NOTIFICATION_FUNCTIONS", f"notify() failed (non-fatal): {str(e)}", level="WARNING")
 
-    # ── DB queries ────────────────────────────────────────────────────────────
     @staticmethod
     def get_notifications_by_user(
         user_id: str, limit: int = 20, offset: int = 0

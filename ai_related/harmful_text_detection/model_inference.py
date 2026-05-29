@@ -1,5 +1,3 @@
-"""Inference module for harmful text detection."""
-
 import json
 import os
 from typing import Dict, List, Tuple
@@ -98,7 +96,7 @@ def load_model(model_type: str = "best") -> Tuple[torch.nn.Module, AutoTokenizer
         Tuple of (model, tokenizer, device, resolved_model_type)
 
     Raises:
-        FileNotFoundError: If model not found
+        FileNotFoundError: If model not found.
     """
     global _model, _tokenizer, _device, _model_name
 
@@ -128,9 +126,6 @@ def load_model(model_type: str = "best") -> Tuple[torch.nn.Module, AutoTokenizer
     _model.eval()
     _model_name = resolved_model
 
-    print(f"Loaded {resolved_model} model from {model_path}")
-    print(f"Device: {_device}")
-
     return _model, _tokenizer, _device, resolved_model
 
 
@@ -148,7 +143,7 @@ def predict(text: str, model_type: str = "best", threshold: float = 0.5) -> dict
         - text: Input text
         - labels: List of detected harmful labels
         - scores: Dictionary of label -> confidence score
-        - is_harmful: Boolean indicating if any harmful content detected
+        - is_harmful: Boolean indicating if any harmful content detected.
     """
     return batch_predict([text], model_type=model_type, threshold=threshold)[0]
 
@@ -163,7 +158,7 @@ def batch_predict(texts: list, model_type: str = "best", threshold: float = 0.5)
         threshold: Confidence threshold for label prediction
 
     Returns:
-        List of prediction dictionaries
+        List of prediction dictionaries.
     """
     model, tokenizer, device, resolved_model = load_model(model_type)
 

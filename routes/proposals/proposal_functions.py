@@ -10,7 +10,7 @@ import uuid
 
 
 def convert_uuids_to_str(data: Dict) -> Dict:
-    """Convert all UUID objects in dict to strings"""
+    """Convert all UUID objects in dict to strings."""
     if not data:
         return data
     result = {}
@@ -23,11 +23,11 @@ def convert_uuids_to_str(data: Dict) -> Dict:
 
 
 class ProposalFunctions:
-    """Handle all proposal-related database operations"""
+    """Handle all proposal-related database operations."""
 
     @staticmethod
     def get_all_proposals(limit: Optional[int] = None) -> List[Dict]:
-        """Fetch all proposals"""
+        """Fetch all proposals."""
         try:
             db = get_db()
             rows = db.fetch_data(
@@ -49,7 +49,7 @@ class ProposalFunctions:
 
     @staticmethod
     def get_proposal_by_id(proposal_id: str) -> Optional[Dict]:
-        """Fetch a proposal by ID"""
+        """Fetch a proposal by ID."""
         try:
             db = get_db()
             conditions = [("proposal_id", "=", proposal_id)]
@@ -69,7 +69,7 @@ class ProposalFunctions:
 
     @staticmethod
     def get_proposals_by_job_post_id(job_post_id: str) -> List[Dict]:
-        """Fetch all proposals for a job post"""
+        """Fetch all proposals for a job post."""
         try:
             db = get_db()
             conditions = [("job_post_id", "=", job_post_id)]
@@ -88,7 +88,7 @@ class ProposalFunctions:
 
     @staticmethod
     def get_proposals_by_job_post_id_enriched(job_post_id: str) -> List[Dict]:
-        """Fetch all proposals for a job post with freelancer info joined"""
+        """Fetch all proposals for a job post with freelancer info joined."""
         try:
             db = get_db()
             query = """
@@ -118,7 +118,7 @@ class ProposalFunctions:
 
     @staticmethod
     def get_proposals_by_freelancer_id(freelancer_id: str) -> List[Dict]:
-        """Fetch all proposals from a freelancer"""
+        """Fetch all proposals from a freelancer."""
         try:
             db = get_db()
             conditions = [("freelancer_id", "=", freelancer_id)]
@@ -193,7 +193,7 @@ class ProposalFunctions:
         status: Optional[str] = "pending",
         is_ai_generated: Optional[bool] = False,
     ) -> Dict:
-        """Create a new proposal and sync proposal_count on the job post"""
+        """Create a new proposal and sync proposal_count on the job post."""
         try:
             db = get_db()
             proposal_id = str(uuid.uuid4())
@@ -213,7 +213,7 @@ class ProposalFunctions:
             db.insert_data(table_name="proposal", data=proposal_data)
             logger("PROPOSAL_FUNCTIONS", f"Proposal {proposal_id} created", level="INFO")
 
-            # ── Keep job_post.proposal_count in sync ──────────────────────
+            # Keep job_post.proposal_count in sync.
             JobPostFunctions._sync_proposal_count(job_post_id)
 
             return convert_uuids_to_str(proposal_data)
@@ -224,7 +224,7 @@ class ProposalFunctions:
 
     @staticmethod
     def update_proposal(proposal_id: str, update_data: Dict) -> Optional[Dict]:
-        """Update proposal information"""
+        """Update proposal information."""
         try:
             db = get_db()
             filtered = {k: v for k, v in update_data.items() if v is not None}
@@ -245,11 +245,11 @@ class ProposalFunctions:
 
     @staticmethod
     def delete_proposal(proposal_id: str) -> bool:
-        """Delete a proposal and sync proposal_count on the job post"""
+        """Delete a proposal and sync proposal_count on the job post."""
         try:
             db = get_db()
 
-            # ── Fetch job_post_id before deleting ─────────────────────────
+            # Fetch job_post_id before deleting to sync proposal_count.
             existing = ProposalFunctions.get_proposal_by_id(proposal_id)
             job_post_id = existing.get("job_post_id") if existing else None
 
@@ -257,7 +257,7 @@ class ProposalFunctions:
             db.delete_data(table_name="proposal", conditions=conditions)
             logger("PROPOSAL_FUNCTIONS", f"Proposal {proposal_id} deleted", level="INFO")
 
-            # ── Keep job_post.proposal_count in sync ──────────────────────
+            # Keep job_post.proposal_count in sync.
             if job_post_id:
                 JobPostFunctions._sync_proposal_count(job_post_id)
 

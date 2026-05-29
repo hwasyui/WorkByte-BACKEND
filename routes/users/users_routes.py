@@ -18,7 +18,7 @@ users_router = APIRouter(prefix="/users", tags=["Users"])
 
 @users_router.get("", response_model=List[UserResponseDetail])
 async def get_all_users(limit: Optional[int] = None, offset: int = 0, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch current user only - Authenticated users only - JSON response"""
+    """Fetch current user only - Authenticated users only - JSON response."""
     try:
         user = UserFunctions.get_user_by_id(current_user.user_id)
         success_msg = f"Retrieved current user {current_user.user_id}"
@@ -35,7 +35,7 @@ async def search_users(
     name: str = Query(..., untu="User email or name to search for"),
     current_user: UserInDB = Depends(get_current_user),
 ):
-    """Search users by email - Authenticated users only - JSON response"""
+    """Search users by email - Authenticated users only - JSON response."""
     try:
         users = UserFunctions.search_users(name)
         logger("USER", f"Searched users for '{name}', found {len(users)} results", "GET /users/search", "INFO")
@@ -48,7 +48,7 @@ async def search_users(
 
 @users_router.get("/{user_id}", response_model=UserResponseDetail)
 async def get_user(user_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch a single user by ID - Authenticated users only - JSON response"""
+    """Fetch a single user by ID - Authenticated users only - JSON response."""
     try:
         assert_user_owns(current_user, user_id)
         user = UserFunctions.get_user_by_id(user_id)
@@ -69,7 +69,7 @@ async def get_user(user_id: str, current_user: UserInDB = Depends(get_current_us
 
 @users_router.post("", response_model=UserResponseDetail, status_code=201)
 async def create_user(user: UserCreate, current_user: UserInDB = Depends(get_current_user)):
-    """Create a new user - Authenticated users only - JSON body accepted"""
+    """Create a new user - Authenticated users only - JSON body accepted."""
     try:
         # Generate UUID if not provided
         user_id = user.user_id or str(uuid.uuid4())
@@ -97,7 +97,7 @@ async def create_user(user: UserCreate, current_user: UserInDB = Depends(get_cur
 
 @users_router.put("/{user_id}", response_model=UserResponseDetail)
 async def update_user(user_id: str, user_update: UserUpdate, current_user: UserInDB = Depends(get_current_user)):
-    """Update user information - Authenticated users only"""
+    """Update user information - Authenticated users only."""
     try:
         assert_user_owns(current_user, user_id)
         # Check if user exists
@@ -131,7 +131,7 @@ async def update_user(user_id: str, user_update: UserUpdate, current_user: UserI
 
 @users_router.delete("/{user_id}", status_code=200)
 async def delete_user(user_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Delete a user - Authenticated users only"""
+    """Delete a user - Authenticated users only."""
     try:
         assert_user_owns(current_user, user_id)
         # Check if user exists

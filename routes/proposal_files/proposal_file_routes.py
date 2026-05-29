@@ -19,7 +19,7 @@ proposal_file_router = APIRouter(prefix="/proposal-files", tags=["Proposal Files
 
 @proposal_file_router.get("", response_model=List[ProposalFileResponse])
 async def get_all_proposal_files(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch all proposal files - Authenticated users only - JSON response"""
+    """Fetch all proposal files - Authenticated users only - JSON response."""
     try:
         proposal_files = ProposalFileFunctions.get_all_proposal_files(limit=limit)
         success_msg = f"Retrieved {len(proposal_files)} proposal files" + (f" (limit: {limit})" if limit else "")
@@ -33,7 +33,7 @@ async def get_all_proposal_files(limit: Optional[int] = None, current_user: User
 
 @proposal_file_router.get("/{proposal_file_id}", response_model=ProposalFileResponse)
 async def get_proposal_file(proposal_file_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch a single proposal file by ID - Authenticated users only - JSON response"""
+    """Fetch a single proposal file by ID - Authenticated users only - JSON response."""
     try:
         proposal_file = ProposalFileFunctions.get_proposal_file_by_id(proposal_file_id)
         if not proposal_file:
@@ -51,7 +51,7 @@ async def get_proposal_file(proposal_file_id: str, current_user: UserInDB = Depe
 
 @proposal_file_router.get("/proposal/{proposal_id}", response_model=List[ProposalFileResponse])
 async def get_proposal_files_by_proposal(proposal_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch all files for a specific proposal - Authenticated users only - JSON response"""
+    """Fetch all files for a specific proposal - Authenticated users only - JSON response."""
     try:
         proposal_files = ProposalFileFunctions.get_proposal_files_by_proposal_id(proposal_id)
         success_msg = f"Retrieved {len(proposal_files)} files for proposal {proposal_id}"
@@ -69,7 +69,7 @@ async def create_proposal_file(
     files: List[UploadFile] = File(...),
     current_user: UserInDB = Depends(get_current_user),
 ):
-    """Upload one or more files for a proposal - Authenticated users only"""
+    """Upload one or more files for a proposal - Authenticated users only."""
     try:
         existing_proposal = ProposalFunctions.get_proposal_by_id(proposal_id)
         if not existing_proposal:
@@ -126,7 +126,7 @@ async def create_proposal_file(
 
 @proposal_file_router.put("/{proposal_file_id}", response_model=ProposalFileResponse)
 async def update_proposal_file(proposal_file_id: str, proposal_file_update: ProposalFileUpdate, current_user: UserInDB = Depends(get_current_user)):
-    """Update proposal file information - Authenticated users only"""
+    """Update proposal file information - Authenticated users only."""
     try:
         existing_proposal_file = ProposalFileFunctions.get_proposal_file_by_id(proposal_file_id)
         if not existing_proposal_file:
@@ -148,7 +148,7 @@ async def update_proposal_file(proposal_file_id: str, proposal_file_update: Prop
 
 @proposal_file_router.delete("/{proposal_file_id}", status_code=200)
 async def delete_proposal_file(proposal_file_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Delete a proposal file - Authenticated users only"""
+    """Delete a proposal file - Authenticated users only."""
     try:
         existing_proposal_file = ProposalFileFunctions.get_proposal_file_by_id(proposal_file_id)
         if not existing_proposal_file:

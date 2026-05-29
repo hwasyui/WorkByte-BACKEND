@@ -19,7 +19,7 @@ job_file_router = APIRouter(prefix="/job-files", tags=["Job Files"])
 
 @job_file_router.get("", response_model=List[JobFileResponse])
 async def get_all_job_files(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch all job files - Authenticated users only - JSON response"""
+    """Fetch all job files - Authenticated users only - JSON response."""
     try:
         job_files = JobFileFunctions.get_all_job_files(limit=limit)
         success_msg = f"Retrieved {len(job_files)} job files" + (f" (limit: {limit})" if limit else "")
@@ -33,7 +33,7 @@ async def get_all_job_files(limit: Optional[int] = None, current_user: UserInDB 
 
 @job_file_router.get("/{job_file_id}", response_model=JobFileResponse)
 async def get_job_file(job_file_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch a single job file by ID - Authenticated users only - JSON response"""
+    """Fetch a single job file by ID - Authenticated users only - JSON response."""
     try:
         job_file = JobFileFunctions.get_job_file_by_id(job_file_id)
         if not job_file:
@@ -51,7 +51,7 @@ async def get_job_file(job_file_id: str, current_user: UserInDB = Depends(get_cu
 
 @job_file_router.get("/job-post/{job_post_id}", response_model=List[JobFileResponse])
 async def get_job_files_by_job_post(job_post_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch all files for a specific job post - Authenticated users only - JSON response"""
+    """Fetch all files for a specific job post - Authenticated users only - JSON response."""
     try:
         job_files = JobFileFunctions.get_job_files_by_job_post_id(job_post_id)
         success_msg = f"Retrieved {len(job_files)} files for job post {job_post_id}"
@@ -69,7 +69,7 @@ async def create_job_file(
     files: List[UploadFile] = File(...),
     current_user: UserInDB = Depends(get_current_user),
 ):
-    """Upload one or more files for a job post - Authenticated users only"""
+    """Upload one or more files for a job post - Authenticated users only."""
     try:
         existing_job_post = JobPostFunctions.get_job_post_by_id(job_post_id)
         if not existing_job_post:
@@ -126,7 +126,7 @@ async def create_job_file(
 
 @job_file_router.put("/{job_file_id}", response_model=JobFileResponse)
 async def update_job_file(job_file_id: str, job_file_update: JobFileUpdate, current_user: UserInDB = Depends(get_current_user)):
-    """Update job file information - Authenticated users only"""
+    """Update job file information - Authenticated users only."""
     try:
         existing_job_file = JobFileFunctions.get_job_file_by_id(job_file_id)
         if not existing_job_file:
@@ -148,7 +148,7 @@ async def update_job_file(job_file_id: str, job_file_update: JobFileUpdate, curr
 
 @job_file_router.delete("/{job_file_id}", status_code=200)
 async def delete_job_file(job_file_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Delete a job file - Authenticated users only"""
+    """Delete a job file - Authenticated users only."""
     try:
         existing_job_file = JobFileFunctions.get_job_file_by_id(job_file_id)
         if not existing_job_file:

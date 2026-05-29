@@ -10,11 +10,9 @@ from datetime import datetime
 import uuid
 
 
-# ── Default message templates ─────────────────────────────────────────────────
-
 def _job_pitch_default(job_title: str) -> str:
     return (
-        f'Hi! I came across your profile and have a project — "{job_title}" — '
+        f'Hi! I came across your profile and have a project, "{job_title}", '
         f"that I think would be a great match for your skills. "
         f"I'd love to chat about it. Let me know if you're interested!"
     )
@@ -25,8 +23,6 @@ def _contract_accepted_default(role_title: str, contract_title: str) -> str:
         f"and I'm excited to move forward. Looking forward to collaborating with you!"
     )
 
-
-# ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _canonical(uid_1: str, uid_2: str) -> Tuple[str, str]:
     """Return (user_a, user_b) with user_a < user_b (UUID string order)."""
@@ -136,8 +132,6 @@ def _enrich_thread(row: dict, current_user_id: str) -> Dict:
         t["job_post"] = None
     return t
 
-
-# ── DMFunctions class ─────────────────────────────────────────────────────────
 
 class DMFunctions:
 

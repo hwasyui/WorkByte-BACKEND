@@ -14,14 +14,14 @@ from functions.response_utils import ResponseSchema
 from routes.job_posts.job_post_functions import JobPostFunctions
 from routes.job_role_skills.job_role_skill_functions import JobRoleSkillFunctions
 from routes.job_roles.job_role_functions import JobRoleFunctions
-from ai_related.job_matching.embedding_manager import mark_job_dirty_by_role
+from ai_related.job_engine.embedding_manager import mark_job_dirty_by_role
 
 job_role_skill_router = APIRouter(prefix="/job-role-skills", tags=["Job Role Skills"])
 
 
 @job_role_skill_router.get("", response_model=List[JobRoleSkillResponse])
 async def get_all_job_role_skills(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch all job role skills - Authenticated users only - JSON response"""
+    """Fetch all job role skills - Authenticated users only - JSON response."""
     try:
         job_role_skills = JobRoleSkillFunctions.get_all_job_role_skills(limit=limit)
         success_msg = f"Retrieved {len(job_role_skills)} job role skills" + (f" (limit: {limit})" if limit else "")
@@ -35,7 +35,7 @@ async def get_all_job_role_skills(limit: Optional[int] = None, current_user: Use
 
 @job_role_skill_router.get("/{job_role_skill_id}", response_model=JobRoleSkillResponse)
 async def get_job_role_skill(job_role_skill_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch a single job role skill by ID - Authenticated users only - JSON response"""
+    """Fetch a single job role skill by ID - Authenticated users only - JSON response."""
     try:
         job_role_skill = JobRoleSkillFunctions.get_job_role_skill_by_id(job_role_skill_id)
         if not job_role_skill:
@@ -56,7 +56,7 @@ async def get_job_role_skill(job_role_skill_id: str, current_user: UserInDB = De
 
 @job_role_skill_router.get("/job-role/{job_role_id}", response_model=List[JobRoleSkillResponse])
 async def get_job_role_skills_by_job_role(job_role_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch all skills for a specific job role - Authenticated users only - JSON response"""
+    """Fetch all skills for a specific job role - Authenticated users only - JSON response."""
     try:
         job_role_skills = JobRoleSkillFunctions.get_job_role_skills_by_job_role_id(job_role_id)
         success_msg = f"Retrieved {len(job_role_skills)} skills for job role {job_role_id}"
@@ -69,7 +69,7 @@ async def get_job_role_skills_by_job_role(job_role_id: str, current_user: UserIn
 
 @job_role_skill_router.post("", response_model=JobRoleSkillResponse, status_code=201)
 async def create_job_role_skill(job_role_skill: JobRoleSkillCreate, current_user: UserInDB = Depends(get_current_user)):
-    """Create a new job role skill - Authenticated users only - JSON body accepted"""
+    """Create a new job role skill - Authenticated users only - JSON body accepted."""
     try:
         job_role_skill_id = job_role_skill.job_role_skill_id or str(uuid.uuid4())
         job_role = JobRoleFunctions.get_job_role_by_id(job_role_skill.job_role_id)
@@ -99,7 +99,7 @@ async def create_job_role_skill(job_role_skill: JobRoleSkillCreate, current_user
 
 @job_role_skill_router.put("/{job_role_skill_id}", response_model=JobRoleSkillResponse)
 async def update_job_role_skill(job_role_skill_id: str, job_role_skill_update: JobRoleSkillUpdate, current_user: UserInDB = Depends(get_current_user)):
-    """Update job role skill information - Authenticated users only"""
+    """Update job role skill information - Authenticated users only."""
     try:
         existing_job_role_skill = JobRoleSkillFunctions.get_job_role_skill_by_id(job_role_skill_id)
         if not existing_job_role_skill:
@@ -125,7 +125,7 @@ async def update_job_role_skill(job_role_skill_id: str, job_role_skill_update: J
 
 @job_role_skill_router.delete("/{job_role_skill_id}", status_code=200)
 async def delete_job_role_skill(job_role_skill_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Delete a job role skill - Authenticated users only"""
+    """Delete a job role skill - Authenticated users only."""
     try:
         existing_job_role_skill = JobRoleSkillFunctions.get_job_role_skill_by_id(job_role_skill_id)
         if not existing_job_role_skill:

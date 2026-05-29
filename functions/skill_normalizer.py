@@ -1,9 +1,3 @@
-"""
-Skill name normalization utility.
-Ensures skill variations like "BACKEND", "backend", "Back End", "backend dev", "backend engineer"
-are treated uniformly and intelligently.
-"""
-
 import re
 
 

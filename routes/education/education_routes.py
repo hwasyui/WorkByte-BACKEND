@@ -12,14 +12,14 @@ from functions.access_control import assert_freelancer_owns, get_freelancer_prof
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.education.education_functions import EducationFunctions
-from ai_related.job_matching.embedding_manager import mark_freelancer_dirty
+from ai_related.job_engine.embedding_manager import mark_freelancer_dirty
 
 education_router = APIRouter(prefix="/educations", tags=["Educations"])
 
 
 @education_router.get("", response_model=List[EducationResponse])
 async def get_all_educations(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch all educations - Authenticated users only - JSON response"""
+    """Fetch all educations - Authenticated users only - JSON response."""
     try:
         freelancer = get_freelancer_profile_for_user(current_user)
         educations = EducationFunctions.get_educations_by_freelancer_id(freelancer["freelancer_id"])
@@ -34,7 +34,7 @@ async def get_all_educations(limit: Optional[int] = None, current_user: UserInDB
 
 @education_router.get("/{education_id}", response_model=EducationResponse)
 async def get_education(education_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch a single education by ID - Authenticated users only - JSON response"""
+    """Fetch a single education by ID - Authenticated users only - JSON response."""
     try:
         education = EducationFunctions.get_education_by_id(education_id)
         if not education:
@@ -52,7 +52,7 @@ async def get_education(education_id: str, current_user: UserInDB = Depends(get_
 
 @education_router.get("/freelancer/{freelancer_id}", response_model=List[EducationResponse])
 async def get_educations_by_freelancer(freelancer_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch all educations for a specific freelancer - Authenticated users only - JSON response"""
+    """Fetch all educations for a specific freelancer - Authenticated users only - JSON response."""
     try:
         educations = EducationFunctions.get_educations_by_freelancer_id(freelancer_id)
         success_msg = f"Retrieved {len(educations)} educations for freelancer {freelancer_id}"
@@ -66,7 +66,7 @@ async def get_educations_by_freelancer(freelancer_id: str, current_user: UserInD
 
 @education_router.post("", response_model=EducationResponse, status_code=201)
 async def create_education(education: EducationCreate, current_user: UserInDB = Depends(get_current_user)):
-    """Create a new education - Authenticated users only - JSON body accepted"""
+    """Create a new education - Authenticated users only - JSON body accepted."""
     try:
         education_id = education.education_id or str(uuid.uuid4())
         assert_freelancer_owns(current_user, education.freelancer_id)
@@ -98,7 +98,7 @@ async def create_education(education: EducationCreate, current_user: UserInDB = 
 
 @education_router.put("/{education_id}", response_model=EducationResponse)
 async def update_education(education_id: str, education_update: EducationUpdate, current_user: UserInDB = Depends(get_current_user)):
-    """Update education information - Authenticated users only"""
+    """Update education information - Authenticated users only."""
     try:
         existing_education = EducationFunctions.get_education_by_id(education_id)
         if not existing_education:
@@ -122,7 +122,7 @@ async def update_education(education_id: str, education_update: EducationUpdate,
 
 @education_router.delete("/{education_id}", status_code=200)
 async def delete_education(education_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Delete an education - Authenticated users only"""
+    """Delete an education - Authenticated users only."""
     try:
         existing_education = EducationFunctions.get_education_by_id(education_id)
         if not existing_education:

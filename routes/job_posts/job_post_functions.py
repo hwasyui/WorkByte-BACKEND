@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 
 
 def convert_uuids_to_str(data: Dict) -> Dict:
-    """Convert all UUID objects in dict to strings"""
+    """Convert all UUID objects in dict to strings."""
     if not data:
         return data
     result = {}
@@ -29,7 +29,7 @@ def convert_uuids_to_str(data: Dict) -> Dict:
 
 
 
-# ── Shared SELECT columns ─────────────────────────────────────────────────────
+# Shared SELECT columns
 _JOB_POST_SELECT = """
     SELECT
         jp.job_post_id, jp.client_id, jp.job_title, jp.job_description,
@@ -49,7 +49,7 @@ _JOB_POST_SELECT = """
         ) AS proposal_count
     FROM job_post jp
     LEFT JOIN job_role jr ON jr.job_post_id = jp.job_post_id
-    LEFT JOIN client c ON c.client_id = jp.client_id
+    LEFT JOIN client c ON c.client_id = jp.client_id.
 """
 
 
@@ -65,7 +65,7 @@ _GLOBAL_MONTHLY_ROLE_BUDGET_USD = {
 
 
 class JobPostFunctions:
-    """Handle all job post-related database operations"""
+    """Handle all job post-related database operations."""
 
 
     @staticmethod
@@ -278,7 +278,7 @@ class JobPostFunctions:
         )
 
 
-    # ── NEW: Category inference ───────────────────────────────────────────────
+    # NEW: Category inference
 
     @staticmethod
     def infer_project_category(job_title: str, job_description: str) -> str:
@@ -463,7 +463,7 @@ class JobPostFunctions:
         }
 
 
-    # ── Internal helper ───────────────────────────────────────────────────────
+    # Internal helper
 
 
     @staticmethod
@@ -482,7 +482,7 @@ class JobPostFunctions:
                     FROM proposal
                     WHERE job_post_id = :job_post_id
                 )
-                WHERE job_post_id = :job_post_id
+                WHERE job_post_id = :job_post_id.
             """
             db.execute_query(query, {"job_post_id": job_post_id})
             logger("JOB_POST_FUNCTIONS",
@@ -492,7 +492,7 @@ class JobPostFunctions:
                    f"Failed to sync proposal_count for {job_post_id}: {str(e)}", level="WARNING")
 
 
-    # ── Fetch operations ──────────────────────────────────────────────────────
+    # Fetch operations
 
 
     # Valid sort fields → SQL expression
@@ -564,7 +564,7 @@ class JobPostFunctions:
                 {where}
                 GROUP BY jp.job_post_id, c.full_name, c.profile_picture_url
                 ORDER BY {sort_col} {direction} NULLS LAST
-                LIMIT :limit OFFSET :offset
+                LIMIT :limit OFFSET :offset.
             """
             data_rows = db.execute_query(data_query, {**params, "limit": page_size, "offset": offset})
             items = [convert_uuids_to_str(dict(row)) for row in data_rows]
@@ -596,7 +596,7 @@ class JobPostFunctions:
                     OR jp.job_description ILIKE '%' || :term || '%')
                 GROUP BY jp.job_post_id, c.full_name, c.profile_picture_url
                 ORDER BY jp.created_at DESC
-                LIMIT :limit
+                LIMIT :limit.
             """
             rows = db.execute_query(query, {"term": search_term, "limit": limit})
             logger("JOB_POST_FUNCTIONS", f"search_job_posts: {len(rows)} results for '{search_term}'", level="INFO")
@@ -608,7 +608,7 @@ class JobPostFunctions:
 
     @staticmethod
     def get_all_job_posts(limit: Optional[int] = None) -> List[Dict]:
-        """Fetch all job posts with role_count, client_name, and live proposal_count"""
+        """Fetch all job posts with role_count, client_name, and live proposal_count."""
         try:
             db = get_db()
             query = _JOB_POST_SELECT + """
@@ -630,12 +630,12 @@ class JobPostFunctions:
 
     @staticmethod
     def get_job_post_by_id(job_post_id: str) -> Optional[Dict]:
-        """Fetch a job post by ID with role_count, client_name, and live proposal_count"""
+        """Fetch a job post by ID with role_count, client_name, and live proposal_count."""
         try:
             db = get_db()
             query = _JOB_POST_SELECT + """
                 WHERE jp.job_post_id = :job_post_id
-                GROUP BY jp.job_post_id, c.full_name, c.profile_picture_url
+                GROUP BY jp.job_post_id, c.full_name, c.profile_picture_url.
             """
             rows = db.execute_query(query, {"job_post_id": job_post_id})
 
@@ -655,13 +655,13 @@ class JobPostFunctions:
 
     @staticmethod
     def get_job_posts_by_client_id(client_id: str) -> List[Dict]:
-        """Fetch all job posts for a client with role_count, client_name, and live proposal_count"""
+        """Fetch all job posts for a client with role_count, client_name, and live proposal_count."""
         try:
             db = get_db()
             query = _JOB_POST_SELECT + """
                 WHERE jp.client_id = :client_id
                 GROUP BY jp.job_post_id, c.full_name, c.profile_picture_url
-                ORDER BY jp.created_at DESC
+                ORDER BY jp.created_at DESC.
             """
             rows = db.execute_query(query, {"client_id": client_id})
 
@@ -685,7 +685,7 @@ class JobPostFunctions:
                 FROM job_post jp
                 WHERE jp.status = 'active'
                 GROUP BY jp.project_category
-                ORDER BY count DESC
+                ORDER BY count DESC.
             """
             rows = db.execute_query(query)
             return [{"category": row["category"], "count": int(row["count"])} for row in rows]
@@ -693,7 +693,7 @@ class JobPostFunctions:
             logger("JOBPOSTFUNCTIONS", f"Error fetching category counts: {str(e)}", level="ERROR")
             raise
 
-    # ── Write operations ──────────────────────────────────────────────────────
+    # Write operations
 
     @staticmethod
     def create_job_post(client_id: str, job_title: str, job_description: str,
@@ -704,7 +704,7 @@ class JobPostFunctions:
                         experience_level: Optional[str] = None,
                         status: Optional[str] = "draft",
                         is_ai_generated: Optional[bool] = False) -> Dict:
-        """Create a new job post"""
+        """Create a new job post."""
         try:
             db = get_db()
             job_post_id = str(uuid.uuid4())
@@ -726,7 +726,7 @@ class JobPostFunctions:
                     level="INFO",
                 )
 
-            # ── NEW: infer project category ───────────────────────────────────
+            # NEW: infer project category
             project_category = JobPostFunctions.infer_project_category(job_title, job_description)
             logger(
                 "JOB_POST_FUNCTIONS",
@@ -790,7 +790,7 @@ class JobPostFunctions:
 
     @staticmethod
     def update_job_post(job_post_id: str, update_data: Dict) -> Optional[Dict]:
-        """Update job post information"""
+        """Update job post information."""
         try:
             db = get_db()
             update_data = {k: v for k, v in update_data.items() if v is not None}
@@ -800,7 +800,7 @@ class JobPostFunctions:
                 logger("JOB_POST_FUNCTIONS", "No data to update", level="WARNING")
                 return JobPostFunctions.get_job_post_by_id(job_post_id)
 
-            # ── NEW: re-infer category if title or description changed ────────
+            # NEW: re-infer category if title or description changed
             if "job_title" in update_data or "job_description" in update_data:
                 existing = JobPostFunctions.get_job_post_by_id(job_post_id)
                 new_title = update_data.get("job_title", existing["job_title"] if existing else "")
@@ -827,7 +827,7 @@ class JobPostFunctions:
 
     @staticmethod
     def delete_job_post(job_post_id: str) -> bool:
-        """Delete a job post"""
+        """Delete a job post."""
         try:
             db = get_db()
             conditions = [("job_post_id", "=", job_post_id)]

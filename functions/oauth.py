@@ -12,8 +12,6 @@ from fastapi import HTTPException
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from functions.logger import logger
 
-# ── Config ────────────────────────────────────────────────────────────────────
-
 _SECRET_KEY = os.getenv("SECRET_KEY", "")
 
 GOOGLE_CLIENT_ID      = os.getenv("GOOGLE_OAUTH_CLIENT_ID")
@@ -26,12 +24,10 @@ FRONTEND_URL = os.getenv("FRONTEND_URL", "")
 SUPPORTED_PROVIDERS = {"google"}
 
 
-# ── Google mobile (Android / iOS) ID-token verification ──────────────────────
-
 def verify_google_id_token(id_token: str) -> dict:
     """
     Verify a Google ID token issued by the mobile google_sign_in SDK.
-    Uses Google's tokeninfo endpoint — simple, no key management needed.
+    Uses Google's tokeninfo endpoint; simple, no key management needed.
     Returns {sub, email, name} on success, raises HTTP 401 on failure.
     """
     if not GOOGLE_CLIENT_ID:
@@ -69,8 +65,6 @@ def verify_google_id_token(id_token: str) -> dict:
     }
 
 
-# ── CSRF state helpers ────────────────────────────────────────────────────────
-
 def generate_state() -> str:
     """Return a self-verifying HMAC-signed state token (no server-side storage)."""
     token = secrets.token_urlsafe(32)
@@ -86,8 +80,6 @@ def verify_state(state: str) -> bool:
     except Exception:
         return False
 
-
-# ── Google ────────────────────────────────────────────────────────────────────
 
 def get_google_auth_url(state: str) -> str:
     if not GOOGLE_CLIENT_ID:
@@ -131,8 +123,6 @@ def exchange_google_code(code: str) -> dict:
         raise HTTPException(status_code=502, detail="Google authentication failed")
 
 
-# ── Unified user lookup / creation ────────────────────────────────────────────
-
 def find_or_create_oauth_user(
     provider: str,
     provider_user_id: str,
@@ -145,7 +135,7 @@ def find_or_create_oauth_user(
     Priority:
       1. provider_user_id already linked  → return existing user's token
       2. email already in users           → link provider, return existing user's token
-      3. new email                        → create user (email_verified=True), link provider
+      3. new email                        → create user (email_verified=True), link provider.
     """
     from functions.db_manager import get_db
     from functions.authentication import (
@@ -168,7 +158,7 @@ def find_or_create_oauth_user(
             "refresh_token_expires_in": REFRESH_TOKEN_EXPIRE_DAYS * 86400,
         }
 
-    # ── 1. Existing provider link ─────────────────────────────────────────────
+    # 1. Existing provider link
     rows = get_db().execute_query(
         """
         SELECT u.user_id, u.email, u.password, u.password_login_enabled,
@@ -189,7 +179,7 @@ def find_or_create_oauth_user(
         logger("OAUTH", f"Existing OAuth link used: {provider} → {user.email}", level="INFO")
         return {**_token_pair(user.user_id, user.email), "is_new_user": False}
 
-    # ── 2. Email already registered (manual or other provider) ───────────────
+    # 2. Email already registered (manual or other provider)
     existing = get_db().execute_query(
         """
         SELECT u.user_id, u.email, u.password, u.password_login_enabled,
@@ -227,7 +217,7 @@ def find_or_create_oauth_user(
         logger("OAUTH", f"OAuth linked to existing account: {provider} → {user.email}", level="INFO")
         return {**_token_pair(user.user_id, user.email), "is_new_user": False}
 
-    # ── 3. Brand new user ─────────────────────────────────────────────────────
+    # 3. Brand new user
     # Store a random hash so the password column is never NULL while still
     # being unguessable. The user can set a real password via forgot-password.
     random_hash = get_password_hash(secrets.token_urlsafe(32))
@@ -263,5 +253,5 @@ def find_or_create_oauth_user(
         "is_new_user": True,
         "user_id":     user_id,
         "email":       email,
-        "note":        "No profile yet — call POST /auth/add-role to set up your freelancer or client profile.",
+        "note":        "No profile yet, call POST /auth/add-role to set up your freelancer or client profile.",
     }

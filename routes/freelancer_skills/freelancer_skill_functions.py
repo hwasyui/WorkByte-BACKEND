@@ -8,7 +8,7 @@ from typing import List, Optional, Dict
 import uuid
 
 def convert_uuids_to_str(data: Dict) -> Dict:
-    """Convert all UUID objects in dict to strings"""
+    """Convert all UUID objects in dict to strings."""
     if not data:
         return data
     result = {}
@@ -21,11 +21,11 @@ def convert_uuids_to_str(data: Dict) -> Dict:
 
 
 class FreelancerSkillFunctions:
-    """Handle all freelancer skill-related database operations"""
+    """Handle all freelancer skill-related database operations."""
 
     @staticmethod
     def get_all_freelancer_skills(limit: Optional[int] = None) -> List[Dict]:
-        """Fetch all freelancer skills"""
+        """Fetch all freelancer skills."""
         try:
             db = get_db()
             rows = db.fetch_data(
@@ -44,7 +44,7 @@ class FreelancerSkillFunctions:
 
     @staticmethod
     def get_freelancer_skill_by_id(freelancer_skill_id: str) -> Optional[Dict]:
-        """Fetch a freelancer skill by ID"""
+        """Fetch a freelancer skill by ID."""
         try:
             db = get_db()
             conditions = [("freelancer_skill_id", "=", freelancer_skill_id)]
@@ -66,7 +66,7 @@ class FreelancerSkillFunctions:
 
     @staticmethod
     def get_freelancer_skills_by_freelancer_id(freelancer_id: str) -> List[Dict]:
-        """Fetch all skills for a freelancer"""
+        """Fetch all skills for a freelancer."""
         try:
             db = get_db()
             conditions = [("freelancer_id", "=", freelancer_id)]
@@ -86,7 +86,7 @@ class FreelancerSkillFunctions:
     @staticmethod
     def create_freelancer_skill(freelancer_id: str, skill_id: str, 
                                proficiency_level: Optional[str] = None) -> Dict:
-        """Create a new freelancer skill"""
+        """Create a new freelancer skill."""
         try:
             db = get_db()
             freelancer_skill_id = str(uuid.uuid4())
@@ -109,7 +109,7 @@ class FreelancerSkillFunctions:
 
     @staticmethod
     def update_freelancer_skill(freelancer_skill_id: str, update_data: Dict) -> Optional[Dict]:
-        """Update freelancer skill information"""
+        """Update freelancer skill information."""
         try:
             db = get_db()
             update_data = {k: v for k, v in update_data.items() if v is not None}
@@ -130,7 +130,7 @@ class FreelancerSkillFunctions:
 
     @staticmethod
     def delete_freelancer_skill(freelancer_skill_id: str) -> bool:
-        """Delete a freelancer skill"""
+        """Delete a freelancer skill."""
         try:
             db = get_db()
             conditions = [("freelancer_skill_id", "=", freelancer_skill_id)]
@@ -145,7 +145,7 @@ class FreelancerSkillFunctions:
 
     @staticmethod
     def delete_freelancer_skill_by_freelancer_and_skill(freelancer_id: str, skill_id: str) -> bool:
-        """Delete a freelancer skill by freelancer_id and skill_id"""
+        """Delete a freelancer skill by freelancer_id and skill_id."""
         try:
             db = get_db()
             conditions = [("freelancer_id", "=", freelancer_id), ("skill_id", "=", skill_id)]

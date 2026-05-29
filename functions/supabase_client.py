@@ -43,7 +43,7 @@ def ensure_bucket(bucket_name: str, public: bool = True) -> None:
     try:
         supabase.storage.create_bucket(bucket_name, options={"public": public})
     except Exception:
-        pass  # already exists — upload will surface any real error
+        pass  # already exists; upload will surface any real error
 
 
 def upload_file(
@@ -53,7 +53,7 @@ def upload_file(
     content_type: str = "application/octet-stream",
     upsert: bool = True,
 ) -> str:
-    """Upload bytes to any bucket — returns public URL."""
+    """Upload bytes to any bucket, returns public URL."""
     storage = supabase.storage.from_(bucket)
 
     if upsert:

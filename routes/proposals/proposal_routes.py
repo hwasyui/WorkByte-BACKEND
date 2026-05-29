@@ -37,7 +37,7 @@ async def get_all_proposals(
 
 @proposal_router.get("/me", response_model=List[ProposalResponse])
 async def get_my_proposals(current_user: UserInDB = Depends(get_current_user)):
-    """Freelancer views their own proposals"""
+    """Freelancer views their own proposals."""
     try:
         freelancer = FreelancerFunctions.get_freelancer_by_user_id(current_user.user_id)
         if not freelancer:
@@ -58,7 +58,7 @@ async def get_proposals_by_job_post(
     job_post_id: str,
     current_user: UserInDB = Depends(get_current_user),
 ):
-    """Client views all proposals for their job post — includes freelancer info"""
+    """Client views all proposals for their job post, includes freelancer info."""
     try:
         proposals = ProposalFunctions.get_proposals_by_job_post_id_enriched(job_post_id)
         logger("PROPOSAL", f"Retrieved {len(proposals)} proposals for job post {job_post_id}", "GET /proposals/job-post/{job_post_id}", "INFO")
@@ -103,7 +103,7 @@ async def create_proposal(
     proposal: ProposalCreate,
     current_user: UserInDB = Depends(get_current_user),
 ):
-    """Freelancer submits a proposal — freelancer_id is derived from token"""
+    """Freelancer submits a proposal; freelancer_id is derived from token."""
     try:
         freelancer = FreelancerFunctions.get_freelancer_by_user_id(current_user.user_id)
         if not freelancer:
@@ -145,7 +145,7 @@ async def create_proposal(
             harm_result = scan_harmful_text_with_ml_fallback(proposal.cover_letter)
             if harm_result["is_flagged"]:
                 labels = harm_result.get("detected_labels", [])
-                logger("PROPOSAL", f"Blocked toxic proposal from freelancer {freelancer_id} — labels={labels}", "POST /proposals", "WARNING")
+                logger("PROPOSAL", f"Blocked toxic proposal from freelancer {freelancer_id}, labels={labels}", "POST /proposals", "WARNING")
                 return ResponseSchema.error(
                     f"Your proposal was not submitted. The cover letter was detected as harmful ({', '.join(labels)}).",
                     400,
@@ -197,10 +197,9 @@ async def update_proposal_status(
     status: str,
     current_user: UserInDB = Depends(get_current_user),
 ):
-    """
-    Update proposal status.
-    - Client: can set 'accepted' or 'rejected'
-    - Freelancer: can only set 'withdrawn' (on their own proposal)
+    """Update proposal status.
+
+    Clients can set 'accepted' or 'rejected'; freelancers can only set 'withdrawn' on their own proposal.
     """
     try:
         proposal = ProposalFunctions.get_proposal_by_id(proposal_id)
@@ -277,7 +276,7 @@ async def update_proposal(
     proposal_update: ProposalUpdate,
     current_user: UserInDB = Depends(get_current_user),
 ):
-    """Freelancer edits their own pending proposal"""
+    """Freelancer edits their own pending proposal."""
     try:
         existing = ProposalFunctions.get_proposal_by_id(proposal_id)
         if not existing:

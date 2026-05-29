@@ -8,7 +8,7 @@ from typing import List, Optional, Dict
 import uuid
 
 def convert_uuids_to_str(data: Dict) -> Dict:
-    """Convert all UUID objects in dict to strings"""
+    """Convert all UUID objects in dict to strings."""
     if not data:
         return data
     result = {}
@@ -21,11 +21,11 @@ def convert_uuids_to_str(data: Dict) -> Dict:
 
 
 class WorkExperienceFunctions:
-    """Handle all work experience-related database operations"""
+    """Handle all work experience-related database operations."""
 
     @staticmethod
     def get_all_work_experiences(limit: Optional[int] = None) -> List[Dict]:
-        """Fetch all work experiences"""
+        """Fetch all work experiences."""
         try:
             db = get_db()
             rows = db.fetch_data(
@@ -45,7 +45,7 @@ class WorkExperienceFunctions:
 
     @staticmethod
     def get_work_experience_by_id(work_experience_id: str) -> Optional[Dict]:
-        """Fetch a work experience by ID"""
+        """Fetch a work experience by ID."""
         try:
             db = get_db()
             conditions = [("work_experience_id", "=", work_experience_id)]
@@ -67,7 +67,7 @@ class WorkExperienceFunctions:
 
     @staticmethod
     def get_work_experiences_by_freelancer_id(freelancer_id: str) -> List[Dict]:
-        """Fetch all work experiences for a freelancer"""
+        """Fetch all work experiences for a freelancer."""
         try:
             db = get_db()
             conditions = [("freelancer_id", "=", freelancer_id)]
@@ -88,7 +88,7 @@ class WorkExperienceFunctions:
     def create_work_experience(freelancer_id: str, job_title: str, company_name: str, 
                                start_date, end_date=None, location: Optional[str] = None,
                                is_current: Optional[bool] = False, description: Optional[str] = None) -> Dict:
-        """Create a new work experience"""
+        """Create a new work experience."""
         try:
             db = get_db()
             work_experience_id = str(uuid.uuid4())
@@ -116,7 +116,7 @@ class WorkExperienceFunctions:
 
     @staticmethod
     def update_work_experience(work_experience_id: str, update_data: Dict) -> Optional[Dict]:
-        """Update work experience information"""
+        """Update work experience information."""
         try:
             db = get_db()
             update_data = {k: v for k, v in update_data.items() if v is not None}
@@ -137,7 +137,7 @@ class WorkExperienceFunctions:
 
     @staticmethod
     def delete_work_experience(work_experience_id: str) -> bool:
-        """Delete a work experience"""
+        """Delete a work experience."""
         try:
             db = get_db()
             conditions = [("work_experience_id", "=", work_experience_id)]

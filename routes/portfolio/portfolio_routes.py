@@ -12,14 +12,14 @@ from functions.access_control import assert_freelancer_owns, get_freelancer_prof
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.portfolio.portfolio_functions import PortfolioFunctions
-from ai_related.job_matching.embedding_manager import mark_freelancer_dirty, mark_portfolio_dirty
+from ai_related.job_engine.embedding_manager import mark_freelancer_dirty, mark_portfolio_dirty
 
 portfolio_router = APIRouter(prefix="/portfolios", tags=["Portfolio"])
 
 
 @portfolio_router.get("", response_model=List[PortfolioResponse])
 async def get_all_portfolios(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch all portfolios - Authenticated users only - JSON response"""
+    """Fetch all portfolios - Authenticated users only - JSON response."""
     try:
         freelancer = get_freelancer_profile_for_user(current_user)
         portfolios = PortfolioFunctions.get_portfolios_by_freelancer_id(freelancer["freelancer_id"])
@@ -34,7 +34,7 @@ async def get_all_portfolios(limit: Optional[int] = None, current_user: UserInDB
 
 @portfolio_router.get("/{portfolio_id}", response_model=PortfolioResponse)
 async def get_portfolio(portfolio_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch a single portfolio by ID - Authenticated users only - JSON response"""
+    """Fetch a single portfolio by ID - Authenticated users only - JSON response."""
     try:
         portfolio = PortfolioFunctions.get_portfolio_by_id(portfolio_id)
         if not portfolio:
@@ -52,7 +52,7 @@ async def get_portfolio(portfolio_id: str, current_user: UserInDB = Depends(get_
 
 @portfolio_router.get("/freelancer/{freelancer_id}", response_model=List[PortfolioResponse])
 async def get_portfolios_by_freelancer(freelancer_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch all portfolios for a specific freelancer - Authenticated users only - JSON response"""
+    """Fetch all portfolios for a specific freelancer - Authenticated users only - JSON response."""
     try:
         portfolios = PortfolioFunctions.get_portfolios_by_freelancer_id(freelancer_id)
         success_msg = f"Retrieved {len(portfolios)} portfolios for freelancer {freelancer_id}"
@@ -66,7 +66,7 @@ async def get_portfolios_by_freelancer(freelancer_id: str, current_user: UserInD
 
 @portfolio_router.post("", response_model=PortfolioResponse, status_code=201)
 async def create_portfolio(portfolio: PortfolioCreate, current_user: UserInDB = Depends(get_current_user)):
-    """Create a new portfolio - Authenticated users only - JSON body accepted"""
+    """Create a new portfolio - Authenticated users only - JSON body accepted."""
     try:
         portfolio_id = portfolio.portfolio_id or str(uuid.uuid4())
         assert_freelancer_owns(current_user, portfolio.freelancer_id)
@@ -97,7 +97,7 @@ async def create_portfolio(portfolio: PortfolioCreate, current_user: UserInDB = 
 
 @portfolio_router.put("/{portfolio_id}", response_model=PortfolioResponse)
 async def update_portfolio(portfolio_id: str, portfolio_update: PortfolioUpdate, current_user: UserInDB = Depends(get_current_user)):
-    """Update portfolio information - Authenticated users only"""
+    """Update portfolio information - Authenticated users only."""
     try:
         existing_portfolio = PortfolioFunctions.get_portfolio_by_id(portfolio_id)
         if not existing_portfolio:
@@ -122,7 +122,7 @@ async def update_portfolio(portfolio_id: str, portfolio_update: PortfolioUpdate,
 
 @portfolio_router.delete("/{portfolio_id}", status_code=200)
 async def delete_portfolio(portfolio_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Delete a portfolio - Authenticated users only"""
+    """Delete a portfolio - Authenticated users only."""
     try:
         existing_portfolio = PortfolioFunctions.get_portfolio_by_id(portfolio_id)
         if not existing_portfolio:

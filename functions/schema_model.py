@@ -3,7 +3,7 @@ from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional, Any, Dict, List
 from datetime import date, datetime
 
-# ==================== AUTHENTICATION ====================
+# Authentication
 class Token(BaseModel):
     access_token: str
     token_type: str
@@ -136,7 +136,7 @@ class CVUploadRequest(BaseModel):
     model_config = {"extra": "forbid"}
 
 
-# ==================== USERS ====================
+# Users
 class UserCreate(BaseModel):
     user_id: Optional[str] = None
     email: EmailStr
@@ -162,7 +162,7 @@ class UserResponseDetail(BaseModel):
         from_attributes = True
 
 
-# ==================== FREELANCERS ====================
+# Freelancers
 class FreelancerCreate(BaseModel):
     freelancer_id: Optional[str] = Form(None)
     user_id: str = Form(...)
@@ -175,6 +175,13 @@ class FreelancerCreate(BaseModel):
     rate_currency: Optional[str] = Form("USD")
 
     model_config = {"extra": "forbid"}
+
+    @field_validator("bio")
+    @classmethod
+    def validate_bio(cls, v):
+        if v is not None and len(v) > 500:
+            raise ValueError("Bio must be 500 characters or fewer")
+        return v
 
     @field_validator("rate_time")
     @classmethod
@@ -197,6 +204,13 @@ class FreelancerUpdate(BaseModel):
     cv_file_url: Optional[str] = None
 
     model_config = {"extra": "forbid"}
+
+    @field_validator("bio")
+    @classmethod
+    def validate_bio(cls, v):
+        if v is not None and len(v) > 500:
+            raise ValueError("Bio must be 500 characters or fewer")
+        return v
 
     @field_validator("rate_time")
     @classmethod
@@ -261,7 +275,7 @@ class FreelancerResponse(BaseModel):
         from_attributes = True
 
 
-# ==================== CLIENTS ====================
+# Clients
 class ClientCreate(BaseModel):
     client_id: Optional[str] = Form(None)
     user_id: str = Form(...)
@@ -272,6 +286,13 @@ class ClientCreate(BaseModel):
 
     model_config = {"extra": "forbid"}
 
+    @field_validator("bio")
+    @classmethod
+    def validate_bio(cls, v):
+        if v is not None and len(v) > 500:
+            raise ValueError("Bio must be 500 characters or fewer")
+        return v
+
 class ClientUpdate(BaseModel):
     full_name: Optional[str] = Form(None)
     bio: Optional[str] = Form(None)
@@ -280,6 +301,13 @@ class ClientUpdate(BaseModel):
     contract_message_template: Optional[str] = Form(None)
 
     model_config = {"extra": "forbid"}
+
+    @field_validator("bio")
+    @classmethod
+    def validate_bio(cls, v):
+        if v is not None and len(v) > 500:
+            raise ValueError("Bio must be 500 characters or fewer")
+        return v
 
     @classmethod
     def as_form(
@@ -316,7 +344,7 @@ class ClientResponse(BaseModel):
         from_attributes = True
 
 
-# ==================== SKILLS ====================
+# Skills
 class SkillCreate(BaseModel):
     skill_id: Optional[str] = None  # Auto-generated if not provided
     skill_name: str
@@ -338,7 +366,7 @@ class SkillResponse(BaseModel):
         from_attributes = True
 
 
-# ==================== FREELANCER SKILLS ====================
+# Freelancer skills
 class FreelancerSkillCreate(BaseModel):
     freelancer_skill_id: Optional[str] = None
     freelancer_id: str
@@ -359,7 +387,7 @@ class FreelancerSkillResponse(BaseModel):
         from_attributes = True
 
 
-# ==================== WORK EXPERIENCE ====================
+# Work experience
 class WorkExperienceCreate(BaseModel):
     work_experience_id: Optional[str] = None
     freelancer_id: str
@@ -371,6 +399,13 @@ class WorkExperienceCreate(BaseModel):
     is_current: Optional[bool] = False
     description: Optional[str] = None
 
+    @field_validator("description")
+    @classmethod
+    def validate_description(cls, v):
+        if v is not None and len(v) > 1000:
+            raise ValueError("Work experience description must be 1000 characters or fewer")
+        return v
+
 class WorkExperienceUpdate(BaseModel):
     job_title: Optional[str] = None
     company_name: Optional[str] = None
@@ -379,6 +414,13 @@ class WorkExperienceUpdate(BaseModel):
     end_date: Optional[date] = None
     is_current: Optional[bool] = None
     description: Optional[str] = None
+
+    @field_validator("description")
+    @classmethod
+    def validate_description(cls, v):
+        if v is not None and len(v) > 1000:
+            raise ValueError("Work experience description must be 1000 characters or fewer")
+        return v
 
 class WorkExperienceResponse(BaseModel):
     work_experience_id: str
@@ -397,7 +439,7 @@ class WorkExperienceResponse(BaseModel):
         from_attributes = True
 
 
-# ==================== EDUCATION ====================
+# Education
 class EducationCreate(BaseModel):
     education_id: Optional[str] = None
     freelancer_id: str
@@ -438,7 +480,7 @@ class EducationResponse(BaseModel):
         from_attributes = True
 
 
-# ==================== JOB POSTS ====================
+# Job posts
 class JobPostCreate(BaseModel):
     job_post_id: Optional[str] = None
     client_id: Optional[str] = None
@@ -523,7 +565,7 @@ class JobPostScopeRoleInput(BaseModel):
     positions_available: Optional[int] = 1
     is_required: Optional[bool] = True
 
-# ==================== JOB ROLES ====================
+# Job roles
 class JobRoleCreate(BaseModel):
     job_role_id: Optional[str] = None
     job_post_id: str
@@ -565,7 +607,7 @@ class JobRoleResponse(BaseModel):
         from_attributes = True
 
 
-# ==================== JOB ROLE SKILLS ====================
+# Job role skills
 class JobRoleSkillCreate(BaseModel):
     job_role_skill_id: Optional[str] = None
     job_role_id: str
@@ -589,7 +631,7 @@ class JobRoleSkillResponse(BaseModel):
         from_attributes = True
 
 
-# ==================== JOB FILES ====================
+# Job files
 class JobFileCreate(BaseModel):
     job_post_id: str = Form(...)
     files: List[UploadFile] = File(...)
@@ -615,7 +657,7 @@ class JobFileResponse(BaseModel):
         from_attributes = True
 
 
-# ==================== PROPOSALS ====================
+# Proposals
 class ProposalCreate(BaseModel):
     proposal_id: Optional[str] = None
     job_post_id: str
@@ -649,7 +691,7 @@ class ProposalResponse(BaseModel):
         from_attributes = True
 
 
-# ==================== PROPOSAL FILES ====================
+# Proposal files
 class ProposalFileCreate(BaseModel):
     proposal_id: str = Form(...)
     files: List[UploadFile] = File(...)
@@ -675,7 +717,7 @@ class ProposalFileResponse(BaseModel):
         from_attributes = True
 
 
-# ==================== CONTRACTS ====================
+# Contracts
 class ContractCreate(BaseModel):
     contract_id: Optional[str] = None
     job_post_id: str
@@ -740,7 +782,7 @@ class ContractResponse(BaseModel):
         from_attributes = True
 
 
-# ==================== CONTRACT GENERATION ====================
+# Contract generation
 class PaymentScheduleItem(BaseModel):
     phase: str
     description: Optional[str] = None
@@ -766,7 +808,7 @@ class ContractGenerateRequest(BaseModel):
     notification_message: Optional[str] = None
     save_message_as_template: bool = False
 
-# ==================== CONTRACT SUBMISSIONS ====================
+# Contract submissions
 class ContractSubmissionFileResponse(BaseModel):
     file_id: str
     submission_id: str
@@ -796,7 +838,7 @@ class ContractSubmissionResponse(BaseModel):
     class Config:
         from_attributes = True
 
-# ==================== PORTFOLIO ====================
+# Portfolio
 class PortfolioCreate(BaseModel):
     portfolio_id: Optional[str] = None
     freelancer_id: str
@@ -833,7 +875,7 @@ class PortfolioResponse(BaseModel):
         from_attributes = True
 
 
-# ==================== SAVED JOBS ====================
+# Saved jobs
 class SavedJobCreate(BaseModel):
     saved_job_id: Optional[str] = None
     job_post_id: str
@@ -849,7 +891,7 @@ class SavedJobResponse(BaseModel):
         from_attributes = True
 
 
-# ==================== RATINGS ====================
+# Ratings
 class RatingCreate(BaseModel):
     rating_id: Optional[str] = None
     contract_id: str
@@ -888,7 +930,7 @@ class RatingResponse(BaseModel):
         from_attributes = True
 
 
-# ==================== PERFORMANCE RATINGS ====================
+# Performance ratings
 class PerformanceRatingCreate(BaseModel):
     performance_rating_id: Optional[str] = None
     freelancer_id: str
@@ -932,7 +974,7 @@ class PerformanceRatingResponse(BaseModel):
         from_attributes = True
 
 
-# ==================== CLIENT TRUST SCORE ====================
+# Client trust score
 class ClientTrustScoreCreate(BaseModel):
     client_trust_score_id: Optional[str] = None
     client_id: str
@@ -967,7 +1009,7 @@ class ClientTrustScoreResponse(BaseModel):
         from_attributes = True
 
 
-# ==================== FREELANCER EMBEDDINGS ====================
+# Freelancer embeddings
 class FreelancerEmbeddingCreate(BaseModel):
     embedding_id: Optional[str] = None
     freelancer_id: str
@@ -991,7 +1033,7 @@ class FreelancerEmbeddingResponse(BaseModel):
         from_attributes = True
 
 
-# ==================== JOB EMBEDDINGS ====================
+# Job embeddings
 class JobEmbeddingCreate(BaseModel):
     embedding_id: Optional[str] = None
     job_role_id: str
@@ -1018,7 +1060,7 @@ class JobEmbeddingResponse(BaseModel):
     class Config:
         from_attributes = True
 
-# ==================== DIRECT MESSAGES ====================
+# Direct messages
 
 class DMThreadCreate(BaseModel):
     participant_id: str
@@ -1079,7 +1121,7 @@ class RevisionRequest(BaseModel):
 class CancelContractRequest(BaseModel):
     reason: Optional[str] = None
     
-# ==================== COMPREHENSIVE FREELANCER PROFILE ====================
+# Comprehensive freelancer profile
 class FreelancerSkillWithDetails(BaseModel):
     freelancer_skill_id: str
     skill: SkillResponse
@@ -1102,7 +1144,7 @@ class FreelancerProfileComplete(BaseModel):
     class Config:
         from_attributes = True
 
-# ==================== REVIEWS ====================
+# Reviews
 
 class ReviewRatingInput(BaseModel):
     category: str  # communication | quality | professionalism | value_for_money
@@ -1173,12 +1215,11 @@ class InitiateReviewPayload(BaseModel):
     contract_id: str
 
 
-# ── Request ───────────────────────────────────────────────────────────────────
+# Notifications
 
 class FCMTokenUpdate(BaseModel):
     token: str
 
-# ── Response ──────────────────────────────────────────────────────────────────
 
 class NotificationResponse(BaseModel):
     id: str
@@ -1190,7 +1231,7 @@ class NotificationResponse(BaseModel):
     created_at: datetime
 
 
-# ── Apply Profile ──────────────────────────────────────────────────────────────────
+# CV apply profile
 
 class CVApplyWorkExperienceRequest(BaseModel):
     company_name: str

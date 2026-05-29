@@ -150,7 +150,7 @@ def _build_otp_email(
           </tr>
         </table>
       </body>
-    </html>
+    </html>.
     """
     return text_body, html_body
 

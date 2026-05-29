@@ -4,6 +4,7 @@ services:
     container_name: capstone-backend
     volumes:
       - .:/app
+      - hf_cache:/root/.cache/huggingface
     working_dir: /app
     command: >
       sh -c "apt-get update && 
@@ -12,14 +13,17 @@ services:
     tty: true
     stdin_open: true
     ports:
-      - "8000:8000"
-      - "8888:8888"
+      - "127.0.0.1:8000:8000"
+      - "127.0.0.1:8888:8888"
     environment:
       - TZ=Asia/Jakarta
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
       - capstone-network
+
+volumes:
+  hf_cache:
 
 networks:
   capstone-network:

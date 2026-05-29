@@ -1,5 +1,3 @@
-"""Text preprocessing and tokenization for toxicity detection."""
-
 import re
 from typing import List
 import numpy as np
@@ -17,7 +15,7 @@ class TextPreprocessor:
             text: Raw text input
 
         Returns:
-            Cleaned text
+            Cleaned text.
         """
         if not isinstance(text, str):
             return ""
@@ -75,6 +73,6 @@ def labels_to_indices(multi_hot_array: np.ndarray) -> List[int]:
         multi_hot_array: Multi-hot encoded array
 
     Returns:
-        List of label indices where value is 1.0
+        List of label indices where value is 1.0.
     """
     return [int(idx) for idx, val in enumerate(multi_hot_array) if val > 0.5]

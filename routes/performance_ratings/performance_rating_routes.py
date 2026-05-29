@@ -18,7 +18,7 @@ performance_rating_router = APIRouter(prefix="/performance-ratings", tags=["Perf
 
 @performance_rating_router.get("", response_model=List[PerformanceRatingResponse])
 async def get_all_performance_ratings(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch all performance ratings - Authenticated users only - JSON response"""
+    """Fetch all performance ratings - Authenticated users only - JSON response."""
     try:
         ratings = PerformanceRatingFunctions.get_all_performance_ratings(limit=limit)
         success_msg = f"Retrieved {len(ratings)} performance ratings" + (f" (limit: {limit})" if limit else "")
@@ -32,7 +32,7 @@ async def get_all_performance_ratings(limit: Optional[int] = None, current_user:
 
 @performance_rating_router.get("/freelancer/{freelancer_id}", response_model=PerformanceRatingResponse)
 async def get_performance_rating(freelancer_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch performance rating for a specific freelancer - Authenticated users only - JSON response"""
+    """Fetch performance rating for a specific freelancer - Authenticated users only - JSON response."""
     try:
         rating = PerformanceRatingFunctions.get_performance_rating_by_freelancer_id(freelancer_id)
         if not rating:
@@ -50,7 +50,7 @@ async def get_performance_rating(freelancer_id: str, current_user: UserInDB = De
 
 @performance_rating_router.post("", response_model=PerformanceRatingResponse, status_code=201)
 async def create_performance_rating(rating: PerformanceRatingCreate, current_user: UserInDB = Depends(get_current_user)):
-    """Create a new performance rating - only client can create for completed contract relationship"""
+    """Create a new performance rating - only client can create for completed contract relationship."""
     try:
         if not current_user.client_id:
             return ResponseSchema.error("Only clients can create performance ratings", 403)
@@ -84,7 +84,7 @@ async def create_performance_rating(rating: PerformanceRatingCreate, current_use
 
 @performance_rating_router.put("/freelancer/{freelancer_id}", response_model=PerformanceRatingResponse)
 async def update_performance_rating(freelancer_id: str, rating_update: PerformanceRatingUpdate, current_user: UserInDB = Depends(get_current_user)):
-    """Update performance rating - only client can update if they have completed contract relationship"""
+    """Update performance rating - only client can update if they have completed contract relationship."""
     try:
         if not current_user.client_id:
             return ResponseSchema.error("Only clients can update performance ratings", 403)
@@ -115,7 +115,7 @@ async def update_performance_rating(freelancer_id: str, rating_update: Performan
 
 @performance_rating_router.delete("/freelancer/{freelancer_id}", status_code=200)
 async def delete_performance_rating(freelancer_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Delete a performance rating - Authenticated users only"""
+    """Delete a performance rating - Authenticated users only."""
     try:
         existing_rating = PerformanceRatingFunctions.get_performance_rating_by_freelancer_id(freelancer_id)
         if not existing_rating:

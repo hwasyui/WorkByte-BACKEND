@@ -1,9 +1,3 @@
-"""
-Admin API routes.
-
-admin_router  — /admin/...  (requires is_admin)
-reports_router — /reports/...  (any authenticated user)
-"""
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -55,8 +49,6 @@ reports_router = APIRouter(prefix="/reports", tags=["Reports"])
 appeals_router = APIRouter(prefix="/appeals", tags=["Appeals"])
 
 
-# ─── request bodies ───────────────────────────────────────────────────────────
-
 class AdminActionBody(BaseModel):
     admin_note: Optional[str] = None
 
@@ -101,8 +93,6 @@ class AdminOverrideBody(BaseModel):
     reason: Optional[str] = None  # shown to the affected user as closure_note / ban_message
 
 
-# ─── dashboard ────────────────────────────────────────────────────────────────
-
 @admin_router.get("/dashboard")
 async def admin_dashboard(current_user: UserInDB = Depends(get_admin_user)):
     """Summary counts for moderation, scam flags, reports, and bans."""
@@ -114,8 +104,6 @@ async def admin_dashboard(current_user: UserInDB = Depends(get_admin_user)):
         logger("ADMIN", f"Dashboard error: {e}", "GET /admin/dashboard", "ERROR")
         return ResponseSchema.error(f"Failed to fetch dashboard stats: {e}", 500)
 
-
-# ─── harmful text detection ───────────────────────────────────────────────────
 
 @admin_router.get("/moderation")
 async def list_moderation(
@@ -155,7 +143,7 @@ async def approve_moderation(
     body: AdminActionBody = AdminActionBody(),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Approve a flagged content item — confirms the AI flag; harmful content is actioned (job closed, etc.)."""
+    """Approve a flagged content item: confirms the AI flag and actions harmful content (job closed, etc.)."""
     try:
         updated = action_moderation_item(
             moderation_id=moderation_id,
@@ -178,7 +166,7 @@ async def reject_moderation(
     body: AdminActionBody = AdminActionBody(),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Reject a flagged content item — dismisses the AI flag as a false positive; content is allowed to stay."""
+    """Reject a flagged content item: dismisses the AI flag as a false positive; content is allowed to stay."""
     try:
         updated = action_moderation_item(
             moderation_id=moderation_id,
@@ -231,8 +219,6 @@ async def force_expire_mod_items(
         logger("ADMIN", f"Force expire mod error: {e}", "POST /admin/moderation/force-expire", "ERROR")
         return ResponseSchema.error(f"Force expire failed: {e}", 500)
 
-
-# ─── scam detection ───────────────────────────────────────────────────────────
 
 @admin_router.get("/scam-flags")
 async def list_scam(
@@ -355,8 +341,6 @@ async def get_client_scam_info(
         logger("ADMIN", f"Client scam record error: {e}", "GET /admin/scam-flags/client", "ERROR")
         return ResponseSchema.error(f"Failed to fetch client scam record: {e}", 500)
 
-
-# ─── reports (admin view) ─────────────────────────────────────────────────────
 
 @admin_router.get("/reports")
 async def admin_list_reports(
@@ -517,8 +501,6 @@ async def admin_get_report(
         return ResponseSchema.error(f"Failed to fetch report: {e}", 500)
 
 
-# ─── appeals (admin view) ─────────────────────────────────────────────────────
-
 @admin_router.get("/appeals")
 async def admin_list_appeals(
     status:         str           = Query(default="pending", description="pending | approved | rejected | all"),
@@ -573,7 +555,7 @@ async def approve_appeal(
     body: AdminActionBody = AdminActionBody(),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Approve an appeal — restores the job post or removes the ban."""
+    """Approve an appeal: restores the job post or removes the ban."""
     try:
         updated = resolve_appeal(
             appeal_id=appeal_id,
@@ -596,7 +578,7 @@ async def reject_appeal(
     body: AdminActionBody = AdminActionBody(),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Reject an appeal — closure/ban remains in effect."""
+    """Reject an appeal: closure/ban remains in effect."""
     try:
         updated = resolve_appeal(
             appeal_id=appeal_id,
@@ -612,8 +594,6 @@ async def reject_appeal(
         logger("ADMIN", f"Reject appeal error: {e}", "POST /admin/appeals/reject", "ERROR")
         return ResponseSchema.error(f"Failed to reject appeal: {e}", 500)
 
-
-# ─── direct admin overrides (no report / no AI flag required) ────────────────
 
 @admin_router.post("/jobs/{job_post_id}/close")
 async def force_close_job(
@@ -699,8 +679,6 @@ async def force_reopen_account(
         return ResponseSchema.error(f"Failed to restore account: {e}", 500)
 
 
-# ─── admin browse: all jobs ──────────────────────────────────────────────────
-
 @admin_router.get("/jobs")
 async def admin_browse_jobs(
     status:                   Optional[str]  = Query(None, description="Include statuses (comma-sep): draft,active,closed,filled"),
@@ -717,10 +695,10 @@ async def admin_browse_jobs(
     is_ai_generated:          Optional[bool] = Query(None, description="Filter by AI-generated flag"),
     client_id:                Optional[str]  = Query(None, description="Filter by specific client UUID"),
     search:                   Optional[str]  = Query(None, description="Partial match on job_title"),
-    created_from:             Optional[str]  = Query(None, description="ISO date — created_at >="),
-    created_to:               Optional[str]  = Query(None, description="ISO date — created_at <="),
-    closed_from:              Optional[str]  = Query(None, description="ISO date — closed_at >="),
-    closed_to:                Optional[str]  = Query(None, description="ISO date — closed_at <="),
+    created_from:             Optional[str]  = Query(None, description="ISO date, created_at >="),
+    created_to:               Optional[str]  = Query(None, description="ISO date, created_at <="),
+    closed_from:              Optional[str]  = Query(None, description="ISO date, closed_at >="),
+    closed_to:                Optional[str]  = Query(None, description="ISO date, closed_at <="),
     sort_by:   str = Query(default="created_at", description="created_at | closed_at | updated_at | job_title | status | proposal_count | view_count"),
     sort_dir:  str = Query(default="desc",        description="asc | desc"),
     page:      int = Query(default=1,  ge=1),
@@ -753,8 +731,6 @@ async def admin_browse_jobs(
         return ResponseSchema.error(f"Failed to list jobs: {e}", 500)
 
 
-# ─── admin browse: all users ──────────────────────────────────────────────────
-
 @admin_router.get("/users")
 async def admin_browse_users(
     role:                 Optional[str]  = Query(None, description="Include roles (comma-sep): freelancer,client,admin"),
@@ -764,10 +740,10 @@ async def admin_browse_users(
     ban_reason:           Optional[str]  = Query(None, description="Include ban reasons (comma-sep): admin_override,community_reports"),
     exclude_ban_reason:   Optional[str]  = Query(None, description="Exclude ban reasons (comma-sep)"),
     search:               Optional[str]  = Query(None, description="Partial match on email or display name"),
-    created_from:         Optional[str]  = Query(None, description="ISO date — created_at >="),
-    created_to:           Optional[str]  = Query(None, description="ISO date — created_at <="),
-    banned_from:          Optional[str]  = Query(None, description="ISO date — report_banned_at >="),
-    banned_to:            Optional[str]  = Query(None, description="ISO date — report_banned_at <="),
+    created_from:         Optional[str]  = Query(None, description="ISO date, created_at >="),
+    created_to:           Optional[str]  = Query(None, description="ISO date, created_at <="),
+    banned_from:          Optional[str]  = Query(None, description="ISO date, report_banned_at >="),
+    banned_to:            Optional[str]  = Query(None, description="ISO date, report_banned_at <="),
     sort_by:   str = Query(default="created_at",  description="created_at | updated_at | email | report_banned_at | ban_reason"),
     sort_dir:  str = Query(default="desc",         description="asc | desc"),
     page:      int = Query(default=1,  ge=1),
@@ -814,8 +790,6 @@ async def admin_get_user(
         return ResponseSchema.error(f"Failed to fetch user: {e}", 500)
 
 
-# ─── reports (user-facing) ────────────────────────────────────────────────────
-
 @reports_router.get("/reasons")
 async def get_report_reasons(current_user: UserInDB = Depends(get_current_user)):
     """Return the list of predefined report reasons."""
@@ -828,19 +802,14 @@ async def user_get_appeal_status(
     target_id: str,
     current_user: UserInDB = Depends(get_current_user),
 ):
-    """
-    Check whether the current user can appeal a specific target and what their status is.
+    """Check whether the current user can appeal a specific ban or job-post closure.
 
-    Query params:
-      target_type: 'user' | 'job_post'
-      target_id:   UUID of the banned user or closed job post
+    Args:
+        target_type: 'user' or 'job_post'.
+        target_id: UUID of the banned user or closed job post.
 
-    Response:
-      can_appeal        bool   — whether submitting a new appeal is allowed right now
-      appeals_remaining int    — how many more appeals can be submitted
-      state             str    — never_appealed | pending | rejected_can_retry | rejected_final | approved
-      message           str    — human-readable message for the frontend to display
-      restriction_reason str|null — the reason for the ban/closure, if stored
+    Returns:
+        can_appeal, appeals_remaining, state, message, and restriction_reason.
     """
     try:
         if target_type not in ("user", "job_post"):
@@ -857,9 +826,12 @@ async def user_submit_appeal(
     body: AppealSubmitBody,
     current_user: UserInDB = Depends(get_current_user),
 ):
-    """
-    Submit an appeal against a job-post closure or account restriction.
-    target_type: 'user' (account ban) | 'job_post' (post closure).
+    """Submit an appeal against a job-post closure or account restriction.
+
+    Args:
+        body.target_type: 'user' (account ban) or 'job_post' (post closure).
+        body.target_id: UUID of the target being appealed.
+        body.message: Appeal message text.
     """
     try:
         if body.target_type not in ("user", "job_post"):
@@ -894,15 +866,13 @@ async def user_list_appeals(current_user: UserInDB = Depends(get_current_user)):
         return ResponseSchema.error(f"Failed to fetch appeals: {e}", 500)
 
 
-# ─── reports (user-facing) ────────────────────────────────────────────────────
-
 @reports_router.post("")
 async def submit_report(
     body: ReportCreateBody,
     current_user: UserInDB = Depends(get_current_user),
 ):
-    """
-    Submit a report against a freelancer or client profile.
+    """Submit a report against a freelancer, client profile, or job post.
+
     At least one reason (predefined or custom) is required.
     """
     try:

@@ -225,7 +225,7 @@ _USER_QUERY = """
     FROM users u
     LEFT JOIN freelancer f ON f.user_id = u.user_id
     LEFT JOIN client     c ON c.user_id = u.user_id
-    WHERE u.email = :email
+    WHERE u.email = :email.
 """
 
 def authenticate_user(email: str, password: str):

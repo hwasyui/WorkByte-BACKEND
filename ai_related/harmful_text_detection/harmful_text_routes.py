@@ -1,5 +1,3 @@
-"""API routes for harmful text detection."""
-
 import os
 import sys
 

@@ -210,9 +210,9 @@ async def add_second_role(
 
 @auth_router.post("/refresh", response_model=dict)
 async def refresh_token_endpoint(payload: RefreshRequest):
-    """
-    Exchange a valid refresh token for a new access token + rotated refresh token.
-    The old refresh token is revoked immediately — each token can only be used once.
+    """Exchange a valid refresh token for a new access token and rotated refresh token.
+
+    The old refresh token is revoked immediately; each token can only be used once.
     """
     try:
         user, new_refresh = use_refresh_token(payload.refresh_token)
@@ -242,10 +242,10 @@ async def change_password_endpoint(
     payload: ChangePasswordRequest,
     current_user: UserInDB = Depends(get_current_user),
 ):
-    """
-    Change password for the currently authenticated user.
-    Requires the current password for verification.
-    All existing refresh tokens are revoked on success — other devices are logged out.
+    """Change password for the currently authenticated user.
+
+    Requires the current password for verification. All existing refresh tokens
+    are revoked on success, logging out other devices.
     """
     try:
         result = change_password(current_user, payload.old_password, payload.new_password)
@@ -281,8 +281,8 @@ async def set_password_endpoint(
 
 @auth_router.post("/logout", response_model=dict)
 async def logout(payload: RefreshRequest):
-    """
-    Revoke the given refresh token so it can no longer be used to obtain new access tokens.
+    """Revoke the given refresh token so it can no longer be used to obtain new access tokens.
+
     The current access token remains valid until it naturally expires (max 30 min).
     """
     try:

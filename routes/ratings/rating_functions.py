@@ -11,7 +11,7 @@ from typing import List, Optional, Dict
 import uuid
 
 def convert_uuids_to_str(data: Dict) -> Dict:
-    """Convert all UUID objects in dict to strings"""
+    """Convert all UUID objects in dict to strings."""
     if not data:
         return data
     result = {}
@@ -24,11 +24,11 @@ def convert_uuids_to_str(data: Dict) -> Dict:
 
 
 class RatingFunctions:
-    """Handle all rating-related database operations"""
+    """Handle all rating-related database operations."""
 
     @staticmethod
     def get_all_ratings(limit: Optional[int] = None) -> List[Dict]:
-        """Fetch all ratings"""
+        """Fetch all ratings."""
         try:
             db = get_db()
             rows = db.fetch_data(
@@ -49,7 +49,7 @@ class RatingFunctions:
 
     @staticmethod
     def get_rating_by_id(rating_id: str) -> Optional[Dict]:
-        """Fetch a rating by ID"""
+        """Fetch a rating by ID."""
         try:
             db = get_db()
             conditions = [("rating_id", "=", rating_id)]
@@ -71,7 +71,7 @@ class RatingFunctions:
 
     @staticmethod
     def get_ratings_by_freelancer_id(freelancer_id: str) -> List[Dict]:
-        """Fetch all ratings for a freelancer"""
+        """Fetch all ratings for a freelancer."""
         try:
             db = get_db()
             conditions = [("freelancer_id", "=", freelancer_id)]
@@ -90,7 +90,7 @@ class RatingFunctions:
 
     @staticmethod
     def get_ratings_by_client_id(client_id: str) -> List[Dict]:
-        """Fetch all ratings given by a client"""
+        """Fetch all ratings given by a client."""
         try:
             db = get_db()
             conditions = [("client_id", "=", client_id)]
@@ -109,7 +109,7 @@ class RatingFunctions:
 
     @staticmethod
     def get_rating_by_contract_id(contract_id: str) -> Optional[Dict]:
-        """Fetch a rating by contract ID"""
+        """Fetch a rating by contract ID."""
         try:
             db = get_db()
             conditions = [("contract_id", "=", contract_id)]
@@ -125,7 +125,7 @@ class RatingFunctions:
     def create_rating(contract_id: str, client_id: str, freelancer_id: str,
                       communication_score: int, result_quality_score: int, professionalism_score: int,
                       timeline_compliance_score: int, overall_rating: float, review_text: Optional[str] = None) -> Dict:
-        """Create a new rating"""
+        """Create a new rating."""
         try:
             contract = ContractFunctions.get_contract_by_id(contract_id)
             if not contract:
@@ -176,7 +176,7 @@ class RatingFunctions:
 
     @staticmethod
     def update_rating(rating_id: str, update_data: Dict) -> Optional[Dict]:
-        """Update rating information (only once)"""
+        """Update rating information (only once)."""
         try:
             existing_rating = RatingFunctions.get_rating_by_id(rating_id)
             if not existing_rating:
@@ -193,7 +193,6 @@ class RatingFunctions:
                 return existing_rating
 
             update_data["update_count"] = current_updates + 1
-            from datetime import datetime
             update_data["updated_at"] = datetime.utcnow()
 
             conditions = [("rating_id", "=", rating_id)]
@@ -208,7 +207,7 @@ class RatingFunctions:
 
     @staticmethod
     def delete_rating(rating_id: str) -> bool:
-        """Delete a rating"""
+        """Delete a rating."""
         try:
             db = get_db()
             conditions = [("rating_id", "=", rating_id)]

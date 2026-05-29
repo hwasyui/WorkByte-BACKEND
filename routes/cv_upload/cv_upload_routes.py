@@ -52,7 +52,7 @@ async def upload_and_analyze_cv(
     """
     Upload a CV (PDF or DOCX) and either:
     1. (Initial) Parse CV to suggest profile data if profile is empty
-    2. (Update) Compare against existing profile, run ATS check, and provide full analysis
+    2. (Update) Compare against existing profile, run ATS check, and provide full analysis.
     """
     logger("CV_UPLOAD", f"CV upload from user {current_user.user_id}", level="DEBUG")
     try:
@@ -73,7 +73,7 @@ async def upload_and_analyze_cv(
         ext = original_name.rsplit(".", 1)[-1].lower() if "." in original_name else "pdf"
         mime = file.content_type or guess_mime(original_name)
 
-        # --- Step 1: Extract raw text ---
+        # Step 1: Extract raw text
         if ext == "docx" or mime in _DOCX_MIMES:
             raw_text = _extract_text_from_docx(contents)
         elif ext == "pdf" or mime == "application/pdf":
@@ -91,14 +91,14 @@ async def upload_and_analyze_cv(
 
         logger("CV_UPLOAD", f"Extracted {len(raw_text)} chars from CV", level="DEBUG")
 
-        # --- Step 2: Store file in Supabase ---
+        # Step 2: Store file in Supabase
         safe_name = re.sub(r"[^A-Za-z0-9._-]+", "_", original_name).strip("._")
         storage_path = f"cvs/{freelancer_id}/{safe_name}"
         public_url = upload_cv_file(path=storage_path, file_bytes=contents, content_type=mime)
         FreelancerFunctions.update_freelancer(freelancer_id, {"cv_file_url": public_url})
         logger("CV_UPLOAD", f"CV stored: {public_url}", level="DEBUG")
 
-        # --- Step 3: Check if profile is meaningfully empty ---
+        # Step 3: Check if profile is meaningfully empty
         has_bio = bool(freelancer.get("bio"))
         has_skills = bool(FreelancerSkillFunctions.get_freelancer_skills_by_freelancer_id(freelancer_id))
         has_work_exp = bool(WorkExperienceFunctions.get_work_experiences_by_freelancer_id(freelancer_id))
@@ -138,24 +138,24 @@ async def upload_and_analyze_cv(
         # PROFILE UPDATE: Profile exists, run full analysis
         logger("CV_UPLOAD", f"CV update detected for freelancer {freelancer_id}. Running full analysis.", level="INFO")
 
-        # --- Step 4: Embedding similarity ---
+        # Step 4: Embedding similarity
         cv_embedding = get_cv_embedding(raw_text)
         profile_embedding = get_cv_embedding(profile_text)
         similarity = cosine_similarity(cv_embedding, profile_embedding)
 
-        # --- Step 5: Skill coverage ---
+        # Step 5: Skill coverage
         profile_skills = get_profile_skill_names(freelancer_id)
         matched_skills = extract_skills_from_text(raw_text, profile_skills)
         missing_skills = [s for s in profile_skills if s not in matched_skills]
         skill_coverage = len(matched_skills) / len(profile_skills) if profile_skills else None
 
-        # --- Step 6: ATS compliance ---
+        # Step 6: ATS compliance
         ats_result = check_ats_compliance(raw_text)
 
-        # --- Step 7: Scoring ---
+        # Step 7: Scoring
         resume_score = compute_resume_score(similarity, skill_coverage)
 
-        # --- Step 8: Structured LLM analysis (all content from GROQ) ---
+        # Step 8: Structured LLM analysis (all content from GROQ)
         llm_analysis = await analyze_cv_with_llm(
             cv_text=raw_text,
             profile_text=profile_text,
@@ -166,7 +166,7 @@ async def upload_and_analyze_cv(
             ats_result=ats_result,
         )
 
-        # --- Step 9: Parse CV for profile suggestions ---
+        # Step 9: Parse CV for profile suggestions
         parsed_profile = await parse_cv_for_profile(raw_text)
 
         final_resume_score = llm_analysis["resume_score"]

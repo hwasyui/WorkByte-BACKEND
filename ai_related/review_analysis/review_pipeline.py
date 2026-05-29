@@ -77,7 +77,7 @@ async def run_post_completion_pipeline(contract_id: str) -> None:
             {"cid": contract_id},
         )
         if not rows:
-            logger("REVIEW_PIPELINE", f"Contract {contract_id} not found — pipeline aborted", level="ERROR")
+            logger("REVIEW_PIPELINE", f"Contract {contract_id} not found, pipeline aborted", level="ERROR")
             return
 
         contract = rows[0]
@@ -86,20 +86,20 @@ async def run_post_completion_pipeline(contract_id: str) -> None:
         client_rows     = db.fetch_data("client",     conditions=[("client_id",     "=", str(contract["client_id"]))],     limit=1)
 
         if not freelancer_rows or not client_rows:
-            logger("REVIEW_PIPELINE", "Could not resolve user IDs — pipeline aborted", level="ERROR")
+            logger("REVIEW_PIPELINE", "Could not resolve user IDs, pipeline aborted", level="ERROR")
             return
 
         freelancer_user_id = str(freelancer_rows[0]["user_id"])
         client_user_id     = str(client_rows[0]["user_id"])
 
-        # Step 2 — Classify category deterministically
+        # Step 2: Classify category deterministically
         category = infer_project_category(
             role_title=contract.get("role_title", "") or "",
             job_title=contract.get("job_title", "") or "",
             job_description=contract.get("job_description", "") or "",
         )
 
-        # Step 2 — Create pending review shell
+        # Step 2: Create pending review shell
         review = ReviewFunctions.create_pending_review(
             contract_id=contract_id,
             reviewer_id=client_user_id,
@@ -108,16 +108,16 @@ async def run_post_completion_pipeline(contract_id: str) -> None:
         )
         review_id = review["id"]
 
-        # Step 3 — Fetch + save AI-targeted question
+        # Step 3: Fetch + save AI-targeted question
         question = get_targeted_question(category)
         ReviewFunctions.save_ai_question(review_id, question)
 
-        # Step 4 — Compute all objective performance scores
+        # Step 4: Compute all objective performance scores
         on_time_score                       = compute_on_time_score(contract.get("end_date"), contract.get("actual_completion_date"))
         revision_count, revision_rate_score = compute_revision_scores(contract_id)
         responsiveness_score                = compute_responsiveness_score(contract_id, freelancer_user_id)
 
-        # Step 4 — Persist performance scores; communication fields are placeholders until Step 6
+        # Step 4: Persist performance scores; communication fields are placeholders until Step 6
         ReviewFunctions.save_performance_scores(
             contract_id=contract_id,
             freelancer_id=freelancer_user_id,
@@ -147,7 +147,7 @@ async def run_post_review_pipeline(review_id: str) -> None:
 
         review = ReviewFunctions.get_review_detail(review_id)
         if not review:
-            logger("REVIEW_PIPELINE", f"Review {review_id} not found — pipeline aborted", level="ERROR")
+            logger("REVIEW_PIPELINE", f"Review {review_id} not found, pipeline aborted", level="ERROR")
             return
 
         freelancer_id   = review["freelancer_id"]
@@ -157,7 +157,7 @@ async def run_post_review_pipeline(review_id: str) -> None:
         ratings         = review.get("ratings", [])
 
         if not ratings:
-            logger("REVIEW_PIPELINE", f"No ratings found for review {review_id} — pipeline aborted", level="WARNING")
+            logger("REVIEW_PIPELINE", f"No ratings found for review {review_id}, pipeline aborted", level="WARNING")
             return
 
         avg_stars = round(sum(float(r["score"]) for r in ratings) / len(ratings), 2)
@@ -201,7 +201,7 @@ async def run_post_review_pipeline(review_id: str) -> None:
         else:
             message_thread = ""
 
-        # Step 6 — Single LLM call for full review analysis
+        # Step 6: Single LLM call for full review analysis
         analysis_result = await analyze_review_full(
             overall_comment=overall_comment,
             client_answer=client_answer,
@@ -215,7 +215,7 @@ async def run_post_review_pipeline(review_id: str) -> None:
 
         overall_pass = analysis_result.get("overall_pass", True)
 
-        # Step 6 — Persist AI analysis
+        # Step 6: Persist AI analysis
         ReviewFunctions.save_ai_analysis(
             review_id=review_id,
             sentiment_score=analysis_result["sentiment_score"],
@@ -230,7 +230,7 @@ async def run_post_review_pipeline(review_id: str) -> None:
             overall_pass=overall_pass,
         )
 
-        # Step 6.5 — Update communication fields in performance scores
+        # Step 6.5: Update communication fields in performance scores
         # communication_sentiment_score is already the fully blended value from analyze_review_full
         communication_sentiment_score = analysis_result["communication_sentiment_score"]
         conflict_score = 1.0 if analysis_result.get("is_flagged_coerced", False) else 0.0
@@ -261,7 +261,7 @@ async def run_post_review_pipeline(review_id: str) -> None:
                 },
             )
 
-        # Step 7 — Publish or flag
+        # Step 7: Publish or flag
         if overall_pass:
             ReviewFunctions.publish_review(review_id)
         else:
@@ -273,7 +273,7 @@ async def run_post_review_pipeline(review_id: str) -> None:
             logger("REVIEW_PIPELINE", f"Review {review_id} not published (pass={overall_pass})", level="WARNING")
             return  # Do not recalculate trust score for unpublished reviews
 
-        # Step 8 — Recalculate trust score
+        # Step 8: Recalculate trust score
         weighted_avg, total_reviews = calculate_weighted_review_avg(freelancer_id)
         overall_score = calculate_trust_score(
             weighted_review_avg=weighted_avg,
@@ -326,7 +326,7 @@ async def run_post_review_pipeline(review_id: str) -> None:
             category_rank_pct=category_rank_pct,
         )
 
-        # Step 9 — Red flag check
+        # Step 9: Red flag check
         ReviewFunctions.check_and_create_red_flag(freelancer_id, overall_score)
 
         logger("REVIEW_PIPELINE", f"Post-review pipeline done | review={review_id} | trust_score={overall_score}", level="INFO")

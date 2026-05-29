@@ -12,14 +12,14 @@ from functions.access_control import assert_freelancer_owns, get_freelancer_prof
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.freelancer_skills.freelancer_skill_functions import FreelancerSkillFunctions
-from ai_related.job_matching.embedding_manager import mark_freelancer_dirty
+from ai_related.job_engine.embedding_manager import mark_freelancer_dirty
 
 freelancer_skill_router = APIRouter(prefix="/freelancer-skills", tags=["Freelancer Skills"])
 
 
 @freelancer_skill_router.get("", response_model=List[FreelancerSkillResponse])
 async def get_all_freelancer_skills(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch all freelancer skills - Authenticated users only - JSON response"""
+    """Fetch all freelancer skills - Authenticated users only - JSON response."""
     try:
         freelancer = get_freelancer_profile_for_user(current_user)
         skills = FreelancerSkillFunctions.get_freelancer_skills_by_freelancer_id(freelancer["freelancer_id"])
@@ -34,7 +34,7 @@ async def get_all_freelancer_skills(limit: Optional[int] = None, current_user: U
 
 @freelancer_skill_router.get("/{freelancer_skill_id}", response_model=FreelancerSkillResponse)
 async def get_freelancer_skill(freelancer_skill_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch a single freelancer skill by ID - Authenticated users only - JSON response"""
+    """Fetch a single freelancer skill by ID - Authenticated users only - JSON response."""
     try:
         skill = FreelancerSkillFunctions.get_freelancer_skill_by_id(freelancer_skill_id)
         if not skill:
@@ -52,7 +52,7 @@ async def get_freelancer_skill(freelancer_skill_id: str, current_user: UserInDB 
 
 @freelancer_skill_router.get("/freelancer/{freelancer_id}", response_model=List[FreelancerSkillResponse])
 async def get_freelancer_skills_by_freelancer(freelancer_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch all skills for a specific freelancer - Authenticated users only - JSON response"""
+    """Fetch all skills for a specific freelancer - Authenticated users only - JSON response."""
     try:
         skills = FreelancerSkillFunctions.get_freelancer_skills_by_freelancer_id(freelancer_id)
         success_msg = f"Retrieved {len(skills)} skills for freelancer {freelancer_id}"
@@ -66,7 +66,7 @@ async def get_freelancer_skills_by_freelancer(freelancer_id: str, current_user: 
 
 @freelancer_skill_router.post("", response_model=FreelancerSkillResponse, status_code=201)
 async def create_freelancer_skill(freelancer_skill: FreelancerSkillCreate, current_user: UserInDB = Depends(get_current_user)):
-    """Create a new freelancer skill - Authenticated users only - JSON body accepted"""
+    """Create a new freelancer skill - Authenticated users only - JSON body accepted."""
     try:
         freelancer_skill_id = freelancer_skill.freelancer_skill_id or str(uuid.uuid4())
         assert_freelancer_owns(current_user, freelancer_skill.freelancer_id)
@@ -93,7 +93,7 @@ async def create_freelancer_skill(freelancer_skill: FreelancerSkillCreate, curre
 
 @freelancer_skill_router.put("/{freelancer_skill_id}", response_model=FreelancerSkillResponse)
 async def update_freelancer_skill(freelancer_skill_id: str, freelancer_skill_update: FreelancerSkillUpdate, current_user: UserInDB = Depends(get_current_user)):
-    """Update freelancer skill information - Authenticated users only"""
+    """Update freelancer skill information - Authenticated users only."""
     try:
         existing_skill = FreelancerSkillFunctions.get_freelancer_skill_by_id(freelancer_skill_id)
         if not existing_skill:
@@ -117,7 +117,7 @@ async def update_freelancer_skill(freelancer_skill_id: str, freelancer_skill_upd
 
 @freelancer_skill_router.delete("/{freelancer_skill_id}", status_code=200)
 async def delete_freelancer_skill(freelancer_skill_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Delete a freelancer skill - Authenticated users only"""
+    """Delete a freelancer skill - Authenticated users only."""
     try:
         existing_skill = FreelancerSkillFunctions.get_freelancer_skill_by_id(freelancer_skill_id)
         if not existing_skill:
@@ -140,7 +140,7 @@ async def delete_freelancer_skill(freelancer_skill_id: str, current_user: UserIn
 
 @freelancer_skill_router.delete("/freelancer/{freelancer_id}/skill/{skill_id}", status_code=200)
 async def delete_freelancer_skill_by_ids(freelancer_id: str, skill_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Delete a freelancer skill by freelancer_id and skill_id - Authenticated users only"""
+    """Delete a freelancer skill by freelancer_id and skill_id - Authenticated users only."""
     try:
         assert_freelancer_owns(current_user, freelancer_id)
         FreelancerSkillFunctions.delete_freelancer_skill_by_freelancer_and_skill(freelancer_id, skill_id)

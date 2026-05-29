@@ -11,7 +11,7 @@ from routes.dm.dm_functions import DMFunctions
 
 
 def convert_uuids_to_str(data: Dict) -> Dict:
-    """Convert all UUID objects in dict to strings"""
+    """Convert all UUID objects in dict to strings."""
     if not data:
         return data
     result = {}
@@ -24,7 +24,7 @@ def convert_uuids_to_str(data: Dict) -> Dict:
 
 
 class ContractSubmissionFunctions:
-    """Handle all contract submission-related database operations"""
+    """Handle all contract submission-related database operations."""
 
     @staticmethod
     def get_contract_by_id(contract_id: str) -> Optional[Dict]:

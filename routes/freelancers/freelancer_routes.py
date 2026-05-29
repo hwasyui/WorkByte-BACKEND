@@ -13,7 +13,7 @@ from functions.access_control import assert_freelancer_owns, get_freelancer_prof
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.freelancers.freelancer_functions import FreelancerFunctions, get_comprehensive_freelancer_profile
-from ai_related.job_matching.embedding_manager import mark_freelancer_dirty
+from ai_related.job_engine.embedding_manager import mark_freelancer_dirty
 from functions.supabase_client import upload_freelancer_profile_picture, delete_file, BUCKET_USER_ASSETS
 from mimetypes import guess_type as guess_mime
 from ai_related.cv_analysis.cv_analysis import parse_cv_for_profile
@@ -154,7 +154,7 @@ async def parse_cv_for_autofill(
 ):
     """
     Parse a CV and return structured profile data for frontend autofill.
-    Does not apply any changes — returns parsed data for the user to review and
+    Does not apply any changes; returns parsed data for the user to review and
     populate form fields before submitting via POST/PUT /freelancers.
     """
     try:
@@ -332,7 +332,7 @@ async def browse_all_freelancers(
     page_size: int = Query(default=20, ge=1, le=100),
     current_user: UserInDB = Depends(get_current_user),
 ):
-    """Browse all freelancers with pagination and sorting - Authenticated users only"""
+    """Browse all freelancers with pagination and sorting - Authenticated users only."""
     try:
         if order_by not in _VALID_FREELANCER_ORDER_BY:
             return ResponseSchema.error(
@@ -445,7 +445,7 @@ async def delete_freelancer_profile_picture(
         return ResponseSchema.error(error_msg, 500)
 
 
-# ✅ Wildcard last — must come after all /{freelancer_id}/xxx routes
+# Wildcard last, must come after all /{freelancer_id}/xxx routes
 @freelancer_router.get("/{identifier}", response_model=FreelancerResponse)
 async def get_freelancer(identifier: str, current_user: UserInDB = Depends(get_current_user)):
     try:

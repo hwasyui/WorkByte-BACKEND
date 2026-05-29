@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, date
 import os
 import sys
 
@@ -12,7 +12,7 @@ import uuid
 
 
 def convert_uuids_to_str(data: Dict) -> Dict:
-    """Convert all UUID objects in dict to strings"""
+    """Convert all UUID objects in dict to strings."""
     if not data:
         return data
     result = {}
@@ -45,11 +45,11 @@ def _format_contract_created_text(data: dict) -> str:
 
 
 class ContractFunctions:
-    """Handle all contract-related database operations"""
+    """Handle all contract-related database operations."""
 
     @staticmethod
     def get_all_contracts(limit: Optional[int] = None) -> List[Dict]:
-        """Fetch all contracts"""
+        """Fetch all contracts."""
         try:
             db = get_db()
             rows = db.fetch_data(
@@ -73,7 +73,7 @@ class ContractFunctions:
 
     @staticmethod
     def get_contract_by_id(contract_id: str) -> Optional[Dict]:
-        """Fetch a contract by ID"""
+        """Fetch a contract by ID."""
         try:
             db = get_db()
             conditions = [("contract_id", "=", contract_id)]
@@ -88,7 +88,7 @@ class ContractFunctions:
 
     @staticmethod
     def get_contracts_by_freelancer_id(freelancer_id: str) -> List[Dict]:
-        """Fetch all contracts for a freelancer"""
+        """Fetch all contracts for a freelancer."""
         try:
             db = get_db()
             rows = db.fetch_data(
@@ -104,7 +104,7 @@ class ContractFunctions:
 
     @staticmethod
     def get_contracts_by_client_id(client_id: str) -> List[Dict]:
-        """Fetch all contracts for a client"""
+        """Fetch all contracts for a client."""
         try:
             db = get_db()
             rows = db.fetch_data(
@@ -185,7 +185,7 @@ class ContractFunctions:
 
     @staticmethod
     def update_contract(contract_id: str, update_data: Dict) -> Optional[Dict]:
-        """Update contract information"""
+        """Update contract information."""
         try:
             db = get_db()
             update_data = {k: v for k, v in update_data.items() if v is not None}
@@ -194,7 +194,7 @@ class ContractFunctions:
                 logger("CONTRACT_FUNCTIONS", "No data to update", level="WARNING")
                 return ContractFunctions.get_contract_by_id(contract_id)
 
-            # ── Auto-set actual_completion_date when marking as completed ──
+            # Auto-set actual_completion_date when marking as completed.
             if update_data.get("status") == "completed":
                 update_data.setdefault(
                     "actual_completion_date",
@@ -245,8 +245,8 @@ class ContractFunctions:
                             conditions=[("freelancer_id", "=", freelancer_id)],
                         )
 
-                # ── Auto-create portfolio entry from completed contract ──────
-                # The portfolio row is a flat link to the contract — frontend
+                # Auto-create portfolio entry from completed contract.
+                # The portfolio row is a flat link to the contract; frontend
                 # joins back via contract_id to display the full work record.
                 # NOT embedded in portfolio_embedding: contract_embedding
                 # already covers this (rating + review + description); duplicating
@@ -267,7 +267,7 @@ class ContractFunctions:
         """
         Create a portfolio row tied to a completed contract.
 
-        Idempotent — does nothing if a portfolio row for this contract already
+        Idempotent: does nothing if a portfolio row for this contract already
         exists. The new row is flagged is_auto_generated=TRUE; embeddings for
         these rows live in contract_embedding, not portfolio_embedding, so
         portfolio_embedding only ever holds user-curated showcase items.
@@ -289,7 +289,7 @@ class ContractFunctions:
             if existing:
                 logger(
                     "CONTRACT_FUNCTIONS",
-                    f"Auto-portfolio already exists for contract {contract_id} — skip",
+                    f"Auto-portfolio already exists for contract {contract_id}, skip",
                     level="DEBUG",
                 )
                 return
@@ -320,7 +320,7 @@ class ContractFunctions:
             logger(
                 "CONTRACT_FUNCTIONS",
                 f"Auto-portfolio created | portfolio_id={portfolio_id} | contract_id={contract_id} "
-                f"| freelancer_id={freelancer_id} (NOT embedded — contract_embedding covers it)",
+                f"| freelancer_id={freelancer_id} (NOT embedded; contract_embedding covers it)",
                 level="INFO",
             )
         except Exception as e:
@@ -332,7 +332,7 @@ class ContractFunctions:
 
     @staticmethod
     def delete_contract(contract_id: str) -> bool:
-        """Delete a contract"""
+        """Delete a contract."""
         try:
             db = get_db()
             db.delete_data(table_name="contract", conditions=[("contract_id", "=", contract_id)])
@@ -348,13 +348,12 @@ class ContractFunctions:
         cancelled_by: str,
         reason: Optional[str] = None,
     ) -> Optional[Dict]:
-        """Cancel a contract"""
+        """Cancel a contract."""
         try:
             contract = ContractFunctions.get_contract_by_id(contract_id)
             if not contract:
                 raise Exception("Contract not found")
 
-            from datetime import date
             update_data = {
                 "status": "cancelled",
                 "end_date": date.today(),

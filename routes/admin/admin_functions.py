@@ -1,5 +1,3 @@
-"""Admin business logic — moderation queue, scam flags, user reports, dashboard."""
-
 import json
 import math
 import os
@@ -8,6 +6,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
+from fastapi import HTTPException
 
 from functions.db_manager import get_db
 from functions.logger import logger
@@ -63,7 +62,7 @@ DEFAULT_BAN_MESSAGE_ADMIN      = (
     "Submit an appeal if you believe this was a mistake."
 )
 
-# ── Sort-column whitelists (safe f-string interpolation — values are hardcoded) ──
+# Sort-column whitelists (safe f-string interpolation; values are hardcoded)
 _MOD_SORT_COLS = {
     "created_at":   "cmq.created_at",
     "total_score":  "(cmq.toxic_score + cmq.obscene_score + cmq.threat_score + cmq.insult_score + cmq.identity_hate_score)",
@@ -96,8 +95,6 @@ VALID_REPORT_REASONS = [
 ]
 
 
-# ─── helpers ──────────────────────────────────────────────────────────────────
-
 def _rows(result) -> List[Dict]:
     if not result:
         return []
@@ -109,8 +106,6 @@ def _row(result) -> Optional[Dict]:
         return None
     return dict(result[0])
 
-
-# ─── harmful text detection ───────────────────────────────────────────────────
 
 def queue_harmful_text_scan(
     content_type: str,
@@ -200,7 +195,7 @@ def _auto_approve_expired():
         )
 
         if total >= threshold:
-            new_status = "approved"  # flag confirmed — harmful content actioned
+            new_status = "approved"  # flag confirmed: harmful content actioned
             if ctype == "job_post":
                 get_db().execute_query(
                     """
@@ -216,10 +211,10 @@ def _auto_approve_expired():
                         "note":   DEFAULT_CLOSURE_NOTE_CONTENT,
                     },
                 )
-            logger("ADMIN", f"Auto-closed {ctype} {content_id} — total_score={total:.2f} >= {threshold}", level="WARNING")
+            logger("ADMIN", f"Auto-closed {ctype} {content_id}, total_score={total:.2f} >= {threshold}", level="WARNING")
         else:
-            new_status = "rejected"  # flag dismissed — false positive
-            logger("ADMIN", f"Auto-dismissed {ctype} {content_id} — total_score={total:.2f} < {threshold}", level="INFO")
+            new_status = "rejected"  # flag dismissed: false positive
+            logger("ADMIN", f"Auto-dismissed {ctype} {content_id}, total_score={total:.2f} < {threshold}", level="INFO")
 
         get_db().execute_query(
             """
@@ -351,8 +346,6 @@ def action_moderation_item(
     return updated
 
 
-# ─── scam detection ───────────────────────────────────────────────────────────
-
 def queue_scam_scan(
     job_post_id: str,
     client_id: str,
@@ -374,7 +367,7 @@ def queue_scam_scan(
     if title or description:
         result = scan_for_scam_with_ml_fallback(title, description)
     else:
-        # Legacy callers pass combined text — split heuristically on first 60 chars.
+        # Legacy callers pass combined text; split heuristically on first 60 chars.
         result = scan_for_scam_with_ml_fallback("", text)
 
     scan_method = result.get("scan_method", "unknown")
@@ -385,7 +378,7 @@ def queue_scam_scan(
     if not is_hard and not is_soft:
         logger(
             "ADMIN",
-            f"Scam scan ({scan_method}): job {job_post_id} is clean — score={scam_score:.3f}",
+            f"Scam scan ({scan_method}): job {job_post_id} is clean, score={scam_score:.3f}",
             level="INFO",
         )
         return None
@@ -393,7 +386,7 @@ def queue_scam_scan(
     auto_remove_at = datetime.utcnow() + timedelta(days=AUTO_REMOVE_DAYS)
     try:
         if is_hard:
-            # Close the job immediately — high-confidence scam.
+            # Close the job immediately; high-confidence scam.
             get_db().execute_query(
                 """
                 UPDATE job_post
@@ -434,15 +427,14 @@ def queue_scam_scan(
         if is_hard:
             logger(
                 "ADMIN",
-                f"Scam detected ({scan_method}): job {job_post_id} auto-closed and flagged "
-                f"— score={scam_score:.3f}",
+                f"Scam detected ({scan_method}): job {job_post_id} auto-closed and flagged, score={scam_score:.3f}",
                 level="WARNING",
             )
         else:
             logger(
                 "ADMIN",
                 f"Suspicious job ({scan_method}): job {job_post_id} soft-flagged for review "
-                f"— score={scam_score:.3f} (job still active)",
+                f", score={scam_score:.3f} (job still active)",
                 level="WARNING",
             )
         return row
@@ -490,16 +482,16 @@ def _flag_client_for_scam(client_id: str):
                 "note":   DEFAULT_CLOSURE_NOTE_SCAM,
             },
         )
-        logger("ADMIN", f"Client {client_id} banned — 3+ confirmed scam jobs; active jobs closed", level="WARNING")
+        logger("ADMIN", f"Client {client_id} banned; 3+ confirmed scam jobs, active jobs closed", level="WARNING")
 
 
 def _process_auto_remove():
+    """Process auto-removal of expired scam flags after 30 days.
+
+    High score (>=85%) confirms scam: closes job post and flags client.
+    Low score (<85%): dismisses flag as false positive.
     """
-    After 30 days:
-    - score >= 85% → auto-remove (close job post, flag client)
-    - score <  85% → auto-dismiss as safe (false positive)
-    """
-    # high score — confirmed scam
+    # high score: confirmed scam
     expired_high = _rows(get_db().execute_query(
         """
         UPDATE scam_job_flags
@@ -527,9 +519,9 @@ def _process_auto_remove():
                 "note":   DEFAULT_CLOSURE_NOTE_SCAM,
             },
         )
-        logger("ADMIN", f"Auto-removed scam job {flag['job_post_id']} — score={flag['scam_score']:.2f}", level="WARNING")
+        logger("ADMIN", f"Auto-removed scam job {flag['job_post_id']}, score={flag['scam_score']:.2f}", level="WARNING")
 
-    # low score — false positive, mark safe
+    # low score: false positive, mark safe
     get_db().execute_query(
         """
         UPDATE scam_job_flags
@@ -602,7 +594,7 @@ def action_scam_flag(
     ))
     if updated and new_status == "safe":
         if updated.get("auto_closed"):
-            # Hard flag false positive — job was auto-closed, reopen it.
+            # Hard flag false positive; job was auto-closed, reopen it.
             get_db().execute_query(
                 """
                 UPDATE job_post
@@ -616,7 +608,7 @@ def action_scam_flag(
             )
             logger("ADMIN", f"Scam flag {flag_id} cleared: job {updated['job_post_id']} reopened by {admin_user_id}", level="INFO")
         else:
-            # Soft flag dismissed — job was never closed, nothing to reopen.
+            # Soft flag dismissed; job was never closed, nothing to reopen.
             logger("ADMIN", f"Soft scam flag {flag_id} dismissed as safe by {admin_user_id} (job was active)", level="INFO")
 
     if updated and new_status == "removed":
@@ -647,15 +639,13 @@ def get_client_scam_record(client_id: str) -> Optional[Dict]:
     ))
 
 
-# ─── report auto-actions ──────────────────────────────────────────────────────
-
 def _process_report_auto_actions():
     """
     Auto-ban users / close job posts that have ≥10 reports
     with the oldest report ≥30 days old.
     Skips targets that already have a record in report_auto_actions.
     """
-    # ── user targets ──────────────────────────────────────────────────────────
+    # User targets
     user_targets = _rows(get_db().execute_query(
         """
         SELECT reported_user_id AS target_id, COUNT(*) AS report_count
@@ -719,7 +709,7 @@ def _process_report_auto_actions():
         )
         logger("ADMIN", f"User {tid} report-banned ({t['report_count']} reports); active jobs closed", level="WARNING")
 
-    # ── job post targets ──────────────────────────────────────────────────────
+    # Job post targets
     job_targets = _rows(get_db().execute_query(
         """
         SELECT job_post_id AS target_id, COUNT(*) AS report_count
@@ -864,8 +854,6 @@ def force_expire_reports(target_type: str, target_id: str) -> None:
     _process_report_auto_actions()
 
 
-# ─── appeals ──────────────────────────────────────────────────────────────────
-
 _MAX_APPEALS_PER_TARGET = 2
 
 def submit_appeal(user_id: str, target_type: str, target_id: str, message: str) -> Optional[Dict]:
@@ -878,8 +866,6 @@ def submit_appeal(user_id: str, target_type: str, target_id: str, message: str) 
       - Maximum of _MAX_APPEALS_PER_TARGET (2) appeals per (user, target).
         The second appeal is the user's one retry after a rejection.
     """
-    from fastapi import HTTPException
-
     existing = _rows(get_db().execute_query(
         """
         SELECT status FROM appeals
@@ -900,7 +886,7 @@ def submit_appeal(user_id: str, target_type: str, target_id: str, message: str) 
         if "approved" in statuses:
             raise HTTPException(
                 status_code=400,
-                detail="Your previous appeal was approved — no further appeal is needed.",
+                detail="Your previous appeal was approved; no further appeal is needed.",
             )
         if len(existing) >= _MAX_APPEALS_PER_TARGET:
             raise HTTPException(
@@ -941,7 +927,7 @@ def get_appeal_status(user_id: str, target_type: str, target_id: str) -> Dict:
       pending              → cannot appeal, waiting for review
       rejected_can_retry   → can appeal, 1 chance left
       rejected_final       → cannot appeal, exhausted
-      approved             → cannot appeal, already resolved positively
+      approved             → cannot appeal, already resolved positively.
     """
     existing = _rows(get_db().execute_query(
         """
@@ -1050,7 +1036,7 @@ def list_appeals(
 
     appeal_attempt  1 = first appeal for that target, 2 = second/final attempt.
     target_type     'user' | 'job_post'
-    search          partial match on submitter email
+    search          partial match on submitter email.
     """
     offset = (page - 1) * page_size
 
@@ -1159,8 +1145,6 @@ def resolve_appeal(
             logger("ADMIN", f"User {target_id} restored via appeal {appeal_id}", level="INFO")
     return updated
 
-
-# ─── user reports ─────────────────────────────────────────────────────────────
 
 def create_report(
     reporter_id: str,
@@ -1308,8 +1292,6 @@ def action_report(
     ))
 
 
-# ─── direct admin override actions ───────────────────────────────────────────
-
 def admin_close_job(
     job_post_id: str,
     admin_user_id: str,
@@ -1427,8 +1409,6 @@ def admin_reopen_account(
     return updated
 
 
-# ─── admin dashboard ──────────────────────────────────────────────────────────
-
 def get_admin_dashboard_stats() -> Dict:
     """Return aggregate counts for the admin overview panel."""
     _auto_approve_expired()
@@ -1476,8 +1456,6 @@ def get_admin_dashboard_stats() -> Dict:
         ),
     }
 
-
-# ─── admin browse: jobs ───────────────────────────────────────────────────────
 
 _JOB_ADMIN_SORT_COLS = {
     "created_at":    "jp.created_at",
@@ -1633,8 +1611,6 @@ def admin_list_jobs(
         "total_pages": math.ceil(total / page_size) if page_size > 0 else 0,
     }
 
-
-# ─── admin browse: users ──────────────────────────────────────────────────────
 
 def admin_list_users(
     role: Optional[str] = None,

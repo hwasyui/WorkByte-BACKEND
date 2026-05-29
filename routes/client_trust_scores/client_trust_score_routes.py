@@ -17,7 +17,7 @@ client_trust_score_router = APIRouter(prefix="/client-trust-scores", tags=["Clie
 
 @client_trust_score_router.get("", response_model=List[ClientTrustScoreResponse])
 async def get_all_client_trust_scores(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch all client trust scores - Authenticated users only - JSON response"""
+    """Fetch all client trust scores - Authenticated users only - JSON response."""
     try:
         scores = ClientTrustScoreFunctions.get_all_client_trust_scores(limit=limit)
         success_msg = f"Retrieved {len(scores)} client trust scores" + (f" (limit: {limit})" if limit else "")
@@ -31,7 +31,7 @@ async def get_all_client_trust_scores(limit: Optional[int] = None, current_user:
 
 @client_trust_score_router.get("/{client_id}", response_model=ClientTrustScoreResponse)
 async def get_client_trust_score(client_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch trust score for a specific client - Authenticated users only - JSON response"""
+    """Fetch trust score for a specific client - Authenticated users only - JSON response."""
     try:
         score = ClientTrustScoreFunctions.get_client_trust_score_by_id(client_id)
         if not score:
@@ -49,7 +49,7 @@ async def get_client_trust_score(client_id: str, current_user: UserInDB = Depend
 
 @client_trust_score_router.post("", response_model=ClientTrustScoreResponse, status_code=201)
 async def create_client_trust_score(score: ClientTrustScoreCreate, current_user: UserInDB = Depends(get_current_user)):
-    """Create a new client trust score - Authenticated users only - JSON body accepted"""
+    """Create a new client trust score - Authenticated users only - JSON body accepted."""
     try:
         assert_client_owns(current_user, score.client_id)
         new_score = ClientTrustScoreFunctions.create_client_trust_score(
@@ -72,7 +72,7 @@ async def create_client_trust_score(score: ClientTrustScoreCreate, current_user:
 
 @client_trust_score_router.put("/{client_id}", response_model=ClientTrustScoreResponse)
 async def update_client_trust_score(client_id: str, score_update: ClientTrustScoreUpdate, current_user: UserInDB = Depends(get_current_user)):
-    """Update client trust score - Authenticated users only"""
+    """Update client trust score - Authenticated users only."""
     try:
         assert_client_owns(current_user, client_id)
         existing_score = ClientTrustScoreFunctions.get_client_trust_score_by_id(client_id)
@@ -95,7 +95,7 @@ async def update_client_trust_score(client_id: str, score_update: ClientTrustSco
 
 @client_trust_score_router.delete("/{client_id}", status_code=200)
 async def delete_client_trust_score(client_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Delete a client trust score - Authenticated users only"""
+    """Delete a client trust score - Authenticated users only."""
     try:
         assert_client_owns(current_user, client_id)
         existing_score = ClientTrustScoreFunctions.get_client_trust_score_by_id(client_id)

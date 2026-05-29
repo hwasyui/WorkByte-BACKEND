@@ -14,7 +14,6 @@ from reportlab.platypus.frames import Frame
 from reportlab.platypus.doctemplate import PageTemplate, BaseDocTemplate
 
 
-# ── Colour palette ────────────────────────────────────────────────────────────
 NAVY       = colors.HexColor("#1A2E4A")
 DARK_NAVY  = colors.HexColor("#0F1E30")
 ACCENT     = colors.HexColor("#2E6DA4")
@@ -30,7 +29,6 @@ MARGIN_V = 2.5 * cm
 CONTENT_W = PAGE_W - 2 * MARGIN_H
 
 
-# ── Page-level header / footer ────────────────────────────────────────────────
 def _draw_page_decorations(canvas, doc, contract_id, generated_at):
     canvas.saveState()
 
@@ -81,7 +79,6 @@ class _ContractDocTemplate(BaseDocTemplate):
         _draw_page_decorations(canvas, doc, self._contract_id, self._generated_at)
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
 def _format_currency(amount, currency):
     if amount is None:
         return "N/A"
@@ -136,12 +133,12 @@ def _payment_schedule_table(items: list, currency: str) -> Table:
     ]]
 
     for item in items:
-        amount_str = _format_currency(item.get("amount"), currency) if item.get("amount") is not None else "—"
-        pct_str    = f"{item['percentage']:.0f}%" if item.get("percentage") is not None else "—"
-        due_str    = str(item.get("due_date") or "—")
+        amount_str = _format_currency(item.get("amount"), currency) if item.get("amount") is not None else "-"
+        pct_str    = f"{item['percentage']:.0f}%" if item.get("percentage") is not None else "-"
+        due_str    = str(item.get("due_date") or "-")
         rows.append([
-            Paragraph(item.get("phase", "—"),        cell_style),
-            Paragraph(item.get("description") or "—", cell_style),
+            Paragraph(item.get("phase", "-"),        cell_style),
+            Paragraph(item.get("description") or "-", cell_style),
             Paragraph(amount_str,                      cell_style),
             Paragraph(pct_str,                         pct_style),
             Paragraph(due_str,                         cell_style),
@@ -154,7 +151,7 @@ def _payment_schedule_table(items: list, currency: str) -> Table:
         ("BACKGROUND",   (0, 0), (-1, 0),       ACCENT),
         ("TEXTCOLOR",    (0, 0), (-1, 0),       WHITE),
         ("FONTNAME",     (0, 0), (-1, 0),       "Helvetica-Bold"),
-        # Data rows — alternating
+        # Data rows, alternating
         ("ROWBACKGROUNDS", (0, 1), (-1, -1),    [WHITE, colors.HexColor("#EEF4FB")]),
         # Shared
         ("GRID",         (0, 0), (-1, -1),      0.4, MID_GRAY),
@@ -216,7 +213,6 @@ def _value_style():
     return s
 
 
-# ── Style sheet ───────────────────────────────────────────────────────────────
 def _build_styles():
     base = getSampleStyleSheet()
     styles = {}
@@ -269,7 +265,6 @@ def _build_styles():
     return styles
 
 
-# ── Main entry point ──────────────────────────────────────────────────────────
 def generate_contract_pdf(contract_context: dict, contract_terms: dict) -> bytes:
     buffer = io.BytesIO()
     contract_id = str(contract_context.get("contract_id", "N/A"))
@@ -287,7 +282,7 @@ def generate_contract_pdf(contract_context: dict, contract_terms: dict) -> bytes
     styles = _build_styles()
     story = []
 
-    # ── Title block ────────────────────────────────────────────────────────────
+    # Title block
     story.append(Spacer(1, 0.3 * cm))
     story.append(Paragraph(
         contract_context.get("contract_title", "Freelance Contract Agreement"),
@@ -300,7 +295,7 @@ def generate_contract_pdf(contract_context: dict, contract_terms: dict) -> bytes
     story.append(Spacer(1, 0.2 * cm))
     story.append(HRFlowable(width="100%", thickness=1.5, color=NAVY, spaceAfter=8))
 
-    # ── Preamble ───────────────────────────────────────────────────────────────
+    # Preamble
     client_name     = contract_context.get("client",     {}).get("full_name", "N/A")
     freelancer_name = contract_context.get("freelancer", {}).get("full_name", "N/A")
     story.append(Paragraph(
@@ -311,7 +306,7 @@ def generate_contract_pdf(contract_context: dict, contract_terms: dict) -> bytes
         styles["body"]
     ))
 
-    # ── 1. Parties ─────────────────────────────────────────────────────────────
+    # 1. Parties
     story.append(_section_header("1. Parties", styles))
     story.append(_kv_table([
         ("Client",     client_name),
@@ -319,7 +314,7 @@ def generate_contract_pdf(contract_context: dict, contract_terms: dict) -> bytes
     ]))
     story.append(Spacer(1, 0.2 * cm))
 
-    # ── 2. Project Scope ───────────────────────────────────────────────────────
+    # 2. Project Scope
     story.append(_section_header("2. Project Scope", styles))
     job_title   = contract_context.get("job_post",  {}).get("job_title", "N/A")
     role_title  = contract_context.get("job_role",  {}).get("role_title", "N/A")
@@ -335,7 +330,7 @@ def generate_contract_pdf(contract_context: dict, contract_terms: dict) -> bytes
     story.append(Paragraph("<b>Description of Work</b>", styles["body_bold"]))
     story.append(Paragraph(description, styles["body"]))
 
-    # ── 3. Financial Terms ─────────────────────────────────────────────────────
+    # 3. Financial Terms
     story.append(_section_header("3. Financial Terms", styles))
     currency = contract_context.get("budget_currency", "USD")
     payment_structure = contract_context.get("payment_structure", "N/A")
@@ -355,7 +350,7 @@ def generate_contract_pdf(contract_context: dict, contract_terms: dict) -> bytes
             story.append(Paragraph("<b>Payment Schedule</b>", styles["body_bold"]))
             story.append(_payment_schedule_table(schedule_items, currency))
 
-    # ── 4. Legal Clauses ───────────────────────────────────────────────────────
+    # 4. Legal Clauses
     story.append(_section_header("4. Legal Clauses", styles))
     dispute = contract_terms.get("dispute_resolution", "N/A")
     legal_rows = [
@@ -378,7 +373,7 @@ def generate_contract_pdf(contract_context: dict, contract_terms: dict) -> bytes
         story.append(Paragraph("<b>Additional Clauses</b>", styles["body_bold"]))
         story.append(Paragraph(contract_terms.get("additional_clauses"), styles["body"]))
 
-    # ── 5. General Provisions ──────────────────────────────────────────────────
+    # 5. General Provisions
     story.append(_section_header("5. General Provisions", styles))
     story.append(Paragraph(
         "<b>Entire Agreement.</b> This Agreement constitutes the entire agreement between "
@@ -396,7 +391,7 @@ def generate_contract_pdf(contract_context: dict, contract_terms: dict) -> bytes
         styles["body"]
     ))
 
-    # ── 6. Signatures ──────────────────────────────────────────────────────────
+    # 6. Signatures
     story.append(_section_header("6. Signatures", styles))
     story.append(Paragraph(
         "By signing below, the parties agree to the terms and conditions set forth in this Agreement.",

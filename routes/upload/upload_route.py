@@ -20,10 +20,13 @@ async def upload_file_endpoint(
     bucket: str = Query(...),
     current_user: UserInDB = Depends(get_current_user),
 ):
-    """
-    Upload a file to Supabase Storage.
-    Optional ?bucket= query param to select target bucket.
-    Returns: { file_url, file_name, file_type, file_size }
+    """Upload a file to Supabase Storage.
+
+    Args:
+        bucket: Target storage bucket name (query param).
+
+    Returns:
+        Dict with file_url, file_name, file_type, and file_size.
     """
     try:
         contents = await file.read()

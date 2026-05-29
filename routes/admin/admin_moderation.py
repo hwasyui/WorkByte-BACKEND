@@ -1,14 +1,3 @@
-"""
-Harmful text detection and scam detection utilities.
-
-scan_harmful_text_with_ml_fallback() is the primary entry point for harmful text scans.
-It tries the trained RoBERTa model first (F1=0.8226 on Jigsaw+ETHOS test set),
-then falls back to deterministic keyword matching if the model is unavailable.
-
-Keyword lists, threshold values, and their rationale are documented in
-moderation_keywords.json (same directory) so they can be audited and updated
-without touching Python code.
-"""
 import json
 import os
 import re
@@ -19,10 +8,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 from typing import Dict, List, Optional
 
 from functions.logger import logger
-
-# ---------------------------------------------------------------------------
-# Load keyword data
-# ---------------------------------------------------------------------------
 
 _KEYWORDS_PATH = os.path.join(os.path.dirname(__file__), "moderation_keywords.json")
 
@@ -42,25 +27,17 @@ _ML_LABEL_REMAP = {
 }
 
 
-# ---------------------------------------------------------------------------
-# Internal helpers
-# ---------------------------------------------------------------------------
-
 def _normalize(text: str) -> str:
     return re.sub(r"\s+", " ", text.lower().strip())
 
-
-# ---------------------------------------------------------------------------
-# Keyword-based scan (fallback / standalone)
-# ---------------------------------------------------------------------------
 
 def scan_harmful_text(text: str) -> Dict:
     """
     Deterministic keyword scan across 5 harm labels.
     Scoring: score = min(hit_count × 0.35, 1.0)
-      — 1 keyword hit → 0.35 (flags for admin review)
-      — 2 hits → 0.70
-      — 3+ hits → 1.0
+      - 1 keyword hit: 0.35 (flags for admin review)
+      - 2 hits: 0.70
+      - 3+ hits: 1.0
     Used directly when called explicitly, or as fallback by
     scan_harmful_text_with_ml_fallback() when the ML model is unavailable.
     """
@@ -91,9 +68,9 @@ def scan_for_scam(text: str) -> Dict:
     """
     Keyword-based scam indicator scan for job posts.
     Score = min(matched_count / 6.0, 1.0)
-      — 6 keywords ≈ 100% scam score
-      — 5 keywords ≈ 83% (near auto-remove threshold)
-    Keyword list and threshold rationale: moderation_keywords.json
+      - 6 keywords: 100% scam score
+      - 5 keywords: 83% (near auto-remove threshold)
+    Keyword list and threshold rationale: moderation_keywords.json.
     """
     normalized = _normalize(text)
     matched = [kw for kw in _SCAM_KEYWORDS if kw in normalized]
@@ -138,10 +115,6 @@ def scan_for_scam_with_ml_fallback(title: str, description: str) -> Dict:
         )
         return scan_for_scam(combined)
 
-
-# ---------------------------------------------------------------------------
-# ML-first scan (primary entry point)
-# ---------------------------------------------------------------------------
 
 def scan_harmful_text_with_ml_fallback(text: str) -> Dict:
     """

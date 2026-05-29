@@ -8,8 +8,6 @@ from typing import Dict, List, Any, Optional
 import math
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
-
 def _row_to_dict(row) -> Dict:
     d = dict(row)
     return {k: str(v) if hasattr(v, "__class__") and "UUID" in v.__class__.__name__ else v
@@ -55,8 +53,6 @@ def _filter_tracking_statuses(
         filtered = [i for i in filtered if i.get("tracking_status") not in exclude_statuses]
     return filtered
 
-
-# ── Tracking status helpers ───────────────────────────────────────────────────
 
 def _freelancer_tracking_status(proposal_status: str, contract_status: Optional[str]) -> str:
     """Single unified status for a freelancer's journey on one job."""
@@ -105,7 +101,7 @@ def _job_tracking_status(job_status: str, role_statuses: List[str]) -> str:
     """
     Job-level status rolled up from all role statuses.
     Priority (highest first):
-    disputed > revision_requested > work_submitted > hiring > in_progress > open > completed > draft
+    disputed > revision_requested > work_submitted > hiring > in_progress > open > completed > draft.
     """
     if not role_statuses:
         return "draft" if job_status == "draft" else "open"
@@ -119,8 +115,6 @@ def _job_tracking_status(job_status: str, role_statuses: List[str]) -> str:
     if s <= {"completed"}:         return "completed"
     return job_status
 
-
-# ── Valid sort fields ─────────────────────────────────────────────────────────
 
 _FREELANCER_SORT_FIELDS = {
     "submitted_at",         # when the proposal was sent
@@ -142,11 +136,7 @@ _CLIENT_SORT_FIELDS = {
 }
 
 
-# ── Dashboard functions ───────────────────────────────────────────────────────
-
 class DashboardFunctions:
-
-    # ── Freelancer ────────────────────────────────────────────────────────────
 
     @staticmethod
     def get_freelancer_dashboard(
@@ -162,11 +152,11 @@ class DashboardFunctions:
         """
         Returns every job the freelancer applied to, enriched with contract data.
         Dates on every item:
-          submitted_at            — when they applied
-          start_date              — contract start (null if no contract)
-          end_date                — expected contract end
-          actual_completion_date  — when work was accepted
-          last_activity_date      — most recent lifecycle date (used for default sort)
+          submitted_at            - when they applied
+          start_date              - contract start (null if no contract)
+          end_date                - expected contract end
+          actual_completion_date  - when work was accepted
+          last_activity_date      - most recent lifecycle date (used for default sort)
         """
         try:
             db = get_db()
@@ -276,8 +266,6 @@ class DashboardFunctions:
             logger("DASHBOARD_FUNCTIONS", f"Error building freelancer dashboard: {str(e)}", level="ERROR")
             raise
 
-    # ── Client ────────────────────────────────────────────────────────────────
-
     @staticmethod
     def get_client_dashboard(
         client_id: str,
@@ -293,10 +281,10 @@ class DashboardFunctions:
         Returns every job post the client created.
         Structure: job → roles → contracts (all with tracking_status + dates).
         Dates on every job item:
-          created_at        — when the job post was created
-          posted_at         — when it went live
-          deadline          — application deadline
-          last_activity_date — most recent contract start across all roles
+          created_at        - when the job post was created
+          posted_at         - when it went live
+          deadline          - application deadline
+          last_activity_date - most recent contract start across all roles.
         """
         try:
             db = get_db()

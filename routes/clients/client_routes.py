@@ -33,7 +33,7 @@ async def browse_all_clients(
     page_size: int = Query(default=20, ge=1, le=100),
     current_user: UserInDB = Depends(get_current_user),
 ):
-    """Browse all clients with pagination and sorting - Authenticated users only"""
+    """Browse all clients with pagination and sorting - Authenticated users only."""
     try:
         if order_by not in _VALID_CLIENT_ORDER_BY:
             return ResponseSchema.error(
@@ -55,7 +55,7 @@ async def browse_all_clients(
 
 @client_router.get("", response_model=List[ClientResponse])
 async def get_all_clients(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch current client profile - Authenticated users only - JSON response"""
+    """Fetch current client profile - Authenticated users only - JSON response."""
     try:
         client = get_client_profile_for_user(current_user)
         success_msg = f"Retrieved client profile for user {current_user.user_id}"
@@ -72,7 +72,7 @@ async def search_clients(
     name: str = Query(..., description="Client name to search for"),
     current_user: UserInDB = Depends(get_current_user),
 ):
-    """Search clients by full name - Authenticated users only - JSON response"""
+    """Search clients by full name - Authenticated users only - JSON response."""
     try:
         results = ClientFunctions.search_clients_by_full_name(name)
         logger("CLIENT", f"Searched clients for '{name}', found {len(results)} results", "GET /clients/search", "INFO")
@@ -85,7 +85,7 @@ async def search_clients(
 
 @client_router.get("/{identifier}", response_model=ClientResponse)
 async def get_client(identifier: str, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch a single client by ID (supports both client_id and user_id) - Authenticated users only - JSON response"""
+    """Fetch a single client by ID (supports both client_id and user_id) - Authenticated users only - JSON response."""
     try:
         client = ClientFunctions.get_client_by_id_or_user_id(identifier)
         if not client:
@@ -105,7 +105,7 @@ async def create_client(
     client: ClientCreate = Depends(),
     current_user: UserInDB = Depends(get_client_user),
 ):
-    """Create a new client profile - Clients only - JSON body accepted"""
+    """Create a new client profile - Clients only - JSON body accepted."""
     try:
         # The client profile must be created for the authenticated user only
         client_id = client.client_id or str(uuid.uuid4())
@@ -168,7 +168,7 @@ async def update_client(
     client_update: ClientUpdate = Depends(ClientUpdate.as_form),
     current_user: UserInDB = Depends(get_client_user),
 ):
-    """Update client information (supports both client_id and user_id) - Clients only"""
+    """Update client information (supports both client_id and user_id) - Clients only."""
     try:
         # Check if client exists and get actual client_id if user_id was provided
         existing = ClientFunctions.get_client_by_id_or_user_id(identifier)
@@ -225,7 +225,7 @@ async def update_client(
 
 @client_router.delete("/{identifier}", status_code=200)
 async def delete_client(identifier: str, current_user: UserInDB = Depends(get_client_user)):
-    """Delete a client profile (supports both client_id and user_id) - Clients only"""
+    """Delete a client profile (supports both client_id and user_id) - Clients only."""
     try:
         # Check if client exists and get actual client_id if user_id was provided
         existing = ClientFunctions.get_client_by_id_or_user_id(identifier)

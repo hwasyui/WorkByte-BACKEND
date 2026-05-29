@@ -8,7 +8,7 @@ from typing import List, Optional, Dict
 import uuid
 
 def convert_uuids_to_str(data: Dict) -> Dict:
-    """Convert all UUID objects in dict to strings"""
+    """Convert all UUID objects in dict to strings."""
     if not data:
         return data
     result = {}
@@ -21,11 +21,11 @@ def convert_uuids_to_str(data: Dict) -> Dict:
 
 
 class EducationFunctions:
-    """Handle all education-related database operations"""
+    """Handle all education-related database operations."""
 
     @staticmethod
     def get_all_educations(limit: Optional[int] = None) -> List[Dict]:
-        """Fetch all educations"""
+        """Fetch all educations."""
         try:
             db = get_db()
             rows = db.fetch_data(
@@ -45,7 +45,7 @@ class EducationFunctions:
 
     @staticmethod
     def get_education_by_id(education_id: str) -> Optional[Dict]:
-        """Fetch an education by ID"""
+        """Fetch an education by ID."""
         try:
             db = get_db()
             conditions = [("education_id", "=", education_id)]
@@ -67,7 +67,7 @@ class EducationFunctions:
 
     @staticmethod
     def get_educations_by_freelancer_id(freelancer_id: str) -> List[Dict]:
-        """Fetch all educations for a freelancer"""
+        """Fetch all educations for a freelancer."""
         try:
             db = get_db()
             conditions = [("freelancer_id", "=", freelancer_id)]
@@ -89,7 +89,7 @@ class EducationFunctions:
                          start_date, field_of_study: Optional[str] = None, end_date=None,
                          is_current: Optional[bool] = False, grade: Optional[str] = None,
                          description: Optional[str] = None) -> Dict:
-        """Create a new education"""
+        """Create a new education."""
         try:
             db = get_db()
             education_id = str(uuid.uuid4())
@@ -118,7 +118,7 @@ class EducationFunctions:
 
     @staticmethod
     def update_education(education_id: str, update_data: Dict) -> Optional[Dict]:
-        """Update education information"""
+        """Update education information."""
         try:
             db = get_db()
             update_data = {k: v for k, v in update_data.items() if v is not None}
@@ -139,7 +139,7 @@ class EducationFunctions:
 
     @staticmethod
     def delete_education(education_id: str) -> bool:
-        """Delete an education"""
+        """Delete an education."""
         try:
             db = get_db()
             conditions = [("education_id", "=", education_id)]

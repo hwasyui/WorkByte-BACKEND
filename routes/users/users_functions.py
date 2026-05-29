@@ -8,7 +8,7 @@ from typing import List, Optional, Dict
 import uuid
 
 def convert_uuids_to_str(data: Dict) -> Dict:
-    """Convert all UUID objects in dict to strings"""
+    """Convert all UUID objects in dict to strings."""
     if not data:
         return data
     result = {}
@@ -21,11 +21,11 @@ def convert_uuids_to_str(data: Dict) -> Dict:
 
 
 class UserFunctions:
-    """Handle all user-related database operations"""
+    """Handle all user-related database operations."""
 
     @staticmethod
     def get_all_users(limit: Optional[int] = None, offset: int = 0) -> List[Dict]:
-        """Fetch all users with optional pagination"""
+        """Fetch all users with optional pagination."""
         try:
             db = get_db()
             conditions = None
@@ -48,7 +48,7 @@ class UserFunctions:
 
     @staticmethod
     def get_user_by_id(user_id: str) -> Optional[Dict]:
-        """Fetch a single user by ID"""
+        """Fetch a single user by ID."""
         try:
             db = get_db()
             conditions = [("user_id", "=", user_id)]
@@ -79,7 +79,7 @@ class UserFunctions:
 
     @staticmethod
     def get_user_by_email(email: str) -> Optional[Dict]:
-        """Fetch a single user by email"""
+        """Fetch a single user by email."""
         try:
             db = get_db()
             conditions = [("email", "=", email)]
@@ -102,7 +102,7 @@ class UserFunctions:
 
     @staticmethod
     def create_user(user_id: str, email: str, password: str, user_type: str = "freelancer") -> Dict:
-        """Create a new user and auto-create freelancer/client profile"""
+        """Create a new user and auto-create freelancer/client profile."""
         try:
             db = get_db()
 
@@ -140,7 +140,7 @@ class UserFunctions:
 
     @staticmethod
     def update_user(user_id: str, update_data: Dict) -> Optional[Dict]:
-        """Update user information"""
+        """Update user information."""
         try:
             db = get_db()
             # Remove None values
@@ -162,7 +162,7 @@ class UserFunctions:
 
     @staticmethod
     def delete_user(user_id: str) -> bool:
-        """Delete a user (cascades to freelancer/client profiles)"""
+        """Delete a user (cascades to freelancer/client profiles)."""
         try:
             db = get_db()
             conditions = [("user_id", "=", user_id)]
@@ -177,7 +177,7 @@ class UserFunctions:
 
     @staticmethod
     def search_users(search_term: str) -> List[Dict]:
-        """Search users by email"""
+        """Search users by email."""
         try:
             db = get_db()
             query = f"SELECT user_id, email, email_verified, email_verified_at, created_at, updated_at FROM users WHERE email ILIKE '%' || :search_term || '%'"

@@ -8,8 +8,8 @@ from fastapi import UploadFile
 from groq import Groq
 from functions.db_manager import get_db
 from functions.logger import logger
-from ai_related.job_matching.source_text_builder import build_freelancer_source_text
-from ai_related.job_matching.embedding_service import _get_model
+from ai_related.job_engine.source_text_builder import build_freelancer_source_text
+from ai_related.job_engine.embedding_service import _get_model
 
 
 def get_cv_embedding(text: str) -> List[float]:
@@ -149,8 +149,7 @@ def classify_cv_quality(similarity: float, coverage: Optional[float], ats_score:
 
 
 def check_ats_compliance(raw_text: str) -> dict:
-    """Rule-based ATS compliance check. Returns ats_score (0–100) and ats_flags."""
-    import re as _re
+    """Rule-based ATS compliance check. Returns ats_score (0-100) and ats_flags."""
     text_lower = raw_text.lower()
     word_count = len(raw_text.split())
     flags: List[str] = []
@@ -168,12 +167,12 @@ def check_ats_compliance(raw_text: str) -> dict:
         else:
             flags.append(flag_msg)
 
-    if _re.search(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}", raw_text):
+    if re.search(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}", raw_text):
         score += 8
     else:
         flags.append("No email address found")
 
-    if _re.search(r"\+?\d[\d\s\-\.\(\)]{6,}\d", raw_text):
+    if re.search(r"\+?\d[\d\s\-\.\(\)]{6,}\d", raw_text):
         score += 7
     else:
         flags.append("No phone number found")
@@ -182,20 +181,20 @@ def check_ats_compliance(raw_text: str) -> dict:
         score += 15
     elif 200 <= word_count < 300:
         score += 8
-        flags.append("CV is too short — aim for at least 300 words")
+        flags.append("CV is too short. Aim for at least 300 words.")
     elif 800 < word_count <= 1200:
         score += 8
-        flags.append("CV is quite long — aim for under 800 words for ATS readability")
+        flags.append("CV is quite long. Aim for under 800 words for ATS readability.")
     else:
         if word_count < 200:
-            flags.append("CV is very short — add more detail on skills, experience, and education")
+            flags.append("CV is very short. Add more detail on skills, experience, and education.")
         else:
-            flags.append("CV is very long — condense to the most relevant experience")
+            flags.append("CV is very long. Condense to the most relevant experience.")
 
-    if _re.search(r"\d+\s*(%|percent|users|clients|projects|increase|decrease|revenue|saving)", text_lower):
+    if re.search(r"\d+\s*(%|percent|users|clients|projects|increase|decrease|revenue|saving)", text_lower):
         score += 10
     else:
-        flags.append("No quantifiable achievements found — add numbers, percentages, or metrics to your experience")
+        flags.append("No quantifiable achievements found. Add numbers, percentages, or metrics to your experience.")
 
     cliches = [
         "team player", "hard-working", "hardworking", "go-getter",
@@ -208,10 +207,10 @@ def check_ats_compliance(raw_text: str) -> dict:
     else:
         flags.append(f"Avoid cliché phrases: {', '.join(found_cliches[:3])}")
 
-    if _re.search(r"\b(19|20)\d{2}\b", raw_text):
+    if re.search(r"\b(19|20)\d{2}\b", raw_text):
         score += 10
     else:
-        flags.append("No dates found in work experience — include start/end years for each role")
+        flags.append("No dates found in work experience. Include start/end years for each role.")
 
     return {"ats_score": score, "ats_flags": flags}
 
@@ -248,7 +247,7 @@ async def analyze_cv_with_llm(
 ) -> Dict[str, Any]:
     """
     Full structured CV analysis via GROQ.
-    All content — assessment, per-section analysis, recommendations — comes from the LLM.
+    All content (assessment, per-section analysis, recommendations) comes from the LLM.
     """
     coverage_str = f"{skill_coverage:.0%}" if skill_coverage is not None else "N/A"
     matched_str = ", ".join(matched_skills[:10]) if matched_skills else "none"
@@ -303,7 +302,7 @@ async def analyze_cv_with_llm(
         f"{json.dumps(schema_example, ensure_ascii=False)}\n\n"
         "Rules:\n"
         "- resume_score: integer 0-100 based on CV quality, completeness, and profile alignment\n"
-        "- All text must reference specific details from THIS CV and THIS profile — never generic advice\n"
+        "- All text must reference specific details from THIS CV and THIS profile, never generic advice\n"
         "- sections must contain exactly these four titles in order: "
         "'Skills Analysis', 'Work Experience', 'Education', 'ATS Optimization'\n"
         "- Each section must have 2-4 specific, actionable recommendations\n"

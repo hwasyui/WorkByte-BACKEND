@@ -94,7 +94,7 @@ async def get_freelancer_dashboard(
     current_user: UserInDB = Depends(get_current_user),
 ):
     """
-    Freelancer dashboard — every job applied to, with unified tracking_status.
+    Freelancer dashboard: every job applied to, with unified tracking_status.
 
     **tracking_status values**
     | Value | Meaning |
@@ -111,11 +111,11 @@ async def get_freelancer_dashboard(
     | disputed | Contract under dispute |
 
     **Dates on each item**
-    - `submitted_at` — when the proposal was sent
-    - `start_date` — contract start date
-    - `end_date` — expected contract end date
-    - `actual_completion_date` — when work was accepted
-    - `last_activity_date` — most recent of the above (default sort field)
+    - `submitted_at`: when the proposal was sent
+    - `start_date`: contract start date
+    - `end_date`: expected contract end date
+    - `actual_completion_date`: when work was accepted
+    - `last_activity_date`: most recent of the above (default sort field)
     """
     try:
         if tracking_status and tracking_status not in _FREELANCER_STATUSES:
@@ -200,7 +200,7 @@ async def get_client_dashboard(
     current_user: UserInDB = Depends(get_current_user),
 ):
     """
-    Client dashboard — every job post, with roles and contracts nested inside.
+    Client dashboard: every job post, with roles and contracts nested inside.
 
     **Job tracking_status values**
     | Value | Meaning |
@@ -215,10 +215,10 @@ async def get_client_dashboard(
     | disputed | A contract is under dispute |
 
     **Dates on each job item**
-    - `created_at` — when the job post was created
-    - `posted_at` — when it went live (published)
-    - `deadline` — application deadline
-    - `last_activity_date` — most recent contract start across all roles (default sort field)
+    - `created_at`: when the job post was created
+    - `posted_at`: when it went live (published)
+    - `deadline`: application deadline
+    - `last_activity_date`: most recent contract start across all roles (default sort field)
 
     **Role tracking_status** follows the same logic per individual role.
     **Contract tracking_status** maps directly from contract status.
