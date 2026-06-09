@@ -68,9 +68,9 @@ async def lifespan(app: FastAPI):
     sweep_task = asyncio.create_task(embedding_sweep_loop())
     logger("LIFESPAN", "Embedding sweep worker started (handles dirty records and manual /embed/ calls regardless of mode)", level="INFO")
 
-    # Warm up ML models in background; both load large weights from disk on
-    # first use, causing a cold-start delay on the first real request.
-    # Running them concurrently at startup means they're ready before any user hits them.
+    # Load AI models in the background at startup so the first real request
+    # doesn't hit a cold-start delay. Each model loads weights from disk and
+    # can take several seconds on first use.
     def _warmup_harmful_text():
         try:
             from ai_related.harmful_text_detection.model_inference import load_model
@@ -87,14 +87,6 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             logger("LIFESPAN", f"Embedding model warm-up failed (non-fatal): {e}", level="WARNING")
 
-    def _warmup_job_ranker():
-        try:
-            from ai_related.job_engine.ml_ranker import _load_model
-            _load_model()
-            logger("LIFESPAN", "Job matching ranker warmed up (CatBoost)", level="INFO")
-        except Exception as e:
-            logger("LIFESPAN", f"Job matching ranker warm-up failed (non-fatal): {e}", level="WARNING")
-
     def _warmup_scam_detector():
         try:
             from ai_related.job_scam_detection.scam_detector import _load_models
@@ -105,7 +97,6 @@ async def lifespan(app: FastAPI):
 
     asyncio.create_task(asyncio.to_thread(_warmup_harmful_text))
     asyncio.create_task(asyncio.to_thread(_warmup_embedding))
-    asyncio.create_task(asyncio.to_thread(_warmup_job_ranker))
     asyncio.create_task(asyncio.to_thread(_warmup_scam_detector))
 
     yield

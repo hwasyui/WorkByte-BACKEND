@@ -15,11 +15,13 @@ from functions.schema_model import (
 )
 from functions.schema_model import UserInDB
 from functions.authentication import get_current_user
-from functions.access_control import assert_client_owns, get_client_profile_for_user
+from functions.access_control import assert_client_owns, get_client_profile_for_user, get_freelancer_profile_for_user
+from functions.authentication import get_freelancer_user
 from routes.clients.client_functions import ClientFunctions as _ClientFunctions
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
-from routes.job_posts.job_post_functions import JobPostFunctions
+from functions.db_manager import get_db
+from routes.job_posts.job_post_functions import JobPostFunctions, convert_uuids_to_str
 from ai_related.job_engine.embedding_manager import mark_job_dirty
 from routes.admin.admin_functions import queue_harmful_text_scan, queue_scam_scan
 
@@ -119,6 +121,112 @@ async def get_category_counts(
         return ResponseSchema.success(result, 200)
     except Exception as e:
         return ResponseSchema.error(f"Failed to fetch category counts: {str(e)}", 500)
+
+
+@job_post_router.get("/popular")
+async def get_popular_jobs(
+    category: Optional[str] = Query(default=None, description="Filter by project category"),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=10, ge=1, le=50),
+    current_user: UserInDB = Depends(get_current_user),
+):
+    """Active jobs ranked by proposal count then view count. Optional category filter."""
+    try:
+        result = JobPostFunctions.browse_job_posts(
+            status="active",
+            order_by="proposal_count",
+            order_dir="desc",
+            page=page,
+            page_size=page_size,
+            category=category,
+        )
+        logger("JOB_POST", f"Popular jobs fetched: page={page} category={category}", "GET /job-posts/popular", "INFO")
+        return ResponseSchema.success(result, 200)
+    except Exception as e:
+        logger("JOB_POST", f"Failed to fetch popular jobs: {str(e)}", "GET /job-posts/popular", "ERROR")
+        return ResponseSchema.error(f"Failed to fetch popular jobs: {str(e)}", 500)
+
+
+@job_post_router.get("/relevant")
+async def get_relevant_jobs(
+    category: Optional[str] = Query(default=None, description="Filter by project category"),
+    limit: int = Query(default=10, ge=1, le=50),
+    current_user: UserInDB = Depends(get_freelancer_user),
+):
+    """
+    Returns active jobs most relevant to the logged-in freelancer, ranked by
+    cosine similarity. We compare each job's role embeddings against everything
+    we know about the freelancer: their profile, past contracts, and portfolio.
+    The highest similarity across all those sources determines a job's rank.
+    Returns an empty list if the freelancer has no embeddings yet.
+    """
+    try:
+        freelancer = get_freelancer_profile_for_user(current_user)
+        fid = str(freelancer["freelancer_id"])
+        db = get_db()
+
+        category_filter = "AND jp.project_category = :category" if category else ""
+        params: dict = {"fid": fid, "limit": limit}
+        if category:
+            params["category"] = category
+
+        rows = db.execute_query(
+            f"""
+            WITH freelancer_vecs AS (
+                SELECT embedding_vector FROM freelancer_embedding
+                WHERE freelancer_id = :fid AND embedding_vector IS NOT NULL
+                UNION ALL
+                SELECT embedding_vector FROM portfolio_embedding
+                WHERE freelancer_id = :fid AND embedding_vector IS NOT NULL
+                UNION ALL
+                SELECT embedding_vector FROM contract_embedding
+                WHERE freelancer_id = :fid AND embedding_vector IS NOT NULL
+            )
+            SELECT
+                jp.job_post_id, jp.client_id, jp.job_title, jp.job_description,
+                jp.project_type, jp.project_scope, jp.estimated_duration,
+                jp.working_days, jp.deadline, jp.experience_level, jp.status,
+                jp.is_ai_generated, jp.view_count, jp.project_category,
+                jp.created_at, jp.updated_at, jp.posted_at, jp.closed_at,
+                jp.closure_reason, jp.closure_note,
+                COUNT(DISTINCT jr.job_role_id) AS role_count,
+                COALESCE(SUM(DISTINCT jr.positions_available), 0) AS available_positions,
+                c.full_name AS client_name,
+                c.profile_picture_url,
+                (SELECT COUNT(*) FROM proposal p WHERE p.job_post_id = jp.job_post_id) AS proposal_count,
+                MAX(1 - (jre.embedding_vector <=> fv.embedding_vector)) AS similarity_score
+            FROM job_role_embedding jre
+            JOIN job_role jr ON jr.job_role_id = jre.job_role_id
+            JOIN job_post jp ON jp.job_post_id = jr.job_post_id
+            LEFT JOIN client c ON c.client_id = jp.client_id
+            CROSS JOIN freelancer_vecs fv
+            WHERE jp.status = 'active'
+              AND jre.embedding_vector IS NOT NULL
+              {category_filter}
+            GROUP BY
+                jp.job_post_id, jp.client_id, jp.job_title, jp.job_description,
+                jp.project_type, jp.project_scope, jp.estimated_duration,
+                jp.working_days, jp.deadline, jp.experience_level, jp.status,
+                jp.is_ai_generated, jp.view_count, jp.project_category,
+                jp.created_at, jp.updated_at, jp.posted_at, jp.closed_at,
+                jp.closure_reason, jp.closure_note,
+                c.full_name, c.profile_picture_url
+            ORDER BY similarity_score DESC
+            LIMIT :limit
+            """,
+            params,
+        )
+
+        if not rows:
+            return ResponseSchema.success([], 200)
+
+        items = [convert_uuids_to_str(dict(row)) for row in rows]
+        logger("JOB_POST", f"Relevant jobs fetched: freelancer={fid} count={len(items)} category={category}", "GET /job-posts/relevant", "INFO")
+        return ResponseSchema.success(items, 200)
+
+    except Exception as e:
+        logger("JOB_POST", f"Failed to fetch relevant jobs: {str(e)}", "GET /job-posts/relevant", "ERROR")
+        return ResponseSchema.error(f"Failed to fetch relevant jobs: {str(e)}", 500)
 
 @job_post_router.get("/search", response_model=List[JobPostResponse])
 async def search_job_posts(
