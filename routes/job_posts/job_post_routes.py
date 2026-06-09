@@ -172,7 +172,17 @@ async def get_relevant_jobs(
 
         rows = db.execute_query(
             f"""
-            WITH freelancer_vecs AS (
+            WITH candidate_roles AS (
+                -- Stage 1: metadata pre-filter. Restricts the candidate set to active jobs
+                -- (with optional category) before any vector math runs.
+                SELECT jre.job_post_id, jre.embedding_vector
+                FROM job_role_embedding jre
+                JOIN job_post jp ON jp.job_post_id = jre.job_post_id
+                WHERE jp.status = 'active'
+                  AND jre.embedding_vector IS NOT NULL
+                  {category_filter}
+            ),
+            freelancer_vecs AS (
                 SELECT embedding_vector FROM freelancer_embedding
                 WHERE freelancer_id = :fid AND embedding_vector IS NOT NULL
                 UNION ALL
@@ -181,6 +191,14 @@ async def get_relevant_jobs(
                 UNION ALL
                 SELECT embedding_vector FROM contract_embedding
                 WHERE freelancer_id = :fid AND embedding_vector IS NOT NULL
+            ),
+            similarity_scores AS (
+                -- Stage 2: cosine similarity runs only on the pre-filtered candidate set.
+                SELECT cr.job_post_id,
+                       MAX(1 - (cr.embedding_vector <=> fv.embedding_vector)) AS similarity_score
+                FROM candidate_roles cr
+                CROSS JOIN freelancer_vecs fv
+                GROUP BY cr.job_post_id
             )
             SELECT
                 jp.job_post_id, jp.client_id, jp.job_title, jp.job_description,
@@ -194,15 +212,11 @@ async def get_relevant_jobs(
                 c.full_name AS client_name,
                 c.profile_picture_url,
                 (SELECT COUNT(*) FROM proposal p WHERE p.job_post_id = jp.job_post_id) AS proposal_count,
-                MAX(1 - (jre.embedding_vector <=> fv.embedding_vector)) AS similarity_score
-            FROM job_role_embedding jre
-            JOIN job_role jr ON jr.job_role_id = jre.job_role_id
-            JOIN job_post jp ON jp.job_post_id = jr.job_post_id
+                ss.similarity_score
+            FROM similarity_scores ss
+            JOIN job_post jp ON jp.job_post_id = ss.job_post_id
+            JOIN job_role jr ON jr.job_post_id = jp.job_post_id
             LEFT JOIN client c ON c.client_id = jp.client_id
-            CROSS JOIN freelancer_vecs fv
-            WHERE jp.status = 'active'
-              AND jre.embedding_vector IS NOT NULL
-              {category_filter}
             GROUP BY
                 jp.job_post_id, jp.client_id, jp.job_title, jp.job_description,
                 jp.project_type, jp.project_scope, jp.estimated_duration,
@@ -210,8 +224,8 @@ async def get_relevant_jobs(
                 jp.is_ai_generated, jp.view_count, jp.project_category,
                 jp.created_at, jp.updated_at, jp.posted_at, jp.closed_at,
                 jp.closure_reason, jp.closure_note,
-                c.full_name, c.profile_picture_url
-            ORDER BY similarity_score DESC
+                c.full_name, c.profile_picture_url, ss.similarity_score
+            ORDER BY ss.similarity_score DESC
             LIMIT :limit
             """,
             params,

@@ -11,6 +11,34 @@ from functions.logger import logger
 
 _LLM_TIMEOUT = 90.0   # user-triggered, so a longer timeout is fine
 
+# FX rates
+_FX_CACHE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "currency_rates.json")
+
+
+def _get_fx_rates() -> dict[str, float]:
+    """Read USD-based FX rates from currency_rates.json. Falls back to USD-only if unavailable."""
+    try:
+        with open(_FX_CACHE_PATH, encoding="utf-8") as fh:
+            data = json.load(fh)
+        rates = {k.upper(): float(v) for k, v in data.get("rates", {}).items()}
+        if rates:
+            logger("RAG_ANALYSER", f"FX rates loaded | {len(rates)} currencies | updated={data.get('updated', '?')}", level="DEBUG")
+            return rates
+    except Exception as e:
+        logger("RAG_ANALYSER", f"FX rate file read failed ({e}); using USD-only fallback", level="WARNING")
+    return {"USD": 1.0}
+
+
+def _to_usd(amount: float, currency: str, fx: dict[str, float]) -> float:
+    """Convert amount from currency to USD using USD-based fx rates."""
+    rate = fx.get(currency.upper(), 1.0)
+    return float(amount) / rate if rate > 0 else float(amount)
+
+
+def _to_idr(amount: float, currency: str, fx: dict[str, float]) -> float:
+    """Convert amount from currency to IDR via USD as the intermediate."""
+    return _to_usd(amount, currency, fx) * fx.get("IDR", 16350.0)
+
 
 def _retrieve_job_context(db, job_post_id: str) -> dict:
     """
@@ -351,7 +379,7 @@ def _retrieve_past_contracts(db, freelancer_id: str, job_post_id: str) -> list[d
     return contracts
 
 
-def _build_prompt(job: dict, fc: dict, past_contracts: list[dict]) -> tuple[str, list[dict]]:
+def _build_prompt(job: dict, fc: dict, past_contracts: list[dict], fx_rates: dict[str, float]) -> tuple[str, list[dict]]:
     """
     Build the grounded LLM prompt from job, freelancer, and past-contract context.
 
@@ -508,7 +536,7 @@ def _build_prompt(job: dict, fc: dict, past_contracts: list[dict]) -> tuple[str,
             lines.append("  No required skills specified")
         if ra["matched_pref"]:
             lines.append(f"  Preferred PRESENT: {', '.join(ra['matched_pref'])}")
-        # Budget fit
+        # Budget fit: convert both to IDR so cross-currency comparisons are accurate
         role_budget_raw = next(
             (r.get("role_budget") for r in job.get("roles", []) if r.get("role_title") == ra["role_title"]),
             None,
@@ -518,17 +546,20 @@ def _build_prompt(job: dict, fc: dict, past_contracts: list[dict]) -> tuple[str,
             "USD",
         )
         if fl_monthly_rate > 0 and role_budget_raw:
-            same_currency = fl_rate_currency.upper() == role_budget_currency.upper()
-            if same_currency:
-                fit = "✓ Within budget" if fl_monthly_rate <= float(role_budget_raw) * 1.1 else "✗ Exceeds budget"
+            fl_idr     = _to_idr(fl_monthly_rate, fl_rate_currency, fx_rates)
+            budget_idr = _to_idr(float(role_budget_raw), role_budget_currency, fx_rates)
+            fit        = "✓ Within budget" if fl_idr <= budget_idr * 1.1 else "✗ Exceeds budget"
+            same_ccy   = fl_rate_currency.upper() == role_budget_currency.upper()
+            if same_ccy and fl_rate_currency.upper() == "IDR":
                 lines.append(
-                    f"  Budget fit:  freelancer ~{fl_monthly_rate:.0f} {fl_rate_currency}/month "
-                    f"vs role budget {role_budget_raw} {role_budget_currency} → {fit}"
+                    f"  Budget fit:  freelancer ~{fl_monthly_rate:,.0f} IDR/month "
+                    f"vs role budget {float(role_budget_raw):,.0f} IDR → {fit}"
                 )
             else:
                 lines.append(
                     f"  Budget fit:  freelancer ~{fl_monthly_rate:.0f} {fl_rate_currency}/month "
-                    f"vs role budget {role_budget_raw} {role_budget_currency} (different currencies, evaluate contextually)"
+                    f"(≈{fl_idr:,.0f} IDR) vs role budget {role_budget_raw} {role_budget_currency} "
+                    f"(≈{budget_idr:,.0f} IDR) → {fit}"
                 )
 
     context = "\n".join(lines)
@@ -767,6 +798,7 @@ async def analyse_job_match(db, freelancer_id: str, job_post_id: str) -> dict:
     job            = _retrieve_job_context(db, job_post_id)
     fc             = _retrieve_freelancer_context(db, freelancer_id, job_post_id=job_post_id)
     past_contracts = _retrieve_past_contracts(db, freelancer_id, job_post_id)
+    fx_rates       = _get_fx_rates()
     retrieval_ms   = (time.perf_counter() - t_retrieval) * 1000
 
     if not job:
@@ -786,7 +818,7 @@ async def analyse_job_match(db, freelancer_id: str, job_post_id: str) -> dict:
     )
 
     t_prompt = time.perf_counter()
-    prompt, role_analyses = _build_prompt(job, fc, past_contracts)
+    prompt, role_analyses = _build_prompt(job, fc, past_contracts, fx_rates)
     prompt_ms = (time.perf_counter() - t_prompt) * 1000
     logger(
         "RAG_ANALYSER",
@@ -811,15 +843,12 @@ async def analyse_job_match(db, freelancer_id: str, job_post_id: str) -> dict:
             role_result["matching_skills"]         = ra["matched_req"]
             role_result["missing_required_skills"] = ra["missing_req"]
 
-            # Ceiling: coverage_pct + 25, so 0% → max 25, 40% → max 65, 80% → max 100.
-            # The +25 offset was chosen to be consistent with the three-way threshold
-            # design: Stage 2 requires ≥20% overlap to enter the feed; here, 40%
-            # coverage is the minimum that can ever yield "apply" (40+25=65, exactly
-            # the apply threshold). Below 40% coverage the LLM cannot recommend apply
-            # regardless of portfolio strength. The headroom above coverage lets strong
-            # past-contract and portfolio evidence meaningfully boost the score, but
-            # not enough to mask a large required-skill gap.
-            ceiling   = min(100, ra["coverage_pct"] + 25)
+            # Ceiling: coverage_pct + 30, so 0% → max 30, 35% → max 65, 70%+ → 100.
+            # The +30 offset means 35% required skill coverage is the minimum to ever
+            # reach "apply" (35+30=65). The LLM cannot exceed this regardless of how
+            # strong the portfolio or past contracts are, keeping skill coverage as the
+            # primary gate while still giving qualitative evidence 30 points of influence.
+            ceiling   = min(100, ra["coverage_pct"] + 30)
             raw_score = int(role_result.get("match_score") or 0)
             role_result["match_score"] = min(ceiling, raw_score)
 

@@ -328,29 +328,8 @@ def build_job_role_source_text(job_role_id: str) -> Optional[str]:
         parts.append(f"Job Title: {r['job_title']}")
         parts.append(f"Role: {r['role_title']}")
 
-        if r.get("job_description"):
-            parts.append(f"Description: {r['job_description']}")
-
-        if r.get("role_description"):
-            parts.append(f"Role Description: {r['role_description']}")
-
-        meta: list[str] = []
-        if r.get("project_type"):
-            meta.append(f"Type: {r['project_type']}")
-        if r.get("project_scope"):
-            meta.append(f"Scope: {r['project_scope']}")
-        if r.get("estimated_duration"):
-            meta.append(f"Duration: {r['estimated_duration']}")
-        if r.get("experience_level"):
-            meta.append(f"Experience Required: {r['experience_level']}")
-        if meta:
-            parts.append(" | ".join(meta))
-
-        if r.get("role_budget"):
-            currency = r.get("budget_currency") or "USD"
-            budget_type = r.get("budget_type") or ""
-            parts.append(f"Budget: {r['role_budget']} {currency} ({budget_type})")
-
+        # Skills lead immediately after title/role so they dominate the embedding.
+        # Descriptions are long and would dilute skill signal if placed first.
         skill_rows = db.execute_query(
             """SELECT s.skill_name, jrs.is_required, jrs.importance_level
                FROM job_role_skill jrs
@@ -380,6 +359,29 @@ def build_job_role_source_text(job_role_id: str) -> Optional[str]:
                 f"  Skills: {len(required)} required + {len(preferred)} preferred",
                 level="DEBUG",
             )
+
+        if r.get("job_description"):
+            parts.append(f"Description: {r['job_description']}")
+
+        if r.get("role_description"):
+            parts.append(f"Role Description: {r['role_description']}")
+
+        meta: list[str] = []
+        if r.get("project_type"):
+            meta.append(f"Type: {r['project_type']}")
+        if r.get("project_scope"):
+            meta.append(f"Scope: {r['project_scope']}")
+        if r.get("estimated_duration"):
+            meta.append(f"Duration: {r['estimated_duration']}")
+        if r.get("experience_level"):
+            meta.append(f"Experience Required: {r['experience_level']}")
+        if meta:
+            parts.append(" | ".join(meta))
+
+        if r.get("role_budget"):
+            currency = r.get("budget_currency") or "USD"
+            budget_type = r.get("budget_type") or ""
+            parts.append(f"Budget: {r['role_budget']} {currency} ({budget_type})")
 
         source_text = "\n".join(parts)
         logger(

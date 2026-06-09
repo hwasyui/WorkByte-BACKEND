@@ -38,6 +38,7 @@ ai_related/job_scam_detection/model1_sbert_rf_complete
 
 CAPSTONE_*.md
 
+walkthrough/
 walkthrough/*.py
 walkthrough/__pycache__/
 walkthrough/*.md
