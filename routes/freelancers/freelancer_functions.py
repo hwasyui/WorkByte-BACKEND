@@ -53,7 +53,7 @@ class EmbeddingFunctions:
                     SET embedding_vector = :vector::vector,
                         source_text = :source_text,
                         embedding_metadata = :metadata
-                    WHERE embedding_id = :embedding_id.
+                    WHERE embedding_id = :embedding_id
                 """
                 db.execute_query(update_query, {
                     "vector": vector_str,
@@ -113,7 +113,7 @@ class EmbeddingFunctions:
                         source_text = :source_text,
                         embedding_metadata = :metadata,
                         embedding_dirty = FALSE
-                    WHERE embedding_id = :embedding_id.
+                    WHERE embedding_id = :embedding_id
                 """
                 db.execute_query(update_query, {
                     "vector": vector_str,
@@ -194,7 +194,7 @@ class FreelancerFunctions:
                     fts.weighted_review_avg
                 FROM freelancer f
                 LEFT JOIN freelancer_trust_scores fts
-                    ON fts.freelancer_id = f.user_id
+                    ON fts.freelancer_id = f.freelancer_id
                 ORDER BY {sort_col} {direction} NULLS LAST
                 LIMIT :limit OFFSET :offset
                 """,
@@ -229,7 +229,7 @@ class FreelancerFunctions:
                     fts.weighted_review_avg
                 FROM freelancer f
                 LEFT JOIN freelancer_trust_scores fts
-                    ON fts.freelancer_id = f.user_id
+                    ON fts.freelancer_id = f.freelancer_id
                 ORDER BY fts.weighted_review_avg DESC NULLS LAST
                 {limit_clause}
                 OFFSET :offset
@@ -298,7 +298,8 @@ class FreelancerFunctions:
                           create_embedding: bool = True) -> Dict:
         try:
             db = get_db()
-            freelancer_id = str(uuid.uuid4())
+            if not freelancer_id:
+                freelancer_id = str(uuid.uuid4())
             freelancer_data = {
                 "freelancer_id": freelancer_id,
                 "user_id": user_id,
@@ -399,7 +400,7 @@ class FreelancerFunctions:
                 FROM freelancer_skill fs
                 JOIN skill s ON fs.skill_id = s.skill_id
                 WHERE fs.freelancer_id = :freelancer_id
-                ORDER BY fs.created_at DESC.
+                ORDER BY fs.created_at DESC
             """
             rows = db.execute_query(query, {"freelancer_id": freelancer_id})
             logger("FREELANCER_FUNCTIONS", f"Fetched skills for freelancer {freelancer_id}", level="INFO")
@@ -429,7 +430,7 @@ def get_comprehensive_freelancer_profile(freelancer_id: str) -> Optional[Dict]:
             FROM freelancer_skill fs
             JOIN skill s ON fs.skill_id = s.skill_id
             WHERE fs.freelancer_id = :freelancer_id
-            ORDER BY fs.created_at DESC.
+            ORDER BY fs.created_at DESC
         """
         skills_rows = db.execute_query(skills_query, {"freelancer_id": freelancer_id})
         skills = [dict(row) for row in skills_rows] if skills_rows else []
@@ -461,7 +462,7 @@ def get_comprehensive_freelancer_profile(freelancer_id: str) -> Optional[Dict]:
                    r.timeline_compliance_score, r.overall_rating, r.review_text, r.created_at
             FROM rating r
             WHERE r.freelancer_id = :freelancer_id
-            ORDER BY r.created_at DESC.
+            ORDER BY r.created_at DESC
         """
         ratings_rows = db.execute_query(ratings_query, {"freelancer_id": freelancer_id})
         ratings = [dict(row) for row in ratings_rows] if ratings_rows else []

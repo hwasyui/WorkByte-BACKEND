@@ -227,7 +227,7 @@ def get_targeted_question(category: str) -> str:
             FROM ai_review_prompts
             WHERE project_category = 'general' AND is_active = TRUE
             ORDER BY RANDOM()
-            LIMIT 1.
+            LIMIT 1
             """
         )
         return fallback[0]["question_text"] if fallback else "How satisfied are you with the overall project outcome?"

@@ -9,6 +9,7 @@ from routes.contracts.contract_functions import ContractFunctions
 from routes.job_posts.job_post_functions import JobPostFunctions
 from typing import List, Optional, Dict
 import uuid
+from datetime import datetime
 
 def convert_uuids_to_str(data: Dict) -> Dict:
     """Convert all UUID objects in dict to strings."""

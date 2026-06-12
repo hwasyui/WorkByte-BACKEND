@@ -436,19 +436,32 @@ def _build_prompt(job: dict, fc: dict, past_contracts: list[dict], fx_rates: dic
     _EXP_LABEL_RAG = {1: "entry", 2: "intermediate", 3: "expert"}
     job_exp_num = _EXP_MAP_RAG.get((job.get("experience_level") or "entry").lower(), 1)
     total_jobs  = int(fc.get("total_jobs") or 0)
-    fl_exp_num  = 3 if total_jobs >= 10 else (2 if total_jobs >= 3 else 1)
+    work_exp_count = len(fc.get("work_experience") or [])
+
+    # Verified tier: driven entirely by in-platform completed contracts
+    verified_exp_num = 3 if total_jobs >= 10 else (2 if total_jobs >= 3 else 1)
+    # Unverified floor: self-reported work experience can lift to intermediate only
+    unverified_exp_num = min(2, 1 + (1 if work_exp_count >= 1 else 0))
+
+    if verified_exp_num >= unverified_exp_num:
+        fl_exp_num = verified_exp_num
+        exp_source = f"verified - {total_jobs} completed contract{'s' if total_jobs != 1 else ''}"
+    else:
+        fl_exp_num = unverified_exp_num
+        exp_source = f"self-reported, unverified - {work_exp_count} work experience entr{'ies' if work_exp_count != 1 else 'y'}"
+
     exp_delta   = fl_exp_num - job_exp_num
     if exp_delta >= 0:
         exp_fit_str = (
-            f"✓ Meets requirement ({_EXP_LABEL_RAG[fl_exp_num]} ≥ {_EXP_LABEL_RAG[job_exp_num]})"
+            f"✓ Meets requirement ({_EXP_LABEL_RAG[fl_exp_num]} ≥ {_EXP_LABEL_RAG[job_exp_num]}, {exp_source})"
         )
     elif exp_delta == -1:
         exp_fit_str = (
-            f"△ Slightly under ({_EXP_LABEL_RAG[fl_exp_num]}, job requires {_EXP_LABEL_RAG[job_exp_num]})"
+            f"△ Slightly under ({_EXP_LABEL_RAG[fl_exp_num]}, job requires {_EXP_LABEL_RAG[job_exp_num]}, {exp_source})"
         )
     else:
         exp_fit_str = (
-            f"✗ Under-qualified ({_EXP_LABEL_RAG[fl_exp_num]}, job requires {_EXP_LABEL_RAG[job_exp_num]})"
+            f"✗ Under-qualified ({_EXP_LABEL_RAG[fl_exp_num]}, job requires {_EXP_LABEL_RAG[job_exp_num]}, {exp_source})"
         )
 
     # Build context
@@ -464,8 +477,8 @@ def _build_prompt(job: dict, fc: dict, past_contracts: list[dict], fx_rates: dic
     lines.append(f"Name:         {fc.get('full_name', '')}")
     if fc.get("title"):
         lines.append(f"Title:        {fc['title']}")
-    lines.append(f"Jobs done:    {fc.get('total_jobs', 0)} completed")
-    lines.append(f"Experience:   {_EXP_LABEL_RAG[fl_exp_num]} (inferred from {total_jobs} completed jobs)")
+    lines.append(f"Jobs done:    {fc.get('total_jobs', 0)} completed in-platform")
+    lines.append(f"Experience:   {_EXP_LABEL_RAG[fl_exp_num]} ({exp_source})")
     lines.append(f"Experience fit: {exp_fit_str}")
     if fc.get("estimated_rate"):
         rate_currency = fc.get("rate_currency") or "USD"
@@ -616,29 +629,34 @@ contracts and portfolio. A freelancer with 50% required skills but directly rele
 can score higher than one with 50% skills and no demonstrated experience in the domain.
 Never give 0 unless the freelancer has absolutely nothing relevant to the role.
 
+VOICE: Write every text field in SECOND PERSON, speaking directly to the freelancer.
+Use "you", "your", "you have", "you are missing" - never "the freelancer", "they", or "their".
+Example: "Your advanced Python skills cover the core of this role." NOT "The freelancer has advanced Python skills."
+
 Respond ONLY with valid JSON (no markdown, no explanation before or after):
 {{
   "overall_match_score": <integer, score of the BEST matching role>,
   "overall_recommendation": "<apply/consider/skip, based on BEST fitting role>",
-  "overall_recommendation_reason": "<one sentence: which role(s) fit well and which don't>",
+  "overall_recommendation_reason": "<one sentence in second person: which role(s) fit you well and which don't>",
   "roles": {roles_template}
 }}
 
 Rules for EACH role object (ALL fields required, never omit):
 - match_score: integer 0-100 holistic score for THIS role
 - recommendation: "apply" if score ≥65, "consider" if 40-64, "skip" if <40
-- recommendation_reason: 2-3 sentences, cite THIS role's skill coverage, relevant past contracts
-  or portfolio items by name, and the freelancer's experience level. Be specific and detailed.
+- recommendation_reason: 2-3 sentences in second person, cite THIS role's skill coverage, relevant
+  past contracts or portfolio items by name, and your experience level. Be specific and detailed.
 - matching_skills: already filled, do NOT change
 - missing_required_skills: already filled, do NOT change
-- strengths: 3-5 detailed items specific to THIS role. For each strength, explain WHY it matters
-  for this role and reference concrete evidence (e.g. specific past contract, portfolio project,
-  proficiency level, work experience). Do not write generic statements.
-- gaps: 2-4 items about MISSING SKILLS or EXPERIENCE only, do NOT mention metrics, ratings, or
-  success rates. For each gap explain: (a) what skill/experience is missing, (b) why it matters
-  for this role, and (c) how significant it is. Write [] if there are truly no skill/experience gaps.
-- skill_tips: 2-3 specific, actionable tips for THIS role, name exact technologies, certifications,
-  or projects the freelancer should pursue to close each gap. Be concrete, not generic.
+- strengths: 3-5 detailed items in second person, specific to THIS role. For each strength, explain
+  WHY it matters for this role and reference concrete evidence (e.g. specific past contract name,
+  portfolio project name, your proficiency level, your work experience). Do not write generic statements.
+- gaps: 2-4 items in second person about MISSING SKILLS or EXPERIENCE only, do NOT mention metrics,
+  ratings, or success rates. For each gap explain: (a) what skill/experience you are missing,
+  (b) why it matters for this role, and (c) how significant it is.
+  Write [] if there are truly no skill/experience gaps.
+- skill_tips: 2-3 specific, actionable tips for THIS role addressed directly to you. Name exact
+  technologies, certifications, or project types to pursue to close each gap. Be concrete, not generic.
 
 Return ONLY the JSON."""
 

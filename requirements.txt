@@ -21,6 +21,7 @@ scikit-learn
 httpx
 groq
 sentence-transformers
+einops
 pdfplumber
 pdf2image
 easyocr

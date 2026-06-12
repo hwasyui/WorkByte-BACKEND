@@ -165,7 +165,7 @@ class UserResponseDetail(BaseModel):
 # Freelancers
 class FreelancerCreate(BaseModel):
     freelancer_id: Optional[str] = Form(None)
-    user_id: str = Form(...)
+    user_id: Optional[str] = Form(None)
     full_name: str = Form(...)
     title: Optional[str] = Form(None)
     bio: Optional[str] = Form(None)
@@ -226,6 +226,7 @@ class FreelancerUpdate(BaseModel):
     async def as_form(
         cls,
         full_name: Optional[str] = Form(None),
+        title: Optional[str] = Form(None),
         bio: Optional[str] = Form(None),
         profile_picture: Optional[UploadFile] = File(None),
         estimated_rate: Optional[float] = Form(None),
@@ -240,6 +241,8 @@ class FreelancerUpdate(BaseModel):
         data = {}
         if "full_name" in form_fields:
             data["full_name"] = full_name
+        if "title" in form_fields:
+            data["title"] = title
         if "bio" in form_fields:
             data["bio"] = bio
         if "profile_picture" in form_fields:
@@ -278,7 +281,7 @@ class FreelancerResponse(BaseModel):
 # Clients
 class ClientCreate(BaseModel):
     client_id: Optional[str] = Form(None)
-    user_id: str = Form(...)
+    user_id: Optional[str] = Form(None)
     full_name: Optional[str] = Form(None)
     bio: Optional[str] = Form(None)
     website_url: Optional[str] = Form(None)

@@ -84,14 +84,23 @@ class JobRoleSkillFunctions:
             raise
 
     @staticmethod
-    def create_job_role_skill(job_role_id: str, skill_id: str, 
+    def create_job_role_skill(job_role_id: str, skill_id: str,
                               is_required: Optional[bool] = True,
                               importance_level: Optional[str] = None) -> Dict:
-        """Create a new job role skill."""
+        """Create a new job role skill, or return existing if already attached."""
         try:
             db = get_db()
+            existing_rows = db.fetch_data(
+                table_name="job_role_skill",
+                conditions=[("job_role_id", "=", job_role_id), ("skill_id", "=", skill_id)],
+                limit=1,
+            )
+            if existing_rows:
+                logger("JOB_ROLE_SKILL_FUNCTIONS", f"Skill {skill_id} already attached to role {job_role_id}", level="INFO")
+                return convert_uuids_to_str(dict(existing_rows[0]))
+
             job_role_skill_id = str(uuid.uuid4())
-            
+
             job_role_skill_data = {
                 "job_role_skill_id": job_role_skill_id,
                 "job_role_id": job_role_id,
@@ -99,9 +108,9 @@ class JobRoleSkillFunctions:
                 "is_required": is_required,
                 "importance_level": importance_level
             }
-            
+
             db.insert_data(table_name="job_role_skill", data=job_role_skill_data)
-            
+
             logger("JOB_ROLE_SKILL_FUNCTIONS", f"Job role skill {job_role_skill_id} created", level="INFO")
             return convert_uuids_to_str(job_role_skill_data)
         

@@ -114,10 +114,10 @@ class NotificationFunctions:
                 """,
                 {"uid": user_id, "limit": limit, "offset": offset},
             )
-            logger("NOTIFICATION_FUNCTIONS", f"Fetched {len(rows)} notifications for user {user_id}", "", "INFO")
+            logger("NOTIFICATION_FUNCTIONS", f"Fetched {len(rows)} notifications for user {user_id}", level="INFO")
             return rows or []
         except Exception as e:
-            logger("NOTIFICATION_FUNCTIONS", f"Error fetching notifications: {str(e)}", "", "ERROR")
+            logger("NOTIFICATION_FUNCTIONS", f"Error fetching notifications: {str(e)}", level="ERROR")
             raise
         
     @staticmethod

@@ -170,7 +170,8 @@ class ClientFunctions:
         """Create a new client profile."""
         try:
             db = get_db()
-            client_id = str(uuid.uuid4())
+            if not client_id:
+                client_id = str(uuid.uuid4())
 
             client_data = {
                 "client_id": client_id,

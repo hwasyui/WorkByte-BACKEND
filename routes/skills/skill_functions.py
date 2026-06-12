@@ -73,7 +73,7 @@ class SkillFunctions:
                 SELECT skill_id, skill_name, skill_category, search_tokens, created_at
                 FROM skill
                 WHERE LOWER(skill_name) = LOWER(:name)
-                LIMIT 1.
+                LIMIT 1
             """
             rows = db.execute_query(query, {"name": skill_name})
 
@@ -183,7 +183,7 @@ class SkillFunctions:
                 ORDER BY
                     CASE WHEN LOWER(skill_name) LIKE :prefix THEN 0 ELSE 1 END,
                     skill_name ASC
-                LIMIT :limit.
+                LIMIT :limit
             """
 
             rows = db.execute_query(
@@ -232,7 +232,7 @@ class SkillFunctions:
                 SELECT skill_id, skill_name, skill_category, search_tokens, created_at
                 FROM skill
                 WHERE LOWER(skill_name) LIKE :prefix
-                ORDER BY skill_name ASC.
+                ORDER BY skill_name ASC
             """
 
             params = {"prefix": f"{letter.lower()}%"}

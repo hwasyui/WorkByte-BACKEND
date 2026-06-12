@@ -49,7 +49,7 @@ _JOB_POST_SELECT = """
         ) AS proposal_count
     FROM job_post jp
     LEFT JOIN job_role jr ON jr.job_post_id = jp.job_post_id
-    LEFT JOIN client c ON c.client_id = jp.client_id.
+    LEFT JOIN client c ON c.client_id = jp.client_id
 """
 
 
@@ -260,7 +260,10 @@ class JobPostFunctions:
             role_budget = role.get("role_budget")
             if role_budget is None:
                 continue
-            positions_available = max(int(role.get("positions_available") or 1), 1)
+            try:
+                positions_available = max(int(role.get("positions_available") or 1), 1)
+            except (ValueError, TypeError):
+                positions_available = 1
             budget_currency = role.get("budget_currency") or "USD"
             total_budget_usd += JobPostFunctions._to_usd_scope(float(role_budget), budget_currency) * positions_available
             has_budget = True
@@ -482,7 +485,7 @@ class JobPostFunctions:
                     FROM proposal
                     WHERE job_post_id = :job_post_id
                 )
-                WHERE job_post_id = :job_post_id.
+                WHERE job_post_id = :job_post_id
             """
             db.execute_query(query, {"job_post_id": job_post_id})
             logger("JOB_POST_FUNCTIONS",
@@ -564,7 +567,7 @@ class JobPostFunctions:
                 {where}
                 GROUP BY jp.job_post_id, c.full_name, c.profile_picture_url
                 ORDER BY {sort_col} {direction} NULLS LAST
-                LIMIT :limit OFFSET :offset.
+                LIMIT :limit OFFSET :offset
             """
             data_rows = db.execute_query(data_query, {**params, "limit": page_size, "offset": offset})
             items = [convert_uuids_to_str(dict(row)) for row in data_rows]
@@ -596,7 +599,7 @@ class JobPostFunctions:
                     OR jp.job_description ILIKE '%' || :term || '%')
                 GROUP BY jp.job_post_id, c.full_name, c.profile_picture_url
                 ORDER BY jp.created_at DESC
-                LIMIT :limit.
+                LIMIT :limit
             """
             rows = db.execute_query(query, {"term": search_term, "limit": limit})
             logger("JOB_POST_FUNCTIONS", f"search_job_posts: {len(rows)} results for '{search_term}'", level="INFO")
@@ -635,7 +638,7 @@ class JobPostFunctions:
             db = get_db()
             query = _JOB_POST_SELECT + """
                 WHERE jp.job_post_id = :job_post_id
-                GROUP BY jp.job_post_id, c.full_name, c.profile_picture_url.
+                GROUP BY jp.job_post_id, c.full_name, c.profile_picture_url
             """
             rows = db.execute_query(query, {"job_post_id": job_post_id})
 
@@ -661,7 +664,7 @@ class JobPostFunctions:
             query = _JOB_POST_SELECT + """
                 WHERE jp.client_id = :client_id
                 GROUP BY jp.job_post_id, c.full_name, c.profile_picture_url
-                ORDER BY jp.created_at DESC.
+                ORDER BY jp.created_at DESC
             """
             rows = db.execute_query(query, {"client_id": client_id})
 
@@ -685,7 +688,7 @@ class JobPostFunctions:
                 FROM job_post jp
                 WHERE jp.status = 'active'
                 GROUP BY jp.project_category
-                ORDER BY count DESC.
+                ORDER BY count DESC
             """
             rows = db.execute_query(query)
             return [{"category": row["category"], "count": int(row["count"])} for row in rows]
