@@ -15,7 +15,7 @@ from functions.schema_model import (
 from functions.authentication import get_current_user, verify_token, get_user
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
-from functions.supabase_client import upload_thread_attachment, guess_mime
+from functions.minio_client import upload_thread_attachment, guess_mime, resolve_file_url, BUCKET_MESSAGE_ATTACHMENTS
 from routes.dm.dm_functions import DMFunctions
 from routes.notifications.notification_functions import NotificationFunctions
 from routes.freelancers.freelancer_functions import FreelancerFunctions
@@ -24,6 +24,13 @@ from routes.admin.admin_moderation import scan_harmful_text_with_ml_fallback
 
 
 dm_router = APIRouter(prefix="/dm", tags=["Direct Messages"])
+
+
+def _resolve_msg_attachment_urls(msg: dict) -> dict:
+    for att in msg.get("attachments", []):
+        if att.get("file_url"):
+            att["file_url"] = resolve_file_url(BUCKET_MESSAGE_ATTACHMENTS, att["file_url"])
+    return msg
 
 
 def _classify_file_type(mime_type: str, is_voice_note: bool = False) -> str:
@@ -289,6 +296,7 @@ async def get_messages(
         messages, has_more, next_cursor = DMFunctions.get_messages(
             thread_id, limit=limit, before=before
         )
+        messages = [_resolve_msg_attachment_urls(m) for m in messages]
         return ResponseSchema.success(
             {"messages": messages, "has_more": has_more, "next_cursor": next_cursor}, 200
         )
@@ -408,6 +416,7 @@ async def send_message_with_attachment(
             )
             msgs, _, _ = DMFunctions.get_messages(thread_id, limit=1)
             msg = next((m for m in msgs if m["dm_message_id"] == msg["dm_message_id"]), msg)
+            msg = _resolve_msg_attachment_urls(msg)
 
         logger("DM", f"Message+attachment sent in thread {thread_id} by {current_user.user_id}", "POST /dm/threads/{thread_id}/messages/upload", "INFO")
         await _manager.broadcast(thread_id, msg)

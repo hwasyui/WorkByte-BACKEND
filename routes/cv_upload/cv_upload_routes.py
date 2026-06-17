@@ -10,7 +10,7 @@ from functions.authentication import get_freelancer_user
 from functions.schema_model import CVUploadRequest, CVApplyRequest, UserInDB
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
-from functions.supabase_client import upload_cv_file, guess_mime
+from functions.minio_client import upload_cv_file, guess_mime
 from routes.freelancers.freelancer_functions import FreelancerFunctions
 from routes.skills.skill_functions import SkillFunctions
 from routes.freelancer_skills.freelancer_skill_functions import FreelancerSkillFunctions

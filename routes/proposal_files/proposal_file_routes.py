@@ -11,17 +11,23 @@ from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.proposal_files.proposal_file_functions import ProposalFileFunctions
 from routes.proposals.proposal_functions import ProposalFunctions
-from functions.supabase_client import upload_proposal_file
+from functions.minio_client import upload_proposal_file, resolve_file_url, BUCKET_PROPOSAL_FILES
 from mimetypes import guess_type as guess_mime
 
 proposal_file_router = APIRouter(prefix="/proposal-files", tags=["Proposal Files"])
+
+
+def _resolve(pf: dict) -> dict:
+    if pf and pf.get("file_url"):
+        pf["file_url"] = resolve_file_url(BUCKET_PROPOSAL_FILES, pf["file_url"])
+    return pf
 
 
 @proposal_file_router.get("", response_model=List[ProposalFileResponse])
 async def get_all_proposal_files(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
     """Fetch all proposal files - Authenticated users only - JSON response."""
     try:
-        proposal_files = ProposalFileFunctions.get_all_proposal_files(limit=limit)
+        proposal_files = [_resolve(pf) for pf in ProposalFileFunctions.get_all_proposal_files(limit=limit)]
         success_msg = f"Retrieved {len(proposal_files)} proposal files" + (f" (limit: {limit})" if limit else "")
         logger("PROPOSAL_FILE", success_msg, "GET /proposal-files", "INFO")
         return ResponseSchema.success(proposal_files, 200)
@@ -42,7 +48,7 @@ async def get_proposal_file(proposal_file_id: str, current_user: UserInDB = Depe
             return ResponseSchema.error(error_msg, 404)
         success_msg = f"Retrieved proposal file {proposal_file_id}"
         logger("PROPOSAL_FILE", success_msg, "GET /proposal-files/{proposal_file_id}", "INFO")
-        return ResponseSchema.success(proposal_file, 200)
+        return ResponseSchema.success(_resolve(proposal_file), 200)
     except Exception as e:
         error_msg = f"Failed to fetch proposal file {proposal_file_id}: {str(e)}"
         logger("PROPOSAL_FILE", error_msg, "GET /proposal-files/{proposal_file_id}", "ERROR")
@@ -53,7 +59,7 @@ async def get_proposal_file(proposal_file_id: str, current_user: UserInDB = Depe
 async def get_proposal_files_by_proposal(proposal_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Fetch all files for a specific proposal - Authenticated users only - JSON response."""
     try:
-        proposal_files = ProposalFileFunctions.get_proposal_files_by_proposal_id(proposal_id)
+        proposal_files = [_resolve(pf) for pf in ProposalFileFunctions.get_proposal_files_by_proposal_id(proposal_id)]
         success_msg = f"Retrieved {len(proposal_files)} files for proposal {proposal_id}"
         logger("PROPOSAL_FILE", success_msg, "GET /proposal-files/proposal/{proposal_id}", "INFO")
         return ResponseSchema.success(proposal_files, 200)
@@ -101,7 +107,7 @@ async def create_proposal_file(
                 file_bytes=upload["file_bytes"],
                 content_type=upload["file_type"],
             )
-            created_files.append(
+            created_files.append(_resolve(
                 ProposalFileFunctions.create_proposal_file(
                     proposal_id=proposal_id,
                     file_url=file_url,
@@ -109,7 +115,7 @@ async def create_proposal_file(
                     file_name=upload["file_name"],
                     file_size=upload["file_size"],
                 )
-            )
+            ))
 
         success_msg = f"Created {len(created_files)} proposal file(s) for proposal {proposal_id}"
         logger("PROPOSAL_FILE", success_msg, "POST /proposal-files", "INFO")

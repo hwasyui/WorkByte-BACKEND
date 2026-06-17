@@ -6,7 +6,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 from typing import Optional, Dict, List
 from functions.db_manager import get_db
 from functions.logger import logger
-from functions.supabase_client import upload_file, create_signed_url
+from functions.minio_client import upload_file, create_signed_url
 from routes.contracts.contract_functions import ContractFunctions
 from routes.clients.client_functions import ClientFunctions
 from routes.freelancers.freelancer_functions import FreelancerFunctions

@@ -1,25 +1,29 @@
 import os
 import mimetypes
+from io import BytesIO
+from minio import Minio
+from minio.error import S3Error
 from dotenv import load_dotenv
 
 load_dotenv()
 
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+MINIO_ENDPOINT        = os.getenv("MINIO_ENDPOINT", "localhost:9000")
+MINIO_ACCESS_KEY      = os.getenv("MINIO_ACCESS_KEY", "capstone")
+MINIO_SECRET_KEY      = os.getenv("MINIO_SECRET_KEY", "capstone")
+MINIO_SECURE          = os.getenv("MINIO_SECURE", "false").lower() == "true"
+MINIO_PUBLIC_BASE     = os.getenv("MINIO_PUBLIC_BASE_URL", "https://workbyte.angelica-whiharto.com/storage")
+BACKEND_PUBLIC_URL    = os.getenv("BACKEND_PUBLIC_URL", "https://workbyte.angelica-whiharto.com").rstrip("/")
 
-if not SUPABASE_URL or not SUPABASE_KEY:
-    raise ValueError("SUPABASE_URL and SUPABASE_KEY must be set in environment variables")
+_client = Minio(
+    MINIO_ENDPOINT,
+    access_key=MINIO_ACCESS_KEY,
+    secret_key=MINIO_SECRET_KEY,
+    secure=MINIO_SECURE,
+)
 
-try:
-    from supabase import create_client
-except ImportError as exc:
-    raise ImportError(
-        "The supabase package is required. Install it with: pip install supabase"
-    ) from exc
+PRIVATE_BUCKETS = {"contract-assets", "contract-submissions", "message-attachments", "proposal-files"}
 
-supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-
-BUCKET_JOB_FILES            = os.getenv("SUPABASE_STORAGE_BUCKET", "job-files")
+BUCKET_JOB_FILES            = "job-files"
 BUCKET_PROPOSAL_FILES       = "proposal-files"
 BUCKET_USER_ASSETS          = "user-assets"
 BUCKET_CONTRACT_SUBMISSIONS = "contract-submissions"
@@ -33,17 +37,9 @@ BUCKET_MAP = {
     "message-attachments":  BUCKET_MESSAGE_ATTACHMENTS,
 }
 
+
 def guess_mime(filename: str, fallback: str = "application/octet-stream") -> str:
-    """Guess MIME type from filename."""
     return mimetypes.guess_type(filename)[0] or fallback
-
-
-def ensure_bucket(bucket_name: str, public: bool = True) -> None:
-    """Create a storage bucket if it does not already exist."""
-    try:
-        supabase.storage.create_bucket(bucket_name, options={"public": public})
-    except Exception:
-        pass  # already exists; upload will surface any real error
 
 
 def upload_file(
@@ -53,47 +49,70 @@ def upload_file(
     content_type: str = "application/octet-stream",
     upsert: bool = True,
 ) -> str:
-    """Upload bytes to any bucket, returns public URL."""
-    storage = supabase.storage.from_(bucket)
+    """Upload bytes to a bucket. Returns public URL for public buckets, storage path for private buckets."""
+    try:
+        _client.put_object(
+            bucket, path, BytesIO(file_bytes), len(file_bytes),
+            content_type=content_type,
+        )
+    except S3Error as e:
+        raise RuntimeError(f"MinIO upload failed [{bucket}/{path}]: {e}")
 
-    if upsert:
-        try:
-            storage.remove([path])
-        except Exception:
-            pass 
-
-    response = storage.upload(path, file_bytes, file_options={"content-type": content_type})
-    if getattr(response, "error", None):
-        raise RuntimeError(f"Supabase upload failed [{bucket}/{path}]: {response.error}")
-
-    return supabase.storage.from_(bucket).get_public_url(path)
+    if bucket in PRIVATE_BUCKETS:
+        return path
+    return f"{MINIO_PUBLIC_BASE}/{bucket}/{path}"
 
 
 def delete_file(bucket: str, path: str) -> None:
-    """Delete a file from any bucket."""
-    supabase.storage.from_(bucket).remove([path])
+    """Delete a file. Accepts either a full URL or a raw storage path."""
+    if path.startswith("http"):
+        marker = f"/{bucket}/"
+        if marker in path:
+            path = path.split(marker, 1)[1]
+    try:
+        _client.remove_object(bucket, path)
+    except S3Error as e:
+        raise RuntimeError(f"MinIO delete failed [{bucket}/{path}]: {e}")
 
 
 def download_file(bucket: str, path: str) -> bytes:
-    """Download bytes from any bucket."""
-    storage = supabase.storage.from_(bucket)
-    response = storage.download(path)
-    if getattr(response, "error", None):
-        raise RuntimeError(f"Supabase download failed [{bucket}/{path}]: {response.error}")
-    return response
+    """Download and return file bytes from any bucket."""
+    response = None
+    try:
+        response = _client.get_object(bucket, path)
+        return response.read()
+    except S3Error as e:
+        raise RuntimeError(f"MinIO download failed [{bucket}/{path}]: {e}")
+    finally:
+        if response:
+            try:
+                response.close()
+                response.release_conn()
+            except Exception:
+                pass
+
+
+def get_file_proxy_url(bucket: str, path: str) -> str:
+    """Return the backend-proxied URL for a private file. Flutter must send JWT to access it."""
+    return f"{BACKEND_PUBLIC_URL}/files/{bucket}/{path}"
 
 
 def create_signed_url(bucket: str, path: str, expires_in: int = 3600) -> str:
-    """Create a signed temporary URL for a private storage object."""
-    storage = supabase.storage.from_(bucket)
-    response = storage.create_signed_url(path, expires_in)
-    if getattr(response, "error", None):
-        raise RuntimeError(f"Supabase signed URL failed: {response.error}")
-    signed_url = response.get("signedURL") or response.get("signedUrl")
-    if not signed_url:
-        raise RuntimeError("Signed URL response did not contain a URL")
-    return signed_url
+    """Compatibility shim used by contract_generation_functions. Returns a backend proxy URL."""
+    return get_file_proxy_url(bucket, path)
 
+
+def resolve_file_url(bucket: str, stored_value: str) -> str:
+    """Convert a stored DB value to a usable URL for Flutter.
+    - Already a URL (old Supabase or public MinIO): return as-is
+    - Raw path in a private bucket: return backend proxy URL
+    - Raw path in a public bucket: return public MinIO URL
+    """
+    if not stored_value or stored_value.startswith("http"):
+        return stored_value
+    if bucket in PRIVATE_BUCKETS:
+        return get_file_proxy_url(bucket, stored_value)
+    return f"{MINIO_PUBLIC_BASE}/{bucket}/{stored_value}"
 
 def upload_proposal_file(proposal_id: str, file_name: str, file_bytes: bytes, content_type: str = None) -> str:
     return upload_file(
@@ -121,9 +140,8 @@ def upload_cv_file(path: str, file_bytes: bytes, content_type: str = None) -> st
         content_type=content_type or guess_mime(path),
     )
 
-
 def upload_freelancer_profile_picture(freelancer_id: str, file_name: str, file_bytes: bytes, content_type: str = None) -> str:
-    ext = file_name.split('.')[-1] if '.' in file_name else 'jpg'
+    ext = file_name.split(".")[-1] if "." in file_name else "jpg"
     path = f"avatars/{freelancer_id}.{ext}"
     return upload_file(
         bucket=BUCKET_USER_ASSETS,
@@ -132,9 +150,8 @@ def upload_freelancer_profile_picture(freelancer_id: str, file_name: str, file_b
         content_type=content_type or guess_mime(file_name),
     )
 
-
 def upload_client_profile_picture(client_id: str, file_name: str, file_bytes: bytes, content_type: str = None) -> str:
-    ext = file_name.split('.')[-1] if '.' in file_name else 'jpg'
+    ext = file_name.split(".")[-1] if "." in file_name else "jpg"
     path = f"avatars/{client_id}.{ext}"
     return upload_file(
         bucket=BUCKET_USER_ASSETS,
@@ -151,10 +168,7 @@ def upload_contract_submission_file(contract_id: str, submission_id: str, file_n
         content_type=content_type or guess_mime(file_name),
     )
 
-
 def upload_thread_attachment(thread_id: str, message_id: str, file_name: str, file_bytes: bytes, content_type: str = None) -> str:
-    """Upload a message attachment (DM or contract chat). Stored at {thread_id}/{message_id}/{file_name}."""
-    ensure_bucket(BUCKET_MESSAGE_ATTACHMENTS, public=True)
     return upload_file(
         bucket=BUCKET_MESSAGE_ATTACHMENTS,
         path=f"{thread_id}/{message_id}/{file_name}",

@@ -15,8 +15,8 @@ BANNER_FILENAME = "Verify email UI.png"
 LOGO_FILENAME = "Verify email UI (1).png"
 BANNER_ASSET = os.path.join(ASSETS_DIR, BANNER_FILENAME)
 LOGO_ASSET = os.path.join(ASSETS_DIR, LOGO_FILENAME)
-DEFAULT_BANNER_URL = "https://rsiiaiehqfwpdinhtmkc.supabase.co/storage/v1/object/public/email/banner.png"
-DEFAULT_LOGO_URL = "https://rsiiaiehqfwpdinhtmkc.supabase.co/storage/v1/object/public/email/logo.png"
+DEFAULT_BANNER_URL = "https://workbyte.angelica-whiharto.com/storage/email/banner.png"
+DEFAULT_LOGO_URL = "https://workbyte.angelica-whiharto.com/storage/email/logo.png"
 
 
 def _expiry_label(minutes: str) -> str:

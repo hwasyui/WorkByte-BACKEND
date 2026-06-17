@@ -11,7 +11,7 @@ argon2-cffi
 python-dotenv
 pydantic[email]
 reportlab
-supabase
+minio
 numpy
 pandas
 joblib

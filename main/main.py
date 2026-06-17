@@ -36,7 +36,7 @@ from routes.ratings.rating_routes import rating_router
 from routes.performance_ratings.performance_rating_routes import performance_rating_router
 from routes.client_trust_scores.client_trust_score_routes import client_trust_score_router
 from routes.dm.dm_routes import dm_router
-from routes.upload.upload_route import upload_router
+from routes.upload.upload_route import upload_router, files_router
 from routes.cv_upload.cv_upload_routes import cv_upload_router
 from routes.contract_submissions.contract_submission_routes import contract_submission_router
 from routes.reviews.review_routes import review_router
@@ -159,6 +159,7 @@ app.include_router(performance_rating_router)
 app.include_router(client_trust_score_router)
 app.include_router(dm_router)
 app.include_router(upload_router)
+app.include_router(files_router)
 app.include_router(cv_upload_router)
 app.include_router(cv_analysis_router)
 app.include_router(contract_submission_router)

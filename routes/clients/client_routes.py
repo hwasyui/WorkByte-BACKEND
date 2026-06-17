@@ -13,7 +13,7 @@ from functions.access_control import assert_client_owns, get_client_profile_for_
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.clients.client_functions import ClientFunctions
-from functions.supabase_client import upload_client_profile_picture, delete_file, BUCKET_USER_ASSETS
+from functions.minio_client import upload_client_profile_picture, delete_file, BUCKET_USER_ASSETS
 from mimetypes import guess_type as guess_mime
 from routes.admin.admin_functions import queue_harmful_text_scan
 

@@ -5,7 +5,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 
 import json
 from fastapi import APIRouter, Body, Depends, Response, BackgroundTasks
-from functions.supabase_client import download_file
+from functions.minio_client import download_file
 from routes.reviews.review_routes import trigger_review_pipeline_on_completion
 from typing import List, Optional
 import uuid

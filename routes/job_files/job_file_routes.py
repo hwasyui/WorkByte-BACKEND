@@ -11,7 +11,7 @@ from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.job_files.job_file_functions import JobFileFunctions
 from routes.job_posts.job_post_functions import JobPostFunctions
-from functions.supabase_client import upload_job_file
+from functions.minio_client import upload_job_file
 from mimetypes import guess_type as guess_mime
 
 job_file_router = APIRouter(prefix="/job-files", tags=["Job Files"])

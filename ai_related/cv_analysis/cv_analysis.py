@@ -310,7 +310,9 @@ async def analyze_cv_with_llm(
     )
 
     try:
-        result = _call_groq(system, user, json_mode=True, max_tokens=1800)
+        result = _call_groq(system, user, json_mode=True, max_tokens=2500)
+        if not isinstance(result, dict):
+            raise ValueError(f"LLM returned {type(result).__name__} instead of dict")
         return {
             "resume_score": max(0, min(100, int(result.get("resume_score", 50)))),
             "overall_assessment": str(result.get("overall_assessment", "")),
@@ -386,7 +388,7 @@ async def parse_cv_for_profile(cv_text: str) -> Dict[str, Any]:
     )
 
     user = (
-        f"=== CV TEXT ===\n{cv_text[:4000]}\n\n"
+        f"=== CV TEXT ===\n{cv_text[:2500]}\n\n"
         "Extract the following fields from this CV and return exactly one JSON object:\n"
         f"{json.dumps(schema_example, ensure_ascii=False)}\n\n"
         "Rules:\n"
@@ -401,7 +403,7 @@ async def parse_cv_for_profile(cv_text: str) -> Dict[str, Any]:
 
     groq_result: Dict[str, Any] = {}
     try:
-        groq_result = _call_groq(system, user, json_mode=True, max_tokens=2000)
+        groq_result = _call_groq(system, user, json_mode=True, max_tokens=3000)
         logger(
             "CV_ANALYSIS",
             f"GROQ extracted skills={len(groq_result.get('skills', []))} "

@@ -14,7 +14,7 @@ from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.freelancers.freelancer_functions import FreelancerFunctions, get_comprehensive_freelancer_profile
 from ai_related.job_engine.embedding_manager import mark_freelancer_dirty
-from functions.supabase_client import upload_freelancer_profile_picture, delete_file, BUCKET_USER_ASSETS
+from functions.minio_client import upload_freelancer_profile_picture, delete_file, BUCKET_USER_ASSETS
 from mimetypes import guess_type as guess_mime
 from ai_related.cv_analysis.cv_analysis import parse_cv_for_profile
 from routes.cv_upload.cv_upload_functions import (
@@ -417,15 +417,10 @@ async def delete_freelancer_profile_picture(
         if not profile_picture_url:
             return ResponseSchema.error("No profile picture to delete", 400)
 
-        # Extract path from URL or assume path
-        # Since URL is public URL, path is after bucket
-        # e.g., https://xxx.supabase.co/storage/v1/object/public/user-assets/avatars/123.jpg
-        # path = avatars/123.jpg
         if "user-assets/" in profile_picture_url:
             path = profile_picture_url.split("user-assets/")[-1]
         else:
-            # Fallback, assume path from upload function
-            path = f"avatars/{current_user.user_id}.jpg"  # or whatever ext, but since delete, maybe try common exts
+            path = f"avatars/{current_user.user_id}.jpg"
 
         try:
             delete_file(BUCKET_USER_ASSETS, path)

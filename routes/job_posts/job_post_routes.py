@@ -132,7 +132,7 @@ async def get_popular_jobs(
 ):
     """Active jobs ranked by proposal count then view count. Optional category filter."""
     try:
-        result = JobPostFunctions.browse_job_posts(
+        paginated = JobPostFunctions.browse_job_posts(
             status="active",
             order_by="proposal_count",
             order_dir="desc",
@@ -140,31 +140,29 @@ async def get_popular_jobs(
             page_size=page_size,
             category=category,
         )
+        items = paginated.get("items", [])
 
         # If every returned job has zero proposals, fall back to ordering by view_count.
-        try:
-            if result and all(int(item.get("proposal_count", 0)) == 0 for item in result):
-                result = JobPostFunctions.browse_job_posts(
-                    status="active",
-                    order_by="view_count",
-                    order_dir="desc",
-                    page=page,
-                    page_size=page_size,
-                    category=category,
-                )
-                logger(
-                    "JOB_POST",
-                    f"Popular jobs: all proposals 0, fell back to view_count: page={page} category={category}",
-                    "GET /job-posts/popular",
-                    "INFO",
-                )
-            else:
-                logger("JOB_POST", f"Popular jobs fetched: page={page} category={category}", "GET /job-posts/popular", "INFO")
-        except Exception:
-            # In case proposal_count values are unexpected, log and return the original result.
-            logger("JOB_POST", f"Popular jobs fetched (fallback check failed): page={page} category={category}", "GET /job-posts/popular", "WARNING")
+        if items and all(int(item.get("proposal_count", 0)) == 0 for item in items):
+            fallback = JobPostFunctions.browse_job_posts(
+                status="active",
+                order_by="view_count",
+                order_dir="desc",
+                page=page,
+                page_size=page_size,
+                category=category,
+            )
+            items = fallback.get("items", [])
+            logger(
+                "JOB_POST",
+                f"Popular jobs: all proposals 0, fell back to view_count: page={page} category={category}",
+                "GET /job-posts/popular",
+                "INFO",
+            )
+        else:
+            logger("JOB_POST", f"Popular jobs fetched: page={page} category={category}", "GET /job-posts/popular", "INFO")
 
-        return ResponseSchema.success(result, 200)
+        return ResponseSchema.success(items, 200)
     except Exception as e:
         logger("JOB_POST", f"Failed to fetch popular jobs: {str(e)}", "GET /job-posts/popular", "ERROR")
         return ResponseSchema.error(f"Failed to fetch popular jobs: {str(e)}", 500)

@@ -9,7 +9,7 @@ from functions.schema_model import RevisionRequest, UserInDB
 from functions.authentication import get_current_user
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
-from functions.supabase_client import upload_contract_submission_file, guess_mime
+from functions.minio_client import upload_contract_submission_file, guess_mime, resolve_file_url, BUCKET_CONTRACT_SUBMISSIONS
 from routes.contract_submissions.contract_submission_functions import ContractSubmissionFunctions
 from routes.freelancers.freelancer_functions import FreelancerFunctions
 from routes.clients.client_functions import ClientFunctions
@@ -21,6 +21,13 @@ contract_submission_router = APIRouter(
     prefix="/contract-submissions",
     tags=["Contract Submissions"],
 )
+
+
+def _resolve_submission_urls(submission: dict) -> dict:
+    for f in submission.get("files", []):
+        if f.get("file_url"):
+            f["file_url"] = resolve_file_url(BUCKET_CONTRACT_SUBMISSIONS, f["file_url"])
+    return submission
 
 ALLOWED_EXTENSIONS = {"pdf", "doc", "docx", "png", "jpg", "jpeg", "zip"}
 MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB per file
@@ -108,7 +115,7 @@ async def create_contract_submission(
                 mime_type=item["content_type"],
             )
 
-        full_submission = ContractSubmissionFunctions.get_submission_by_id(submission_id)
+        full_submission = _resolve_submission_urls(ContractSubmissionFunctions.get_submission_by_id(submission_id))
 
         # Notify client that work has been submitted
         try:
@@ -154,7 +161,7 @@ async def get_submissions_by_contract(
         if not is_party:
             return ResponseSchema.error("Unauthorized to view these submissions", 403)
 
-        submissions = ContractSubmissionFunctions.get_submissions_by_contract_id(contract_id)
+        submissions = [_resolve_submission_urls(s) for s in ContractSubmissionFunctions.get_submissions_by_contract_id(contract_id)]
         logger("CONTRACT_SUBMISSION", f"Retrieved {len(submissions)} submissions for contract {contract_id}", "GET /contract-submissions/contract/{contract_id}", "INFO")
         return ResponseSchema.success(submissions, 200)
 
@@ -190,6 +197,7 @@ async def request_revision_for_latest_submission(
         )
         if not latest_submission:
             return ResponseSchema.error("No submission found for this contract", 404)
+        latest_submission = _resolve_submission_urls(latest_submission)
 
         # Notify freelancer of revision request
         try:
@@ -239,6 +247,7 @@ async def approve_latest_submission(
         )
         if not latest_submission:
             return ResponseSchema.error("No submission found for this contract", 404)
+        latest_submission = _resolve_submission_urls(latest_submission)
 
         await trigger_review_pipeline_on_completion(contract_id, background_tasks)
 
