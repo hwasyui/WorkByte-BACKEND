@@ -329,17 +329,27 @@ async def analyze_cv_with_llm(
 
 async def parse_cv_for_profile(cv_text: str) -> Dict[str, Any]:
     """
-    Parse CV text into structured profile fields.
-    Returns suggested data the frontend can offer as profile auto-fill.
+    Hybrid CV parser: RoBERTa NER extracts bio/name/contact, GROQ extracts
+    structured fields (skills, work_experience, education, languages).
     """
-    system = (
-        "You are an expert at parsing CVs and resumes into structured data. "
-        "Extract profile information and return valid JSON only. "
-        "Do not include markdown fences, explanations, or any text outside the JSON."
-    )
+    # Step 1: RoBERTa for bio and contact entities
+    suggested_bio = ""
+    try:
+        from routes.cv_upload.cv_parser_roberta import parse_cv_with_roberta
+        roberta_result = parse_cv_with_roberta(cv_text)
+        suggested_bio = roberta_result.get("suggested_bio", "")
+        logger(
+            "CV_ANALYSIS",
+            f"RoBERTa extracted bio={'yes' if suggested_bio else 'no'} "
+            f"| roberta_skills={len(roberta_result.get('skills', []))} "
+            f"| roberta_exp={len(roberta_result.get('work_experience', []))}",
+            level="INFO",
+        )
+    except Exception as e:
+        logger("CV_ANALYSIS", f"RoBERTa extraction failed: {e}", level="WARNING")
 
+    # Step 2: GROQ for structured fields
     schema_example = {
-        "suggested_bio": "Professional bio derived from CV content in 2-3 sentences...",
         "skills": ["Python", "FastAPI", "React", "PostgreSQL"],
         "languages": [
             {"name": "English", "proficiency": "fluent"},
@@ -369,12 +379,17 @@ async def parse_cv_for_profile(cv_text: str) -> Dict[str, Any]:
         ]
     }
 
+    system = (
+        "You are an expert at parsing CVs into structured data. "
+        "Extract the requested fields and return valid JSON only. "
+        "Do not include markdown fences, explanations, or any text outside the JSON."
+    )
+
     user = (
         f"=== CV TEXT ===\n{cv_text[:4000]}\n\n"
-        "Parse this CV and return exactly one JSON object matching this structure:\n"
+        "Extract the following fields from this CV and return exactly one JSON object:\n"
         f"{json.dumps(schema_example, ensure_ascii=False)}\n\n"
         "Rules:\n"
-        "- suggested_bio: 2-3 sentence professional summary derived from CV content\n"
         "- skills: all technical and relevant soft skills mentioned\n"
         "- languages proficiency must be one of: basic, conversational, fluent, native\n"
         "- dates: use YYYY-MM format when month is known, YYYY when only year is known\n"
@@ -384,12 +399,29 @@ async def parse_cv_for_profile(cv_text: str) -> Dict[str, Any]:
         "- Return only the JSON object, nothing else"
     )
 
+    groq_result: Dict[str, Any] = {}
     try:
-        result = _call_groq(system, user, json_mode=True, max_tokens=2000)
-        return result
+        groq_result = _call_groq(system, user, json_mode=True, max_tokens=2000)
+        logger(
+            "CV_ANALYSIS",
+            f"GROQ extracted skills={len(groq_result.get('skills', []))} "
+            f"| exp={len(groq_result.get('work_experience', []))} "
+            f"| edu={len(groq_result.get('education', []))}",
+            level="INFO",
+        )
     except Exception as e:
-        logger("CV_ANALYSIS", f"CV profile parsing failed: {e}", level="ERROR")
-        return {}
+        logger("CV_ANALYSIS", f"GROQ structured extraction failed: {e}", level="ERROR")
+
+    # Merge: bio from RoBERTa (fallback to GROQ if empty), rest from GROQ
+    bio = suggested_bio or groq_result.get("suggested_bio", "")
+
+    return {
+        "suggested_bio": bio,
+        "skills": groq_result.get("skills", []),
+        "languages": groq_result.get("languages", []),
+        "work_experience": groq_result.get("work_experience", []),
+        "education": groq_result.get("education", []),
+    }
 
 
 async def build_cv_recommendations(

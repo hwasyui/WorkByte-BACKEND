@@ -566,7 +566,7 @@ class JobPostFunctions:
             data_query = _JOB_POST_SELECT + f"""
                 {where}
                 GROUP BY jp.job_post_id, c.full_name, c.profile_picture_url
-                ORDER BY {sort_col} {direction} NULLS LAST
+                ORDER BY {sort_col} {direction} NULLS LAST, jp.view_count DESC, jp.created_at DESC
                 LIMIT :limit OFFSET :offset
             """
             data_rows = db.execute_query(data_query, {**params, "limit": page_size, "offset": offset})
@@ -655,6 +655,17 @@ class JobPostFunctions:
             logger("JOB_POST_FUNCTIONS", f"Error fetching job post: {str(e)}", level="ERROR")
             raise
 
+    @staticmethod
+    def increment_view_count(job_post_id: str) -> None:
+        try:
+            db = get_db()
+            db.execute_query(
+                "UPDATE job_post SET view_count = view_count + 1 WHERE job_post_id = :job_post_id",
+                {"job_post_id": job_post_id},
+            )
+        except Exception as e:
+            logger("JOB_POST_FUNCTIONS", f"Error incrementing view_count for {job_post_id}: {str(e)}", level="ERROR")
+            raise
 
     @staticmethod
     def get_job_posts_by_client_id(client_id: str) -> List[Dict]:

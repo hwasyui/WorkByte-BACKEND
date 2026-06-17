@@ -140,7 +140,30 @@ async def get_popular_jobs(
             page_size=page_size,
             category=category,
         )
-        logger("JOB_POST", f"Popular jobs fetched: page={page} category={category}", "GET /job-posts/popular", "INFO")
+
+        # If every returned job has zero proposals, fall back to ordering by view_count.
+        try:
+            if result and all(int(item.get("proposal_count", 0)) == 0 for item in result):
+                result = JobPostFunctions.browse_job_posts(
+                    status="active",
+                    order_by="view_count",
+                    order_dir="desc",
+                    page=page,
+                    page_size=page_size,
+                    category=category,
+                )
+                logger(
+                    "JOB_POST",
+                    f"Popular jobs: all proposals 0, fell back to view_count: page={page} category={category}",
+                    "GET /job-posts/popular",
+                    "INFO",
+                )
+            else:
+                logger("JOB_POST", f"Popular jobs fetched: page={page} category={category}", "GET /job-posts/popular", "INFO")
+        except Exception:
+            # In case proposal_count values are unexpected, log and return the original result.
+            logger("JOB_POST", f"Popular jobs fetched (fallback check failed): page={page} category={category}", "GET /job-posts/popular", "WARNING")
+
         return ResponseSchema.success(result, 200)
     except Exception as e:
         logger("JOB_POST", f"Failed to fetch popular jobs: {str(e)}", "GET /job-posts/popular", "ERROR")
@@ -281,6 +304,7 @@ async def get_job_post(job_post_id: str, current_user: UserInDB = Depends(get_cu
             error_msg = f"Job post {job_post_id} not found"
             logger("JOB_POST", error_msg, "GET /job-posts/{job_post_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
+        JobPostFunctions.increment_view_count(job_post_id)
         success_msg = f"Retrieved job post {job_post_id}"
         logger("JOB_POST", success_msg, "GET /job-posts/{job_post_id}", "INFO")
         return ResponseSchema.success(job_post, 200)

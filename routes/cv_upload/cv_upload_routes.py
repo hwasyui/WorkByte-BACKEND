@@ -91,12 +91,16 @@ async def upload_and_analyze_cv(
 
         logger("CV_UPLOAD", f"Extracted {len(raw_text)} chars from CV", level="DEBUG")
 
-        # Step 2: Store file in Supabase
+        # Step 2: Store file in Supabase (non-fatal — parsing continues if storage is unreachable)
         safe_name = re.sub(r"[^A-Za-z0-9._-]+", "_", original_name).strip("._")
         storage_path = f"cvs/{freelancer_id}/{safe_name}"
-        public_url = upload_cv_file(path=storage_path, file_bytes=contents, content_type=mime)
-        FreelancerFunctions.update_freelancer(freelancer_id, {"cv_file_url": public_url})
-        logger("CV_UPLOAD", f"CV stored: {public_url}", level="DEBUG")
+        public_url = None
+        try:
+            public_url = upload_cv_file(path=storage_path, file_bytes=contents, content_type=mime)
+            FreelancerFunctions.update_freelancer(freelancer_id, {"cv_file_url": public_url})
+            logger("CV_UPLOAD", f"CV stored: {public_url}", level="DEBUG")
+        except Exception as upload_err:
+            logger("CV_UPLOAD", f"CV storage upload failed (continuing): {upload_err}", level="WARNING")
 
         # Step 3: Check if profile is meaningfully empty
         has_bio = bool(freelancer.get("bio"))
