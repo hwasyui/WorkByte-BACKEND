@@ -45,6 +45,7 @@ from ai_related.cv_analysis.cv_analysis_routes import cv_analysis_router
 from ai_related.harmful_text_detection.harmful_text_routes import harmful_text_router
 from routes.admin.admin_routes import admin_router, reports_router, appeals_router
 from routes.notifications.notification_routes import notification_router
+from routes.share.share_routes import share_router
 
 
 @asynccontextmanager
@@ -68,9 +69,6 @@ async def lifespan(app: FastAPI):
     sweep_task = asyncio.create_task(embedding_sweep_loop())
     logger("LIFESPAN", "Embedding sweep worker started (handles dirty records and manual /embed/ calls regardless of mode)", level="INFO")
 
-    # Load AI models in the background at startup so the first real request
-    # doesn't hit a cold-start delay. Each model loads weights from disk and
-    # can take several seconds on first use.
     def _warmup_harmful_text():
         try:
             from ai_related.harmful_text_detection.model_inference import load_model
@@ -171,6 +169,7 @@ app.include_router(admin_router)
 app.include_router(reports_router)
 app.include_router(appeals_router)
 app.include_router(notification_router)
+app.include_router(share_router)
 
 
 @app.exception_handler(RequestValidationError)

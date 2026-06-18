@@ -369,7 +369,6 @@ async def send_message(
 
 # POST /dm/threads/{thread_id}/messages/upload
 
-
 @dm_router.post("/threads/{thread_id}/messages/upload", status_code=201)
 async def send_message_with_attachment(
     thread_id: str,
@@ -388,6 +387,21 @@ async def send_message_with_attachment(
         text = (message_text or "").strip()
         if not text and (not file or not file.filename):
             return ResponseSchema.error("Provide message_text, a file, or both", 400)
+
+        if text:
+            harm_result = scan_harmful_text_with_ml_fallback(text)
+            if harm_result["is_flagged"]:
+                labels = harm_result.get("detected_labels", [])
+                logger(
+                    "DM",
+                    f"Blocked toxic attachment message from {current_user.user_id} in thread {thread_id}, labels={labels}",
+                    "POST /dm/threads/{thread_id}/messages/upload",
+                    "WARNING",
+                )
+                return ResponseSchema.error(
+                    f"Your message was not sent. It was detected as harmful ({', '.join(labels)}).",
+                    400,
+                )
 
         msg = DMFunctions.send_message(
             thread_id=thread_id,
@@ -418,10 +432,14 @@ async def send_message_with_attachment(
             msg = next((m for m in msgs if m["dm_message_id"] == msg["dm_message_id"]), msg)
             msg = _resolve_msg_attachment_urls(msg)
 
-        logger("DM", f"Message+attachment sent in thread {thread_id} by {current_user.user_id}", "POST /dm/threads/{thread_id}/messages/upload", "INFO")
+        logger(
+            "DM",
+            f"Message+attachment sent in thread {thread_id} by {current_user.user_id}",
+            "POST /dm/threads/{thread_id}/messages/upload",
+            "INFO",
+        )
         await _manager.broadcast(thread_id, msg)
 
-        # Notify the other participant
         try:
             recipient_id = (
                 str(thread["user_b_id"])
@@ -438,15 +456,25 @@ async def send_message_with_attachment(
                 data={"thread_id": thread_id},
             )
         except Exception as notif_err:
-            logger("DM", f"Attachment message notification failed (non-fatal): {notif_err}", "POST /dm/threads/{thread_id}/messages/upload", "WARNING")
+            logger(
+                "DM",
+                f"Attachment message notification failed (non-fatal): {notif_err}",
+                "POST /dm/threads/{thread_id}/messages/upload",
+                "WARNING",
+            )
 
         return ResponseSchema.success(msg, 201)
+
     except PermissionError as e:
         return ResponseSchema.error(str(e), 403)
     except Exception as e:
-        logger("DM", f"Failed to send message with attachment: {e}", "POST /dm/threads/{thread_id}/messages/upload", "ERROR")
+        logger(
+            "DM",
+            f"Failed to send message with attachment: {e}",
+            "POST /dm/threads/{thread_id}/messages/upload",
+            "ERROR",
+        )
         return ResponseSchema.error(str(e), 500)
-
 
 # PUT /dm/threads/{thread_id}/read
 

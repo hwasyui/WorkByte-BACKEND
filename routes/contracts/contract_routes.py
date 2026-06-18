@@ -5,7 +5,12 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 
 import json
 from fastapi import APIRouter, Body, Depends, Response, BackgroundTasks
-from functions.minio_client import download_file
+from functions.minio_client import (
+    download_file,
+    upload_thread_attachment,
+    resolve_file_url,
+    BUCKET_MESSAGE_ATTACHMENTS,
+)
 from routes.reviews.review_routes import trigger_review_pipeline_on_completion
 from typing import List, Optional
 import uuid
@@ -35,8 +40,7 @@ _DEFAULT_CONTRACT_NOTIFICATION = (
     "Hello {freelancer_name},\n\n"
     'The contract for "{contract_title}" ({role_title}) has been finalized '
     "and is ready for your review.\n\n"
-    "Please find the contract PDF at the link below:\n"
-    "{pdf_url}\n\n"
+    "I attached the contract PDF below.\n\n"
     "Looking forward to working with you!"
 )
 
@@ -44,10 +48,11 @@ _DEFAULT_CONTRACT_NOTIFICATION = (
 def _render_notification(template: str, subs: dict) -> str:
     for key, val in subs.items():
         template = template.replace(f"{{{key}}}", str(val) if val else "")
-    if "{pdf_url}" not in template and subs.get("pdf_url"):
-        template += f"\n\nContract PDF: {subs['pdf_url']}"
-    return template
 
+    # Remove leftover pdf_url placeholder if an old saved template still has it
+    template = template.replace("{pdf_url}", "").strip()
+
+    return template
 
 contract_router = APIRouter(prefix="/contracts", tags=["Contracts"])
 
@@ -330,9 +335,7 @@ async def generate_contract_pdf(contract_id: str, generation_data: ContractGener
                 freelancer = FreelancerFunctions.get_freelancer_by_id(str(refreshed["freelancer_id"]))
                 freelancer_name = (freelancer or {}).get("full_name") or "there"
                 freelancer_user_id = str((freelancer or {}).get("user_id", ""))
-
-                signed_url = ContractGenerationFunctions.get_signed_contract_url(storage_path)
-
+                
                 custom_msg = generation_data.notification_message
                 saved_template = client_profile.get("contract_message_template")
                 raw_template = custom_msg or saved_template or _DEFAULT_CONTRACT_NOTIFICATION
@@ -341,7 +344,6 @@ async def generate_contract_pdf(contract_id: str, generation_data: ContractGener
                     "freelancer_name": freelancer_name,
                     "contract_title": refreshed.get("contract_title") or "",
                     "role_title": refreshed.get("role_title") or "",
-                    "pdf_url": signed_url,
                 })
 
                 if generation_data.save_message_as_template and custom_msg:
@@ -353,12 +355,41 @@ async def generate_contract_pdf(contract_id: str, generation_data: ContractGener
                 if freelancer_user_id:
                     thread = DMFunctions.get_thread_by_contract_id(contract_id)
                     if thread:
-                        DMFunctions.send_message(
+                        msg = DMFunctions.send_message(
                             thread_id=thread["thread_id"],
                             sender_id=str(current_user.user_id),
                             message_text=message_text,
-                            metadata={"type": "contract_pdf_shared", "pdf_url": signed_url},
+                            metadata={
+                                "type": "contract_pdf_shared",
+                                "contract_id": contract_id,
+                            },
                         )
+
+                        file_name = f"contract_{contract_id}.pdf"
+
+                        attachment_path = upload_thread_attachment(
+                            thread_id=thread["thread_id"],
+                            message_id=msg["dm_message_id"],
+                            file_name=file_name,
+                            file_bytes=pdf_bytes,
+                            content_type="application/pdf",
+                        )
+
+                        attachment = DMFunctions.create_attachment(
+                            dm_message_id=msg["dm_message_id"],
+                            file_name=file_name,
+                            file_url=attachment_path,
+                            mime_type="application/pdf",
+                            file_type="document",
+                            file_size_bytes=len(pdf_bytes),
+                        )
+
+                        attachment["file_url"] = resolve_file_url(
+                            BUCKET_MESSAGE_ATTACHMENTS,
+                            attachment["file_url"],
+                        )
+
+                        msg["attachments"] = [attachment]
             except Exception as msg_err:
                 logger("CONTRACT", f"Failed to send PDF notification: {str(msg_err)}", "POST /contracts/{contract_id}/generate", "WARNING")
 
