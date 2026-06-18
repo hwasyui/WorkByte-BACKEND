@@ -106,7 +106,7 @@ _ASSET_LINKS = [
             "namespace": "android_app",
             "package_name": "app.workbyte.com",
             "sha256_cert_fingerprints": [
-                "REPLACE_WITH_YOUR_SHA256_FINGERPRINT"
+                os.environ.get("ANDROID_SHA256_FINGERPRINT", "2D:61:8B:94:7E:5A:8A:62:D8:1A:B3:62:33:5E:75:F9:07:19:77:72:18:CF:CF:39:67:69:00:48:CC:16:2E:86")
             ],
         },
     }
