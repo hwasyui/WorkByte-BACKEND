@@ -104,7 +104,7 @@ _ASSET_LINKS = [
         "relation": ["delegate_permission/common.handle_all_urls"],
         "target": {
             "namespace": "android_app",
-            "package_name": "com.workbyte.app",
+            "package_name": "app.workbyte.com",
             "sha256_cert_fingerprints": [
                 "REPLACE_WITH_YOUR_SHA256_FINGERPRINT"
             ],
