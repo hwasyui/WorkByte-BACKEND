@@ -23,7 +23,7 @@ async def upload_file_endpoint(
     bucket: str = Query(...),
     current_user: UserInDB = Depends(get_current_user),
 ):
-    """Upload a file to Supabase Storage.
+    """Upload a file to MinIO.
 
     Args:
         bucket: Target storage bucket name (query param).

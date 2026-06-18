@@ -91,7 +91,7 @@ async def upload_and_analyze_cv(
 
         logger("CV_UPLOAD", f"Extracted {len(raw_text)} chars from CV", level="DEBUG")
 
-        # Step 2: Store file in Supabase (non-fatal — parsing continues if storage is unreachable)
+        # Step 2: Store file in MinIO (non-fatal — parsing continues if storage is unreachable)
         safe_name = re.sub(r"[^A-Za-z0-9._-]+", "_", original_name).strip("._")
         storage_path = f"cvs/{freelancer_id}/{safe_name}"
         public_url = None

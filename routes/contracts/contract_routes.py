@@ -126,7 +126,7 @@ async def get_contract_generation_data(contract_id: str, current_user: UserInDB 
 
 @contract_router.get("/{contract_id}/pdf-url")
 async def get_contract_pdf_url(contract_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Return a signed Supabase URL for a generated contract PDF."""
+    """Return a proxy URL for a generated contract PDF."""
     try:
         contract = ContractFunctions.get_contract_by_id(contract_id)
         if not contract:

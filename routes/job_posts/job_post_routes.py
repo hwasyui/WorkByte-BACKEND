@@ -71,7 +71,7 @@ async def get_all_job_posts(
     order_dir: str = Query(default="desc", description="asc or desc", pattern="^(asc|desc)$"),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
-    category: Optional[str] = Query(default=None, description="Filter by project category, e.g. mobiledev, backenddev"),
+    category: Optional[str] = Query(default=None, description="Filter by project category, e.g. mobile_dev, web_dev, backend_dev"),
     current_user: UserInDB = Depends(get_current_user),
 ):
     """

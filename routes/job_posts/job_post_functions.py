@@ -282,46 +282,89 @@ class JobPostFunctions:
 
 
     # NEW: Category inference
-
     @staticmethod
     def infer_project_category(job_title: str, job_description: str) -> str:
-        """Infer a project category from job title and description using keyword matching."""
-        text = " ".join(filter(None, [job_title, job_description])).lower()
-        category_map = [
-            # Mobile
-            ("mobile", "mobile_dev"), ("android", "mobile_dev"), ("ios", "mobile_dev"),
-            ("flutter", "mobile_dev"), ("react native", "mobile_dev"), ("swift", "mobile_dev"),
-            ("kotlin", "mobile_dev"), ("dart", "mobile_dev"),
-            # Backend
-            ("backend", "backend_dev"), ("api", "backend_dev"), ("server", "backend_dev"),
-            ("database", "backend_dev"), ("fastapi", "backend_dev"), ("django", "backend_dev"),
-            ("node", "backend_dev"), ("postgresql", "backend_dev"), ("mysql", "backend_dev"),
-            # Web Frontend
-            ("web", "web_dev"), ("frontend", "web_dev"), ("html", "web_dev"),
-            ("css", "web_dev"), ("react", "web_dev"), ("vue", "web_dev"), ("nextjs", "web_dev"),
-            # UI/UX Design
-            ("ui/ux", "ui_ux_design"), ("ui ux", "ui_ux_design"), ("user interface", "ui_ux_design"),
-            ("figma", "ui_ux_design"), ("wireframe", "ui_ux_design"), ("prototype", "ui_ux_design"),
-            # Graphic Design
-            ("graphic", "graphic_design"), ("logo", "graphic_design"), ("branding", "graphic_design"),
-            ("illustration", "graphic_design"), ("photoshop", "graphic_design"),
-            # Writing / Copy_writing
-            ("copy", "copy_writing"), ("writing", "copy_writing"), ("content", "copy_writing"),
-            ("blog", "copy_writing"), ("seo", "copy_writing"),
-            # Data / Analytics
-            ("data", "data_analytics"), ("analytics", "data_analytics"), ("machine learning", "data_analytics"),
-            ("ai", "data_analytics"), ("python", "data_analytics"), ("tableau", "data_analytics"),
-            # Video / Motion
-            ("video", "video_editing"), ("motion", "video_editing"), ("animation", "video_editing"),
-            ("premiere", "video_editing"), ("after effects", "video_editing"),
-            # Marketing
-            ("marketing", "marketing"), ("social media", "marketing"), ("ads", "marketing"),
-            ("instagram", "marketing"), ("campaign", "marketing"),
-        ]
-        for keyword, category in category_map:
-            if keyword in text:
-                return category
-        return "general"
+        """Infer one primary project category from job title and description using weighted scoring."""
+        title = (job_title or "").lower()
+        desc = (job_description or "").lower()
+        full_text = f"{title} {desc}"
+
+        category_keywords = {
+            "mobile_dev": [
+                "mobile", "android", "ios", "flutter", "react native",
+                "swift", "kotlin", "dart"
+            ],
+            "web_dev": [
+                "frontend", "front-end", "front end", "web", "website",
+                "landing page", "html", "css", "javascript", "typescript",
+                "react", "vue", "nextjs", "next.js", "angular"
+            ],
+            "backend_dev": [
+                "backend", "back-end", "back end", "api", "server",
+                "database", "fastapi", "django", "flask", "node",
+                "express", "postgresql", "postgres", "mysql", "mongodb"
+            ],
+            "ui_ux_design": [
+                "ui/ux", "ui ux", "user interface", "user experience",
+                "figma", "wireframe", "prototype", "mockup"
+            ],
+            "graphic_design": [
+                "graphic", "logo", "branding", "illustration",
+                "photoshop", "poster", "banner"
+            ],
+            "copy_writing": [
+                "copywriting", "copy writing", "writing", "content",
+                "blog", "article", "seo"
+            ],
+            "data_analytics": [
+                "data", "analytics", "dashboard", "machine learning",
+                "ai", "python", "tableau", "power bi"
+            ],
+            "video_editing": [
+                "video", "motion", "animation", "premiere",
+                "after effects", "reels", "shorts"
+            ],
+            "marketing": [
+                "marketing", "social media", "ads", "advertisement",
+                "instagram", "campaign", "tiktok"
+            ],
+        }
+
+        scores = {category: 0 for category in category_keywords}
+
+        for category, keywords in category_keywords.items():
+            for keyword in keywords:
+                if keyword in full_text:
+                    scores[category] += 1
+
+                # Title is more important than description
+                if keyword in title:
+                    scores[category] += 3
+
+        # Extra rules for common conflicts
+
+        # Flutter / Android / iOS should usually be mobile, not web.
+        if any(k in full_text for k in ["flutter", "android", "ios", "react native", "kotlin", "swift"]):
+            scores["mobile_dev"] += 4
+
+        # Frontend terms should usually go to web_dev,
+        # even if the description mentions API/database integration.
+        if any(k in full_text for k in [
+            "frontend", "front-end", "front end", "react", "vue",
+            "html", "css", "nextjs", "next.js", "angular"
+        ]):
+            scores["web_dev"] += 4
+
+        # Backend title should strongly override weak frontend/web mentions.
+        if any(k in title for k in ["backend", "back-end", "back end", "api developer"]):
+            scores["backend_dev"] += 5
+
+        best_category = max(scores, key=scores.get)
+
+        if scores[best_category] == 0:
+            return "general"
+
+        return best_category
 
 
     @staticmethod
@@ -551,7 +594,7 @@ class JobPostFunctions:
                 params = {"status": status}
 
             if category:
-                where += " AND jp.project_category = %(category)s"
+                where += " AND jp.project_category = :category"
                 params["category"] = category
 
             count_query = f"""

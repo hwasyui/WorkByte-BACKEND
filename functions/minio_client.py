@@ -104,7 +104,7 @@ def create_signed_url(bucket: str, path: str, expires_in: int = 3600) -> str:
 
 def resolve_file_url(bucket: str, stored_value: str) -> str:
     """Convert a stored DB value to a usable URL for Flutter.
-    - Already a URL (old Supabase or public MinIO): return as-is
+    - Already a URL: return as-is
     - Raw path in a private bucket: return backend proxy URL
     - Raw path in a public bucket: return public MinIO URL
     """
