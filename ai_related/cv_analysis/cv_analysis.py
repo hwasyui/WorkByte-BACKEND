@@ -388,7 +388,7 @@ async def parse_cv_for_profile(cv_text: str) -> Dict[str, Any]:
     )
 
     user = (
-        f"=== CV TEXT ===\n{cv_text[:2500]}\n\n"
+        f"=== CV TEXT ===\n{cv_text[:5000]}\n\n"
         "Extract the following fields from this CV and return exactly one JSON object:\n"
         f"{json.dumps(schema_example, ensure_ascii=False)}\n\n"
         "Rules:\n"
