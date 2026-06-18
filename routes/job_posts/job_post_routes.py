@@ -28,8 +28,12 @@ from routes.admin.admin_functions import queue_harmful_text_scan, queue_scam_sca
 job_post_router = APIRouter(prefix="/job-posts", tags=["Job Posts"])
 
 
-_VALID_JOB_STATUSES   = {"active", "closed", "filled", "draft", "all"}
-_VALID_JOB_ORDER_BY   = {"created_at", "posted_at", "deadline", "job_title", "proposal_count", "view_count"}
+_VALID_JOB_STATUSES      = {"active", "closed", "filled", "draft", "all"}
+_VALID_JOB_ORDER_BY      = {"created_at", "posted_at", "deadline", "job_title", "proposal_count", "view_count"}
+_VALID_PROJECT_TYPES     = {"individual", "team"}
+_VALID_PROJECT_SCOPES    = {"small", "medium", "large"}
+_VALID_EXPERIENCE_LEVELS = {"entry", "intermediate", "expert"}
+_VALID_BUDGET_TYPES      = {"fixed", "negotiable"}
 
 
 @job_post_router.post("/calculate-project-scope", response_model=JobPostScopeCalculationResponse)
@@ -59,36 +63,37 @@ async def calculate_project_scope(
 
 @job_post_router.get("", response_model=List[JobPostResponse])
 async def get_all_job_posts(
-    status: str = Query(
-        default="active",
-        description="Filter by job status. One of: active (default), closed, filled, draft, all. "
-                    "Draft jobs are only visible to their creator.",
-    ),
-    order_by: str = Query(
-        default="created_at",
-        description="Sort field. One of: created_at (default), posted_at, deadline, job_title, proposal_count, view_count",
-    ),
+    status: str = Query(default="active", description="active (default), closed, filled, draft, all"),
+    order_by: str = Query(default="created_at", description="created_at (default), posted_at, deadline, job_title, proposal_count, view_count"),
     order_dir: str = Query(default="desc", description="asc or desc", pattern="^(asc|desc)$"),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
     category: Optional[str] = Query(default=None, description="Filter by project category, e.g. mobile_dev, web_dev, backend_dev"),
+    project_type: Optional[str] = Query(default=None, description="individual or team"),
+    project_scope: Optional[str] = Query(default=None, description="small, medium, or large"),
+    experience_level: Optional[str] = Query(default=None, description="entry, intermediate, or expert"),
+    date_from: Optional[str] = Query(default=None, description="Filter jobs created on or after this date (ISO 8601, e.g. 2024-01-01)"),
+    date_to: Optional[str] = Query(default=None, description="Filter jobs created on or before this date (ISO 8601, e.g. 2024-12-31)"),
+    budget_min: Optional[float] = Query(default=None, ge=0, description="Minimum role budget"),
+    budget_max: Optional[float] = Query(default=None, ge=0, description="Maximum role budget"),
+    budget_type: Optional[str] = Query(default=None, description="fixed or negotiable"),
+    budget_currency: Optional[str] = Query(default=None, description="Currency code, e.g. USD, IDR"),
     current_user: UserInDB = Depends(get_current_user),
 ):
-    """
-    Browse all job posts with pagination, status filter, and sorting.
-    Defaults to active jobs. Draft visibility is restricted to the owning client.
-    """
     try:
         if status not in _VALID_JOB_STATUSES:
-            return ResponseSchema.error(
-                f"Invalid status '{status}'. Valid values: {', '.join(sorted(_VALID_JOB_STATUSES))}", 400
-            )
+            return ResponseSchema.error(f"Invalid status '{status}'. Valid values: {', '.join(sorted(_VALID_JOB_STATUSES))}", 400)
         if order_by not in _VALID_JOB_ORDER_BY:
-            return ResponseSchema.error(
-                f"Invalid order_by '{order_by}'. Valid values: {', '.join(sorted(_VALID_JOB_ORDER_BY))}", 400
-            )
+            return ResponseSchema.error(f"Invalid order_by '{order_by}'. Valid values: {', '.join(sorted(_VALID_JOB_ORDER_BY))}", 400)
+        if project_type and project_type not in _VALID_PROJECT_TYPES:
+            return ResponseSchema.error(f"Invalid project_type '{project_type}'. Valid values: {', '.join(sorted(_VALID_PROJECT_TYPES))}", 400)
+        if project_scope and project_scope not in _VALID_PROJECT_SCOPES:
+            return ResponseSchema.error(f"Invalid project_scope '{project_scope}'. Valid values: {', '.join(sorted(_VALID_PROJECT_SCOPES))}", 400)
+        if experience_level and experience_level not in _VALID_EXPERIENCE_LEVELS:
+            return ResponseSchema.error(f"Invalid experience_level '{experience_level}'. Valid values: {', '.join(sorted(_VALID_EXPERIENCE_LEVELS))}", 400)
+        if budget_type and budget_type not in _VALID_BUDGET_TYPES:
+            return ResponseSchema.error(f"Invalid budget_type '{budget_type}'. Valid values: {', '.join(sorted(_VALID_BUDGET_TYPES))}", 400)
 
-        # Resolve requesting client_id for draft gate (None for freelancers / non-clients)
         requesting_client_id = None
         if current_user.client_id:
             client = _ClientFunctions.get_client_by_user_id(current_user.user_id)
@@ -103,6 +108,15 @@ async def get_all_job_posts(
             page_size=page_size,
             requesting_client_id=requesting_client_id,
             category=category,
+            project_type=project_type,
+            project_scope=project_scope,
+            experience_level=experience_level,
+            date_from=date_from,
+            date_to=date_to,
+            budget_min=budget_min,
+            budget_max=budget_max,
+            budget_type=budget_type,
+            budget_currency=budget_currency,
         )
         logger("JOB_POST", f"Browsed job posts: status={status} page={page}", "GET /job-posts", "INFO")
         return ResponseSchema.success(result, 200)

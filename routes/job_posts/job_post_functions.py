@@ -562,20 +562,23 @@ class JobPostFunctions:
         page: int = 1,
         page_size: int = 20,
         requesting_client_id: Optional[str] = None,
-         category: Optional[str] = None,
+        category: Optional[str] = None,
+        project_type: Optional[str] = None,
+        project_scope: Optional[str] = None,
+        experience_level: Optional[str] = None,
+        date_from: Optional[str] = None,
+        date_to: Optional[str] = None,
+        budget_min: Optional[float] = None,
+        budget_max: Optional[float] = None,
+        budget_type: Optional[str] = None,
+        budget_currency: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """
-        Paginated + filtered + sorted job post browse.
-        Draft gate: drafts only appear when the requesting client owns them.
-        """
         try:
             db = get_db()
-
 
             sort_col = JobPostFunctions._JOB_SORT_FIELDS.get(order_by, "jp.created_at")
             direction = "DESC" if order_dir.lower() == "desc" else "ASC"
             offset = (page - 1) * page_size
-
 
             if status == "all":
                 if requesting_client_id:
@@ -596,15 +599,42 @@ class JobPostFunctions:
             if category:
                 where += " AND jp.project_category = :category"
                 params["category"] = category
+            if project_type:
+                where += " AND jp.project_type = :project_type"
+                params["project_type"] = project_type
+            if project_scope:
+                where += " AND jp.project_scope = :project_scope"
+                params["project_scope"] = project_scope
+            if experience_level:
+                where += " AND jp.experience_level = :experience_level"
+                params["experience_level"] = experience_level
+            if date_from:
+                where += " AND jp.created_at >= :date_from"
+                params["date_from"] = date_from
+            if date_to:
+                where += " AND jp.created_at <= :date_to"
+                params["date_to"] = date_to
+            if budget_min is not None:
+                where += " AND jr.role_budget >= :budget_min"
+                params["budget_min"] = budget_min
+            if budget_max is not None:
+                where += " AND jr.role_budget <= :budget_max"
+                params["budget_max"] = budget_max
+            if budget_type:
+                where += " AND jr.budget_type = :budget_type"
+                params["budget_type"] = budget_type
+            if budget_currency:
+                where += " AND jr.budget_currency = :budget_currency"
+                params["budget_currency"] = budget_currency
 
             count_query = f"""
                 SELECT COUNT(DISTINCT jp.job_post_id) AS total
                 FROM job_post jp
+                LEFT JOIN job_role jr ON jr.job_post_id = jp.job_post_id
                 {where}
             """
             count_rows = db.execute_query(count_query, params)
             total = int(count_rows[0]["total"]) if count_rows else 0
-
 
             data_query = _JOB_POST_SELECT + f"""
                 {where}
@@ -614,7 +644,6 @@ class JobPostFunctions:
             """
             data_rows = db.execute_query(data_query, {**params, "limit": page_size, "offset": offset})
             items = [convert_uuids_to_str(dict(row)) for row in data_rows]
-
 
             logger("JOB_POST_FUNCTIONS", f"browse_job_posts: {total} total, page {page}/{math.ceil(total/page_size) or 1}", level="INFO")
             return {

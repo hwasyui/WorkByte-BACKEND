@@ -20,37 +20,130 @@ _HTML = """<!DOCTYPE html>
   <meta charset="utf-8">
   <title>{title}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&display=swap" rel="stylesheet">
   <style>
-    body {{ font-family: sans-serif; display: flex; flex-direction: column;
-           align-items: center; justify-content: center; min-height: 100vh;
-           margin: 0; background: #f5f5f5; color: #333; text-align: center; padding: 24px; }}
-    h1 {{ font-size: 1.4rem; margin-bottom: 8px; }}
-    p  {{ color: #666; margin-bottom: 24px; }}
-    a  {{ display: inline-block; padding: 12px 28px; background: #2563eb;
-          color: #fff; border-radius: 8px; text-decoration: none; font-weight: 600; }}
-    a:hover {{ background: #1d4ed8; }}
+    *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
+
+    body {{
+      font-family: 'Poppins', sans-serif;
+      background: #F9F9F9;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }}
+
+    .card {{
+      background: #fff;
+      border: 1px solid #F0F0F1;
+      border-radius: 16px;
+      padding: 36px 28px;
+      max-width: 360px;
+      width: 100%;
+      text-align: center;
+    }}
+
+    .logo {{
+      display: block;
+      margin: 0 auto 28px;
+      height: 36px;
+      width: auto;
+    }}
+
+    .badge {{
+      display: inline-block;
+      background: #E0E7FF;
+      color: #4F46E5;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 16px;
+    }}
+
+    h1 {{
+      font-size: 20px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 12px;
+      line-height: 1.3;
+    }}
+
+    p {{
+      font-size: 13px;
+      font-weight: 400;
+      color: #7D7D7D;
+      margin-bottom: 28px;
+      line-height: 1.6;
+    }}
+
+    .btn {{
+      display: block;
+      width: 100%;
+      padding: 14px 28px;
+      background: linear-gradient(90deg, #4F46E5, #6366F1);
+      color: #fff;
+      border-radius: 30px;
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 600;
+      box-shadow: 0 6px 14px rgba(79, 70, 229, 0.25);
+      transition: opacity 0.15s;
+    }}
+
+    .btn:hover {{ opacity: 0.9; }}
+
+    .divider {{
+      margin: 16px 0;
+      font-size: 12px;
+      color: #B6B5B5;
+    }}
+
+    .btn-secondary {{
+      display: block;
+      width: 100%;
+      padding: 13px 28px;
+      background: #fff;
+      color: #4F46E5;
+      border: 1.5px solid #E0E7FF;
+      border-radius: 30px;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 600;
+      transition: background 0.15s;
+    }}
+
+    .btn-secondary:hover {{ background: #F5F3FF; }}
   </style>
 </head>
 <body>
-  <h1>{title}</h1>
-  <p>{subtitle}</p>
-  <a href="{store_link}">Download WorkByte App</a>
+  <div class="card">
+    <img class="logo" src="/assets/workbyte-logo.png" alt="WorkByte">
+
+    <h1>{title}</h1>
+    <div class="badge">{badge}</div>
+    <p>· Available on WorkByte App · Tap below to open the app</p>
+
+    <a class="btn" href="{deep_link}" id="open-btn">Open in App</a>
+    <div class="divider">or</div>
+    <a class="btn-secondary" href="{store_link}">Download WorkByte</a>
+  </div>
+
   <script>
-    // Try to open the deep link immediately.
     window.location.href = "{deep_link}";
-    // If the app isn't installed the browser will stay here; after 2.5 s we
-    // give up silently (the download button is already visible).
   </script>
 </body>
 </html>"""
 
 
-def _html(title: str, subtitle: str, deep_link: str) -> str:
+def _html(title: str, subtitle: str, deep_link: str, badge: str = "WorkByte") -> str:
     return _HTML.format(
         title=title,
         subtitle=subtitle,
         store_link=STORE_LINK,
         deep_link=deep_link,
+        badge=badge,
     )
 
 
@@ -71,7 +164,7 @@ async def share_job_post(job_post_id: str):
         subtitle = "View this job on WorkByte."
 
     deep_link = f"workbyte://job/{job_post_id}"
-    return HTMLResponse(_html(title, subtitle, deep_link))
+    return HTMLResponse(_html(title, subtitle, deep_link, badge="Job Post"))
 
 
 @share_router.get("/share/profile/{user_id}", response_class=HTMLResponse)
@@ -97,7 +190,7 @@ async def share_user_profile(user_id: str):
     title = f"{display_name}'s Profile" if display_name else "User Profile"
     subtitle = "View this profile on WorkByte."
     deep_link = f"workbyte://profile/{user_id}"
-    return HTMLResponse(_html(title, subtitle, deep_link))
+    return HTMLResponse(_html(title, subtitle, deep_link, badge="Profile"))
 
 _ASSET_LINKS = [
     {
