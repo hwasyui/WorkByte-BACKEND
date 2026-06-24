@@ -73,7 +73,7 @@ def build_freelancer_source_text(freelancer_id: str) -> Optional[str]:
                FROM work_experience
                WHERE freelancer_id = :fid
                ORDER BY start_date DESC
-               LIMIT 3""",
+               LIMIT 5""",
             {"fid": freelancer_id},
         )
         if work_rows:
@@ -95,7 +95,8 @@ def build_freelancer_source_text(freelancer_id: str) -> Optional[str]:
             """SELECT degree, field_of_study, institution_name
                FROM education
                WHERE freelancer_id = :fid
-               ORDER BY start_date DESC""",
+               ORDER BY start_date DESC
+               LIMIT 3""",
             {"fid": freelancer_id},
         )
         if edu_rows:
@@ -107,27 +108,6 @@ def build_freelancer_source_text(freelancer_id: str) -> Optional[str]:
                 )
             parts.append("Education:\n" + "\n".join(edu_lines))
             logger("SOURCE_TEXT_BUILDER", f"  {len(edu_rows)} education record(s) added", level="DEBUG")
-
-        # portfolio
-        port_rows = db.execute_query(
-            """SELECT project_title, project_description
-               FROM portfolio
-               WHERE freelancer_id = :fid
-               ORDER BY created_at DESC""",
-            {"fid": freelancer_id},
-        )
-        if port_rows:
-            port_lines = []
-            for r in port_rows:
-                if r.get("project_description"):
-                    port_lines.append(
-                        f"  - {r['project_title']}: {r['project_description']}"
-                    )
-                else:
-                    port_lines.append(f"  - {r['project_title']}")
-            if port_lines:
-                parts.append("Portfolio:\n" + "\n".join(port_lines))
-                logger("SOURCE_TEXT_BUILDER", f"  {len(port_lines)} portfolio project(s) added", level="DEBUG")
 
         source_text = "\n".join(parts) if parts else f["full_name"]
         logger(
