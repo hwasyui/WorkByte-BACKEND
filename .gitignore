@@ -46,3 +46,5 @@ walkthrough/*.pdf
 walkthrough/*.jpeg
 walkthrough/*.png
 walkthrough/*.jpg
+
+docker-compose.yml
