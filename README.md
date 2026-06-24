@@ -36,8 +36,10 @@ All development is done inside the Docker container environment.
 
 ## 🔗 Related Repositories
 
+* Backend: https://github.com/hwasyui/WorkByte-BACKEND
 * Frontend: https://github.com/hwasyui/WorkByte-FRONTEND
 * Database: https://github.com/hwasyui/WorkByte-DATABASE
+* Storage: https://github.com/hwasyui/WorkByte-STORAGE
 
 ---
 
