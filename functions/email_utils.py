@@ -15,8 +15,9 @@ BANNER_FILENAME = "Verify email UI.png"
 LOGO_FILENAME = "Verify email UI (1).png"
 BANNER_ASSET = os.path.join(ASSETS_DIR, BANNER_FILENAME)
 LOGO_ASSET = os.path.join(ASSETS_DIR, LOGO_FILENAME)
-DEFAULT_BANNER_URL = "https://workbyte.angelica-whiharto.com/storage/email/banner.png"
-DEFAULT_LOGO_URL = "https://workbyte.angelica-whiharto.com/storage/email/logo.png"
+_minio_public_base = os.getenv("MINIO_PUBLIC_BASE_URL", "http://localhost:9000").rstrip("/")
+DEFAULT_BANNER_URL = f"{_minio_public_base}/email/banner.png"
+DEFAULT_LOGO_URL = f"{_minio_public_base}/email/logo.png"
 
 
 def _expiry_label(minutes: str) -> str:

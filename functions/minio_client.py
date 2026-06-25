@@ -11,8 +11,8 @@ MINIO_ENDPOINT        = os.getenv("MINIO_ENDPOINT", "localhost:9000")
 MINIO_ACCESS_KEY      = os.getenv("MINIO_ACCESS_KEY", "capstone")
 MINIO_SECRET_KEY      = os.getenv("MINIO_SECRET_KEY", "capstone")
 MINIO_SECURE          = os.getenv("MINIO_SECURE", "false").lower() == "true"
-MINIO_PUBLIC_BASE     = os.getenv("MINIO_PUBLIC_BASE_URL", "https://workbyte.angelica-whiharto.com/storage")
-BACKEND_PUBLIC_URL    = os.getenv("BACKEND_PUBLIC_URL", "https://workbyte.angelica-whiharto.com").rstrip("/")
+MINIO_PUBLIC_BASE     = os.getenv("MINIO_PUBLIC_BASE_URL", "http://localhost:9000").rstrip("/")
+BACKEND_PUBLIC_URL    = os.getenv("BACKEND_PUBLIC_URL", "http://localhost:8000").rstrip("/")
 
 _client = Minio(
     MINIO_ENDPOINT,
