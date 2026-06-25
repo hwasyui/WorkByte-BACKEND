@@ -1,4 +1,5 @@
 import os
+import json
 import mimetypes
 from io import BytesIO
 from minio import Minio
@@ -36,6 +37,34 @@ BUCKET_MAP = {
     "contract-submissions": BUCKET_CONTRACT_SUBMISSIONS,
     "message-attachments":  BUCKET_MESSAGE_ATTACHMENTS,
 }
+
+
+_ALL_BUCKETS = [
+    "user-assets",
+    "job-files",
+    "proposal-files",
+    "contract-submissions",
+    "message-attachments",
+    "contract-assets",
+]
+_PUBLIC_READ_BUCKETS = {"user-assets", "job-files"}
+
+
+def ensure_buckets() -> None:
+    for bucket in _ALL_BUCKETS:
+        if not _client.bucket_exists(bucket):
+            _client.make_bucket(bucket)
+        if bucket in _PUBLIC_READ_BUCKETS:
+            policy = json.dumps({
+                "Version": "2012-10-17",
+                "Statement": [{
+                    "Effect": "Allow",
+                    "Principal": {"AWS": ["*"]},
+                    "Action": ["s3:GetObject"],
+                    "Resource": [f"arn:aws:s3:::{bucket}/*"],
+                }],
+            })
+            _client.set_bucket_policy(bucket, policy)
 
 
 def guess_mime(filename: str, fallback: str = "application/octet-stream") -> str:

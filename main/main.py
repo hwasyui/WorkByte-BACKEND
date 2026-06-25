@@ -10,6 +10,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from functions.functions import get_table_testing
 from functions.logger import logger
 from functions.db_manager import init_db, close_db
+from functions.minio_client import ensure_buckets
 from functions.response_utils import ResponseSchema
 from ai_related.job_engine.embedding_manager import _should_embed_immediately
 from routes.auth_router import auth_router
@@ -58,6 +59,12 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger("LIFESPAN", f"Failed to initialize database on startup: {str(e)}", level="ERROR")
         raise
+
+    try:
+        ensure_buckets()
+        logger("LIFESPAN", "MinIO buckets ensured", level="INFO")
+    except Exception as e:
+        logger("LIFESPAN", f"MinIO bucket setup failed (non-fatal): {e}", level="WARNING")
 
     immediate = _should_embed_immediately()
     logger(
