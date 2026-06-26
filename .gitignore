@@ -10,6 +10,9 @@ __pycache__/
 *.log
 notes.txt
 *.json
+!routes/admin/moderation_keywords.json
+!ai_related/job_engine/currency_rates.json
+!routes/job_posts/project_scope_market_cache.json
 venv
 
 *.safetensors

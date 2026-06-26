@@ -13,25 +13,15 @@ pydantic[email]
 reportlab
 minio
 numpy
-pandas
 joblib
-lightgbm
-catboost
-scikit-learn
 httpx
 groq
 sentence-transformers
-einops
 pdfplumber
 pdf2image
 easyocr
 python-docx
 jupyter
-matplotlib
-seaborn
-easyocr
 transformers
-torch
-datasets
-groq
+torch --index-url https://download.pytorch.org/whl/cpu
 google-auth
