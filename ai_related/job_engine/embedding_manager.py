@@ -305,19 +305,13 @@ async def upsert_job_role_embedding(job_role_id: str) -> dict:
 
         db = get_db()
         role_rows = db.execute_query(
-            """SELECT jr.job_post_id, jp.experience_level, jr.role_budget
-               FROM job_role jr
-               JOIN job_post jp ON jp.job_post_id = jr.job_post_id
-               WHERE jr.job_role_id = :jrid""",
+            "SELECT job_post_id FROM job_role WHERE job_role_id = :jrid",
             {"jrid": job_role_id},
         )
         if not role_rows:
             logger("EMBEDDING_MANAGER", f"Role {job_role_id} not found , skipping upsert", level="WARNING")
             return {"status": "skipped", "reason": "role_not_found"}
-        role_meta = dict(role_rows[0])
-        job_post_id      = str(role_meta["job_post_id"])
-        meta_exp_level   = role_meta.get("experience_level")
-        meta_role_budget = role_meta.get("role_budget")
+        job_post_id = str(role_rows[0]["job_post_id"])
 
         logger("EMBEDDING_MANAGER", f"Requesting embedding vector | job_role_id={job_role_id} | source_chars={len(source_text)}", level="DEBUG")
         vector = await get_embedding(source_text)
@@ -337,13 +331,10 @@ async def upsert_job_role_embedding(job_role_id: str) -> dict:
                        source_text           = :txt,
                        embedding_metadata    = CAST(:meta AS jsonb),
                        embedding_dirty       = FALSE,
-                       meta_experience_level = :exp_level,
-                       meta_role_budget      = :budget,
                        updated_at            = NOW()
                    WHERE job_role_id = :jrid""",
                 {
                     "vec": vector_pg, "txt": source_text, "meta": metadata, "jrid": job_role_id,
-                    "exp_level": meta_exp_level, "budget": meta_role_budget,
                 },
             )
             logger("EMBEDDING_MANAGER", f"Job role embedding UPDATED | job_role_id={job_role_id} | dim={len(vector)}", level="INFO")
@@ -353,14 +344,11 @@ async def upsert_job_role_embedding(job_role_id: str) -> dict:
             db.execute_query(
                 """INSERT INTO job_role_embedding
                      (embedding_id, job_role_id, job_post_id, embedding_vector,
-                      source_text, embedding_metadata, embedding_dirty,
-                      meta_experience_level, meta_role_budget)
-                   VALUES (:eid, :jrid, :jpid, CAST(:vec AS vector), :txt, CAST(:meta AS jsonb), FALSE,
-                           :exp_level, :budget)""",
+                      source_text, embedding_metadata, embedding_dirty)
+                   VALUES (:eid, :jrid, :jpid, CAST(:vec AS vector), :txt, CAST(:meta AS jsonb), FALSE)""",
                 {
                     "eid": embedding_id, "jrid": job_role_id, "jpid": job_post_id,
                     "vec": vector_pg, "txt": source_text, "meta": metadata,
-                    "exp_level": meta_exp_level, "budget": meta_role_budget,
                 },
             )
             logger("EMBEDDING_MANAGER", f"Job role embedding CREATED | job_role_id={job_role_id} | dim={len(vector)}", level="INFO")
