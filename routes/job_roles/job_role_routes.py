@@ -13,6 +13,8 @@ from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.job_posts.job_post_functions import JobPostFunctions
 from routes.job_roles.job_role_functions import JobRoleFunctions
+from routes.contracts.contract_functions import ContractFunctions
+from routes.proposals.proposal_functions import ProposalFunctions
 from ai_related.job_engine.embedding_manager import mark_job_dirty, mark_job_dirty_by_role
 
 job_role_router = APIRouter(prefix="/job-roles", tags=["Job Roles"])
@@ -149,7 +151,28 @@ async def delete_job_role(job_role_id: str, current_user: UserInDB = Depends(get
             return ResponseSchema.error(error_msg, 404)
         job_post = JobPostFunctions.get_job_post_by_id(existing_job_role["job_post_id"])
         assert_client_owns(current_user, job_post["client_id"])
-        
+
+        # contract.job_role_id is ON DELETE RESTRICT - pre-check for a clean error
+        # instead of a raw DB integrity error surfacing as a 500.
+        existing_contracts = ContractFunctions.get_contracts_by_job_role_id(job_role_id)
+        if existing_contracts:
+            return ResponseSchema.error(
+                f"Cannot delete this role - {len(existing_contracts)} contract(s) reference it. "
+                "Cancel or otherwise resolve them first.",
+                409,
+            )
+
+        # proposal.job_role_id is ON DELETE SET NULL, so without this check the
+        # delete would succeed silently and orphan any pending/accepted proposal
+        # (nulling its job_role_id) instead of erroring.
+        active_proposals = ProposalFunctions.get_active_proposals_by_job_role_id(job_role_id)
+        if active_proposals:
+            return ResponseSchema.error(
+                f"Cannot delete this role - {len(active_proposals)} proposal(s) are still pending or "
+                "accepted for it. Reject or otherwise resolve them first.",
+                409,
+            )
+
         jpid = str(existing_job_role["job_post_id"])
         JobRoleFunctions.delete_job_role(job_role_id)
         mark_job_dirty(jpid)

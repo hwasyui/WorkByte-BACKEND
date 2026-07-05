@@ -1,11 +1,14 @@
 import io
-import os
 import re
 import math
 import json
+from pathlib import Path
 from typing import List, Optional, Dict, Any
+import numpy as np
+import joblib
 from fastapi import UploadFile
 from groq import Groq
+from sentence_transformers import SentenceTransformer
 from functions.db_manager import get_db
 from functions.logger import logger
 from ai_related.job_engine.source_text_builder import build_freelancer_source_text
@@ -96,22 +99,6 @@ def cosine_similarity(a: List[float], b: List[float]) -> float:
     return max(min(dot / (mag_a * mag_b), 1.0), -1.0)
 
 
-def compute_resume_score(similarity: float, skill_coverage: Optional[float]) -> int:
-    """Convert similarity + skill coverage to a 0-100 resume score."""
-    sim_component = min(100.0, max(0.0, (similarity - 0.30) / 0.55 * 100.0))
-    if skill_coverage is not None:
-        cov_component = min(100.0, max(0.0, skill_coverage * 100.0))
-        return int(round(sim_component * 0.6 + cov_component * 0.4))
-    return int(round(sim_component))
-
-
-def compute_overall_score(resume_score: int, ats_score: int) -> int:
-    """Simple average of resume score and ATS score."""
-    result = int(round((resume_score + ats_score) / 2))
-    logger("CV_ANALYSIS", f"compute_overall_score({resume_score}, {ats_score}) = {result}", level="DEBUG")
-    return result
-
-
 def grade_overall_score(overall_score: int) -> str:
     """Map overall_score (0-100) to one of four grades."""
     if overall_score >= 80:
@@ -149,7 +136,9 @@ def classify_cv_quality(similarity: float, coverage: Optional[float], ats_score:
 
 
 def check_ats_compliance(raw_text: str) -> dict:
-    """Rule-based ATS compliance check. Returns ats_score (0-100) and ats_flags."""
+    """Rule-based ATS checklist. Returns ats_flags (human-readable issues) plus a
+    legacy ats_score — the score is no longer used for the response, only ats_flags
+    (numeric ATS scoring now comes from predict_ats(), see below)."""
     text_lower = raw_text.lower()
     word_count = len(raw_text.split())
     flags: List[str] = []
@@ -215,8 +204,199 @@ def check_ats_compliance(raw_text: str) -> dict:
     return {"ats_score": score, "ats_flags": flags}
 
 
+# ─────────────────────────────────────────────────────────────────────────
+# XGBoost scoring models (match / ATS tier / section scores).
+# Trained offline — see cv_analysis_xgb_models/xgboost_cv_analysis_final.ipynb.
+# All numeric CV scoring comes from these models; the LLM (below) only writes
+# the narrative assessment and recommendations grounded in these numbers.
+# ─────────────────────────────────────────────────────────────────────────
+
+_XGB_MODELS_DIR = Path(__file__).parent / "cv_analysis_xgb_models"
+_XGB_PCA_DIR = _XGB_MODELS_DIR / "model_pkl"
+
+# The match/section models were trained against nomic-embed-text-v1 (NOT v1.5,
+# which the rest of the backend uses for RAG job matching) — a different
+# encoder here would silently feed the PCA/XGBoost models out-of-distribution
+# vectors, so this is a dedicated singleton, separate from job_engine's model.
+_MATCH_ENCODER_NAME = "nomic-ai/nomic-embed-text-v1"
+_MATCH_CONFIDENCE_THRESHOLD = 0.60
+
+_ATS_TIER_SCORE = {"High ATS": 100, "Medium ATS": 50, "Low ATS": 20}
+_WEIGHT_SECTION_OVERALL = 0.60
+_WEIGHT_ATS = 0.40
+
+_match_encoder: Optional[SentenceTransformer] = None
+_match_model = None
+_ats_model = None
+_section_model = None
+_pca_match = None
+_pca_section = None
+_ats_feature_names: Optional[List[str]] = None
+_ats_label_map: Optional[Dict[int, str]] = None
+_section_target_cols: Optional[List[str]] = None
+
+
+def _get_match_encoder() -> SentenceTransformer:
+    global _match_encoder
+    if _match_encoder is None:
+        logger("CV_ANALYSIS", f"Loading {_MATCH_ENCODER_NAME} for XGB scoring ...", level="INFO")
+        _match_encoder = SentenceTransformer(_MATCH_ENCODER_NAME, trust_remote_code=True)
+        logger("CV_ANALYSIS", f"{_MATCH_ENCODER_NAME} loaded", level="INFO")
+    return _match_encoder
+
+
+def _load_xgb_models() -> None:
+    global _match_model, _ats_model, _section_model, _pca_match, _pca_section
+    global _ats_feature_names, _ats_label_map, _section_target_cols
+    if _match_model is not None:
+        return
+    logger("CV_ANALYSIS", "Loading CV-analysis XGBoost models ...", level="INFO")
+    _match_model         = joblib.load(_XGB_MODELS_DIR / "match_scorer_xgb.pkl")
+    _ats_model           = joblib.load(_XGB_MODELS_DIR / "ats_scorer_xgb.pkl")
+    _section_model       = joblib.load(_XGB_MODELS_DIR / "section_scorer_xgb.pkl")
+    _pca_match           = joblib.load(_XGB_PCA_DIR / "pca_match.pkl")
+    _pca_section         = joblib.load(_XGB_PCA_DIR / "pca_section.pkl")
+    _ats_feature_names   = joblib.load(_XGB_MODELS_DIR / "ats_feature_names.pkl")
+    _ats_label_map       = joblib.load(_XGB_MODELS_DIR / "ats_label_map.pkl")
+    _section_target_cols = joblib.load(_XGB_MODELS_DIR / "section_target_cols.pkl")
+    logger("CV_ANALYSIS", "CV-analysis XGBoost models loaded", level="INFO")
+
+
+# Feature recipes below are copied verbatim from xgboost_cv_analysis_final.ipynb —
+# they must stay byte-for-byte identical to what the models were trained on.
+
+_ATS_SECTION_KEYWORDS = {
+    "has_summary":    ["summary", "profile", "about", "objective"],
+    "has_skills":     ["skills", "expertise", "competencies", "technical"],
+    "has_experience": ["experience", "employment", "work history"],
+    "has_education":  ["education", "academic", "qualification", "degree"],
+}
+_ATS_CLICHES = [
+    "team player", "hard-working", "go-getter", "self-starter",
+    "detail-oriented", "results-oriented", "passionate about",
+]
+
+
+def _extract_ats_features(text: str) -> Dict[str, float]:
+    t     = text.lower()
+    words = text.split()
+    wc    = len(words)
+    feats: Dict[str, float] = {}
+    for key, kws in _ATS_SECTION_KEYWORDS.items():
+        feats[key] = int(any(k in t for k in kws))
+    feats["has_email"]    = int(bool(re.search(r"[\w.+-]+@[\w-]+\.[a-z]{2,}", text)))
+    feats["has_phone"]    = int(bool(re.search(r"\+?\d[\d\s\-\.\(\)]{6,}\d", text)))
+    feats["has_dates"]    = int(bool(re.search(r"\b(19|20)\d{2}\b", text)))
+    feats["has_metrics"]  = int(bool(re.search(
+        r"\d+\s*(%|percent|users|clients|revenue|saving|increase|decrease)", t)))
+    feats["has_bullets"]  = int(bool(re.search(r"^[•\-\*]", text, re.MULTILINE)))
+    feats["no_cliches"]   = int(not any(c in t for c in _ATS_CLICHES))
+    feats["word_count"]   = wc
+    feats["wc_optimal"]   = int(300 <= wc <= 800)
+    feats["wc_too_short"] = int(wc < 200)
+    feats["wc_too_long"]  = int(wc > 1200)
+    feats["unique_ratio"] = len(set(words)) / max(wc, 1)
+    feats["avg_word_len"] = float(np.mean([len(w) for w in words])) if words else 0.0
+    return feats
+
+
+def _extract_explicit_features(resume: str, jd: str) -> np.ndarray:
+    r_lower = resume.lower()
+    j_lower = jd.lower()
+    r_words = set(r_lower.split())
+    j_words = set(j_lower.split())
+    overlap       = len(r_words & j_words) / max(len(j_words), 1)
+    len_ratio     = min(len(resume), len(jd)) / max(max(len(resume), len(jd)), 1)
+    has_email     = int(bool(re.search(r"[\w.+-]+@[\w-]+\.[a-z]{2,}", resume)))
+    has_phone     = int(bool(re.search(r"\+?\d[\d\s\-\.\(\)]{6,}\d", resume)))
+    has_dates     = int(bool(re.search(r"\b(19|20)\d{2}\b", resume)))
+    has_skills_kw = int(any(k in r_lower for k in ["skills", "expertise", "proficient"]))
+    has_exp_kw    = int(any(k in r_lower for k in ["experience", "worked", "developed"]))
+    has_edu_kw    = int(any(k in r_lower for k in ["education", "degree", "university"]))
+    has_metrics   = int(bool(re.search(
+        r"\d+\s*(%|percent|users|clients|revenue|saving|increase|decrease)", r_lower)))
+    r_word_count  = min(len(resume.split()) / 1000, 1.0)
+    return np.array([overlap, len_ratio, has_email, has_phone, has_dates,
+                     has_skills_kw, has_exp_kw, has_edu_kw, has_metrics, r_word_count])
+
+
+def _build_pair_features(emb_a: np.ndarray, emb_b: np.ndarray) -> np.ndarray:
+    return np.hstack([[np.dot(emb_a, emb_b)], np.abs(emb_a - emb_b), emb_a * emb_b])
+
+
+def predict_match(cv_text: str, profile_text: str) -> Dict[str, Any]:
+    """Fit / No Fit classification, via match_scorer_xgb.pkl."""
+    _load_xgb_models()
+    encoder  = _get_match_encoder()
+    emb_cv   = encoder.encode(f"search_document: {cv_text}", normalize_embeddings=True)
+    emb_job  = encoder.encode(f"search_query: {profile_text}", normalize_embeddings=True)
+    explicit = _extract_explicit_features(cv_text, profile_text)
+    raw      = _build_pair_features(emb_cv, emb_job)
+    feat     = np.hstack([_pca_match.transform(raw.reshape(1, -1))[0], explicit]).reshape(1, -1)
+
+    proba = _match_model.predict_proba(feat)[0]
+    pred  = int(proba.argmax())
+    if proba.max() < _MATCH_CONFIDENCE_THRESHOLD:
+        pred = 0
+    return {
+        "match_label":      "Fit" if pred == 1 else "No Fit",
+        "match_confidence": round(float(proba.max()), 4),
+        "match_score":      round(float(np.dot(emb_cv, emb_job)), 4),
+    }
+
+
+def predict_ats(cv_text: str) -> Dict[str, Any]:
+    """Low / Medium / High ATS tier classification, via ats_scorer_xgb.pkl."""
+    _load_xgb_models()
+    feats = _extract_ats_features(cv_text)
+    x     = np.array([[feats[name] for name in _ats_feature_names]])
+    pred  = int(_ats_model.predict(x)[0])
+    proba = _ats_model.predict_proba(x)[0]
+    return {
+        "ats_label":      _ats_label_map[pred],
+        "ats_confidence": round(float(proba.max()), 4),
+    }
+
+
+def predict_sections(cv_text: str, profile_text: str) -> Dict[str, float]:
+    """Experience / Skills / Education / Overall 0-100 scores, via section_scorer_xgb.pkl."""
+    _load_xgb_models()
+    encoder  = _get_match_encoder()
+    emb_cv   = encoder.encode(f"search_document: {cv_text}", normalize_embeddings=True)
+    emb_job  = encoder.encode(f"search_query: {profile_text}", normalize_embeddings=True)
+    explicit = _extract_explicit_features(cv_text, profile_text)
+    raw      = _build_pair_features(emb_cv, emb_job)
+    feat     = np.hstack([_pca_section.transform(raw.reshape(1, -1))[0], explicit]).reshape(1, -1)
+
+    preds = _section_model.predict(feat)[0]
+    return {
+        col.replace("score_", ""): round(float(np.clip(p, 0, 1)) * 100, 1)
+        for col, p in zip(_section_target_cols, preds)
+    }
+
+
+def ats_label_to_score(ats_label: str) -> int:
+    """Map the ATS classifier's categorical tier to a 0-100 number, for API display."""
+    return _ATS_TIER_SCORE.get(ats_label, 20)
+
+
+def compute_overall_score(section_overall_pct: float, ats_label: str) -> int:
+    """Overall score = 60% section-model overall score + 40% ATS-tier score."""
+    ats_tier_score = ats_label_to_score(ats_label)
+    result = int(round(section_overall_pct * _WEIGHT_SECTION_OVERALL + ats_tier_score * _WEIGHT_ATS))
+    logger(
+        "CV_ANALYSIS",
+        f"compute_overall_score(section_overall={section_overall_pct}, ats_label={ats_label}) = {result}",
+        level="DEBUG",
+    )
+    return result
+
+
 def _call_groq(system_prompt: str, user_prompt: str, json_mode: bool = False, max_tokens: int = 1500) -> Any:
-    """Call GROQ LLM and return the response."""
+    """Call GROQ LLM and return the response. Retries once on a JSON-schema
+    failure — gpt-oss-20b occasionally produces malformed nested JSON, and a
+    resample on the same prompt usually succeeds since generation isn't
+    deterministic (temperature=0.3)."""
     client = Groq()
     kwargs: Dict[str, Any] = {
         "model": "openai/gpt-oss-20b",
@@ -229,11 +409,18 @@ def _call_groq(system_prompt: str, user_prompt: str, json_mode: bool = False, ma
     }
     if json_mode:
         kwargs["response_format"] = {"type": "json_object"}
-    completion = client.chat.completions.create(**kwargs)
-    content = completion.choices[0].message.content.strip()
-    if json_mode:
-        return json.loads(content)
-    return content
+
+    attempts = 2 if json_mode else 1
+    for attempt in range(attempts):
+        try:
+            completion = client.chat.completions.create(**kwargs)
+            content = completion.choices[0].message.content.strip()
+            return json.loads(content) if json_mode else content
+        except Exception as e:
+            if attempt < attempts - 1:
+                logger("CV_ANALYSIS", f"GROQ call failed (attempt {attempt + 1}/{attempts}), retrying: {e}", level="WARNING")
+                continue
+            raise
 
 
 async def analyze_cv_with_llm(
@@ -244,24 +431,28 @@ async def analyze_cv_with_llm(
     matched_skills: List[str],
     missing_skills: List[str],
     ats_result: Dict[str, Any],
+    model_scores: Dict[str, Any],
 ) -> Dict[str, Any]:
     """
-    Full structured CV analysis via GROQ.
-    All content (assessment, per-section analysis, recommendations) comes from the LLM.
+    Narrative CV analysis via GROQ. All numeric scoring is already final by the
+    time this runs (predict_match / predict_ats / predict_sections) — the LLM
+    only writes assessment text and recommendations grounded in those numbers,
+    it never invents its own score.
     """
     coverage_str = f"{skill_coverage:.0%}" if skill_coverage is not None else "N/A"
     matched_str = ", ".join(matched_skills[:10]) if matched_skills else "none"
     missing_str = ", ".join(missing_skills[:10]) if missing_skills else "none"
     ats_flags_str = "\n".join(f"- {f}" for f in ats_result.get("ats_flags", [])) or "None"
+    section_scores = model_scores.get("section_scores", {})
 
     system = (
         "You are an expert CV reviewer and career coach. "
-        "Analyze the provided CV against the freelancer profile and return valid JSON only. "
+        "Write an analysis grounded in the scores a trained model has already computed — "
+        "you never invent or restate a numeric score yourself. Return valid JSON only. "
         "Do not include markdown fences, explanations, or any text outside the JSON."
     )
 
     schema_example = {
-        "resume_score": 72,
         "overall_assessment": "Concise overall assessment specific to this candidate's CV...",
         "profile_match_analysis": "How well the CV aligns with the freelancer's profile...",
         "sections": [
@@ -289,20 +480,28 @@ async def analyze_cv_with_llm(
     }
 
     user = (
-        f"=== ANALYSIS METRICS ===\n"
+        f"=== MODEL-COMPUTED SCORES (already final — do not recompute or contradict) ===\n"
+        f"Match: {model_scores.get('match_label')} (confidence {model_scores.get('match_confidence', 0):.0%})\n"
+        f"ATS Tier: {model_scores.get('ats_label')} (confidence {model_scores.get('ats_confidence', 0):.0%})\n"
+        f"Section Scores — Experience: {section_scores.get('experience', 0):.0f}/100, "
+        f"Skills: {section_scores.get('skills', 0):.0f}/100, "
+        f"Education: {section_scores.get('education', 0):.0f}/100, "
+        f"Overall: {section_scores.get('overall', 0):.0f}/100\n\n"
+        f"=== ADDITIONAL METRICS ===\n"
         f"Profile-CV Similarity: {similarity:.2f} ({similarity * 100:.1f}%)\n"
         f"Skill Coverage: {coverage_str}\n"
         f"Skills Matched: {matched_str}\n"
         f"Skills Missing from CV: {missing_str}\n"
-        f"ATS Score: {ats_result.get('ats_score', 0)}/100\n"
         f"ATS Issues Found:\n{ats_flags_str}\n\n"
         f"=== FREELANCER PROFILE ===\n{profile_text[:2500]}\n\n"
         f"=== CV CONTENT ===\n{cv_text[:2500]}\n\n"
-        "Analyze this CV and return exactly one JSON object matching this structure:\n"
+        "Write an analysis and return exactly one JSON object matching this structure:\n"
         f"{json.dumps(schema_example, ensure_ascii=False)}\n\n"
         "Rules:\n"
-        "- resume_score: integer 0-100 based on CV quality, completeness, and profile alignment\n"
+        "- Do NOT output resume_score or any other numeric score — scoring is already handled\n"
         "- All text must reference specific details from THIS CV and THIS profile, never generic advice\n"
+        "- All text must stay consistent with the model-computed scores above "
+        "(e.g. never call it a strong match if Match is 'No Fit')\n"
         "- sections must contain exactly these four titles in order: "
         "'Skills Analysis', 'Work Experience', 'Education', 'ATS Optimization'\n"
         "- Each section must have 2-4 specific, actionable recommendations\n"
@@ -313,16 +512,17 @@ async def analyze_cv_with_llm(
         result = _call_groq(system, user, json_mode=True, max_tokens=2500)
         if not isinstance(result, dict):
             raise ValueError(f"LLM returned {type(result).__name__} instead of dict")
+        sections = result.get("sections", [])
+        if not isinstance(sections, list):
+            sections = []
         return {
-            "resume_score": max(0, min(100, int(result.get("resume_score", 50)))),
             "overall_assessment": str(result.get("overall_assessment", "")),
             "profile_match_analysis": str(result.get("profile_match_analysis", "")),
-            "sections": result.get("sections", []),
+            "sections": sections,
         }
     except Exception as e:
         logger("CV_ANALYSIS", f"LLM structured analysis failed: {e}", level="ERROR")
         return {
-            "resume_score": compute_resume_score(similarity, skill_coverage),
             "overall_assessment": "",
             "profile_match_analysis": "",
             "sections": [],
@@ -436,9 +636,14 @@ async def build_cv_recommendations(
 ) -> List[str]:
     """Flat recommendation list for backward compatibility with cv_upload_routes."""
     ats_result = check_ats_compliance(cv_text)
+    model_scores = {
+        **predict_match(cv_text, profile_text),
+        **predict_ats(cv_text),
+        "section_scores": predict_sections(cv_text, profile_text),
+    }
     analysis = await analyze_cv_with_llm(
         cv_text, profile_text, similarity, skill_coverage,
-        matched_skills, missing_skills, ats_result,
+        matched_skills, missing_skills, ats_result, model_scores,
     )
     recs: List[str] = []
     for section in analysis.get("sections", []):

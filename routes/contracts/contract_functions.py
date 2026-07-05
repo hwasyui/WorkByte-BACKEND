@@ -9,6 +9,7 @@ from functions.db_manager import get_db
 from functions.logger import logger
 from typing import List, Optional, Dict
 import uuid
+from routes.proposals.proposal_functions import ProposalFunctions
 
 
 def convert_uuids_to_str(data: Dict) -> Dict:
@@ -84,6 +85,44 @@ class ContractFunctions:
             return None
         except Exception as e:
             logger("CONTRACT_FUNCTIONS", f"Error fetching contract: {str(e)}", level="ERROR")
+            raise
+
+    @staticmethod
+    def get_contracts_by_job_post_id(job_post_id: str) -> List[Dict]:
+        """Fetch all contracts under a job post, any status - used to pre-check
+        deletability, since contract.job_post_id is ON DELETE RESTRICT."""
+        try:
+            db = get_db()
+            rows = db.fetch_data(table_name="contract", conditions=[("job_post_id", "=", job_post_id)])
+            return [convert_uuids_to_str(dict(row)) for row in rows]
+        except Exception as e:
+            logger("CONTRACT_FUNCTIONS", f"Error fetching contracts for job post: {str(e)}", level="ERROR")
+            raise
+
+    @staticmethod
+    def get_contracts_by_job_role_id(job_role_id: str) -> List[Dict]:
+        """Fetch all contracts under a job role, any status - used to pre-check
+        deletability, since contract.job_role_id is ON DELETE RESTRICT."""
+        try:
+            db = get_db()
+            rows = db.fetch_data(table_name="contract", conditions=[("job_role_id", "=", job_role_id)])
+            return [convert_uuids_to_str(dict(row)) for row in rows]
+        except Exception as e:
+            logger("CONTRACT_FUNCTIONS", f"Error fetching contracts for job role: {str(e)}", level="ERROR")
+            raise
+
+    @staticmethod
+    def get_contract_by_proposal_id(proposal_id: str) -> Optional[Dict]:
+        """Fetch the contract already created from a given proposal, if any."""
+        try:
+            db = get_db()
+            conditions = [("proposal_id", "=", proposal_id)]
+            rows = db.fetch_data(table_name="contract", conditions=conditions, limit=1)
+            if rows:
+                return convert_uuids_to_str(dict(rows[0]))
+            return None
+        except Exception as e:
+            logger("CONTRACT_FUNCTIONS", f"Error checking existing contract for proposal: {str(e)}", level="ERROR")
             raise
 
     @staticmethod
@@ -331,12 +370,41 @@ class ContractFunctions:
             )
 
     @staticmethod
+    def _revert_proposal_on_contract_removal(proposal_id: str) -> None:
+        """Keep proposal.status truthful once its contract is gone: 'accepted'
+        is only supposed to mean there's a live contract behind it, so once
+        that contract is cancelled/deleted, flip the proposal to 'rejected'
+        instead of leaving it stuck showing 'accepted' for work that no
+        longer exists. Non-fatal - this must never break the actual
+        cancel/delete operation."""
+        try:
+            proposal = ProposalFunctions.get_proposal_by_id(str(proposal_id))
+            if proposal and proposal.get("status") == "accepted":
+                ProposalFunctions.update_proposal(str(proposal_id), {"status": "rejected"})
+                logger(
+                    "CONTRACT_FUNCTIONS",
+                    f"Proposal {proposal_id} reverted to 'rejected' after its contract was removed",
+                    level="INFO",
+                )
+        except Exception as e:
+            logger(
+                "CONTRACT_FUNCTIONS",
+                f"Failed to revert proposal {proposal_id} after contract removal (non-fatal): {e}",
+                level="WARNING",
+            )
+
+    @staticmethod
     def delete_contract(contract_id: str) -> bool:
         """Delete a contract."""
         try:
             db = get_db()
+            contract = ContractFunctions.get_contract_by_id(contract_id)
             db.delete_data(table_name="contract", conditions=[("contract_id", "=", contract_id)])
             logger("CONTRACT_FUNCTIONS", f"Contract {contract_id} deleted", level="INFO")
+
+            if contract and contract.get("proposal_id"):
+                ContractFunctions._revert_proposal_on_contract_removal(contract["proposal_id"])
+
             return True
         except Exception as e:
             logger("CONTRACT_FUNCTIONS", f"Error deleting contract: {str(e)}", level="ERROR")
@@ -362,6 +430,9 @@ class ContractFunctions:
             if reason:
                 update_data["cancellation_reason"] = reason
             updated_contract = ContractFunctions.update_contract(contract_id, update_data)
+
+            if contract.get("proposal_id"):
+                ContractFunctions._revert_proposal_on_contract_removal(contract["proposal_id"])
 
             try:
                 DMFunctions.send_system_event(

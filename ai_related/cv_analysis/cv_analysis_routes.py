@@ -16,13 +16,15 @@ from ai_related.cv_analysis.cv_analysis import (
     extract_skills_from_text,
     get_cv_embedding,
     cosine_similarity,
-    classify_cv_quality,
-    compute_resume_score,
     compute_overall_score,
     grade_overall_score,
     check_ats_compliance,
     analyze_cv_with_llm,
     parse_cv_for_profile,
+    predict_match,
+    predict_ats,
+    predict_sections,
+    ats_label_to_score,
 )
 from routes.freelancers.freelancer_functions import FreelancerFunctions
 
@@ -60,7 +62,18 @@ async def analyze_cv(
         skill_coverage = len(matched_skills) / len(profile_skills) if profile_skills else None
 
         ats_result = check_ats_compliance(cv_text)
-        resume_score = compute_resume_score(similarity, skill_coverage)
+
+        # Scoring — all numeric scores come from the trained XGBoost models,
+        # not the LLM (see cv_analysis_xgb_models/xgboost_cv_analysis_final.ipynb)
+        match_result = predict_match(cv_text, profile_text)
+        ats_ml_result = predict_ats(cv_text)
+        section_scores = predict_sections(cv_text, profile_text)
+
+        model_scores = {
+            **match_result,
+            **ats_ml_result,
+            "section_scores": section_scores,
+        }
 
         llm_analysis = await analyze_cv_with_llm(
             cv_text=cv_text,
@@ -70,30 +83,37 @@ async def analyze_cv(
             matched_skills=matched_skills,
             missing_skills=missing_skills,
             ats_result=ats_result,
+            model_scores=model_scores,
         )
 
         parsed_profile = await parse_cv_for_profile(cv_text)
 
-        final_resume_score = llm_analysis["resume_score"]
-        overall_score = compute_overall_score(final_resume_score, ats_result["ats_score"])
+        resume_score = int(round(section_scores["overall"]))
+        overall_score = compute_overall_score(section_scores["overall"], ats_ml_result["ats_label"])
         overall_grade = grade_overall_score(overall_score)
 
         logger(
             "CV_ANALYSIS",
-            f"CV analysis completed | freelancer={freelancer_id} | overall={overall_score} ({overall_grade}) | similarity={similarity:.3f}",
+            f"CV analysis completed | freelancer={freelancer_id} | overall={overall_score} ({overall_grade}) "
+            f"| match={match_result['match_label']} | ats={ats_ml_result['ats_label']} | similarity={similarity:.3f}",
             level="INFO",
         )
 
         return ResponseSchema.success({
             "overall_score": overall_score,
             "overall_grade": overall_grade,
-            "resume_score": final_resume_score,
-            "ats_score": ats_result["ats_score"],
+            "resume_score": resume_score,
+            "ats_score": ats_label_to_score(ats_ml_result["ats_label"]),
+            "ats_label": ats_ml_result["ats_label"],
+            "ats_confidence": ats_ml_result["ats_confidence"],
             "ats_flags": ats_result["ats_flags"],
+            "match_label": match_result["match_label"],
+            "match_confidence": match_result["match_confidence"],
             "similarity_score": round(similarity, 4),
             "skill_coverage": round(skill_coverage, 4) if skill_coverage is not None else None,
             "matched_skills": matched_skills,
             "missing_skills": missing_skills,
+            "section_scores": section_scores,
             "overall_assessment": llm_analysis["overall_assessment"],
             "profile_match_analysis": llm_analysis["profile_match_analysis"],
             "sections": llm_analysis["sections"],

@@ -22,6 +22,8 @@ contract_submission_router = APIRouter(
     tags=["Contract Submissions"],
 )
 
+MAX_REVISION_REQUESTS = 3  # per contract, across its whole lifetime
+
 
 def _resolve_submission_urls(submission: dict) -> dict:
     for f in submission.get("files", []):
@@ -191,6 +193,13 @@ async def request_revision_for_latest_submission(
         if client["client_id"] != contract["client_id"]:
             return ResponseSchema.error("Unauthorized to request revision for this contract", 403)
 
+        revision_rounds = ContractSubmissionFunctions.count_revision_rounds(contract_id)
+        if revision_rounds >= MAX_REVISION_REQUESTS:
+            return ResponseSchema.error(
+                f"Maximum number of revision requests ({MAX_REVISION_REQUESTS}) reached for this contract",
+                400,
+            )
+
         latest_submission = ContractSubmissionFunctions.request_revision_for_latest_submission(
             contract_id=contract_id,
             note=payload.note,
@@ -241,6 +250,19 @@ async def approve_latest_submission(
 
         if client["client_id"] != contract["client_id"]:
             return ResponseSchema.error("Unauthorized to approve this contract", 403)
+
+        if contract["status"] != "under_review":
+            return ResponseSchema.error(
+                f"Cannot approve a submission when contract status is '{contract['status']}'", 400
+            )
+
+        latest_submission_check = ContractSubmissionFunctions.get_latest_submission_by_contract_id(contract_id)
+        if not latest_submission_check:
+            return ResponseSchema.error("No submission found for this contract", 404)
+        if latest_submission_check["status"] != "submitted":
+            return ResponseSchema.error(
+                f"Cannot approve a submission that is already '{latest_submission_check['status']}'", 400
+            )
 
         latest_submission = ContractSubmissionFunctions.approve_latest_submission(
             contract_id=contract_id

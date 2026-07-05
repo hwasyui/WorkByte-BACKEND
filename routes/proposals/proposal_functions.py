@@ -219,6 +219,26 @@ class ProposalFunctions:
             raise
 
     @staticmethod
+    def get_active_proposals_by_job_role_id(job_role_id: str) -> List[Dict]:
+        """Fetch proposals still in play ('pending' or 'accepted') for a role -
+        used to pre-check whether a role is safe to delete. proposal.job_role_id
+        is ON DELETE SET NULL, so deleting a role with these still outstanding
+        would silently orphan them instead of raising any error."""
+        try:
+            rows = get_db().execute_query(
+                """
+                SELECT proposal_id, freelancer_id, status
+                FROM proposal
+                WHERE job_role_id = :jrid AND status IN ('pending', 'accepted')
+                """,
+                {"jrid": job_role_id},
+            )
+            return [convert_uuids_to_str(dict(row)) for row in rows]
+        except Exception as e:
+            logger("PROPOSAL_FUNCTIONS", f"Error checking active proposals for role: {str(e)}", level="ERROR")
+            raise
+
+    @staticmethod
     def create_proposal(
         job_post_id: str,
         freelancer_id: str,
@@ -338,6 +358,32 @@ class ProposalFunctions:
 
         except Exception as e:
             logger("PROPOSAL_FUNCTIONS", f"Proposal scan failed for {proposal_id}: {e}", level="ERROR")
+
+    @staticmethod
+    def auto_reject_pending_proposals_on_job_closure(job_post_id: str) -> int:
+        """When a job post closes, its still-'pending' proposals can never be
+        decided (accept/reject already requires job_post.status == 'active') -
+        without this they'd stay 'pending' forever, pointing at a closed job with
+        no way for the freelancer to know it's a dead end. Only 'pending' is
+        touched; 'accepted' proposals are left alone since closing a job post
+        must never silently affect an engagement already in progress."""
+        try:
+            rows = get_db().fetch_data(
+                table_name="proposal",
+                conditions=[("job_post_id", "=", job_post_id), ("status", "=", "pending")],
+            )
+            for row in rows or []:
+                ProposalFunctions.update_proposal(str(row["proposal_id"]), {"status": "rejected"})
+            if rows:
+                logger(
+                    "PROPOSAL_FUNCTIONS",
+                    f"Auto-rejected {len(rows)} pending proposal(s) for closed job post {job_post_id}",
+                    level="INFO",
+                )
+            return len(rows) if rows else 0
+        except Exception as e:
+            logger("PROPOSAL_FUNCTIONS", f"Failed to auto-reject pending proposals for job post {job_post_id}: {e}", level="ERROR")
+            return 0
 
     @staticmethod
     async def notify_proposal_owners_of_job_closure(job_post_id: str, reason: str) -> None:

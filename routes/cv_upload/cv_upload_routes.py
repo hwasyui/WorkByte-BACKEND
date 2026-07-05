@@ -22,12 +22,15 @@ from ai_related.cv_analysis.cv_analysis import (
     extract_skills_from_text,
     get_cv_embedding,
     cosine_similarity,
-    compute_resume_score,
     compute_overall_score,
     grade_overall_score,
     check_ats_compliance,
     analyze_cv_with_llm,
     parse_cv_for_profile,
+    predict_match,
+    predict_ats,
+    predict_sections,
+    ats_label_to_score,
 )
 from .cv_upload_functions import (
     _extract_text_from_pdf,
@@ -153,13 +156,22 @@ async def upload_and_analyze_cv(
         missing_skills = [s for s in profile_skills if s not in matched_skills]
         skill_coverage = len(matched_skills) / len(profile_skills) if profile_skills else None
 
-        # Step 6: ATS compliance
+        # Step 6: ATS compliance (rule-based flags only — numeric score comes from the ATS model below)
         ats_result = check_ats_compliance(raw_text)
 
-        # Step 7: Scoring
-        resume_score = compute_resume_score(similarity, skill_coverage)
+        # Step 7: Scoring — all numeric scores come from the trained XGBoost models,
+        # not the LLM (see cv_analysis_xgb_models/xgboost_cv_analysis_final.ipynb)
+        match_result = predict_match(raw_text, profile_text)
+        ats_ml_result = predict_ats(raw_text)
+        section_scores = predict_sections(raw_text, profile_text)
 
-        # Step 8: Structured LLM analysis (all content from GROQ)
+        model_scores = {
+            **match_result,
+            **ats_ml_result,
+            "section_scores": section_scores,
+        }
+
+        # Step 8: Structured LLM analysis (narrative text only — no scoring)
         llm_analysis = await analyze_cv_with_llm(
             cv_text=raw_text,
             profile_text=profile_text,
@@ -168,22 +180,20 @@ async def upload_and_analyze_cv(
             matched_skills=matched_skills,
             missing_skills=missing_skills,
             ats_result=ats_result,
+            model_scores=model_scores,
         )
 
         # Step 9: Parse CV for profile suggestions
         parsed_profile = await parse_cv_for_profile(raw_text)
 
-        final_resume_score = llm_analysis["resume_score"]
-        ats_score = ats_result["ats_score"]
-        logger("CV_UPLOAD", f"DEBUG: final_resume_score={final_resume_score} (type: {type(final_resume_score).__name__}), ats_score={ats_score} (type: {type(ats_score).__name__})", level="DEBUG")
-        
-        overall_score = compute_overall_score(final_resume_score, ats_score)
+        resume_score = int(round(section_scores["overall"]))
+        overall_score = compute_overall_score(section_scores["overall"], ats_ml_result["ats_label"])
         overall_grade = grade_overall_score(overall_score)
 
         logger(
             "CV_UPLOAD",
             f"CV analysis complete | freelancer={freelancer_id} | overall={overall_score} ({overall_grade}) "
-            f"| similarity={similarity:.3f} | ats={ats_result['ats_score']}",
+            f"| match={match_result['match_label']} | ats={ats_ml_result['ats_label']} | similarity={similarity:.3f}",
             level="INFO",
         )
 
@@ -195,13 +205,18 @@ async def upload_and_analyze_cv(
                 "is_initial": False,
                 "overall_score": overall_score,
                 "overall_grade": overall_grade,
-                "resume_score": final_resume_score,
-                "ats_score": ats_result["ats_score"],
+                "resume_score": resume_score,
+                "ats_score": ats_label_to_score(ats_ml_result["ats_label"]),
+                "ats_label": ats_ml_result["ats_label"],
+                "ats_confidence": ats_ml_result["ats_confidence"],
                 "ats_flags": ats_result["ats_flags"],
+                "match_label": match_result["match_label"],
+                "match_confidence": match_result["match_confidence"],
                 "similarity_score": round(similarity, 4),
                 "skill_coverage": round(skill_coverage, 4) if skill_coverage is not None else None,
                 "matched_skills": matched_skills,
                 "missing_skills": missing_skills,
+                "section_scores": section_scores,
                 "overall_assessment": llm_analysis["overall_assessment"],
                 "profile_match_analysis": llm_analysis["profile_match_analysis"],
                 "sections": llm_analysis["sections"],

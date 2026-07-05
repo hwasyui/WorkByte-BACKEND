@@ -62,6 +62,16 @@ async def run_post_completion_pipeline(contract_id: str) -> None:
     """
     try:
         logger("REVIEW_PIPELINE", f"Starting post-completion pipeline for contract {contract_id}", level="INFO")
+
+        existing_review = ReviewFunctions.get_review_by_contract_id(contract_id)
+        if existing_review:
+            logger(
+                "REVIEW_PIPELINE",
+                f"Contract {contract_id} already has a review ({existing_review['id']}), skipping duplicate pipeline run",
+                level="WARNING",
+            )
+            return
+
         db = get_db()
 
         rows = db.execute_query(

@@ -31,6 +31,7 @@ from routes.contracts.contract_functions import ContractFunctions
 from routes.contracts.contract_generation_functions import ContractGenerationFunctions
 from routes.clients.client_functions import ClientFunctions
 from routes.freelancers.freelancer_functions import FreelancerFunctions
+from routes.proposals.proposal_functions import ProposalFunctions
 from routes.dm.dm_functions import DMFunctions, _contract_accepted_default
 from routes.notifications.notification_functions import NotificationFunctions
 from ai_related.job_engine.embedding_manager import mark_contract_dirty
@@ -230,6 +231,31 @@ async def create_contract(contract: ContractCreate, current_user: UserInDB = Dep
                 return ResponseSchema.error("Cannot create a contract for another client", 403)
         else:
             return ResponseSchema.error("Only clients can create contracts", 403)
+
+        # A contract may only be finalized from a proposal the client has already
+        # accepted (via PATCH /proposals/{id}/status) and that passed moderation -
+        # without this, a contract could be created from a still-pending, rejected,
+        # or blocked proposal since this endpoint never used to look at it at all.
+        proposal = ProposalFunctions.get_proposal_by_id(str(contract.proposal_id))
+        if not proposal:
+            return ResponseSchema.error(f"Proposal {contract.proposal_id} not found", 404)
+        if proposal["status"] != "accepted":
+            return ResponseSchema.error(
+                f"Cannot create a contract from a proposal that hasn't been accepted (current status: {proposal['status']})", 400
+            )
+        if proposal["moderation_status"] != "visible":
+            return ResponseSchema.error("Cannot create a contract from a proposal that hasn't passed moderation", 400)
+        existing_contract = ContractFunctions.get_contract_by_proposal_id(str(contract.proposal_id))
+        if existing_contract:
+            return ResponseSchema.error(
+                f"A contract already exists for this proposal (contract_id: {existing_contract['contract_id']})", 409
+            )
+        if str(proposal["freelancer_id"]) != str(contract.freelancer_id):
+            return ResponseSchema.error("Contract freelancer does not match the proposal's freelancer", 400)
+        if str(proposal["job_post_id"]) != str(contract.job_post_id):
+            return ResponseSchema.error("Contract job post does not match the proposal's job post", 400)
+        if proposal.get("job_role_id") and str(proposal["job_role_id"]) != str(contract.job_role_id):
+            return ResponseSchema.error("Contract job role does not match the proposal's job role", 400)
 
         new_contract = ContractFunctions.create_contract(
             contract_id=contract_id,
@@ -440,6 +466,21 @@ async def update_contract(contract_id: str, contract_update: ContractUpdate, bac
         assert_current_user_is_contract_party(current_user, existing_contract)
 
         update_data = contract_update.model_dump(exclude_unset=True)
+
+        # This generic endpoint must never be the place a status transition actually
+        # happens - both parties pass assert_current_user_is_contract_party above, so
+        # without this guard either side could force-complete or reopen any contract.
+        # The frontend does redundantly PUT the status it just set via the dedicated
+        # submission/approve endpoints (same value, harmless no-op) - only reject an
+        # attempt to change it to something DIFFERENT from the current value here.
+        new_status = update_data.get("status")
+        if new_status and new_status != existing_contract.get("status"):
+            return ResponseSchema.error(
+                "Contract status can only change through the dedicated submission, "
+                "approve, revision, or cancel endpoints - not through this generic update",
+                400,
+            )
+
         updated_contract = ContractFunctions.update_contract(contract_id, update_data)
 
         if update_data.get("status") == "completed" and existing_contract.get("status") != "completed":

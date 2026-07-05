@@ -210,6 +210,24 @@ class ContractSubmissionFunctions:
             raise
 
     @staticmethod
+    def count_revision_rounds(contract_id: str) -> int:
+        """Count how many times revision has already been requested on this
+        contract. Each round leaves exactly one submission behind with status
+        'revision_requested' (not yet resubmitted) or 'superseded' (resubmitted
+        since) - counting those gives the number of past rounds without needing
+        a dedicated counter column."""
+        try:
+            db = get_db()
+            rows = db.fetch_data(
+                table_name="contract_submission",
+                conditions=[("contract_id", "=", contract_id)],
+            )
+            return sum(1 for r in rows if r.get("status") in ("revision_requested", "superseded"))
+        except Exception as e:
+            logger("CONTRACT_SUBMISSION_FUNCTIONS", f"Error counting revision rounds: {str(e)}", level="ERROR")
+            raise
+
+    @staticmethod
     def supersede_latest_revision_requested_submission(contract_id: str) -> Optional[Dict]:
         try:
             latest_submission = ContractSubmissionFunctions.get_latest_submission_by_contract_id(contract_id)

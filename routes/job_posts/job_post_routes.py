@@ -23,6 +23,7 @@ from functions.response_utils import ResponseSchema
 from functions.db_manager import get_db
 from routes.job_posts.job_post_functions import JobPostFunctions, convert_uuids_to_str
 from routes.proposals.proposal_functions import ProposalFunctions
+from routes.contracts.contract_functions import ContractFunctions
 from ai_related.job_engine.embedding_manager import mark_job_dirty
 from routes.admin.admin_functions import queue_harmful_text_scan, queue_scam_scan
 
@@ -417,6 +418,7 @@ async def update_job_post(job_post_id: str, job_post_update: JobPostUpdate, curr
         updated_job_post = JobPostFunctions.update_job_post(job_post_id, update_data)
 
         if update_data.get("status") == "closed" and existing_job_post.get("status") != "closed":
+            ProposalFunctions.auto_reject_pending_proposals_on_job_closure(job_post_id)
             asyncio.create_task(
                 ProposalFunctions.notify_proposal_owners_of_job_closure(job_post_id, "the client closed it")
             )
@@ -444,7 +446,18 @@ async def delete_job_post(job_post_id: str, current_user: UserInDB = Depends(get
             logger("JOB_POST", error_msg, "DELETE /job-posts/{job_post_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
         assert_client_owns(current_user, existing_job_post["client_id"])
-        
+
+        # contract.job_post_id is ON DELETE RESTRICT - without this pre-check, deleting
+        # a job post with any contract (regardless of status) raises a raw DB integrity
+        # error that surfaces as an ugly 500 further down.
+        existing_contracts = ContractFunctions.get_contracts_by_job_post_id(job_post_id)
+        if existing_contracts:
+            return ResponseSchema.error(
+                f"Cannot delete this job post - {len(existing_contracts)} contract(s) reference it. "
+                "Cancel or otherwise resolve them first.",
+                409,
+            )
+
         JobPostFunctions.delete_job_post(job_post_id)
 
         success_msg = f"Deleted job post {job_post_id}"

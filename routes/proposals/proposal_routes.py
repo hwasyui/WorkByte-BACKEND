@@ -261,6 +261,18 @@ async def update_proposal_status(
             if client and str(client["client_id"]) == str(job_row[0]["client_id"]):
                 is_proposal_client = True
 
+        if not (is_proposal_freelancer or is_proposal_client):
+            return ResponseSchema.error("Unauthorized", 403)
+
+        # Once a proposal has moved off 'pending' (accepted/rejected/withdrawn), its
+        # status is final - neither side may flip it again. This matters most for
+        # 'accepted': a contract may already reference it (see POST /contracts),
+        # so silently reopening it here would desync the two records.
+        if proposal["status"] != "pending":
+            return ResponseSchema.error(
+                f"This proposal has already been decided (current status: {proposal['status']}) and can no longer be changed", 400
+            )
+
         if is_proposal_freelancer:
             if status != "withdrawn":
                 return ResponseSchema.error("Freelancers can only set status to 'withdrawn'", 403)
@@ -271,8 +283,6 @@ async def update_proposal_status(
                 return ResponseSchema.error(f"Proposal {proposal_id} not found", 404)
             if job_row and job_row[0]["status"] != "active":
                 return ResponseSchema.error("This job post is no longer active", 400)
-        else:
-            return ResponseSchema.error("Unauthorized", 403)
 
         updated = ProposalFunctions.update_proposal(proposal_id, {"status": status})
 
@@ -362,6 +372,15 @@ async def delete_proposal(
         freelancer = FreelancerFunctions.get_freelancer_by_user_id(current_user.user_id)
         if not freelancer or str(freelancer["freelancer_id"]) != str(existing["freelancer_id"]):
             return ResponseSchema.error("You can only delete your own proposals", 403)
+
+        # Same invariant as PATCH /proposals/{id}/status: once a proposal has been
+        # decided (accepted/rejected/withdrawn), it's final - deleting an 'accepted'
+        # one here would let it vanish out from under a client who already accepted
+        # it (and could still race a contract that references it).
+        if existing["status"] != "pending":
+            return ResponseSchema.error(
+                f"Only a pending proposal can be deleted (current status: {existing['status']})", 400
+            )
 
         ProposalFunctions.delete_proposal(proposal_id)
         logger("PROPOSAL", f"Proposal {proposal_id} deleted", "DELETE /proposals/{proposal_id}", "INFO")
