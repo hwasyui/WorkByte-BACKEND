@@ -2,7 +2,7 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, HTTPException
 from typing import List, Optional
 from functions.schema_model import PerformanceRatingCreate, PerformanceRatingUpdate, PerformanceRatingResponse
 from functions.schema_model import UserInDB
@@ -76,6 +76,9 @@ async def create_performance_rating(rating: PerformanceRatingCreate, current_use
         error_msg = f"Validation error: {str(e)}"
         logger("PERFORMANCE_RATING", error_msg, "POST /performance-ratings", "WARNING")
         return ResponseSchema.error(error_msg, 400)
+    except HTTPException as e:
+        logger("PERFORMANCE_RATING", f"HTTP {e.status_code}: {e.detail}", "POST /performance-ratings", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to create performance rating: {str(e)}"
         logger("PERFORMANCE_RATING", error_msg, "POST /performance-ratings", "ERROR")
@@ -107,6 +110,9 @@ async def update_performance_rating(freelancer_id: str, rating_update: Performan
         success_msg = f"Updated performance rating for freelancer {freelancer_id}"
         logger("PERFORMANCE_RATING", success_msg, "PUT /performance-ratings/freelancer/{freelancer_id}", "INFO")
         return ResponseSchema.success(updated_rating, 200)
+    except HTTPException as e:
+        logger("PERFORMANCE_RATING", f"HTTP {e.status_code}: {e.detail}", "PUT /performance-ratings/freelancer/{freelancer_id}", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to update performance rating for freelancer {freelancer_id}: {str(e)}"
         logger("PERFORMANCE_RATING", error_msg, "PUT /performance-ratings/freelancer/{freelancer_id}", "ERROR")

@@ -9,7 +9,6 @@ import uuid
 from routes.contracts.contract_functions import ContractFunctions
 from routes.dm.dm_functions import DMFunctions
 
-
 def convert_uuids_to_str(data: Dict) -> Dict:
     """Convert all UUID objects in dict to strings."""
     if not data:
@@ -21,7 +20,6 @@ def convert_uuids_to_str(data: Dict) -> Dict:
         else:
             result[key] = value
     return result
-
 
 class ContractSubmissionFunctions:
     """Handle all contract submission-related database operations."""

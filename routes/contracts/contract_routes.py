@@ -4,7 +4,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 import json
-from fastapi import APIRouter, Body, Depends, Response, BackgroundTasks
+from fastapi import APIRouter, Body, Depends, Response, BackgroundTasks, HTTPException
 from functions.minio_client import (
     download_file,
     upload_thread_attachment,
@@ -75,6 +75,9 @@ async def get_all_contracts(limit: Optional[int] = None, current_user: UserInDB 
             contracts += ContractFunctions.get_contracts_by_freelancer_id(freelancer["freelancer_id"])
         logger("CONTRACT", f"Retrieved {len(contracts)} contracts for user {current_user.user_id}", "GET /contracts", "INFO")
         return ResponseSchema.success(contracts, 200)
+    except HTTPException as e:
+        logger("CONTRACT", f"HTTP {e.status_code}: {e.detail}", "GET /contracts", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("CONTRACT", f"Failed to fetch contracts: {str(e)}", "GET /contracts", "ERROR")
         return ResponseSchema.error(f"Failed to fetch contracts: {str(e)}", 500)
@@ -91,6 +94,9 @@ async def get_contracts_by_freelancer(freelancer_id: str, current_user: UserInDB
         contracts = ContractFunctions.get_contracts_by_freelancer_id(freelancer_id)
         logger("CONTRACT", f"Retrieved {len(contracts)} contracts for freelancer {freelancer_id}", "GET /contracts/freelancer/{freelancer_id}", "INFO")
         return ResponseSchema.success(contracts, 200)
+    except HTTPException as e:
+        logger("CONTRACT", f"HTTP {e.status_code}: {e.detail}", "GET /contracts/freelancer/{freelancer_id}", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("CONTRACT", f"Failed to fetch contracts for freelancer {freelancer_id}: {str(e)}", "GET /contracts/freelancer/{freelancer_id}", "ERROR")
         return ResponseSchema.error(f"Failed to fetch contracts for freelancer {freelancer_id}: {str(e)}", 500)
@@ -104,6 +110,9 @@ async def get_contracts_by_client(client_id: str, current_user: UserInDB = Depen
         contracts = ContractFunctions.get_contracts_by_client_id(client_id)
         logger("CONTRACT", f"Retrieved {len(contracts)} contracts for client {client_id}", "GET /contracts/client/{client_id}", "INFO")
         return ResponseSchema.success(contracts, 200)
+    except HTTPException as e:
+        logger("CONTRACT", f"HTTP {e.status_code}: {e.detail}", "GET /contracts/client/{client_id}", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("CONTRACT", f"Failed to fetch contracts for client {client_id}: {str(e)}", "GET /contracts/client/{client_id}", "ERROR")
         return ResponseSchema.error(f"Failed to fetch contracts for client {client_id}: {str(e)}", 500)
@@ -124,6 +133,9 @@ async def get_contract_generation_data(contract_id: str, current_user: UserInDB 
 
         logger("CONTRACT", f"Retrieved generation data for contract {contract_id}", "GET /contracts/{contract_id}/generation-data", "INFO")
         return ResponseSchema.success(context, 200)
+    except HTTPException as e:
+        logger("CONTRACT", f"HTTP {e.status_code}: {e.detail}", "GET /contracts/{contract_id}/generation-data", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("CONTRACT", f"Failed to fetch generation data for contract {contract_id}: {str(e)}", "GET /contracts/{contract_id}/generation-data", "ERROR")
         return ResponseSchema.error(f"Failed to fetch generation data for contract {contract_id}: {str(e)}", 500)
@@ -145,6 +157,9 @@ async def get_contract_pdf_url(contract_id: str, current_user: UserInDB = Depend
         signed_url = ContractGenerationFunctions.get_signed_contract_url(pdf_path)
         logger("CONTRACT", f"Created signed PDF URL for contract {contract_id}", "GET /contracts/{contract_id}/pdf-url", "INFO")
         return ResponseSchema.success({"pdf_url": signed_url}, 200)
+    except HTTPException as e:
+        logger("CONTRACT", f"HTTP {e.status_code}: {e.detail}", "GET /contracts/{contract_id}/pdf-url", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("CONTRACT", f"Failed to create PDF URL for contract {contract_id}: {str(e)}", "GET /contracts/{contract_id}/pdf-url", "ERROR")
         return ResponseSchema.error(f"Failed to create PDF URL for contract {contract_id}: {str(e)}", 500)
@@ -170,6 +185,9 @@ async def download_contract_pdf(contract_id: str, current_user: UserInDB = Depen
             media_type="application/pdf",
             headers={"Content-Disposition": f"attachment; filename=contract_{contract_id}.pdf"},
         )
+    except HTTPException as e:
+        logger("CONTRACT", f"HTTP {e.status_code}: {e.detail}", "GET /contracts/{contract_id}/pdf-download", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("CONTRACT", f"Failed to download PDF for contract {contract_id}: {str(e)}", "GET /contracts/{contract_id}/pdf-download", "ERROR")
         return ResponseSchema.error(f"Failed to download PDF for contract {contract_id}: {str(e)}", 500)
@@ -188,6 +206,9 @@ async def get_contract(contract_id: str, current_user: UserInDB = Depends(get_cu
         assert_current_user_is_contract_party(current_user, contract)
         logger("CONTRACT", f"Retrieved contract {contract_id}", "GET /contracts/{contract_id}", "INFO")
         return ResponseSchema.success(contract, 200)
+    except HTTPException as e:
+        logger("CONTRACT", f"HTTP {e.status_code}: {e.detail}", "GET /contracts/{contract_id}", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("CONTRACT", f"Failed to fetch contract {contract_id}: {str(e)}", "GET /contracts/{contract_id}", "ERROR")
         return ResponseSchema.error(f"Failed to fetch contract {contract_id}: {str(e)}", 500)
@@ -272,6 +293,9 @@ async def create_contract(contract: ContractCreate, current_user: UserInDB = Dep
     except ValueError as e:
         logger("CONTRACT", f"Validation error: {str(e)}", "POST /contracts", "WARNING")
         return ResponseSchema.error(f"Validation error: {str(e)}", 400)
+    except HTTPException as e:
+        logger("CONTRACT", f"HTTP {e.status_code}: {e.detail}", "POST /contracts", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("CONTRACT", f"Failed to create contract: {str(e)}", "POST /contracts", "ERROR")
         return ResponseSchema.error(f"Failed to create contract: {str(e)}", 500)
@@ -398,6 +422,9 @@ async def generate_contract_pdf(contract_id: str, generation_data: ContractGener
     except ValueError as e:
         logger("CONTRACT", f"Validation error: {str(e)}", "POST /contracts/{contract_id}/generate", "WARNING")
         return ResponseSchema.error(f"Validation error: {str(e)}", 400)
+    except HTTPException as e:
+        logger("CONTRACT", f"HTTP {e.status_code}: {e.detail}", "POST /contracts/{contract_id}/generate", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("CONTRACT", f"Failed to generate contract PDF for {contract_id}: {str(e)}", "POST /contracts/{contract_id}/generate", "ERROR")
         return ResponseSchema.error(f"Failed to generate contract PDF for {contract_id}: {str(e)}", 500)
@@ -473,6 +500,9 @@ async def update_contract(contract_id: str, contract_update: ContractUpdate, bac
 
         logger("CONTRACT", f"Updated contract {contract_id}", "PUT /contracts/{contract_id}", "INFO")
         return ResponseSchema.success(updated_contract, 200)
+    except HTTPException as e:
+        logger("CONTRACT", f"HTTP {e.status_code}: {e.detail}", "PUT /contracts/{contract_id}", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("CONTRACT", f"Failed to update contract {contract_id}: {str(e)}", "PUT /contracts/{contract_id}", "ERROR")
         return ResponseSchema.error(f"Failed to update contract {contract_id}: {str(e)}", 500)
@@ -532,6 +562,9 @@ async def cancel_contract(
         logger("CONTRACT", f"Contract {contract_id} cancelled by user {current_user.user_id}", "PUT /contracts/{contract_id}/cancel", "INFO")
         return ResponseSchema.success(cancelled_contract, 200)
 
+    except HTTPException as e:
+        logger("CONTRACT", f"HTTP {e.status_code}: {e.detail}", "PUT /contracts/{contract_id}/cancel", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("CONTRACT", f"Failed to cancel contract {contract_id}: {str(e)}", "PUT /contracts/{contract_id}/cancel", "ERROR")
         return ResponseSchema.error(f"Failed to cancel contract {contract_id}: {str(e)}", 500)
@@ -553,6 +586,9 @@ async def delete_contract(contract_id: str, current_user: UserInDB = Depends(get
 
         logger("CONTRACT", f"Deleted contract {contract_id}", "DELETE /contracts/{contract_id}", "INFO")
         return ResponseSchema.success("Deleted successfully", 200)
+    except HTTPException as e:
+        logger("CONTRACT", f"HTTP {e.status_code}: {e.detail}", "DELETE /contracts/{contract_id}", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("CONTRACT", f"Failed to delete contract {contract_id}: {str(e)}", "DELETE /contracts/{contract_id}", "ERROR")
         return ResponseSchema.error(f"Failed to delete contract {contract_id}: {str(e)}", 500)

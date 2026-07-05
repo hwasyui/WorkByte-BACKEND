@@ -16,6 +16,7 @@ from routes.auth_router import auth_router
 from routes.oauth.oauth_routes import oauth_router
 from ai_related.job_engine.job_engine_routes import router as job_engine_router
 from ai_related.job_engine.sweep_worker import embedding_sweep_loop
+from routes.admin.moderation_sweep_worker import moderation_sweep_loop
 from routes.users.users_routes import users_router
 from routes.freelancers.freelancer_routes import freelancer_router
 from routes.clients.client_routes import client_router
@@ -75,11 +76,14 @@ async def lifespan(app: FastAPI):
     sweep_task = asyncio.create_task(embedding_sweep_loop())
     logger("LIFESPAN", "Embedding sweep worker started (handles dirty records and manual /embed/ calls regardless of mode)", level="INFO")
 
+    moderation_sweep_task = asyncio.create_task(moderation_sweep_loop())
+    logger("LIFESPAN", "Moderation sweep worker started (auto-approve/auto-remove/report actions run regardless of admin login)", level="INFO")
+
     def _warmup_harmful_text():
         try:
             from ai_related.harmful_text_detection.model_inference import load_model
-            load_model("best")
-            logger("LIFESPAN", "Harmful text model warmed up (roberta)", level="INFO")
+            _, _, _, resolved_model = load_model("best")
+            logger("LIFESPAN", f"Harmful text model warmed up ({resolved_model})", level="INFO")
         except Exception as e:
             logger("LIFESPAN", f"Harmful text model warm-up failed (non-fatal): {e}", level="WARNING")
 
@@ -111,7 +115,14 @@ async def lifespan(app: FastAPI):
     except asyncio.CancelledError:
         pass
     logger("LIFESPAN", "Embedding sweep worker stopped", level="INFO")
-    
+
+    moderation_sweep_task.cancel()
+    try:
+        await moderation_sweep_task
+    except asyncio.CancelledError:
+        pass
+    logger("LIFESPAN", "Moderation sweep worker stopped", level="INFO")
+
     try:
         close_db()
         logger("LIFESPAN", "Application shutdown complete - database connections closed", level="INFO")

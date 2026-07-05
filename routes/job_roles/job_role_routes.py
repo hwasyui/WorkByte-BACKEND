@@ -2,7 +2,7 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, HTTPException
 from typing import List, Optional, Dict
 import uuid
 from functions.schema_model import JobRoleCreate, JobRoleUpdate, JobRoleResponse
@@ -27,6 +27,9 @@ async def get_all_job_roles(limit: Optional[int] = None, current_user: UserInDB 
         success_msg = f"Retrieved {len(job_roles)} job roles for client {client['client_id']}"
         logger("JOB_ROLE", success_msg, "GET /job-roles", "INFO")
         return ResponseSchema.success(job_roles, 200)
+    except HTTPException as e:
+        logger("JOB_ROLE", f"HTTP {e.status_code}: {e.detail}", "GET /job-roles", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to fetch job roles: {str(e)}"
         logger("JOB_ROLE", error_msg, "GET /job-roles", "ERROR")
@@ -47,6 +50,9 @@ async def get_job_role(job_role_id: str, current_user: UserInDB = Depends(get_cu
         success_msg = f"Retrieved job role {job_role_id}"
         logger("JOB_ROLE", success_msg, "GET /job-roles/{job_role_id}", "INFO")
         return ResponseSchema.success(job_role, 200)
+    except HTTPException as e:
+        logger("JOB_ROLE", f"HTTP {e.status_code}: {e.detail}", "GET /job-roles/{job_role_id}", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to fetch job role {job_role_id}: {str(e)}"
         logger("JOB_ROLE", error_msg, "GET /job-roles/{job_role_id}", "ERROR")
@@ -95,6 +101,9 @@ async def create_job_role(job_role: JobRoleCreate, current_user: UserInDB = Depe
         error_msg = f"Validation error: {str(e)}"
         logger("JOB_ROLE", error_msg, "POST /job-roles", "WARNING")
         return ResponseSchema.error(error_msg, 400)
+    except HTTPException as e:
+        logger("JOB_ROLE", f"HTTP {e.status_code}: {e.detail}", "POST /job-roles", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to create job role: {str(e)}"
         logger("JOB_ROLE", error_msg, "POST /job-roles", "ERROR")
@@ -120,6 +129,9 @@ async def update_job_role(job_role_id: str, job_role_update: JobRoleUpdate, curr
         success_msg = f"Updated job role {job_role_id}"
         logger("JOB_ROLE", success_msg, "PUT /job-roles/{job_role_id}", "INFO")
         return ResponseSchema.success(updated_job_role, 200)
+    except HTTPException as e:
+        logger("JOB_ROLE", f"HTTP {e.status_code}: {e.detail}", "PUT /job-roles/{job_role_id}", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to update job role {job_role_id}: {str(e)}"
         logger("JOB_ROLE", error_msg, "PUT /job-roles/{job_role_id}", "ERROR")
@@ -144,6 +156,9 @@ async def delete_job_role(job_role_id: str, current_user: UserInDB = Depends(get
         success_msg = f"Deleted job role {job_role_id}"
         logger("JOB_ROLE", success_msg, "DELETE /job-roles/{job_role_id}", "INFO")
         return ResponseSchema.success("Deleted successfully", 200)
+    except HTTPException as e:
+        logger("JOB_ROLE", f"HTTP {e.status_code}: {e.detail}", "DELETE /job-roles/{job_role_id}", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to delete job role {job_role_id}: {str(e)}"
         logger("JOB_ROLE", error_msg, "DELETE /job-roles/{job_role_id}", "ERROR")

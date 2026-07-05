@@ -3,7 +3,7 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, status, HTTPException
 from typing import List, Optional, Dict
 import uuid
 from functions.schema_model import (
@@ -22,6 +22,7 @@ from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from functions.db_manager import get_db
 from routes.job_posts.job_post_functions import JobPostFunctions, convert_uuids_to_str
+from routes.proposals.proposal_functions import ProposalFunctions
 from ai_related.job_engine.embedding_manager import mark_job_dirty
 from routes.admin.admin_functions import queue_harmful_text_scan, queue_scam_scan
 
@@ -273,6 +274,9 @@ async def get_relevant_jobs(
         logger("JOB_POST", f"Relevant jobs fetched: freelancer={fid} count={len(items)} category={category}", "GET /job-posts/relevant", "INFO")
         return ResponseSchema.success(items, 200)
 
+    except HTTPException as e:
+        logger("JOB_POST", f"HTTP {e.status_code}: {e.detail}", "GET /job-posts/relevant", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("JOB_POST", f"Failed to fetch relevant jobs: {str(e)}", "GET /job-posts/relevant", "ERROR")
         return ResponseSchema.error(f"Failed to fetch relevant jobs: {str(e)}", 500)
@@ -389,6 +393,9 @@ async def create_job_post(job_post: JobPostCreate, current_user: UserInDB = Depe
         error_msg = f"Validation error: {str(e)}"
         logger("JOB_POST", error_msg, "POST /job-posts", "WARNING")
         return ResponseSchema.error(error_msg, 400)
+    except HTTPException as e:
+        logger("JOB_POST", f"HTTP {e.status_code}: {e.detail}", "POST /job-posts", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to create job post: {str(e)}"
         logger("JOB_POST", error_msg, "POST /job-posts", "ERROR")
@@ -408,11 +415,19 @@ async def update_job_post(job_post_id: str, job_post_update: JobPostUpdate, curr
         
         update_data = job_post_update.model_dump(exclude_unset=True)
         updated_job_post = JobPostFunctions.update_job_post(job_post_id, update_data)
-        
+
+        if update_data.get("status") == "closed" and existing_job_post.get("status") != "closed":
+            asyncio.create_task(
+                ProposalFunctions.notify_proposal_owners_of_job_closure(job_post_id, "the client closed it")
+            )
+
         mark_job_dirty(job_post_id)
         success_msg = f"Updated job post {job_post_id}"
         logger("JOB_POST", success_msg, "PUT /job-posts/{job_post_id}", "INFO")
         return ResponseSchema.success(updated_job_post, 200)
+    except HTTPException as e:
+        logger("JOB_POST", f"HTTP {e.status_code}: {e.detail}", "PUT /job-posts/{job_post_id}", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to update job post {job_post_id}: {str(e)}"
         logger("JOB_POST", error_msg, "PUT /job-posts/{job_post_id}", "ERROR")
@@ -435,6 +450,9 @@ async def delete_job_post(job_post_id: str, current_user: UserInDB = Depends(get
         success_msg = f"Deleted job post {job_post_id}"
         logger("JOB_POST", success_msg, "DELETE /job-posts/{job_post_id}", "INFO")
         return ResponseSchema.success("Deleted successfully", 200)
+    except HTTPException as e:
+        logger("JOB_POST", f"HTTP {e.status_code}: {e.detail}", "DELETE /job-posts/{job_post_id}", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to delete job post {job_post_id}: {str(e)}"
         logger("JOB_POST", error_msg, "DELETE /job-posts/{job_post_id}", "ERROR")

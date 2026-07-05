@@ -46,6 +46,7 @@ _JOB_POST_SELECT = """
             SELECT COUNT(*)
             FROM proposal p
             WHERE p.job_post_id = jp.job_post_id
+              AND p.moderation_status = 'visible'
         ) AS proposal_count
     FROM job_post jp
     LEFT JOIN job_role jr ON jr.job_post_id = jp.job_post_id
@@ -527,6 +528,7 @@ class JobPostFunctions:
                     SELECT COUNT(*)
                     FROM proposal
                     WHERE job_post_id = :job_post_id
+                      AND moderation_status = 'visible'
                 )
                 WHERE job_post_id = :job_post_id
             """

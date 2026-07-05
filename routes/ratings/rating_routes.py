@@ -2,7 +2,7 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, HTTPException
 from typing import List, Optional, Dict
 import uuid
 from functions.schema_model import RatingCreate, RatingUpdate, RatingResponse
@@ -120,6 +120,9 @@ async def create_rating(rating: RatingCreate, current_user: UserInDB = Depends(g
         error_msg = f"Validation error: {str(e)}"
         logger("RATING", error_msg, "POST /ratings", "WARNING")
         return ResponseSchema.error(error_msg, 400)
+    except HTTPException as e:
+        logger("RATING", f"HTTP {e.status_code}: {e.detail}", "POST /ratings", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to create rating: {str(e)}"
         logger("RATING", error_msg, "POST /ratings", "ERROR")
@@ -157,6 +160,9 @@ async def update_rating(rating_id: str, rating_update: RatingUpdate, current_use
         error_msg = f"Validation error: {str(e)}"
         logger("RATING", error_msg, "PUT /ratings/{rating_id}", "WARNING")
         return ResponseSchema.error(error_msg, 400)
+    except HTTPException as e:
+        logger("RATING", f"HTTP {e.status_code}: {e.detail}", "PUT /ratings/{rating_id}", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to update rating {rating_id}: {str(e)}"
         logger("RATING", error_msg, "PUT /ratings/{rating_id}", "ERROR")

@@ -3,7 +3,7 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from fastapi import APIRouter, Depends, Form, Query, Request, UploadFile, File
+from fastapi import APIRouter, Depends, Form, Query, Request, UploadFile, File, HTTPException
 from typing import List, Optional, Dict
 import uuid
 from functions.schema_model import FreelancerCreate, FreelancerUpdate, FreelancerResponse, FreelancerProfileComplete
@@ -78,6 +78,9 @@ async def get_all_freelancers(limit: Optional[int] = None, current_user: UserInD
         freelancer = get_freelancer_profile_for_user(current_user)
         logger("FREELANCER", f"Retrieved freelancer profile for user {current_user.user_id}", "GET /freelancers", "INFO")
         return ResponseSchema.success([freelancer], 200)
+    except HTTPException as e:
+        logger("FREELANCER", f"HTTP {e.status_code}: {e.detail}", "GET /freelancers", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to fetch freelancers: {str(e)}"
         logger("FREELANCER", error_msg, "GET /freelancers", "ERROR")
@@ -249,6 +252,9 @@ async def update_freelancer(
 
         logger("FREELANCER", f"Updated freelancer {freelancer_id}", "PUT /freelancers/{identifier}", "INFO")
         return ResponseSchema.success(updated_freelancer, 200)
+    except HTTPException as e:
+        logger("FREELANCER", f"HTTP {e.status_code}: {e.detail}", "PUT /freelancers/{identifier}", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to update freelancer {identifier}: {str(e)}"
         logger("FREELANCER", error_msg, "PUT /freelancers/{identifier}", "ERROR")
@@ -266,6 +272,9 @@ async def delete_freelancer(identifier: str, current_user: UserInDB = Depends(ge
         FreelancerFunctions.delete_freelancer(freelancer_id, delete_embedding=True)
         logger("FREELANCER", f"Freelancer {freelancer_id} deleted", "DELETE /freelancers/{identifier}", "INFO")
         return ResponseSchema.success(f"Freelancer {freelancer_id} deleted successfully", 200)
+    except HTTPException as e:
+        logger("FREELANCER", f"HTTP {e.status_code}: {e.detail}", "DELETE /freelancers/{identifier}", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to delete freelancer {identifier}: {str(e)}"
         logger("FREELANCER", error_msg, "DELETE /freelancers/{identifier}", "ERROR")
@@ -396,6 +405,9 @@ async def upload_freelancer_profile_picture_endpoint(
         )
         logger("FREELANCER", f"Profile picture updated for freelancer {freelancer_id}", f"POST /freelancers/{freelancer_id}/profile-picture", "INFO")
         return ResponseSchema.success(updated, 200)
+    except HTTPException as e:
+        logger("FREELANCER", f"HTTP {e.status_code}: {e.detail}", f"POST /freelancers/{freelancer_id}/profile-picture", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to upload profile picture for freelancer {freelancer_id}: {str(e)}"
         logger("FREELANCER", error_msg, f"POST /freelancers/{freelancer_id}/profile-picture", "ERROR")
@@ -434,6 +446,9 @@ async def delete_freelancer_profile_picture(
         )
         logger("FREELANCER", f"Profile picture deleted for freelancer {freelancer_id}", f"DELETE /freelancers/{freelancer_id}/profile-picture", "INFO")
         return ResponseSchema.success({"message": "Profile picture deleted successfully", "freelancer": updated}, 200)
+    except HTTPException as e:
+        logger("FREELANCER", f"HTTP {e.status_code}: {e.detail}", f"DELETE /freelancers/{freelancer_id}/profile-picture", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to delete profile picture for freelancer {freelancer_id}: {str(e)}"
         logger("FREELANCER", error_msg, f"DELETE /freelancers/{freelancer_id}/profile-picture", "ERROR")

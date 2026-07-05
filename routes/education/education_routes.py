@@ -1,8 +1,9 @@
+import asyncio
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, HTTPException
 from typing import List, Optional, Dict
 import uuid
 from functions.schema_model import EducationCreate, EducationUpdate, EducationResponse
@@ -12,6 +13,7 @@ from functions.access_control import assert_freelancer_owns, get_freelancer_prof
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.education.education_functions import EducationFunctions
+from routes.admin.admin_functions import queue_harmful_text_scan
 from ai_related.job_engine.embedding_manager import mark_freelancer_dirty
 
 education_router = APIRouter(prefix="/educations", tags=["Educations"])
@@ -26,6 +28,9 @@ async def get_all_educations(limit: Optional[int] = None, current_user: UserInDB
         success_msg = f"Retrieved {len(educations)} educations for freelancer {freelancer['freelancer_id']}"
         logger("EDUCATION", success_msg, "GET /educations", "INFO")
         return ResponseSchema.success(educations, 200)
+    except HTTPException as e:
+        logger("EDUCATION", f"HTTP {e.status_code}: {e.detail}", "GET /educations", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to fetch educations: {str(e)}"
         logger("EDUCATION", error_msg, "GET /educations", "ERROR")
@@ -83,6 +88,20 @@ async def create_education(education: EducationCreate, current_user: UserInDB = 
         )
         
         mark_freelancer_dirty(str(education.freelancer_id))
+
+        _scan_text = " ".join(filter(None, [
+            education.institution_name, education.degree, education.field_of_study,
+            education.grade, education.description,
+        ]))
+        if _scan_text.strip():
+            asyncio.create_task(asyncio.to_thread(
+                queue_harmful_text_scan,
+                "freelancer_profile",
+                str(education.freelancer_id),
+                str(current_user.user_id),
+                _scan_text,
+            ))
+
         success_msg = f"Created education {education_id} for freelancer {education.freelancer_id}"
         logger("EDUCATION", success_msg, "POST /educations", "INFO")
         return ResponseSchema.success(new_education, 201)
@@ -90,6 +109,9 @@ async def create_education(education: EducationCreate, current_user: UserInDB = 
         error_msg = f"Validation error: {str(e)}"
         logger("EDUCATION", error_msg, "POST /educations", "WARNING")
         return ResponseSchema.error(error_msg, 400)
+    except HTTPException as e:
+        logger("EDUCATION", f"HTTP {e.status_code}: {e.detail}", "POST /educations", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to create education: {str(e)}"
         logger("EDUCATION", error_msg, "POST /educations", "ERROR")
@@ -111,9 +133,29 @@ async def update_education(education_id: str, education_update: EducationUpdate,
         updated_education = EducationFunctions.update_education(education_id, update_data)
         
         mark_freelancer_dirty(str(existing_education["freelancer_id"]))
+
+        _scan_text = " ".join(filter(None, [
+            updated_education.get("institution_name", ""),
+            updated_education.get("degree", ""),
+            updated_education.get("field_of_study", ""),
+            updated_education.get("grade", ""),
+            updated_education.get("description", ""),
+        ]))
+        if _scan_text.strip():
+            asyncio.create_task(asyncio.to_thread(
+                queue_harmful_text_scan,
+                "freelancer_profile",
+                str(existing_education["freelancer_id"]),
+                str(current_user.user_id),
+                _scan_text,
+            ))
+
         success_msg = f"Updated education {education_id}"
         logger("EDUCATION", success_msg, "PUT /educations/{education_id}", "INFO")
         return ResponseSchema.success(updated_education, 200)
+    except HTTPException as e:
+        logger("EDUCATION", f"HTTP {e.status_code}: {e.detail}", "PUT /educations/{education_id}", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to update education {education_id}: {str(e)}"
         logger("EDUCATION", error_msg, "PUT /educations/{education_id}", "ERROR")
@@ -137,6 +179,9 @@ async def delete_education(education_id: str, current_user: UserInDB = Depends(g
         success_msg = f"Deleted education {education_id}"
         logger("EDUCATION", success_msg, "DELETE /educations/{education_id}", "INFO")
         return ResponseSchema.success("Deleted successfully", 200)
+    except HTTPException as e:
+        logger("EDUCATION", f"HTTP {e.status_code}: {e.detail}", "DELETE /educations/{education_id}", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to delete education {education_id}: {str(e)}"
         logger("EDUCATION", error_msg, "DELETE /educations/{education_id}", "ERROR")

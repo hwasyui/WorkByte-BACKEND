@@ -2,7 +2,7 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, HTTPException
 from typing import List, Optional
 from functions.schema_model import ClientTrustScoreCreate, ClientTrustScoreUpdate, ClientTrustScoreResponse
 from functions.schema_model import UserInDB
@@ -64,6 +64,9 @@ async def create_client_trust_score(score: ClientTrustScoreCreate, current_user:
         error_msg = f"Validation error: {str(e)}"
         logger("CLIENT_TRUST_SCORE", error_msg, "POST /client-trust-scores", "WARNING")
         return ResponseSchema.error(error_msg, 400)
+    except HTTPException as e:
+        logger("CLIENT_TRUST_SCORE", f"HTTP {e.status_code}: {e.detail}", "POST /client-trust-scores", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to create client trust score: {str(e)}"
         logger("CLIENT_TRUST_SCORE", error_msg, "POST /client-trust-scores", "ERROR")
@@ -87,6 +90,9 @@ async def update_client_trust_score(client_id: str, score_update: ClientTrustSco
         success_msg = f"Updated trust score for client {client_id}"
         logger("CLIENT_TRUST_SCORE", success_msg, "PUT /client-trust-scores/{client_id}", "INFO")
         return ResponseSchema.success(updated_score, 200)
+    except HTTPException as e:
+        logger("CLIENT_TRUST_SCORE", f"HTTP {e.status_code}: {e.detail}", "PUT /client-trust-scores/{client_id}", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to update trust score for client {client_id}: {str(e)}"
         logger("CLIENT_TRUST_SCORE", error_msg, "PUT /client-trust-scores/{client_id}", "ERROR")
@@ -109,6 +115,9 @@ async def delete_client_trust_score(client_id: str, current_user: UserInDB = Dep
         success_msg = f"Deleted trust score for client {client_id}"
         logger("CLIENT_TRUST_SCORE", success_msg, "DELETE /client-trust-scores/{client_id}", "INFO")
         return ResponseSchema.success(None, 200)
+    except HTTPException as e:
+        logger("CLIENT_TRUST_SCORE", f"HTTP {e.status_code}: {e.detail}", "DELETE /client-trust-scores/{client_id}", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to delete trust score for client {client_id}: {str(e)}"
         logger("CLIENT_TRUST_SCORE", error_msg, "DELETE /client-trust-scores/{client_id}", "ERROR")

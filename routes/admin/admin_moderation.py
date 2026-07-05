@@ -5,9 +5,13 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
+from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
+from functions.db_manager import get_db
 from functions.logger import logger
+
+AUTO_APPROVE_DAYS: int = 30
 
 _KEYWORDS_PATH = os.path.join(os.path.dirname(__file__), "moderation_keywords.json")
 
@@ -118,21 +122,20 @@ def scan_for_scam_with_ml_fallback(title: str, description: str) -> Dict:
 
 def scan_harmful_text_with_ml_fallback(text: str) -> Dict:
     """
-    Primary harmful text scan entry point.
+    primary harmful text scan entry point.
 
-    1. Attempts inference with the trained RoBERTa model (threshold=0.5).
-       Model metrics on Jigsaw+ETHOS test set: F1=0.71, precision=0.70,
-       recall=0.73, hamming_loss=0.062.
-    2. On any failure (model files missing, CUDA OOM, etc.) logs a WARNING
+    1. runs inference with the best available trained model (chunked for long
+       text, each label uses its own tuned threshold from config.pkl).
+    2. on any failure (model files missing, cuda oom, etc.) logs a warning
        and transparently falls back to keyword matching.
 
-    Return shape is identical to scan_harmful_text() plus a 'scan_method' key
+    return shape is identical to scan_harmful_text() plus a 'scan_method' key
     ('ml' or 'keyword') so callers can log which path was taken.
     """
     try:
         from ai_related.harmful_text_detection.model_inference import predict
 
-        ml = predict(text, model_type="best", threshold=0.5)
+        ml = predict(text, model_type="best")
 
         # Map ML label names to the DB/keyword naming convention
         normalized_labels = [_ML_LABEL_REMAP.get(lbl, lbl) for lbl in ml["labels"]]
@@ -155,3 +158,66 @@ def scan_harmful_text_with_ml_fallback(text: str) -> Dict:
             level="WARNING",
         )
         return scan_harmful_text(text)
+
+
+def insert_harmful_text_queue_entry(
+    content_type: str,
+    content_id: str,
+    user_id: str,
+    text: str,
+    result: Dict,
+) -> Optional[Dict]:
+    """
+    Insert an already-flagged scan result into harmful_text_queue as an audit/review
+    record. Shared by queue_harmful_text_scan() (job posts, freelancer/client profiles,
+    which scan-then-queue in one step) and the proposal instant-block path (which has
+    already scanned and just needs the record persisted, not a second scan run).
+    content_type: 'job_post' | 'freelancer_profile' | 'client_profile' | 'proposal'
+    """
+    scan_method = result.get("scan_method", "unknown")
+    auto_approve_at = datetime.utcnow() + timedelta(days=AUTO_APPROVE_DAYS)
+    try:
+        row = _row(get_db().execute_query(
+            """
+            INSERT INTO harmful_text_queue (
+                content_type, content_id, user_id,
+                toxic_score, obscene_score,
+                threat_score, insult_score, identity_hate_score,
+                detected_labels, flagged_text, auto_approve_at
+            ) VALUES (
+                :content_type, :content_id, :user_id,
+                :toxic_score, :obscene_score,
+                :threat_score, :insult_score, :identity_hate_score,
+                CAST(:detected_labels AS JSONB), :flagged_text, :auto_approve_at
+            )
+            RETURNING *
+            """,
+            params={
+                "content_type":         content_type,
+                "content_id":           content_id,
+                "user_id":              user_id,
+                "toxic_score":          result["toxic_score"],
+                "obscene_score":        result["obscene_score"],
+                "threat_score":         result["threat_score"],
+                "insult_score":         result["insult_score"],
+                "identity_hate_score":  result["identity_hate_score"],
+                "detected_labels":      json.dumps(result["detected_labels"]),
+                "flagged_text":         text[:500],
+                "auto_approve_at":      auto_approve_at,
+            },
+        ))
+        logger(
+            "ADMIN",
+            f"Content flagged via {scan_method} scan: {content_type} {content_id} labels={result['detected_labels']}",
+            level="INFO",
+        )
+        return row
+    except Exception as e:
+        logger("ADMIN", f"Failed to queue content scan: {e}", level="ERROR")
+        return None
+
+
+def _row(result) -> Optional[Dict]:
+    if not result:
+        return None
+    return dict(result[0])

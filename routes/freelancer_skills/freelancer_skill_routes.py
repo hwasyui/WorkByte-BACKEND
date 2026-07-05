@@ -2,7 +2,7 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, HTTPException
 from typing import List, Optional, Dict
 import uuid
 from functions.schema_model import FreelancerSkillCreate, FreelancerSkillUpdate, FreelancerSkillResponse
@@ -26,6 +26,9 @@ async def get_all_freelancer_skills(limit: Optional[int] = None, current_user: U
         success_msg = f"Retrieved {len(skills)} freelancer skills for freelancer {freelancer['freelancer_id']}"
         logger("FREELANCER_SKILL", success_msg, "GET /freelancer-skills", "INFO")
         return ResponseSchema.success(skills, 200)
+    except HTTPException as e:
+        logger("FREELANCER_SKILL", f"HTTP {e.status_code}: {e.detail}", "GET /freelancer-skills", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to fetch freelancer skills: {str(e)}"
         logger("FREELANCER_SKILL", error_msg, "GET /freelancer-skills", "ERROR")
@@ -85,6 +88,9 @@ async def create_freelancer_skill(freelancer_skill: FreelancerSkillCreate, curre
         error_msg = f"Validation error: {str(e)}"
         logger("FREELANCER_SKILL", error_msg, "POST /freelancer-skills", "WARNING")
         return ResponseSchema.error(error_msg, 400)
+    except HTTPException as e:
+        logger("FREELANCER_SKILL", f"HTTP {e.status_code}: {e.detail}", "POST /freelancer-skills", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to create freelancer skill: {str(e)}"
         logger("FREELANCER_SKILL", error_msg, "POST /freelancer-skills", "ERROR")
@@ -109,6 +115,9 @@ async def update_freelancer_skill(freelancer_skill_id: str, freelancer_skill_upd
         success_msg = f"Updated freelancer skill {freelancer_skill_id}"
         logger("FREELANCER_SKILL", success_msg, "PUT /freelancer-skills/{freelancer_skill_id}", "INFO")
         return ResponseSchema.success(updated_skill, 200)
+    except HTTPException as e:
+        logger("FREELANCER_SKILL", f"HTTP {e.status_code}: {e.detail}", "PUT /freelancer-skills/{freelancer_skill_id}", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to update freelancer skill {freelancer_skill_id}: {str(e)}"
         logger("FREELANCER_SKILL", error_msg, "PUT /freelancer-skills/{freelancer_skill_id}", "ERROR")
@@ -132,6 +141,9 @@ async def delete_freelancer_skill(freelancer_skill_id: str, current_user: UserIn
         success_msg = f"Deleted freelancer skill {freelancer_skill_id}"
         logger("FREELANCER_SKILL", success_msg, "DELETE /freelancer-skills/{freelancer_skill_id}", "INFO")
         return ResponseSchema.success("Deleted successfully", 200)
+    except HTTPException as e:
+        logger("FREELANCER_SKILL", f"HTTP {e.status_code}: {e.detail}", "DELETE /freelancer-skills/{freelancer_skill_id}", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to delete freelancer skill {freelancer_skill_id}: {str(e)}"
         logger("FREELANCER_SKILL", error_msg, "DELETE /freelancer-skills/{freelancer_skill_id}", "ERROR")
@@ -148,6 +160,9 @@ async def delete_freelancer_skill_by_ids(freelancer_id: str, skill_id: str, curr
         success_msg = f"Deleted skill {skill_id} from freelancer {freelancer_id}"
         logger("FREELANCER_SKILL", success_msg, "DELETE /freelancer-skills/freelancer/{freelancer_id}/skill/{skill_id}", "INFO")
         return ResponseSchema.success("Deleted successfully", 200)
+    except HTTPException as e:
+        logger("FREELANCER_SKILL", f"HTTP {e.status_code}: {e.detail}", "DELETE /freelancer-skills/freelancer/{freelancer_id}/skill/{skill_id}", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to delete freelancer skill: {str(e)}"
         logger("FREELANCER_SKILL", error_msg, "DELETE /freelancer-skills/freelancer/{freelancer_id}/skill/{skill_id}", "ERROR")

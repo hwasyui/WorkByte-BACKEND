@@ -9,35 +9,12 @@ import httpx
 
 from functions.logger import logger
 
-_LLM_TIMEOUT = 90.0   # user-triggered, so a longer timeout is fine
+_LLM_TIMEOUT = 90.0
 
-# FX rates
-_FX_CACHE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "currency_rates.json")
+RELEVANCE_THRESHOLD = 0.3
 
-
-def _get_fx_rates() -> dict[str, float]:
-    """Read USD-based FX rates from currency_rates.json. Falls back to USD-only if unavailable."""
-    try:
-        with open(_FX_CACHE_PATH, encoding="utf-8") as fh:
-            data = json.load(fh)
-        rates = {k.upper(): float(v) for k, v in data.get("rates", {}).items()}
-        if rates:
-            logger("RAG_ANALYSER", f"FX rates loaded | {len(rates)} currencies | updated={data.get('updated', '?')}", level="DEBUG")
-            return rates
-    except Exception as e:
-        logger("RAG_ANALYSER", f"FX rate file read failed ({e}); using USD-only fallback", level="WARNING")
-    return {"USD": 1.0}
-
-
-def _to_usd(amount: float, currency: str, fx: dict[str, float]) -> float:
-    """Convert amount from currency to USD using USD-based fx rates."""
-    rate = fx.get(currency.upper(), 1.0)
-    return float(amount) / rate if rate > 0 else float(amount)
-
-
-def _to_idr(amount: float, currency: str, fx: dict[str, float]) -> float:
-    """Convert amount from currency to IDR via USD as the intermediate."""
-    return _to_usd(amount, currency, fx) * fx.get("IDR", 16350.0)
+# max combined evidence items (past contracts + portfolio) shown to the LLM
+EVIDENCE_CAP = 3
 
 
 def _retrieve_job_context(db, job_post_id: str) -> dict:
@@ -57,7 +34,7 @@ def _retrieve_job_context(db, job_post_id: str) -> dict:
     job_rows = db.execute_query(
         """
         SELECT job_title, job_description, project_type, project_scope,
-               experience_level, estimated_duration, deadline
+               estimated_duration, deadline
         FROM job_post
         WHERE job_post_id = :jpid
         """,
@@ -72,9 +49,6 @@ def _retrieve_job_context(db, job_post_id: str) -> dict:
         """
         SELECT jr.role_title,
                jr.role_description,
-               jr.role_budget,
-               jr.budget_type,
-               jr.budget_currency,
                COALESCE(
                    array_agg(
                        s.skill_name || ' (' ||
@@ -90,8 +64,7 @@ def _retrieve_job_context(db, job_post_id: str) -> dict:
         LEFT JOIN job_role_skill jrs ON jrs.job_role_id = jr.job_role_id
         LEFT JOIN skill s            ON s.skill_id       = jrs.skill_id
         WHERE jr.job_post_id = :jpid
-        GROUP BY jr.job_role_id, jr.role_title, jr.role_description,
-                 jr.role_budget, jr.budget_type, jr.budget_currency
+        GROUP BY jr.job_role_id, jr.role_title, jr.role_description
         ORDER BY jr.display_order
         """,
         {"jpid": job_post_id},
@@ -125,16 +98,16 @@ def _retrieve_freelancer_context(db, freelancer_id: str, job_post_id: str | None
             items are ranked by relevance to the job instead of by recency.
 
     Returns:
-        Dict with profile fields plus ``skills``, ``portfolio`` (up to 3),
-        ``portfolio_retrieval_method``, and ``work_experience`` (up to 3) lists.
+        Dict with profile fields plus ``skills``, ``portfolio`` (up to EVIDENCE_CAP candidates,
+        for the evidence gate in analyse_job_match to draw from), ``portfolio_retrieval_method``,
+        and ``work_experience`` (up to 3) lists.
         Returns an empty dict if the freelancer is not found.
     """
     logger("RAG_ANALYSER", f"Retrieving freelancer context | freelancer_id={freelancer_id}", level="DEBUG")
 
     f_rows = db.execute_query(
         """
-        SELECT f.full_name, f.title, f.bio, f.estimated_rate, f.rate_time, f.rate_currency,
-               f.total_jobs
+        SELECT f.full_name, f.title, f.bio, f.estimated_rate, f.rate_time, f.rate_currency
         FROM freelancer f
         WHERE f.freelancer_id = :fid
         """,
@@ -158,11 +131,6 @@ def _retrieve_freelancer_context(db, freelancer_id: str, job_post_id: str | None
     )
     fc["skills"] = [dict(s) for s in skills]
 
-    # Portfolio ranked by cosine similarity to the target job when embeddings
-    # are ready; otherwise fall back to most-recent-first.
-    # portfolio_embedding contains manually-entered external projects (self-reported).
-    # Contracts (auto-generated once a job completes on-platform) are retrieved
-    # separately in _retrieve_past_contracts and carry higher credibility.
     portfolio_method = "recency_fallback"
     if job_post_id:
         portfolio_embed_check = db.execute_query(
@@ -183,7 +151,7 @@ def _retrieve_freelancer_context(db, freelancer_id: str, job_post_id: str | None
 
         if has_portfolio_embeddings and has_job_embedding:
             portfolio_rows = db.execute_query(
-                """
+                f"""
                 SELECT p.project_title,
                        p.project_description,
                        p.project_url,
@@ -200,8 +168,9 @@ def _retrieve_freelancer_context(db, freelancer_id: str, job_post_id: str | None
                 ) best_role
                 WHERE pe.freelancer_id = :fid
                   AND pe.embedding_vector IS NOT NULL
+                  AND COALESCE(p.is_auto_generated, FALSE) = FALSE
                 ORDER BY pe.embedding_vector <=> best_role.embedding_vector
-                LIMIT 3
+                LIMIT {EVIDENCE_CAP}
                 """,
                 {"fid": freelancer_id, "jpid": job_post_id},
             )
@@ -219,23 +188,25 @@ def _retrieve_freelancer_context(db, freelancer_id: str, job_post_id: str | None
                 level="DEBUG",
             )
             portfolio_rows = db.execute_query(
-                """
+                f"""
                 SELECT project_title, project_description, project_url
                 FROM portfolio
                 WHERE freelancer_id = :fid
+                  AND COALESCE(is_auto_generated, FALSE) = FALSE
                 ORDER BY completion_date DESC NULLS LAST
-                LIMIT 3
+                LIMIT {EVIDENCE_CAP}
                 """,
                 {"fid": freelancer_id},
             )
     else:
         portfolio_rows = db.execute_query(
-            """
+            f"""
             SELECT project_title, project_description, project_url
             FROM portfolio
             WHERE freelancer_id = :fid
+              AND COALESCE(is_auto_generated, FALSE) = FALSE
             ORDER BY completion_date DESC NULLS LAST
-            LIMIT 3
+            LIMIT {EVIDENCE_CAP}
             """,
             {"fid": freelancer_id},
         )
@@ -261,7 +232,7 @@ def _retrieve_freelancer_context(db, freelancer_id: str, job_post_id: str | None
         f"Freelancer context retrieved | freelancer_id={freelancer_id} | name='{fc.get('full_name', '?')}' "
         f"| skills={len(fc['skills'])} "
         f"| portfolio={len(fc['portfolio'])} ({portfolio_method}) "
-        f"| work_exp={len(fc['work_experience'])} | jobs={fc.get('total_jobs', 0)}",
+        f"| work_exp={len(fc['work_experience'])}",
         level="DEBUG",
     )
     return fc
@@ -301,7 +272,7 @@ def _retrieve_past_contracts(db, freelancer_id: str, job_post_id: str) -> list[d
     if has_embeddings and has_job_embedding:
         logger("RAG_ANALYSER", "Using vector similarity to rank past contracts", level="DEBUG")
         rows = db.execute_query(
-            """
+            f"""
             SELECT jp.job_title,
                    jp.job_description,
                    c.status                        AS contract_status,
@@ -328,7 +299,7 @@ def _retrieve_past_contracts(db, freelancer_id: str, job_post_id: str) -> list[d
             GROUP BY jp.job_title, jp.job_description, c.status, rwc.overall_comment,
                      ce.embedding_vector, best_role.embedding_vector
             ORDER BY ce.embedding_vector <=> best_role.embedding_vector
-            LIMIT 5
+            LIMIT {EVIDENCE_CAP}
             """,
             {"fid": freelancer_id, "jpid": job_post_id},
         )
@@ -341,7 +312,7 @@ def _retrieve_past_contracts(db, freelancer_id: str, job_post_id: str) -> list[d
             level="DEBUG",
         )
         rows = db.execute_query(
-            """
+            f"""
             SELECT jp.job_title,
                    jp.job_description,
                    c.status                AS contract_status,
@@ -356,13 +327,17 @@ def _retrieve_past_contracts(db, freelancer_id: str, job_post_id: str) -> list[d
               AND c.status = 'completed'
             GROUP BY jp.job_title, jp.job_description, c.status, rwc.overall_comment, c.end_date
             ORDER BY c.end_date DESC NULLS LAST
-            LIMIT 5
+            LIMIT {EVIDENCE_CAP}
             """,
             {"fid": freelancer_id},
         )
         retrieval_method = "recency_fallback"
 
     contracts = [dict(r) for r in rows]
+    if retrieval_method == "recency_fallback":
+        # no similarity score exists yet in this mode, evidence gating treats these as relevant
+        for c in contracts:
+            c["similarity"] = None
     rated = sum(1 for c in contracts if c.get("overall_rating") is not None)
     avg_rating = (
         sum(float(c["overall_rating"]) for c in contracts if c.get("overall_rating"))
@@ -379,9 +354,65 @@ def _retrieve_past_contracts(db, freelancer_id: str, job_post_id: str) -> list[d
     return contracts
 
 
-def _build_prompt(job: dict, fc: dict, past_contracts: list[dict], fx_rates: dict[str, float]) -> tuple[str, list[dict]]:
+def _build_evidence_list(past_contracts: list[dict], portfolio_candidates: list[dict]) -> tuple[list[dict], dict]:
     """
-    Build the grounded LLM prompt from job, freelancer, and past-contract context.
+    Merge past contracts and portfolio items into one evidence list, capped at
+    EVIDENCE_CAP, using a relevance-gated, contract-first fill strategy.
+
+    Contracts with cosine similarity >= RELEVANCE_THRESHOLD are "relevant" and take
+    priority slots, highest similarity first. Remaining slots (if any) are filled
+    with portfolio items ranked by cosine similarity to the same job embedding.
+    Zero relevant contracts means the evidence list is portfolio-only.
+
+    When contracts have no similarity score (recency fallback, embeddings not ready),
+    there is nothing to gate on, so all retrieved contracts are treated as relevant,
+    preserving prior behavior for that fallback path.
+
+    Returns:
+        (evidence, stats). Each evidence item is the original contract or portfolio
+        dict plus a "source" key ("contract" or "portfolio"). stats holds the counts
+        used for structured logging.
+    """
+    contracts_have_scores = any(c.get("similarity") is not None for c in past_contracts)
+
+    if contracts_have_scores:
+        relevant_contracts = [
+            c for c in past_contracts if (c.get("similarity") or 0.0) >= RELEVANCE_THRESHOLD
+        ]
+        relevant_contracts.sort(key=lambda c: c.get("similarity") or 0.0, reverse=True)
+    else:
+        relevant_contracts = list(past_contracts)
+
+    evidence = [{**c, "source": "contract"} for c in relevant_contracts[:EVIDENCE_CAP]]
+
+    remaining_slots = EVIDENCE_CAP - len(evidence)
+    portfolio_used = portfolio_candidates[:remaining_slots] if remaining_slots > 0 else []
+    evidence.extend({**p, "source": "portfolio"} for p in portfolio_used)
+
+    if relevant_contracts and portfolio_used:
+        path = "mixed"
+    elif relevant_contracts:
+        path = "contract_only"
+    else:
+        path = "portfolio_only"
+
+    stats = {
+        "relevant_contracts_found": len(relevant_contracts),
+        "portfolio_used_to_enrich": len(portfolio_used),
+        "top_contract_similarity": relevant_contracts[0].get("similarity") if relevant_contracts else None,
+        "path": path,
+    }
+    return evidence, stats
+
+
+def _build_prompt(job: dict, fc: dict, evidence: list[dict]) -> tuple[str, list[dict]]:
+    """
+    Build the grounded LLM prompt from job, freelancer, and evidence context.
+
+    ``evidence`` is the relevance-gated, contract-first merged list built by
+    _build_evidence_list: verified contracts fill priority slots first, portfolio
+    items fill any remaining slots up to EVIDENCE_CAP total. Each item is labeled
+    by source so the LLM still knows contracts are the more credible evidence.
 
     Analysis is ROLE-CENTRIC: each role receives a full independent evaluation
     (match_score, recommendation, strengths, gaps, skill_tips) based on its own
@@ -419,10 +450,6 @@ def _build_prompt(job: dict, fc: dict, past_contracts: list[dict], fx_rates: dic
         role_analyses.append({
             "role_title":    role.get("role_title", ""),
             "role_desc":     (role.get("role_description") or "")[:200],
-            "budget_str":    (
-                f"{role.get('role_budget', 'N/A')} {role.get('budget_currency', '')} "
-                f"({role.get('budget_type', '')})"
-            ),
             "required":      required,
             "preferred":     preferred,
             "matched_req":   matched_req,
@@ -430,39 +457,6 @@ def _build_prompt(job: dict, fc: dict, past_contracts: list[dict], fx_rates: dic
             "matched_pref":  matched_pref,
             "coverage_pct":  coverage_pct,
         })
-
-    # Experience gap (pre-computed)
-    _EXP_MAP_RAG   = {"entry": 1, "intermediate": 2, "expert": 3}
-    _EXP_LABEL_RAG = {1: "entry", 2: "intermediate", 3: "expert"}
-    job_exp_num = _EXP_MAP_RAG.get((job.get("experience_level") or "entry").lower(), 1)
-    total_jobs  = int(fc.get("total_jobs") or 0)
-    work_exp_count = len(fc.get("work_experience") or [])
-
-    # Verified tier: driven entirely by in-platform completed contracts
-    verified_exp_num = 3 if total_jobs >= 10 else (2 if total_jobs >= 3 else 1)
-    # Unverified floor: self-reported work experience can lift to intermediate only
-    unverified_exp_num = min(2, 1 + (1 if work_exp_count >= 1 else 0))
-
-    if verified_exp_num >= unverified_exp_num:
-        fl_exp_num = verified_exp_num
-        exp_source = f"verified - {total_jobs} completed contract{'s' if total_jobs != 1 else ''}"
-    else:
-        fl_exp_num = unverified_exp_num
-        exp_source = f"self-reported, unverified - {work_exp_count} work experience entr{'ies' if work_exp_count != 1 else 'y'}"
-
-    exp_delta   = fl_exp_num - job_exp_num
-    if exp_delta >= 0:
-        exp_fit_str = (
-            f"✓ Meets requirement ({_EXP_LABEL_RAG[fl_exp_num]} ≥ {_EXP_LABEL_RAG[job_exp_num]}, {exp_source})"
-        )
-    elif exp_delta == -1:
-        exp_fit_str = (
-            f"△ Slightly under ({_EXP_LABEL_RAG[fl_exp_num]}, job requires {_EXP_LABEL_RAG[job_exp_num]}, {exp_source})"
-        )
-    else:
-        exp_fit_str = (
-            f"✗ Under-qualified ({_EXP_LABEL_RAG[fl_exp_num]}, job requires {_EXP_LABEL_RAG[job_exp_num]}, {exp_source})"
-        )
 
     # Build context
     lines = []
@@ -477,9 +471,6 @@ def _build_prompt(job: dict, fc: dict, past_contracts: list[dict], fx_rates: dic
     lines.append(f"Name:         {fc.get('full_name', '')}")
     if fc.get("title"):
         lines.append(f"Title:        {fc['title']}")
-    lines.append(f"Jobs done:    {fc.get('total_jobs', 0)} completed in-platform")
-    lines.append(f"Experience:   {_EXP_LABEL_RAG[fl_exp_num]} ({exp_source})")
-    lines.append(f"Experience fit: {exp_fit_str}")
     if fc.get("estimated_rate"):
         rate_currency = fc.get("rate_currency") or "USD"
         rate_time     = fc.get("rate_time") or "hourly"
@@ -494,13 +485,6 @@ def _build_prompt(job: dict, fc: dict, past_contracts: list[dict], fx_rates: dic
             for s in fc["skills"]
         ]
         lines.append(f"Skills:       {', '.join(skill_strs)}")
-    if fc.get("portfolio"):
-        method = fc.get("portfolio_retrieval_method", "recency_fallback")
-        rank_label = "most relevant to this job" if method == "vector_similarity" else "most recent"
-        lines.append(f"  Portfolio ({rank_label}), self-reported external projects, unverified credibility:")
-        for p in fc["portfolio"]:
-            relevance = f" [relevance: {p['relevance_score']}]" if p.get("relevance_score") is not None else ""
-            lines.append(f"    - {p['project_title']}{relevance}: {(p.get('project_description') or '')[:120]}")
     if fc.get("work_experience"):
         lines.append("  Work Experience:")
         for w in fc["work_experience"]:
@@ -509,31 +493,28 @@ def _build_prompt(job: dict, fc: dict, past_contracts: list[dict], fx_rates: dic
                 f"{(w.get('description') or '')[:120]}"
             )
 
-    if past_contracts:
-        lines.append("\nPAST COMPLETED CONTRACTS (verified in-app work, primary evidence, prioritise over portfolio)")
-        for c in past_contracts:
-            rating_str = f"Rating: {c['overall_rating']}/5" if c.get("overall_rating") else "Not yet rated"
-            review = (c.get("review_text") or "")[:180]
-            lines.append(f"  - {c['job_title']} | {rating_str}")
-            if review:
-                lines.append(f"    Review: \"{review}\"")
+    if evidence:
+        lines.append("\nEVIDENCE (ranked by relevance, verified contracts prioritised over self-reported portfolio)")
+        for item in evidence:
+            if item["source"] == "contract":
+                rating_str = f"Rating: {item['overall_rating']}/5" if item.get("overall_rating") else "Not yet rated"
+                review = (item.get("review_text") or "")[:180]
+                lines.append(f"  - [verified completed contract] {item['job_title']} | {rating_str}")
+                if review:
+                    lines.append(f"    Review: \"{review}\"")
+            else:
+                relevance = f" [relevance: {item['relevance_score']}]" if item.get("relevance_score") is not None else ""
+                lines.append(
+                    f"  - [self-reported portfolio]{relevance} {item['project_title']}: "
+                    f"{(item.get('project_description') or '')[:120]}"
+                )
     else:
-        lines.append("\nPAST CONTRACTS\nNone on-platform yet.")
+        lines.append("\nEVIDENCE\nNo completed contracts or portfolio items on-platform yet.")
 
     # Per-role skill match section (primary evidence)
-    # Rate-to-budget helpers (used per role below)
-    _RATE_TO_MONTHLY: dict[str, float] = {
-        "hourly": 160.0, "daily": 20.0, "weekly": 4.0, "monthly": 1.0, "annually": 1 / 12,
-    }
-    fl_rate          = float(fc.get("estimated_rate") or 0)
-    fl_rate_time     = (fc.get("rate_time") or "hourly").lower()
-    fl_rate_currency = (fc.get("rate_currency") or "USD").upper()
-    fl_monthly_rate  = fl_rate * _RATE_TO_MONTHLY.get(fl_rate_time, 160.0)
-
     lines.append("\nPER-ROLE SKILL MATCH (pre-computed, primary evidence for scoring)")
     for ra in role_analyses:
         lines.append(f"\n  ROLE: {ra['role_title']}")
-        lines.append(f"  Budget: {ra['budget_str']}")
         if ra["role_desc"]:
             lines.append(f"  Description: {ra['role_desc']}")
         lines.append(f"  Required skill coverage: {len(ra['matched_req'])}/{len(ra['required'])} = {ra['coverage_pct']}%")
@@ -549,31 +530,6 @@ def _build_prompt(job: dict, fc: dict, past_contracts: list[dict], fx_rates: dic
             lines.append("  No required skills specified")
         if ra["matched_pref"]:
             lines.append(f"  Preferred PRESENT: {', '.join(ra['matched_pref'])}")
-        # Budget fit: convert both to IDR so cross-currency comparisons are accurate
-        role_budget_raw = next(
-            (r.get("role_budget") for r in job.get("roles", []) if r.get("role_title") == ra["role_title"]),
-            None,
-        )
-        role_budget_currency = next(
-            (r.get("budget_currency") or "USD" for r in job.get("roles", []) if r.get("role_title") == ra["role_title"]),
-            "USD",
-        )
-        if fl_monthly_rate > 0 and role_budget_raw:
-            fl_idr     = _to_idr(fl_monthly_rate, fl_rate_currency, fx_rates)
-            budget_idr = _to_idr(float(role_budget_raw), role_budget_currency, fx_rates)
-            fit        = "✓ Within budget" if fl_idr <= budget_idr * 1.1 else "✗ Exceeds budget"
-            same_ccy   = fl_rate_currency.upper() == role_budget_currency.upper()
-            if same_ccy and fl_rate_currency.upper() == "IDR":
-                lines.append(
-                    f"  Budget fit:  freelancer ~{fl_monthly_rate:,.0f} IDR/month "
-                    f"vs role budget {float(role_budget_raw):,.0f} IDR → {fit}"
-                )
-            else:
-                lines.append(
-                    f"  Budget fit:  freelancer ~{fl_monthly_rate:.0f} {fl_rate_currency}/month "
-                    f"(≈{fl_idr:,.0f} IDR) vs role budget {role_budget_raw} {role_budget_currency} "
-                    f"(≈{budget_idr:,.0f} IDR) → {fit}"
-                )
 
     context = "\n".join(lines)
 
@@ -608,7 +564,7 @@ def _build_prompt(job: dict, fc: dict, past_contracts: list[dict], fx_rates: dic
         for ra in role_analyses
     )
 
-    prompt = f"""You are an AI job matching assistant. Analyse the freelancer's fit for EACH ROLE SEPARATELY and independently. The job post description is background only, each role must be evaluated on its own required skills, budget, and description.
+    prompt = f"""You are an AI job matching assistant. Analyse the freelancer's fit for EACH ROLE SEPARATELY and independently. The job post description is background only, each role must be evaluated on its own required skills and description.
 
 {context}
 
@@ -618,8 +574,6 @@ Score each role holistically (0-100) considering:
   3. Directly relevant past contracts (as evidence of experience, not platform credibility)
   4. Portfolio items that demonstrate the role's core skills
   5. Work experience relevance to this specific role
-  6. Experience level fit (shown above, note if under/over-qualified)
-  7. Budget fit (shown per role above, note if rate exceeds budget)
 
 Scoring guidance per role (skill coverage reference):
 {role_bands}
@@ -816,7 +770,6 @@ async def analyse_job_match(db, freelancer_id: str, job_post_id: str) -> dict:
     job            = _retrieve_job_context(db, job_post_id)
     fc             = _retrieve_freelancer_context(db, freelancer_id, job_post_id=job_post_id)
     past_contracts = _retrieve_past_contracts(db, freelancer_id, job_post_id)
-    fx_rates       = _get_fx_rates()
     retrieval_ms   = (time.perf_counter() - t_retrieval) * 1000
 
     if not job:
@@ -835,8 +788,18 @@ async def analyse_job_match(db, freelancer_id: str, job_post_id: str) -> dict:
         level="INFO",
     )
 
+    evidence, evidence_stats = _build_evidence_list(past_contracts, fc.get("portfolio", []))
+    logger(
+        "RAG_ANALYSER",
+        f"Evidence gate applied | relevant_contracts={evidence_stats['relevant_contracts_found']} "
+        f"| portfolio_used_to_enrich={evidence_stats['portfolio_used_to_enrich']} "
+        f"| top_contract_similarity={evidence_stats['top_contract_similarity']} "
+        f"| path={evidence_stats['path']} | threshold={RELEVANCE_THRESHOLD}",
+        level="INFO",
+    )
+
     t_prompt = time.perf_counter()
-    prompt, role_analyses = _build_prompt(job, fc, past_contracts, fx_rates)
+    prompt, role_analyses = _build_prompt(job, fc, evidence)
     prompt_ms = (time.perf_counter() - t_prompt) * 1000
     logger(
         "RAG_ANALYSER",
@@ -902,11 +865,12 @@ async def analyse_job_match(db, freelancer_id: str, job_post_id: str) -> dict:
     result["job_post_id"]   = job_post_id
     result["freelancer_id"] = freelancer_id
     result["rag_sources"]   = {
-        "past_contracts_used": len(past_contracts),
-        "portfolio_items":     len(fc.get("portfolio", [])),
+        "past_contracts_used": sum(1 for e in evidence if e["source"] == "contract"),
+        "portfolio_items":     sum(1 for e in evidence if e["source"] == "portfolio"),
         "work_experience":     len(fc.get("work_experience", [])),
         "freelancer_skills":   len(fc.get("skills", [])),
         "job_roles":           len(job.get("roles", [])),
+        "evidence_path":       evidence_stats["path"],
     }
 
     total_ms = (time.perf_counter() - t_start) * 1000

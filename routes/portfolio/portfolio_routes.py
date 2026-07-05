@@ -1,8 +1,9 @@
+import asyncio
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, HTTPException
 from typing import List, Optional, Dict
 import uuid
 from functions.schema_model import PortfolioCreate, PortfolioUpdate, PortfolioResponse
@@ -12,6 +13,7 @@ from functions.access_control import assert_freelancer_owns, get_freelancer_prof
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.portfolio.portfolio_functions import PortfolioFunctions
+from routes.admin.admin_functions import queue_harmful_text_scan
 from ai_related.job_engine.embedding_manager import mark_freelancer_dirty, mark_portfolio_dirty
 
 portfolio_router = APIRouter(prefix="/portfolios", tags=["Portfolio"])
@@ -26,6 +28,9 @@ async def get_all_portfolios(limit: Optional[int] = None, current_user: UserInDB
         success_msg = f"Retrieved {len(portfolios)} portfolios for freelancer {freelancer['freelancer_id']}"
         logger("PORTFOLIO", success_msg, "GET /portfolios", "INFO")
         return ResponseSchema.success(portfolios, 200)
+    except HTTPException as e:
+        logger("PORTFOLIO", f"HTTP {e.status_code}: {e.detail}", "GET /portfolios", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to fetch portfolios: {str(e)}"
         logger("PORTFOLIO", error_msg, "GET /portfolios", "ERROR")
@@ -82,6 +87,17 @@ async def create_portfolio(portfolio: PortfolioCreate, current_user: UserInDB = 
         
         mark_freelancer_dirty(str(portfolio.freelancer_id))
         mark_portfolio_dirty(str(new_portfolio["portfolio_id"]))
+
+        _scan_text = " ".join(filter(None, [portfolio.project_title, portfolio.project_description]))
+        if _scan_text.strip():
+            asyncio.create_task(asyncio.to_thread(
+                queue_harmful_text_scan,
+                "freelancer_profile",
+                str(portfolio.freelancer_id),
+                str(current_user.user_id),
+                _scan_text,
+            ))
+
         success_msg = f"Created portfolio {portfolio_id} for freelancer {portfolio.freelancer_id}"
         logger("PORTFOLIO", success_msg, "POST /portfolios", "INFO")
         return ResponseSchema.success(new_portfolio, 201)
@@ -89,6 +105,9 @@ async def create_portfolio(portfolio: PortfolioCreate, current_user: UserInDB = 
         error_msg = f"Validation error: {str(e)}"
         logger("PORTFOLIO", error_msg, "POST /portfolios", "WARNING")
         return ResponseSchema.error(error_msg, 400)
+    except HTTPException as e:
+        logger("PORTFOLIO", f"HTTP {e.status_code}: {e.detail}", "POST /portfolios", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to create portfolio: {str(e)}"
         logger("PORTFOLIO", error_msg, "POST /portfolios", "ERROR")
@@ -111,9 +130,26 @@ async def update_portfolio(portfolio_id: str, portfolio_update: PortfolioUpdate,
         
         mark_freelancer_dirty(str(existing_portfolio["freelancer_id"]))
         mark_portfolio_dirty(portfolio_id)
+
+        _scan_text = " ".join(filter(None, [
+            updated_portfolio.get("project_title", ""),
+            updated_portfolio.get("project_description", ""),
+        ]))
+        if _scan_text.strip():
+            asyncio.create_task(asyncio.to_thread(
+                queue_harmful_text_scan,
+                "freelancer_profile",
+                str(existing_portfolio["freelancer_id"]),
+                str(current_user.user_id),
+                _scan_text,
+            ))
+
         success_msg = f"Updated portfolio {portfolio_id}"
         logger("PORTFOLIO", success_msg, "PUT /portfolios/{portfolio_id}", "INFO")
         return ResponseSchema.success(updated_portfolio, 200)
+    except HTTPException as e:
+        logger("PORTFOLIO", f"HTTP {e.status_code}: {e.detail}", "PUT /portfolios/{portfolio_id}", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to update portfolio {portfolio_id}: {str(e)}"
         logger("PORTFOLIO", error_msg, "PUT /portfolios/{portfolio_id}", "ERROR")
@@ -137,6 +173,9 @@ async def delete_portfolio(portfolio_id: str, current_user: UserInDB = Depends(g
         success_msg = f"Deleted portfolio {portfolio_id}"
         logger("PORTFOLIO", success_msg, "DELETE /portfolios/{portfolio_id}", "INFO")
         return ResponseSchema.success("Deleted successfully", 200)
+    except HTTPException as e:
+        logger("PORTFOLIO", f"HTTP {e.status_code}: {e.detail}", "DELETE /portfolios/{portfolio_id}", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to delete portfolio {portfolio_id}: {str(e)}"
         logger("PORTFOLIO", error_msg, "DELETE /portfolios/{portfolio_id}", "ERROR")

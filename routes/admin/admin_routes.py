@@ -108,7 +108,7 @@ async def admin_dashboard(current_user: UserInDB = Depends(get_admin_user)):
 @admin_router.get("/moderation")
 async def list_moderation(
     status:       str = Query(default="pending",     description="pending | approved | rejected | all"),
-    content_type: str = Query(default="all",         description="job_post | freelancer_profile | client_profile | all"),
+    content_type: str = Query(default="all",         description="job_post | freelancer_profile | client_profile | proposal | all"),
     sort_by:      str = Query(default="created_at",  description="created_at | total_score | content_type | status"),
     sort_dir:     str = Query(default="desc",        description="asc | desc"),
     page:         int = Query(default=1, ge=1),
@@ -119,8 +119,8 @@ async def list_moderation(
     try:
         if status not in ("pending", "approved", "rejected", "all"):
             return ResponseSchema.error("status must be pending, approved, rejected, or all", 400)
-        if content_type not in ("job_post", "freelancer_profile", "client_profile", "all"):
-            return ResponseSchema.error("content_type must be job_post, freelancer_profile, client_profile, or all", 400)
+        if content_type not in ("job_post", "freelancer_profile", "client_profile", "proposal", "all"):
+            return ResponseSchema.error("content_type must be job_post, freelancer_profile, client_profile, proposal, or all", 400)
         if sort_by not in ("created_at", "total_score", "content_type", "status"):
             return ResponseSchema.error("sort_by must be created_at, total_score, content_type, or status", 400)
         if sort_dir not in ("asc", "desc"):

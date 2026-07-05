@@ -11,7 +11,6 @@ from ai_related.job_engine.embedding_manager import (
 SWEEP_INTERVAL_SECONDS = 300   # 5 minutes
 BATCH_SIZE = 100               # max records processed per sweep cycle
 
-
 async def _sweep_freelancers() -> int:
     """
     Re-embed all dirty freelancer embedding rows in one batch.
@@ -44,7 +43,6 @@ async def _sweep_freelancers() -> int:
     logger("SWEEP_WORKER", f"Freelancer sweep complete | refreshed={count}/{len(rows)}", level="INFO")
     return count
 
-
 async def _sweep_jobs() -> int:
     """
     Re-embed all dirty job role embedding rows in one batch.
@@ -76,7 +74,6 @@ async def _sweep_jobs() -> int:
 
     logger("SWEEP_WORKER", f"Job role sweep complete | refreshed={count}/{len(rows)}", level="INFO")
     return count
-
 
 async def _sweep_contracts() -> int:
     """

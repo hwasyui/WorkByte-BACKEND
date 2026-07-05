@@ -1,8 +1,9 @@
+import asyncio
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from typing import List, Optional
 import uuid
 from functions.schema_model import ProposalCreate, ProposalUpdate, ProposalResponse
@@ -15,10 +16,11 @@ from routes.proposals.proposal_functions import ProposalFunctions
 from routes.freelancers.freelancer_functions import FreelancerFunctions
 from routes.clients.client_functions import ClientFunctions
 from routes.notifications.notification_functions import NotificationFunctions
-from routes.admin.admin_moderation import scan_harmful_text_with_ml_fallback
 
 
 proposal_router = APIRouter(prefix="/proposals", tags=["Proposals"])
+
+_VALID_PROPOSAL_ORDER_BY = {"submitted_at", "proposed_budget", "total_jobs"}
 
 
 @proposal_router.get("", response_model=List[ProposalResponse])
@@ -27,7 +29,7 @@ async def get_all_proposals(
     current_user: UserInDB = Depends(get_current_user),
 ):
     try:
-        proposals = ProposalFunctions.get_all_proposals(limit=limit)
+        proposals = ProposalFunctions.get_all_proposals(limit=limit, visible_only=True)
         logger("PROPOSAL", f"Retrieved {len(proposals)} proposals", "GET /proposals", "INFO")
         return ResponseSchema.success(proposals, 200)
     except Exception as e:
@@ -44,7 +46,7 @@ async def get_my_proposals(current_user: UserInDB = Depends(get_current_user)):
             return ResponseSchema.error("Freelancer profile not found", 404)
 
         proposals = ProposalFunctions.get_proposals_by_freelancer_id(
-            freelancer["freelancer_id"]
+            freelancer["freelancer_id"], visible_only=False
         )
         logger("PROPOSAL", f"Retrieved {len(proposals)} proposals for user {current_user.user_id}", "GET /proposals/me", "INFO")
         return ResponseSchema.success(proposals, 200)
@@ -56,11 +58,29 @@ async def get_my_proposals(current_user: UserInDB = Depends(get_current_user)):
 @proposal_router.get("/job-post/{job_post_id}")
 async def get_proposals_by_job_post(
     job_post_id: str,
+    order_by: str = Query(default="submitted_at", description="submitted_at (default), proposed_budget, total_jobs"),
+    order_dir: str = Query(default="desc", description="asc or desc", pattern="^(asc|desc)$"),
     current_user: UserInDB = Depends(get_current_user),
 ):
-    """Client views all proposals for their job post, includes freelancer info."""
+    """Client views all proposals for their own job post, includes freelancer info."""
     try:
-        proposals = ProposalFunctions.get_proposals_by_job_post_id_enriched(job_post_id)
+        if order_by not in _VALID_PROPOSAL_ORDER_BY:
+            return ResponseSchema.error(f"Invalid order_by '{order_by}'. Valid values: {', '.join(sorted(_VALID_PROPOSAL_ORDER_BY))}", 400)
+
+        job_post_row = get_db().execute_query(
+            "SELECT client_id FROM job_post WHERE job_post_id = :jpid",
+            {"jpid": job_post_id}
+        )
+        if not job_post_row:
+            return ResponseSchema.error(f"Job post {job_post_id} not found", 404)
+
+        client = ClientFunctions.get_client_by_user_id(current_user.user_id)
+        if not client or str(client["client_id"]) != str(job_post_row[0]["client_id"]):
+            return ResponseSchema.error("You can only view proposals for your own job post", 403)
+
+        proposals = ProposalFunctions.get_proposals_by_job_post_id_enriched(
+            job_post_id, visible_only=True, order_by=order_by, order_dir=order_dir
+        )
         logger("PROPOSAL", f"Retrieved {len(proposals)} proposals for job post {job_post_id}", "GET /proposals/job-post/{job_post_id}", "INFO")
         return ResponseSchema.success(proposals, 200)
     except Exception as e:
@@ -74,7 +94,7 @@ async def get_proposals_by_freelancer(
     current_user: UserInDB = Depends(get_current_user),
 ):
     try:
-        proposals = ProposalFunctions.get_proposals_by_freelancer_id(freelancer_id)
+        proposals = ProposalFunctions.get_proposals_by_freelancer_id(freelancer_id, visible_only=True)
         logger("PROPOSAL", f"Retrieved {len(proposals)} proposals for freelancer {freelancer_id}", "GET /proposals/freelancer/{freelancer_id}", "INFO")
         return ResponseSchema.success(proposals, 200)
     except Exception as e:
@@ -91,6 +111,13 @@ async def get_proposal(
         proposal = ProposalFunctions.get_proposal_by_id(proposal_id)
         if not proposal:
             return ResponseSchema.error(f"Proposal {proposal_id} not found", 404)
+
+        if proposal.get("moderation_status") != "visible":
+            freelancer = FreelancerFunctions.get_freelancer_by_user_id(current_user.user_id)
+            is_owner = freelancer and str(freelancer["freelancer_id"]) == str(proposal["freelancer_id"])
+            if not is_owner:
+                return ResponseSchema.error(f"Proposal {proposal_id} not found", 404)
+
         logger("PROPOSAL", f"Retrieved proposal {proposal_id}", "GET /proposals/{proposal_id}", "INFO")
         return ResponseSchema.success(proposal, 200)
     except Exception as e:
@@ -111,18 +138,22 @@ async def create_proposal(
 
         freelancer_id = freelancer["freelancer_id"]
 
+        job_post_row = get_db().execute_query(
+            "SELECT client_id, status FROM job_post WHERE job_post_id = :jpid",
+            {"jpid": str(proposal.job_post_id)}
+        )
+        if not job_post_row:
+            return ResponseSchema.error("Job post not found", 404)
+        if job_post_row[0]["status"] != "active":
+            return ResponseSchema.error("This job post is no longer accepting proposals", 400)
+
         if current_user.client_id:
-            job_row = get_db().execute_query(
-                "SELECT client_id FROM job_post WHERE job_post_id = :jpid",
-                {"jpid": str(proposal.job_post_id)}
+            client_row = get_db().execute_query(
+                "SELECT user_id FROM client WHERE client_id = :cid",
+                {"cid": str(job_post_row[0]["client_id"])}
             )
-            if job_row:
-                client_row = get_db().execute_query(
-                    "SELECT user_id FROM client WHERE client_id = :cid",
-                    {"cid": str(job_row[0]["client_id"])}
-                )
-                if client_row and str(client_row[0]["user_id"]) == str(current_user.user_id):
-                    return ResponseSchema.error("You cannot apply to your own job post", 403)
+            if client_row and str(client_row[0]["user_id"]) == str(current_user.user_id):
+                return ResponseSchema.error("You cannot apply to your own job post", 403)
 
         if proposal.job_role_id:
             existing = ProposalFunctions.get_proposal_for_freelancer_role(
@@ -141,16 +172,6 @@ async def create_proposal(
         if existing:
             return ResponseSchema.error(duplicate_message, 409)
 
-        if proposal.cover_letter and proposal.cover_letter.strip():
-            harm_result = scan_harmful_text_with_ml_fallback(proposal.cover_letter)
-            if harm_result["is_flagged"]:
-                labels = harm_result.get("detected_labels", [])
-                logger("PROPOSAL", f"Blocked toxic proposal from freelancer {freelancer_id}, labels={labels}", "POST /proposals", "WARNING")
-                return ResponseSchema.error(
-                    f"Your proposal was not submitted. The cover letter was detected as harmful ({', '.join(labels)}).",
-                    400,
-                )
-
         new_proposal = ProposalFunctions.create_proposal(
             job_post_id=proposal.job_post_id,
             freelancer_id=freelancer_id,
@@ -161,6 +182,22 @@ async def create_proposal(
             status=proposal.status if proposal.status else "pending",
             is_ai_generated=proposal.is_ai_generated,
         )
+
+        # neutral wording, no mention of moderation - the proposal is saved but not visible to the client yet
+        try:
+            await NotificationFunctions.notify(
+                recipient_user_id=str(current_user.user_id),
+                notif_type="proposal_submitted",
+                title="Proposal Submitted",
+                body="Your proposal has been submitted and is being processed.",
+                data={"proposal_id": new_proposal["proposal_id"]},
+            )
+        except Exception as notif_err:
+            logger("PROPOSAL", f"Proposal-submitted notification failed (non-fatal): {notif_err}", "POST /proposals", "WARNING")
+
+        asyncio.create_task(ProposalFunctions.run_proposal_scan(
+            new_proposal["proposal_id"], proposal.cover_letter, str(current_user.user_id)
+        ))
 
         # Notify client of new proposal
         try:
@@ -214,15 +251,15 @@ async def update_proposal_status(
             if freelancer and str(freelancer["freelancer_id"]) == str(proposal["freelancer_id"]):
                 is_proposal_freelancer = True
 
-        if current_user.client_id:
-            job_row = get_db().execute_query(
-                "SELECT client_id FROM job_post WHERE job_post_id = :jpid",
-                {"jpid": str(proposal["job_post_id"])}
-            )
-            if job_row:
-                client = ClientFunctions.get_client_by_user_id(current_user.user_id)
-                if client and str(client["client_id"]) == str(job_row[0]["client_id"]):
-                    is_proposal_client = True
+        job_row = get_db().execute_query(
+            "SELECT client_id, status FROM job_post WHERE job_post_id = :jpid",
+            {"jpid": str(proposal["job_post_id"])}
+        )
+
+        if current_user.client_id and job_row:
+            client = ClientFunctions.get_client_by_user_id(current_user.user_id)
+            if client and str(client["client_id"]) == str(job_row[0]["client_id"]):
+                is_proposal_client = True
 
         if is_proposal_freelancer:
             if status != "withdrawn":
@@ -230,6 +267,10 @@ async def update_proposal_status(
         elif is_proposal_client:
             if status not in ("accepted", "rejected"):
                 return ResponseSchema.error("Clients can only set status to 'accepted' or 'rejected'", 403)
+            if proposal.get("moderation_status") != "visible":
+                return ResponseSchema.error(f"Proposal {proposal_id} not found", 404)
+            if job_row and job_row[0]["status"] != "active":
+                return ResponseSchema.error("This job post is no longer active", 400)
         else:
             return ResponseSchema.error("Unauthorized", 403)
 
@@ -289,8 +330,18 @@ async def update_proposal(
         if existing["status"] != "pending":
             return ResponseSchema.error("Only pending proposals can be edited", 400)
 
+        if existing["moderation_status"] == "scanning":
+            return ResponseSchema.error("Proposal is still being reviewed, please wait before editing", 409)
+
         update_data = proposal_update.model_dump(exclude_unset=True)
         updated = ProposalFunctions.update_proposal(proposal_id, update_data)
+
+        # re-scan on every edit, not just cover_letter changes, since the row is edited in place
+        new_cover_letter = update_data.get("cover_letter", existing["cover_letter"])
+        asyncio.create_task(ProposalFunctions.run_proposal_scan(
+            proposal_id, new_cover_letter, str(current_user.user_id)
+        ))
+
         logger("PROPOSAL", f"Proposal {proposal_id} updated", "PUT /proposals/{proposal_id}", "INFO")
         return ResponseSchema.success(updated, 200)
     except Exception as e:
@@ -307,6 +358,10 @@ async def delete_proposal(
         existing = ProposalFunctions.get_proposal_by_id(proposal_id)
         if not existing:
             return ResponseSchema.error(f"Proposal {proposal_id} not found", 404)
+
+        freelancer = FreelancerFunctions.get_freelancer_by_user_id(current_user.user_id)
+        if not freelancer or str(freelancer["freelancer_id"]) != str(existing["freelancer_id"]):
+            return ResponseSchema.error("You can only delete your own proposals", 403)
 
         ProposalFunctions.delete_proposal(proposal_id)
         logger("PROPOSAL", f"Proposal {proposal_id} deleted", "DELETE /proposals/{proposal_id}", "INFO")

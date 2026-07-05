@@ -3,7 +3,7 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from fastapi import APIRouter, Depends, Query, status, UploadFile, File
+from fastapi import APIRouter, Depends, Query, status, UploadFile, File, HTTPException
 from typing import List, Optional, Dict
 import uuid
 from functions.schema_model import ClientCreate, ClientUpdate, ClientResponse
@@ -61,6 +61,9 @@ async def get_all_clients(limit: Optional[int] = None, current_user: UserInDB = 
         success_msg = f"Retrieved client profile for user {current_user.user_id}"
         logger("CLIENT", success_msg, "GET /clients", "INFO")
         return ResponseSchema.success([client], 200)
+    except HTTPException as e:
+        logger("CLIENT", f"HTTP {e.status_code}: {e.detail}", "GET /clients", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to fetch clients: {str(e)}"
         logger("CLIENT", error_msg, "GET /clients", "ERROR")
@@ -156,6 +159,9 @@ async def create_client(
         success_msg = f"Created client {client_id} for user {client.user_id} with full name '{client.full_name}'"
         logger("CLIENT", success_msg, "POST /clients", "INFO")
         return ResponseSchema.success(new_client, 201)
+    except HTTPException as e:
+        logger("CLIENT", f"HTTP {e.status_code}: {e.detail}", "POST /clients", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to create client: {str(e)}"
         logger("CLIENT", error_msg, "POST /clients", "ERROR")
@@ -217,6 +223,9 @@ async def update_client(
         success_msg = f"Updated client {client_id} with fields: {', '.join(update_data.keys())}"
         logger("CLIENT", success_msg, "PUT /clients/{identifier}", "INFO")
         return ResponseSchema.success(updated_client, 200)
+    except HTTPException as e:
+        logger("CLIENT", f"HTTP {e.status_code}: {e.detail}", "PUT /clients/{identifier}", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to update client {identifier}: {str(e)}"
         logger("CLIENT", error_msg, "PUT /clients/{identifier}", "ERROR")
@@ -239,6 +248,9 @@ async def delete_client(identifier: str, current_user: UserInDB = Depends(get_cl
         success_msg = f"Client {client_id} deleted successfully"
         logger("CLIENT", success_msg, "DELETE /clients/{identifier}", "INFO")
         return ResponseSchema.success(success_msg, 200)
+    except HTTPException as e:
+        logger("CLIENT", f"HTTP {e.status_code}: {e.detail}", "DELETE /clients/{identifier}", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to delete client {identifier}: {str(e)}"
         logger("CLIENT", error_msg, "DELETE /clients/{identifier}", "ERROR")
@@ -280,6 +292,9 @@ async def upload_client_profile_picture_endpoint(
         )
         logger("CLIENT", f"Profile picture updated for client {client_id}", f"POST /clients/{client_id}/profile-picture", "INFO")
         return ResponseSchema.success(updated_client, 200)
+    except HTTPException as e:
+        logger("CLIENT", f"HTTP {e.status_code}: {e.detail}", f"POST /clients/{client_id}/profile-picture", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to upload profile picture for client {client_id}: {str(e)}"
         logger("CLIENT", error_msg, f"POST /clients/{client_id}/profile-picture", "ERROR")
@@ -318,6 +333,9 @@ async def delete_client_profile_picture(
         )
         logger("CLIENT", f"Profile picture deleted for client {client_id}", f"DELETE /clients/{client_id}/profile-picture", "INFO")
         return ResponseSchema.success({"message": "Profile picture deleted successfully", "client": updated}, 200)
+    except HTTPException as e:
+        logger("CLIENT", f"HTTP {e.status_code}: {e.detail}", f"DELETE /clients/{client_id}/profile-picture", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to delete profile picture for client {client_id}: {str(e)}"
         logger("CLIENT", error_msg, f"DELETE /clients/{client_id}/profile-picture", "ERROR")

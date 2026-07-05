@@ -1,3 +1,4 @@
+import asyncio
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -24,6 +25,9 @@ from routes.admin.admin_moderation import scan_harmful_text_with_ml_fallback
 
 
 dm_router = APIRouter(prefix="/dm", tags=["Direct Messages"])
+
+# ~4-5 chunks of the 128-token scan window, keeps moderation latency predictable
+_MAX_MESSAGE_LENGTH = 2500
 
 
 def _resolve_msg_attachment_urls(msg: dict) -> dict:
@@ -322,15 +326,17 @@ async def send_message(
             return ResponseSchema.error("Access denied", 403)
         if not payload.message_text.strip():
             return ResponseSchema.error("message_text cannot be empty", 400)
+        if len(payload.message_text) > _MAX_MESSAGE_LENGTH:
+            return ResponseSchema.error(
+                f"Message is too long. Please keep it under {_MAX_MESSAGE_LENGTH:,} characters, or split it into shorter messages.",
+                400,
+            )
 
-        harm_result = scan_harmful_text_with_ml_fallback(payload.message_text)
+        harm_result = await asyncio.to_thread(scan_harmful_text_with_ml_fallback, payload.message_text)
         if harm_result["is_flagged"]:
             labels = harm_result.get("detected_labels", [])
             logger("DM", f"Blocked toxic message from {current_user.user_id} in thread {thread_id}, labels={labels}", "POST /dm/threads/{thread_id}/messages", "WARNING")
-            return ResponseSchema.error(
-                f"Your message was not sent. It was detected as harmful ({', '.join(labels)}).",
-                400,
-            )
+            return ResponseSchema.error("Message couldn't be sent.", 400)
 
         msg = DMFunctions.send_message(
             thread_id=thread_id,
@@ -387,9 +393,14 @@ async def send_message_with_attachment(
         text = (message_text or "").strip()
         if not text and (not file or not file.filename):
             return ResponseSchema.error("Provide message_text, a file, or both", 400)
+        if len(text) > _MAX_MESSAGE_LENGTH:
+            return ResponseSchema.error(
+                f"Message is too long. Please keep it under {_MAX_MESSAGE_LENGTH:,} characters, or split it into shorter messages.",
+                400,
+            )
 
         if text:
-            harm_result = scan_harmful_text_with_ml_fallback(text)
+            harm_result = await asyncio.to_thread(scan_harmful_text_with_ml_fallback, text)
             if harm_result["is_flagged"]:
                 labels = harm_result.get("detected_labels", [])
                 logger(
@@ -398,10 +409,7 @@ async def send_message_with_attachment(
                     "POST /dm/threads/{thread_id}/messages/upload",
                     "WARNING",
                 )
-                return ResponseSchema.error(
-                    f"Your message was not sent. It was detected as harmful ({', '.join(labels)}).",
-                    400,
-                )
+                return ResponseSchema.error("Message couldn't be sent.", 400)
 
         msg = DMFunctions.send_message(
             thread_id=thread_id,

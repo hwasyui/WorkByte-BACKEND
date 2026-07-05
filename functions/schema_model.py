@@ -689,6 +689,8 @@ class ProposalResponse(BaseModel):
     status: str
     is_ai_generated: Optional[bool] = False
     submitted_at: Optional[datetime] = None
+    moderation_status: Optional[str] = "visible"
+    scanned_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

@@ -59,8 +59,9 @@ async def get_user(user_id: str, current_user: UserInDB = Depends(get_current_us
         success_msg = f"Retrieved user {user_id}"
         logger("USER", success_msg, "GET /users/{user_id}", "INFO")
         return ResponseSchema.success(user, 200)
-    except HTTPException:
-        raise
+    except HTTPException as e:
+        logger("USER", f"HTTP {e.status_code}: {e.detail}", "GET /users/{user_id}", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to fetch user {user_id}: {str(e)}"
         logger("USER", error_msg, "GET /users/{user_id}", "ERROR")
@@ -121,8 +122,9 @@ async def update_user(user_id: str, user_update: UserUpdate, current_user: UserI
         success_msg = f"Updated user {user_id} with fields: {', '.join(update_data.keys())}"
         logger("USER", success_msg, "PUT /users/{user_id}", "INFO")
         return ResponseSchema.success(updated_user, 200)
-    except HTTPException:
-        raise
+    except HTTPException as e:
+        logger("USER", f"HTTP {e.status_code}: {e.detail}", "PUT /users/{user_id}", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to update user {user_id}: {str(e)}"
         logger("USER", error_msg, "PUT /users/{user_id}", "ERROR")
@@ -145,8 +147,9 @@ async def delete_user(user_id: str, current_user: UserInDB = Depends(get_current
         success_msg = f"User {user_id} deleted successfully"
         logger("USER", success_msg, "DELETE /users/{user_id}", "INFO")
         return ResponseSchema.success(success_msg, 200)
-    except HTTPException:
-        raise
+    except HTTPException as e:
+        logger("USER", f"HTTP {e.status_code}: {e.detail}", "DELETE /users/{user_id}", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to delete user {user_id}: {str(e)}"
         logger("USER", error_msg, "DELETE /users/{user_id}", "ERROR")

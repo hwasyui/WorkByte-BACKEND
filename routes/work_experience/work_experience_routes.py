@@ -1,8 +1,9 @@
+import asyncio
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, HTTPException
 from typing import List, Optional, Dict
 import uuid
 from functions.schema_model import WorkExperienceCreate, WorkExperienceUpdate, WorkExperienceResponse
@@ -12,6 +13,7 @@ from functions.access_control import assert_freelancer_owns, get_freelancer_prof
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.work_experience.work_experience_functions import WorkExperienceFunctions
+from routes.admin.admin_functions import queue_harmful_text_scan
 from ai_related.job_engine.embedding_manager import mark_freelancer_dirty
 
 work_experience_router = APIRouter(prefix="/work-experiences", tags=["Work Experiences"])
@@ -26,6 +28,9 @@ async def get_all_work_experiences(limit: Optional[int] = None, current_user: Us
         success_msg = f"Retrieved {len(experiences)} work experiences for freelancer {freelancer['freelancer_id']}"
         logger("WORK_EXPERIENCE", success_msg, "GET /work-experiences", "INFO")
         return ResponseSchema.success(experiences, 200)
+    except HTTPException as e:
+        logger("WORK_EXPERIENCE", f"HTTP {e.status_code}: {e.detail}", "GET /work-experiences", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to fetch work experiences: {str(e)}"
         logger("WORK_EXPERIENCE", error_msg, "GET /work-experiences", "ERROR")
@@ -82,6 +87,20 @@ async def create_work_experience(work_experience: WorkExperienceCreate, current_
         )
         
         mark_freelancer_dirty(str(work_experience.freelancer_id))
+
+        _scan_text = " ".join(filter(None, [
+            work_experience.job_title, work_experience.company_name,
+            work_experience.location, work_experience.description,
+        ]))
+        if _scan_text.strip():
+            asyncio.create_task(asyncio.to_thread(
+                queue_harmful_text_scan,
+                "freelancer_profile",
+                str(work_experience.freelancer_id),
+                str(current_user.user_id),
+                _scan_text,
+            ))
+
         success_msg = f"Created work experience {work_experience_id} for freelancer {work_experience.freelancer_id}"
         logger("WORK_EXPERIENCE", success_msg, "POST /work-experiences", "INFO")
         return ResponseSchema.success(new_experience, 201)
@@ -89,6 +108,9 @@ async def create_work_experience(work_experience: WorkExperienceCreate, current_
         error_msg = f"Validation error: {str(e)}"
         logger("WORK_EXPERIENCE", error_msg, "POST /work-experiences", "WARNING")
         return ResponseSchema.error(error_msg, 400)
+    except HTTPException as e:
+        logger("WORK_EXPERIENCE", f"HTTP {e.status_code}: {e.detail}", "POST /work-experiences", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to create work experience: {str(e)}"
         logger("WORK_EXPERIENCE", error_msg, "POST /work-experiences", "ERROR")
@@ -110,9 +132,28 @@ async def update_work_experience(work_experience_id: str, work_experience_update
         updated_experience = WorkExperienceFunctions.update_work_experience(work_experience_id, update_data)
         
         mark_freelancer_dirty(str(existing_experience["freelancer_id"]))
+
+        _scan_text = " ".join(filter(None, [
+            updated_experience.get("job_title", ""),
+            updated_experience.get("company_name", ""),
+            updated_experience.get("location", ""),
+            updated_experience.get("description", ""),
+        ]))
+        if _scan_text.strip():
+            asyncio.create_task(asyncio.to_thread(
+                queue_harmful_text_scan,
+                "freelancer_profile",
+                str(existing_experience["freelancer_id"]),
+                str(current_user.user_id),
+                _scan_text,
+            ))
+
         success_msg = f"Updated work experience {work_experience_id}"
         logger("WORK_EXPERIENCE", success_msg, "PUT /work-experiences/{work_experience_id}", "INFO")
         return ResponseSchema.success(updated_experience, 200)
+    except HTTPException as e:
+        logger("WORK_EXPERIENCE", f"HTTP {e.status_code}: {e.detail}", "PUT /work-experiences/{work_experience_id}", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to update work experience {work_experience_id}: {str(e)}"
         logger("WORK_EXPERIENCE", error_msg, "PUT /work-experiences/{work_experience_id}", "ERROR")
@@ -136,6 +177,9 @@ async def delete_work_experience(work_experience_id: str, current_user: UserInDB
         success_msg = f"Deleted work experience {work_experience_id}"
         logger("WORK_EXPERIENCE", success_msg, "DELETE /work-experiences/{work_experience_id}", "INFO")
         return ResponseSchema.success("Deleted successfully", 200)
+    except HTTPException as e:
+        logger("WORK_EXPERIENCE", f"HTTP {e.status_code}: {e.detail}", "DELETE /work-experiences/{work_experience_id}", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         error_msg = f"Failed to delete work experience {work_experience_id}: {str(e)}"
         logger("WORK_EXPERIENCE", error_msg, "DELETE /work-experiences/{work_experience_id}", "ERROR")
