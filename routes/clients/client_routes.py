@@ -13,7 +13,7 @@ from functions.access_control import assert_client_owns, get_client_profile_for_
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.clients.client_functions import ClientFunctions
-from functions.minio_client import upload_client_profile_picture, delete_file, BUCKET_USER_ASSETS
+from functions.minio_client import upload_client_profile_picture, delete_file, BUCKET_USER_ASSETS, validate_file_size
 from mimetypes import guess_type as guess_mime
 from routes.admin.admin_moderation import scan_harmful_text_with_ml_fallback
 
@@ -156,6 +156,7 @@ async def create_client(
             contents = await client.profile_picture.read()
             if not contents:
                 return ResponseSchema.error("Profile picture file must not be empty", 400)
+            validate_file_size(contents, client.profile_picture.filename or "profile picture")
             mime_type = client.profile_picture.content_type or guess_mime(client.profile_picture.filename or "avatar.jpg")[0]
             if not mime_type.startswith("image/"):
                 return ResponseSchema.error("Only image files are allowed for profile pictures", 400)
@@ -219,6 +220,7 @@ async def update_client(
             contents = await client_update.profile_picture.read()
             if not contents:
                 return ResponseSchema.error("Profile picture file must not be empty", 400)
+            validate_file_size(contents, client_update.profile_picture.filename or "profile picture")
             mime_type = client_update.profile_picture.content_type or guess_mime(client_update.profile_picture.filename or "avatar.jpg")[0]
             if not mime_type.startswith("image/"):
                 return ResponseSchema.error("Only image files are allowed for profile pictures", 400)
@@ -296,6 +298,7 @@ async def upload_client_profile_picture_endpoint(
         contents = await file.read()
         if not contents:
             return ResponseSchema.error("Profile picture file must not be empty", 400)
+        validate_file_size(contents, file.filename or "profile picture")
 
         mime_type = file.content_type or guess_mime(file.filename or "avatar.jpg")[0]
         if not mime_type or not mime_type.startswith("image/"):

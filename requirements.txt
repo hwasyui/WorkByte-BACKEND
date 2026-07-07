@@ -13,8 +13,9 @@ pydantic[email]
 reportlab
 minio
 numpy
-joblib
-xgboost
+joblib==1.5.3
+xgboost==3.3.0
+scikit-learn==1.8.0
 httpx
 groq
 sentence-transformers

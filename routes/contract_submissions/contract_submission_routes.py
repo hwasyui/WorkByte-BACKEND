@@ -9,7 +9,7 @@ from functions.schema_model import RevisionRequest, UserInDB
 from functions.authentication import get_current_user
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
-from functions.minio_client import upload_contract_submission_file, guess_mime, resolve_file_url, BUCKET_CONTRACT_SUBMISSIONS
+from functions.minio_client import upload_contract_submission_file, guess_mime, resolve_file_url, BUCKET_CONTRACT_SUBMISSIONS, MAX_UPLOAD_FILE_SIZE_BYTES
 from routes.contract_submissions.contract_submission_functions import ContractSubmissionFunctions
 from routes.freelancers.freelancer_functions import FreelancerFunctions
 from routes.clients.client_functions import ClientFunctions
@@ -32,7 +32,7 @@ def _resolve_submission_urls(submission: dict) -> dict:
     return submission
 
 ALLOWED_EXTENSIONS = {"pdf", "doc", "docx", "png", "jpg", "jpeg", "zip"}
-MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB per file
+MAX_FILE_SIZE_BYTES = MAX_UPLOAD_FILE_SIZE_BYTES
 
 
 def _get_extension(filename: str) -> str:
@@ -84,7 +84,7 @@ async def create_contract_submission(
 
             file_bytes = await file.read()
             if len(file_bytes) > MAX_FILE_SIZE_BYTES:
-                return ResponseSchema.error(f"File too large: {file_name}. Max size is 10 MB", 400)
+                return ResponseSchema.error(f"File too large: {file_name}. Max size is 100 MB", 400)
 
             validated_files.append({
                 "file_name": file_name,

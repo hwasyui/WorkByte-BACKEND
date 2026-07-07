@@ -9,7 +9,7 @@ from functions.authentication import get_current_user
 from functions.schema_model import UserInDB
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
-from functions.minio_client import upload_file, download_file, BUCKET_MAP, BUCKET_JOB_FILES, guess_mime, PRIVATE_BUCKETS, resolve_file_url
+from functions.minio_client import upload_file, download_file, BUCKET_MAP, BUCKET_JOB_FILES, guess_mime, PRIVATE_BUCKETS, resolve_file_url, validate_file_size
 import uuid
 
 
@@ -33,6 +33,7 @@ async def upload_file_endpoint(
     """
     try:
         contents = await file.read()
+        validate_file_size(contents, file.filename or "file")
         file_size = len(contents)
 
         original_name = file.filename or "file"

@@ -11,7 +11,7 @@ from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.proposal_files.proposal_file_functions import ProposalFileFunctions
 from routes.proposals.proposal_functions import ProposalFunctions
-from functions.minio_client import upload_proposal_file, resolve_file_url, BUCKET_PROPOSAL_FILES
+from functions.minio_client import upload_proposal_file, resolve_file_url, BUCKET_PROPOSAL_FILES, MAX_UPLOAD_FILE_SIZE_BYTES
 from mimetypes import guess_type as guess_mime
 
 proposal_file_router = APIRouter(prefix="/proposal-files", tags=["Proposal Files"])
@@ -89,6 +89,8 @@ async def create_proposal_file(
             contents = await upload.read()
             if not contents:
                 return ResponseSchema.error(f"Uploaded file '{upload.filename or 'unnamed'}' must not be empty", 400)
+            if len(contents) > MAX_UPLOAD_FILE_SIZE_BYTES:
+                return ResponseSchema.error(f"File too large: {upload.filename or 'unnamed'}. Max size is 100 MB.", 400)
 
             mime_type = upload.content_type or guess_mime(upload.filename or "attachment.bin")[0]
             mime_type = mime_type or "application/octet-stream"

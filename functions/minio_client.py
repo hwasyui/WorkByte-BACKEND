@@ -2,11 +2,23 @@ import os
 import json
 import mimetypes
 from io import BytesIO
+from fastapi import HTTPException
 from minio import Minio
 from minio.error import S3Error
 from dotenv import load_dotenv
 
 load_dotenv()
+
+MAX_UPLOAD_FILE_SIZE_BYTES = 100 * 1024 * 1024  # 100 MB
+
+
+def validate_file_size(contents: bytes, file_name: str = "file") -> None:
+    if len(contents) > MAX_UPLOAD_FILE_SIZE_BYTES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"File too large: {file_name}. Max size is 100 MB.",
+        )
+
 
 MINIO_ENDPOINT        = os.getenv("MINIO_ENDPOINT", "localhost:9000")
 MINIO_ACCESS_KEY      = os.getenv("MINIO_ACCESS_KEY", "capstone")
@@ -22,13 +34,14 @@ _client = Minio(
     secure=MINIO_SECURE,
 )
 
-PRIVATE_BUCKETS = {"contract-assets", "contract-submissions", "message-attachments", "proposal-files"}
+PRIVATE_BUCKETS = {"contract-assets", "contract-submissions", "message-attachments", "proposal-files", "cv-files"}
 
 BUCKET_JOB_FILES            = "job-files"
 BUCKET_PROPOSAL_FILES       = "proposal-files"
 BUCKET_USER_ASSETS          = "user-assets"
 BUCKET_CONTRACT_SUBMISSIONS = "contract-submissions"
 BUCKET_MESSAGE_ATTACHMENTS  = "message-attachments"
+BUCKET_CV_FILES             = "cv-files"
 
 BUCKET_MAP = {
     "job-files":            BUCKET_JOB_FILES,
@@ -36,6 +49,7 @@ BUCKET_MAP = {
     "user-assets":          BUCKET_USER_ASSETS,
     "contract-submissions": BUCKET_CONTRACT_SUBMISSIONS,
     "message-attachments":  BUCKET_MESSAGE_ATTACHMENTS,
+    "cv-files":             BUCKET_CV_FILES,
 }
 
 
@@ -46,6 +60,7 @@ _ALL_BUCKETS = [
     "contract-submissions",
     "message-attachments",
     "contract-assets",
+    "cv-files",
 ]
 _PUBLIC_READ_BUCKETS = {"user-assets", "job-files"}
 
@@ -162,12 +177,15 @@ def upload_job_file(job_post_id: str, file_name: str, file_bytes: bytes, content
 
 
 def upload_cv_file(path: str, file_bytes: bytes, content_type: str = None) -> str:
-    return upload_file(
-        bucket=BUCKET_USER_ASSETS,
+    """Resolves to a full URL here (unlike other private buckets, which return a
+    raw path) so cv_file_url stays a drop-in value for existing callers."""
+    stored = upload_file(
+        bucket=BUCKET_CV_FILES,
         path=path,
         file_bytes=file_bytes,
         content_type=content_type or guess_mime(path),
     )
+    return resolve_file_url(BUCKET_CV_FILES, stored)
 
 def upload_freelancer_profile_picture(freelancer_id: str, file_name: str, file_bytes: bytes, content_type: str = None) -> str:
     ext = file_name.split(".")[-1] if "." in file_name else "jpg"

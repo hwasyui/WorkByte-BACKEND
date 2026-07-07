@@ -1,3 +1,4 @@
+import asyncio
 import os
 import re
 import sys
@@ -10,7 +11,7 @@ from functions.authentication import get_freelancer_user
 from functions.schema_model import CVUploadRequest, CVApplyRequest, UserInDB
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
-from functions.minio_client import upload_cv_file, guess_mime
+from functions.minio_client import upload_cv_file, guess_mime, validate_file_size
 from routes.freelancers.freelancer_functions import FreelancerFunctions
 from routes.skills.skill_functions import SkillFunctions
 from routes.freelancer_skills.freelancer_skill_functions import FreelancerSkillFunctions
@@ -63,6 +64,7 @@ async def upload_and_analyze_cv(
         contents = await file.read()
         if not contents:
             raise HTTPException(status_code=400, detail="CV file must not be empty")
+        validate_file_size(contents, file.filename or "CV file")
 
         logger("CV_UPLOAD", f"File: {file.filename}, size={len(contents)} bytes", level="DEBUG")
 
@@ -78,11 +80,11 @@ async def upload_and_analyze_cv(
 
         # Step 1: Extract raw text
         if ext == "docx" or mime in _DOCX_MIMES:
-            raw_text = _extract_text_from_docx(contents)
+            raw_text = await asyncio.to_thread(_extract_text_from_docx, contents)
         elif ext == "pdf" or mime == "application/pdf":
-            raw_text = _extract_text_from_pdf(contents)
+            raw_text = await asyncio.to_thread(_extract_text_from_pdf, contents)
         elif mime.startswith("image/") or ext in {"png", "jpg", "jpeg", "bmp", "tiff"}:
-            raw_text = _extract_text_from_image(contents)
+            raw_text = await asyncio.to_thread(_extract_text_from_image, contents)
         else:
             raise HTTPException(
                 status_code=400,
@@ -146,8 +148,8 @@ async def upload_and_analyze_cv(
         logger("CV_UPLOAD", f"CV update detected for freelancer {freelancer_id}. Running full analysis.", level="INFO")
 
         # Step 4: Embedding similarity
-        cv_embedding = get_cv_embedding(raw_text)
-        profile_embedding = get_cv_embedding(profile_text)
+        cv_embedding = await asyncio.to_thread(get_cv_embedding, raw_text)
+        profile_embedding = await asyncio.to_thread(get_cv_embedding, profile_text)
         similarity = cosine_similarity(cv_embedding, profile_embedding)
 
         # Step 5: Skill coverage
@@ -161,9 +163,9 @@ async def upload_and_analyze_cv(
 
         # Step 7: Scoring — all numeric scores come from the trained XGBoost models,
         # not the LLM (see cv_analysis_xgb_models/xgboost_cv_analysis_final.ipynb)
-        match_result = predict_match(raw_text, profile_text)
-        ats_ml_result = predict_ats(raw_text)
-        section_scores = predict_sections(raw_text, profile_text)
+        match_result = await asyncio.to_thread(predict_match, raw_text, profile_text)
+        ats_ml_result = await asyncio.to_thread(predict_ats, raw_text)
+        section_scores = await asyncio.to_thread(predict_sections, raw_text, profile_text)
 
         model_scores = {
             **match_result,

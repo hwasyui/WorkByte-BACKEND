@@ -16,7 +16,7 @@ from functions.schema_model import (
 from functions.authentication import get_current_user, verify_token, get_user
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
-from functions.minio_client import upload_thread_attachment, guess_mime, resolve_file_url, BUCKET_MESSAGE_ATTACHMENTS
+from functions.minio_client import upload_thread_attachment, guess_mime, resolve_file_url, BUCKET_MESSAGE_ATTACHMENTS, MAX_UPLOAD_FILE_SIZE_BYTES
 from routes.dm.dm_functions import DMFunctions
 from routes.notifications.notification_functions import NotificationFunctions
 from routes.freelancers.freelancer_functions import FreelancerFunctions
@@ -419,6 +419,8 @@ async def send_message_with_attachment(
 
         if file and file.filename:
             file_bytes = await file.read()
+            if len(file_bytes) > MAX_UPLOAD_FILE_SIZE_BYTES:
+                return ResponseSchema.error(f"File too large: {file.filename}. Max size is 100 MB.", 400)
             mime_type = file.content_type or guess_mime(file.filename)
             file_type = _classify_file_type(mime_type, is_voice_note=is_voice_note)
             file_url = upload_thread_attachment(

@@ -103,9 +103,28 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             logger("LIFESPAN", f"Scam detector warm-up failed (non-fatal): {e}", level="WARNING")
 
+    def _warmup_cv_analysis():
+        try:
+            from ai_related.cv_analysis.cv_analysis import _load_xgb_models, _get_match_encoder
+            _load_xgb_models()
+            _get_match_encoder()
+            logger("LIFESPAN", "CV analysis models warmed up (XGBoost scorers + nomic-embed-text-v1)", level="INFO")
+        except Exception as e:
+            logger("LIFESPAN", f"CV analysis model warm-up failed (non-fatal): {e}", level="WARNING")
+
+    def _warmup_cv_ocr():
+        try:
+            from routes.cv_upload.cv_upload_functions import _get_easyocr_reader
+            _get_easyocr_reader()
+            logger("LIFESPAN", "EasyOCR reader warmed up", level="INFO")
+        except Exception as e:
+            logger("LIFESPAN", f"EasyOCR warm-up failed (non-fatal): {e}", level="WARNING")
+
     asyncio.create_task(asyncio.to_thread(_warmup_harmful_text))
     asyncio.create_task(asyncio.to_thread(_warmup_embedding))
     asyncio.create_task(asyncio.to_thread(_warmup_scam_detector))
+    asyncio.create_task(asyncio.to_thread(_warmup_cv_analysis))
+    asyncio.create_task(asyncio.to_thread(_warmup_cv_ocr))
 
     yield
 

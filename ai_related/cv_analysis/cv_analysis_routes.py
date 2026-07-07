@@ -1,3 +1,4 @@
+import asyncio
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -9,6 +10,7 @@ from functions.authentication import get_freelancer_user
 from functions.schema_model import UserInDB
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
+from functions.minio_client import validate_file_size
 from ai_related.cv_analysis.cv_analysis import (
     extract_cv_text,
     build_freelancer_profile_text,
@@ -27,6 +29,9 @@ from ai_related.cv_analysis.cv_analysis import (
     ats_label_to_score,
 )
 from routes.freelancers.freelancer_functions import FreelancerFunctions
+from routes.freelancer_skills.freelancer_skill_functions import FreelancerSkillFunctions
+from routes.work_experience.work_experience_functions import WorkExperienceFunctions
+from routes.education.education_functions import EducationFunctions
 
 cv_analysis_router = APIRouter(prefix="/cv_analysis", tags=["CV Analysis"])
 
@@ -38,9 +43,16 @@ async def analyze_cv(
 ) -> Dict[str, Any]:
     logger("CV_ANALYSIS", f"CV analysis request from user {current_user.user_id}", level="DEBUG")
     try:
+        contents = await cv_file.read()
+        validate_file_size(contents, cv_file.filename or "CV file")
+        await cv_file.seek(0)
+
         cv_text = await extract_cv_text(cv_file)
         if not cv_text:
-            raise HTTPException(status_code=400, detail="Unable to extract text from CV")
+            raise HTTPException(
+                status_code=422,
+                detail="Unable to extract text from the uploaded CV. Ensure the file contains readable text.",
+            )
 
         freelancer = FreelancerFunctions.get_freelancer_by_user_id(current_user.user_id)
         if not freelancer:
@@ -48,12 +60,20 @@ async def analyze_cv(
 
         freelancer_id = freelancer["freelancer_id"]
 
+        # profile text always falls back to full_name, so it's never falsy on its own
+        has_bio = bool(freelancer.get("bio"))
+        has_skills = bool(FreelancerSkillFunctions.get_freelancer_skills_by_freelancer_id(freelancer_id))
+        has_work_exp = bool(WorkExperienceFunctions.get_work_experiences_by_freelancer_id(freelancer_id))
+        has_education = bool(EducationFunctions.get_educations_by_freelancer_id(freelancer_id))
+        if not (has_bio or has_skills or has_work_exp or has_education):
+            raise HTTPException(status_code=400, detail="Freelancer profile is incomplete. Add skills, education, or experience first.")
+
         profile_text = build_freelancer_profile_text(freelancer_id)
         if not profile_text:
             raise HTTPException(status_code=400, detail="Freelancer profile is incomplete. Add skills, education, or experience first.")
 
-        cv_embedding = get_cv_embedding(cv_text)
-        profile_embedding = get_cv_embedding(profile_text)
+        cv_embedding = await asyncio.to_thread(get_cv_embedding, cv_text)
+        profile_embedding = await asyncio.to_thread(get_cv_embedding, profile_text)
         similarity = cosine_similarity(cv_embedding, profile_embedding)
 
         profile_skills = get_profile_skill_names(freelancer_id)
@@ -65,9 +85,9 @@ async def analyze_cv(
 
         # Scoring — all numeric scores come from the trained XGBoost models,
         # not the LLM (see cv_analysis_xgb_models/xgboost_cv_analysis_final.ipynb)
-        match_result = predict_match(cv_text, profile_text)
-        ats_ml_result = predict_ats(cv_text)
-        section_scores = predict_sections(cv_text, profile_text)
+        match_result = await asyncio.to_thread(predict_match, cv_text, profile_text)
+        ats_ml_result = await asyncio.to_thread(predict_ats, cv_text)
+        section_scores = await asyncio.to_thread(predict_sections, cv_text, profile_text)
 
         model_scores = {
             **match_result,
@@ -122,6 +142,8 @@ async def analyze_cv(
 
     except HTTPException:
         raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger("CV_ANALYSIS", f"CV analysis failed: {str(e)}", level="ERROR")
         raise HTTPException(status_code=500, detail=f"CV analysis failed: {str(e)}")

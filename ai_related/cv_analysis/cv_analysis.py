@@ -1,4 +1,4 @@
-import io
+import asyncio
 import re
 import math
 import json
@@ -26,33 +26,32 @@ def _normalize_text(text: str) -> str:
 
 
 async def extract_cv_text(cv_file: UploadFile) -> str:
+    """Returns "" when extraction yields no text; raises ValueError for empty
+    files or unsupported types."""
     contents = await cv_file.read()
     if not contents:
         raise ValueError("CV file is empty")
 
     file_name = (cv_file.filename or "").lower()
-    if cv_file.content_type.startswith("text/") or file_name.endswith(".txt"):
+    content_type = cv_file.content_type or ""
+
+    if content_type.startswith("text/") or file_name.endswith(".txt"):
         return contents.decode("utf-8", errors="replace")
 
-    if file_name.endswith(".pdf"):
-        import PyPDF2
-        reader = PyPDF2.PdfReader(io.BytesIO(contents))
-        pages = [page.extract_text() or "" for page in reader.pages]
-        extracted = "\n".join(pages).strip()
-        if not extracted:
-            raise ValueError("Unable to extract text from the PDF. Ensure the PDF contains selectable text.")
-        return extracted
+    # extraction lives in cv_upload; reused here rather than duplicated
+    from routes.cv_upload.cv_upload_functions import _extract_text_from_pdf, _extract_text_from_docx
 
-    if file_name.endswith(".docx") or cv_file.content_type in (
+    if file_name.endswith(".pdf") or content_type == "application/pdf":
+        return await asyncio.to_thread(_extract_text_from_pdf, contents)
+
+    if file_name.endswith(".docx") or content_type in (
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         "application/msword",
     ):
-        import docx
-        doc = docx.Document(io.BytesIO(contents))
-        extracted = "\n".join(para.text for para in doc.paragraphs if para.text.strip())
-        if not extracted:
-            raise ValueError("Unable to extract text from the DOCX file.")
-        return extracted
+        try:
+            return await asyncio.to_thread(_extract_text_from_docx, contents)
+        except RuntimeError:
+            return ""
 
     raise ValueError("Unsupported CV file type. Please upload a PDF (.pdf) or Word document (.docx).")
 
@@ -222,8 +221,8 @@ _MATCH_ENCODER_NAME = "nomic-ai/nomic-embed-text-v1"
 _MATCH_CONFIDENCE_THRESHOLD = 0.60
 
 _ATS_TIER_SCORE = {"High ATS": 100, "Medium ATS": 50, "Low ATS": 20}
-_WEIGHT_SECTION_OVERALL = 0.60
-_WEIGHT_ATS = 0.40
+_WEIGHT_SECTION_OVERALL = 0.75
+_WEIGHT_ATS = 0.25
 
 _match_encoder: Optional[SentenceTransformer] = None
 _match_model = None
@@ -381,7 +380,7 @@ def ats_label_to_score(ats_label: str) -> int:
 
 
 def compute_overall_score(section_overall_pct: float, ats_label: str) -> int:
-    """Overall score = 60% section-model overall score + 40% ATS-tier score."""
+    """Overall score = 75% section-model overall score + 25% ATS-tier score."""
     ats_tier_score = ats_label_to_score(ats_label)
     result = int(round(section_overall_pct * _WEIGHT_SECTION_OVERALL + ats_tier_score * _WEIGHT_ATS))
     logger(
@@ -509,7 +508,7 @@ async def analyze_cv_with_llm(
     )
 
     try:
-        result = _call_groq(system, user, json_mode=True, max_tokens=2500)
+        result = await asyncio.to_thread(_call_groq, system, user, json_mode=True, max_tokens=2500)
         if not isinstance(result, dict):
             raise ValueError(f"LLM returned {type(result).__name__} instead of dict")
         sections = result.get("sections", [])
@@ -538,7 +537,7 @@ async def parse_cv_for_profile(cv_text: str) -> Dict[str, Any]:
     suggested_bio = ""
     try:
         from routes.cv_upload.cv_parser_roberta import parse_cv_with_roberta
-        roberta_result = parse_cv_with_roberta(cv_text)
+        roberta_result = await asyncio.to_thread(parse_cv_with_roberta, cv_text)
         suggested_bio = roberta_result.get("suggested_bio", "")
         logger(
             "CV_ANALYSIS",
@@ -603,7 +602,7 @@ async def parse_cv_for_profile(cv_text: str) -> Dict[str, Any]:
 
     groq_result: Dict[str, Any] = {}
     try:
-        groq_result = _call_groq(system, user, json_mode=True, max_tokens=3000)
+        groq_result = await asyncio.to_thread(_call_groq, system, user, json_mode=True, max_tokens=3000)
         logger(
             "CV_ANALYSIS",
             f"GROQ extracted skills={len(groq_result.get('skills', []))} "
@@ -636,10 +635,13 @@ async def build_cv_recommendations(
 ) -> List[str]:
     """Flat recommendation list for backward compatibility with cv_upload_routes."""
     ats_result = check_ats_compliance(cv_text)
+    match_result = await asyncio.to_thread(predict_match, cv_text, profile_text)
+    ats_ml_result = await asyncio.to_thread(predict_ats, cv_text)
+    section_scores = await asyncio.to_thread(predict_sections, cv_text, profile_text)
     model_scores = {
-        **predict_match(cv_text, profile_text),
-        **predict_ats(cv_text),
-        "section_scores": predict_sections(cv_text, profile_text),
+        **match_result,
+        **ats_ml_result,
+        "section_scores": section_scores,
     }
     analysis = await analyze_cv_with_llm(
         cv_text, profile_text, similarity, skill_coverage,

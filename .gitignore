@@ -17,6 +17,14 @@ venv
 
 *.safetensors
 *.pkl
+!ai_related/cv_analysis/cv_analysis_xgb_models/match_scorer_xgb.pkl
+!ai_related/cv_analysis/cv_analysis_xgb_models/ats_scorer_xgb.pkl
+!ai_related/cv_analysis/cv_analysis_xgb_models/section_scorer_xgb.pkl
+!ai_related/cv_analysis/cv_analysis_xgb_models/ats_feature_names.pkl
+!ai_related/cv_analysis/cv_analysis_xgb_models/ats_label_map.pkl
+!ai_related/cv_analysis/cv_analysis_xgb_models/section_target_cols.pkl
+!ai_related/cv_analysis/cv_analysis_xgb_models/model_pkl/pca_match.pkl
+!ai_related/cv_analysis/cv_analysis_xgb_models/model_pkl/pca_section.pkl
 *.bin
 *.zip
 
@@ -38,7 +46,13 @@ ai_related/job_matching/machine_learning/models/*.png
 *.parquet
 
 ai_related/job_scam_detection/model1_sbert_rf_complete
-ai_related/cv_analysis/cv_analysis_xgb_models
+
+# cv_analysis: training notebook, result plots, and cached feature arrays
+# (not needed at inference time; the model .pkl files are whitelisted above)
+ai_related/cv_analysis/cv_analysis_xgb_models/*.ipynb
+ai_related/cv_analysis/cv_analysis_xgb_models/*.png
+ai_related/cv_analysis/cv_analysis_xgb_models/model_pkl/*.npy
+ai_related/cv_analysis/cv_analysis_xgb_models/model_pkl/ats_feature_names.pkl
 
 CAPSTONE_*.md
 
