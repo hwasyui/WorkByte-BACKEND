@@ -1,3 +1,4 @@
+import asyncio
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -11,8 +12,18 @@ from functions.authentication import get_current_user
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.skills.skill_functions import SkillFunctions
+from routes.admin.admin_moderation import scan_harmful_text_with_ml_fallback
 
 skill_router = APIRouter(prefix="/skills", tags=["Skills"])
+
+_SKILL_LABEL_NAMES = {
+    "toxic": "toxicity",
+    "toxicity": "toxicity",
+    "obscene": "obscenity",
+    "threat": "threats",
+    "insult": "insults",
+    "identity_hate": "identity-based hate speech",
+}
 
 
 @skill_router.get("", response_model=List[SkillResponse])
@@ -120,8 +131,26 @@ async def get_skill(skill_id: str, current_user: UserInDB = Depends(get_current_
 
 @skill_router.post("", response_model=SkillResponse, status_code=201)
 async def create_skill(skill: SkillCreate, current_user: UserInDB = Depends(get_current_user)):
-    """Create a new skill."""
+    """Create a new skill. skill is a shared, global lookup table with no single owner
+    (visible to every user via autocomplete/search), so unlike the identity-field scans
+    this fails CLOSED: if the scan itself errors, the create is rejected rather than
+    letting an unscanned name into a table everyone sees."""
     try:
+        scan_text = skill.skill_name or ""
+        if scan_text.strip():
+            try:
+                harm_result = await asyncio.to_thread(scan_harmful_text_with_ml_fallback, scan_text)
+            except Exception as e:
+                logger("SKILL", f"Skill-name scan errored, failing closed (rejecting create): {e}", level="WARNING")
+                return ResponseSchema.error("Couldn't verify this skill name right now. Please try again shortly.", 503)
+            if harm_result["is_flagged"]:
+                labels = [_SKILL_LABEL_NAMES.get(l, l) for l in harm_result.get("detected_labels", [])]
+                logger("SKILL", f"Blocked skill creation '{skill.skill_name}', labels={harm_result.get('detected_labels')}", level="WARNING")
+                return ResponseSchema.error(
+                    f"This skill name couldn't be created. It was flagged for {', '.join(labels) or 'a policy violation'}.",
+                    400,
+                )
+
         new_skill = SkillFunctions.create_skill(
             skill_name=skill.skill_name,
             skill_category=skill.skill_category,

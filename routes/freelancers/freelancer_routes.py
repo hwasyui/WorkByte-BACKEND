@@ -22,7 +22,41 @@ from routes.cv_upload.cv_upload_functions import (
     _extract_text_from_docx,
     _extract_text_from_image,
 )
-from routes.admin.admin_functions import queue_harmful_text_scan
+from routes.admin.admin_moderation import scan_harmful_text_with_ml_fallback
+
+_IDENTITY_FIELD_LABEL_NAMES = {
+    "toxic": "toxicity",
+    "toxicity": "toxicity",
+    "obscene": "obscenity",
+    "threat": "threats",
+    "insult": "insults",
+    "identity_hate": "identity-based hate speech",
+}
+
+
+async def _scan_identity_fields_or_reject(scan_text: str, field_label: str = "profile") -> Optional[Dict]:
+    """Synchronous scan-then-reject for name/title/bio, mirroring the DM message flow
+    (routes/dm/dm_routes.py send_message): scan inline, reject outright if flagged, no
+    queue, no async window where bad content is briefly live. Unlike DM, this fails OPEN
+    if the scan itself errors (not just fails to flag) - blast radius is one profile, so
+    blocking a legitimate save because the model crashed is worse than letting it through
+    for a later re-scan pass. Returns an error dict to return to the caller, or None if
+    the save should proceed."""
+    if not scan_text or not scan_text.strip():
+        return None
+    try:
+        harm_result = await asyncio.to_thread(scan_harmful_text_with_ml_fallback, scan_text)
+    except Exception as e:
+        logger("FREELANCER", f"Identity-field scan errored, failing open (allowing save): {e}", level="WARNING")
+        return None
+    if harm_result["is_flagged"]:
+        labels = [_IDENTITY_FIELD_LABEL_NAMES.get(l, l) for l in harm_result.get("detected_labels", [])]
+        logger("FREELANCER", f"Blocked {field_label} save, labels={harm_result.get('detected_labels')}", level="WARNING")
+        return {
+            "message": f"Your {field_label} couldn't be saved. It was flagged for {', '.join(labels) or 'a policy violation'}.",
+            "status": 400,
+        }
+    return None
 
 _DOCX_MIMES = {
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -117,6 +151,11 @@ async def create_freelancer(
             )
             logger("FREELANCER", f"Freelancer avatar uploaded: {profile_picture_url}", level="DEBUG")
 
+        _scan_text = " ".join(filter(None, [freelancer.full_name, freelancer.title, freelancer.bio]))
+        rejection = await _scan_identity_fields_or_reject(_scan_text, "profile")
+        if rejection:
+            return ResponseSchema.error(rejection["message"], rejection["status"])
+
         new_freelancer = FreelancerFunctions.create_freelancer(
             freelancer_id=freelancer_id,
             user_id=current_user.user_id,
@@ -131,16 +170,6 @@ async def create_freelancer(
             create_embedding=True
         )
         mark_freelancer_dirty(str(new_freelancer["freelancer_id"]))
-
-        _scan_text = " ".join(filter(None, [freelancer.full_name, freelancer.title, freelancer.bio]))
-        if _scan_text.strip():
-            asyncio.create_task(asyncio.to_thread(
-                queue_harmful_text_scan,
-                "freelancer_profile",
-                str(new_freelancer["freelancer_id"]),
-                str(current_user.user_id),
-                _scan_text,
-            ))
 
         logger("FREELANCER", f"Created freelancer {freelancer_id}", "POST /freelancers", "INFO")
         return ResponseSchema.success(new_freelancer, 201)
@@ -233,22 +262,17 @@ async def update_freelancer(
             )
             logger("FREELANCER", f"Freelancer avatar uploaded: {update_data['profile_picture_url']}", level="DEBUG")
 
+        _scan_text = " ".join(filter(None, [
+            update_data.get("full_name") or existing.get("full_name", ""),
+            update_data.get("title") if "title" in update_data else existing.get("title", ""),
+            update_data.get("bio") if "bio" in update_data else existing.get("bio", ""),
+        ]))
+        rejection = await _scan_identity_fields_or_reject(_scan_text, "profile")
+        if rejection:
+            return ResponseSchema.error(rejection["message"], rejection["status"])
+
         updated_freelancer = FreelancerFunctions.update_freelancer(freelancer_id=freelancer_id, update_data=update_data)
         mark_freelancer_dirty(freelancer_id)
-
-        _scan_text = " ".join(filter(None, [
-            updated_freelancer.get("full_name", ""),
-            updated_freelancer.get("title", ""),
-            updated_freelancer.get("bio", ""),
-        ]))
-        if _scan_text.strip():
-            asyncio.create_task(asyncio.to_thread(
-                queue_harmful_text_scan,
-                "freelancer_profile",
-                str(freelancer_id),
-                str(current_user.user_id),
-                _scan_text,
-            ))
 
         logger("FREELANCER", f"Updated freelancer {freelancer_id}", "PUT /freelancers/{identifier}", "INFO")
         return ResponseSchema.success(updated_freelancer, 200)
@@ -363,7 +387,7 @@ async def browse_all_freelancers(
 @freelancer_router.get("/{freelancer_id}/profile", response_model=FreelancerProfileComplete)
 async def get_comprehensive_freelancer_profile_endpoint(freelancer_id: str, current_user: UserInDB = Depends(get_current_user)):
     try:
-        profile = get_comprehensive_freelancer_profile(freelancer_id)
+        profile = get_comprehensive_freelancer_profile(freelancer_id, viewer_user_id=str(current_user.user_id))
         if not profile:
             return ResponseSchema.error(f"Freelancer {freelancer_id} not found", 404)
         logger("FREELANCER", f"Retrieved comprehensive profile for freelancer {freelancer_id}", "GET /freelancers/{freelancer_id}/profile", "INFO")

@@ -25,7 +25,7 @@ from routes.job_posts.job_post_functions import JobPostFunctions, convert_uuids_
 from routes.proposals.proposal_functions import ProposalFunctions
 from routes.contracts.contract_functions import ContractFunctions
 from ai_related.job_engine.embedding_manager import mark_job_dirty
-from routes.admin.admin_functions import queue_harmful_text_scan, queue_scam_scan
+from routes.admin.admin_functions import queue_scam_scan
 
 job_post_router = APIRouter(prefix="/job-posts", tags=["Job Posts"])
 
@@ -216,6 +216,7 @@ async def get_relevant_jobs(
                 FROM job_role_embedding jre
                 JOIN job_post jp ON jp.job_post_id = jre.job_post_id
                 WHERE jp.status = 'active'
+                  AND jp.moderation_status = 'visible'
                   AND jre.embedding_vector IS NOT NULL
                   {category_filter}
             ),
@@ -302,7 +303,7 @@ async def search_job_posts(
 async def get_job_posts_by_client(client_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Fetch all job posts for a specific client - Authenticated users only - JSON response."""
     try:
-        job_posts = JobPostFunctions.get_job_posts_by_client_id(client_id)
+        job_posts = JobPostFunctions.get_job_posts_by_client_id(client_id, viewer_user_id=str(current_user.user_id))
         success_msg = f"Retrieved {len(job_posts)} job posts for client {client_id}"
         logger("JOB_POST", success_msg, "GET /job-posts/client/{client_id}", "INFO")
         return ResponseSchema.success(job_posts, 200)
@@ -316,7 +317,7 @@ async def get_job_posts_by_client(client_id: str, current_user: UserInDB = Depen
 async def get_job_post(job_post_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Fetch a single job post by ID - Authenticated users only - JSON response."""
     try:
-        job_post = JobPostFunctions.get_job_post_by_id(job_post_id)
+        job_post = JobPostFunctions.get_job_post_by_id_for_viewer(job_post_id, viewer_user_id=str(current_user.user_id))
         if not job_post:
             error_msg = f"Job post {job_post_id} not found"
             logger("JOB_POST", error_msg, "GET /job-posts/{job_post_id}", "WARNING")
@@ -375,14 +376,14 @@ async def create_job_post(job_post: JobPostCreate, current_user: UserInDB = Depe
         
         # Role embeddings are created when job roles are added via POST /job-roles.
 
-        # Background: toxicity detection + scam detection
+        # Background: harmful-content moderation (scanning -> visible | blocked) + scam detection
         _jp_id    = str(new_job_post["job_post_id"])
         _cl_id    = str(client["client_id"])
         _usr_id   = current_user.user_id
         _title    = job_post.job_title
         _desc     = job_post.job_description
         _scan_text = f"{_title} {_desc}"
-        asyncio.create_task(asyncio.to_thread(queue_harmful_text_scan, "job_post", _jp_id, _usr_id, _scan_text))
+        asyncio.create_task(JobPostFunctions.run_job_post_scan(_jp_id, _scan_text, str(_usr_id)))
         asyncio.create_task(asyncio.to_thread(
             queue_scam_scan, _jp_id, _cl_id, _scan_text, _title, _desc,
         ))
@@ -422,6 +423,10 @@ async def update_job_post(job_post_id: str, job_post_update: JobPostUpdate, curr
             asyncio.create_task(
                 ProposalFunctions.notify_proposal_owners_of_job_closure(job_post_id, "the client closed it")
             )
+
+        if "job_title" in update_data or "job_description" in update_data:
+            _scan_text = f"{updated_job_post.get('job_title', '')} {updated_job_post.get('job_description', '')}"
+            asyncio.create_task(JobPostFunctions.run_job_post_scan(job_post_id, _scan_text, str(current_user.user_id)))
 
         mark_job_dirty(job_post_id)
         success_msg = f"Updated job post {job_post_id}"

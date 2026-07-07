@@ -12,7 +12,7 @@ from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.admin.admin_functions import (
     VALID_REPORT_REASONS,
-    action_moderation_item,
+    mark_moderation_item_reviewed,
     action_report,
     action_scam_flag,
     admin_close_account,
@@ -22,7 +22,6 @@ from routes.admin.admin_functions import (
     admin_reopen_account,
     admin_reopen_job,
     create_report,
-    force_expire_moderation,
     force_expire_reports,
     force_expire_scam_flags,
     get_admin_dashboard_stats,
@@ -107,80 +106,61 @@ async def admin_dashboard(current_user: UserInDB = Depends(get_admin_user)):
 
 @admin_router.get("/moderation")
 async def list_moderation(
-    status:       str = Query(default="pending",     description="pending | approved | rejected | all"),
-    content_type: str = Query(default="all",         description="job_post | freelancer_profile | client_profile | proposal | all"),
-    sort_by:      str = Query(default="created_at",  description="created_at | total_score | content_type | status"),
+    reviewed:     Optional[bool] = Query(default=None, description="filter by whether an admin has looked at it yet; omit for no filter"),
+    content_type: str = Query(default="all",         description="job_post | freelancer_profile | client_profile | portfolio | education | work_experience | proposal | all"),
+    sort_by:      str = Query(default="created_at",  description="created_at | total_score | content_type | reviewed_at"),
     sort_dir:     str = Query(default="desc",        description="asc | desc"),
     page:         int = Query(default=1, ge=1),
     page_size:    int = Query(default=20, ge=1, le=100),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """List harmful text detection queue items. Supports filtering by status and content_type, and sorting."""
+    """Browse the harmful-text audit trail. Plain history, not an action queue - filter
+    by content_type and by whether it's been reviewed yet, sort as needed."""
     try:
-        if status not in ("pending", "approved", "rejected", "all"):
-            return ResponseSchema.error("status must be pending, approved, rejected, or all", 400)
-        if content_type not in ("job_post", "freelancer_profile", "client_profile", "proposal", "all"):
-            return ResponseSchema.error("content_type must be job_post, freelancer_profile, client_profile, proposal, or all", 400)
-        if sort_by not in ("created_at", "total_score", "content_type", "status"):
-            return ResponseSchema.error("sort_by must be created_at, total_score, content_type, or status", 400)
+        _VALID_MOD_CONTENT_TYPES = (
+            "job_post", "freelancer_profile", "client_profile",
+            "portfolio", "education", "work_experience", "proposal", "all",
+        )
+        if content_type not in _VALID_MOD_CONTENT_TYPES:
+            return ResponseSchema.error(f"content_type must be one of: {', '.join(_VALID_MOD_CONTENT_TYPES)}", 400)
+        if sort_by not in ("created_at", "total_score", "content_type", "reviewed_at"):
+            return ResponseSchema.error("sort_by must be created_at, total_score, content_type, or reviewed_at", 400)
         if sort_dir not in ("asc", "desc"):
             return ResponseSchema.error("sort_dir must be asc or desc", 400)
         items = list_moderation_queue(
-            status=status, content_type=content_type,
+            reviewed=reviewed, content_type=content_type,
             sort_by=sort_by, sort_dir=sort_dir,
             page=page, page_size=page_size,
         )
-        logger("ADMIN", f"Moderation queue fetched: status={status} content_type={content_type} sort={sort_by} {sort_dir}", "GET /admin/moderation", "INFO")
+        logger("ADMIN", f"Moderation queue fetched: reviewed={reviewed} content_type={content_type} sort={sort_by} {sort_dir}", "GET /admin/moderation", "INFO")
         return ResponseSchema.success(items, 200)
     except Exception as e:
         logger("ADMIN", f"Moderation list error: {e}", "GET /admin/moderation", "ERROR")
         return ResponseSchema.error(f"Failed to fetch moderation queue: {e}", 500)
 
 
-@admin_router.post("/moderation/{moderation_id}/approve")
-async def approve_moderation(
+@admin_router.post("/moderation/{moderation_id}/review")
+async def review_moderation(
     moderation_id: str,
     body: AdminActionBody = AdminActionBody(),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Approve a flagged content item: confirms the AI flag and actions harmful content (job closed, etc.)."""
+    """Mark an audit-trail entry as reviewed, optionally with a note. Bookkeeping only -
+    does not take any action on the underlying content. To actually close a job post or
+    ban an account after reviewing, use the dedicated endpoint for that."""
     try:
-        updated = action_moderation_item(
+        updated = mark_moderation_item_reviewed(
             moderation_id=moderation_id,
-            action="approve",
             admin_user_id=current_user.user_id,
             admin_note=body.admin_note,
         )
         if not updated:
-            return ResponseSchema.error("Item not found or already actioned", 404)
-        logger("ADMIN", f"Moderation {moderation_id} approved by {current_user.user_id}", "POST /admin/moderation/approve", "INFO")
+            return ResponseSchema.error("Item not found or already reviewed", 404)
+        logger("ADMIN", f"Moderation {moderation_id} marked reviewed by {current_user.user_id}", "POST /admin/moderation/review", "INFO")
         return ResponseSchema.success(updated, 200)
     except Exception as e:
-        logger("ADMIN", f"Approve moderation error: {e}", "POST /admin/moderation/approve", "ERROR")
-        return ResponseSchema.error(f"Failed to approve item: {e}", 500)
-
-
-@admin_router.post("/moderation/{moderation_id}/reject")
-async def reject_moderation(
-    moderation_id: str,
-    body: AdminActionBody = AdminActionBody(),
-    current_user: UserInDB = Depends(get_admin_user),
-):
-    """Reject a flagged content item: dismisses the AI flag as a false positive; content is allowed to stay."""
-    try:
-        updated = action_moderation_item(
-            moderation_id=moderation_id,
-            action="reject",
-            admin_user_id=current_user.user_id,
-            admin_note=body.admin_note,
-        )
-        if not updated:
-            return ResponseSchema.error("Item not found or already actioned", 404)
-        logger("ADMIN", f"Moderation {moderation_id} rejected by {current_user.user_id}", "POST /admin/moderation/reject", "INFO")
-        return ResponseSchema.success(updated, 200)
-    except Exception as e:
-        logger("ADMIN", f"Reject moderation error: {e}", "POST /admin/moderation/reject", "ERROR")
-        return ResponseSchema.error(f"Failed to reject item: {e}", 500)
+        logger("ADMIN", f"Review moderation error: {e}", "POST /admin/moderation/review", "ERROR")
+        return ResponseSchema.error(f"Failed to mark item reviewed: {e}", 500)
 
 
 @admin_router.post("/moderation/scan")
@@ -204,20 +184,6 @@ async def trigger_content_scan(
     except Exception as e:
         logger("ADMIN", f"Content scan error: {e}", "POST /admin/moderation/scan", "ERROR")
         return ResponseSchema.error(f"Content scan failed: {e}", 500)
-
-
-@admin_router.post("/moderation/force-expire")
-async def force_expire_mod_items(
-    body: ForceExpireBody,
-    current_user: UserInDB = Depends(get_admin_user),
-):
-    """Backdate auto_approve_at and immediately trigger the auto-action sweep (testing utility)."""
-    try:
-        force_expire_moderation(body.ids)
-        return ResponseSchema.success({"processed": len(body.ids)}, 200)
-    except Exception as e:
-        logger("ADMIN", f"Force expire mod error: {e}", "POST /admin/moderation/force-expire", "ERROR")
-        return ResponseSchema.error(f"Force expire failed: {e}", 500)
 
 
 @admin_router.get("/scam-flags")

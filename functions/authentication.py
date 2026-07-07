@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import os
 import sys
@@ -587,8 +588,11 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        token_data = verify_token(token, credentials_exception)
-        user = get_user(token_data.email)
+        def _lookup():
+            token_data = verify_token(token, credentials_exception)
+            return get_user(token_data.email)
+
+        user = await asyncio.to_thread(_lookup)
         if user is None:
             raise credentials_exception
         return user

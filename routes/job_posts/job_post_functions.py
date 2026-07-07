@@ -1,3 +1,4 @@
+import asyncio
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -5,6 +6,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 
 from functions.db_manager import get_db
 from functions.logger import logger
+from routes.admin.admin_moderation import scan_harmful_text_with_ml_fallback, insert_harmful_text_queue_entry
+from routes.notifications.notification_functions import NotificationFunctions
 from typing import List, Optional, Dict, Any
 import uuid
 import math
@@ -12,6 +15,16 @@ import re
 import json
 import urllib.request
 from datetime import datetime, timezone
+
+# harm labels reported to the client when a job post gets blocked, never the matched text
+_LABEL_DISPLAY_NAMES = {
+    "toxic": "toxicity",
+    "toxicity": "toxicity",
+    "obscene": "obscenity",
+    "threat": "threats",
+    "insult": "insults",
+    "identity_hate": "identity-based hate speech",
+}
 
 
 
@@ -38,6 +51,7 @@ _JOB_POST_SELECT = """
         jp.is_ai_generated, jp.view_count, jp.project_category,
         jp.created_at, jp.updated_at, jp.posted_at, jp.closed_at,
         jp.closure_reason, jp.closure_note,
+        jp.moderation_status, jp.scanned_at,
         COUNT(DISTINCT jr.job_role_id) AS role_count,
         COALESCE(SUM(jr.positions_available), 0) AS available_positions,
         c.full_name AS client_name,
@@ -598,6 +612,15 @@ class JobPostFunctions:
                 where = "WHERE jp.status = :status"
                 params = {"status": status}
 
+            # A 'scanning'/'blocked' post is hidden from everyone except its own client -
+            # blocking content must never mean an owner can't see their own post to fix it,
+            # but no one else should see it at all while it's not cleared.
+            if requesting_client_id:
+                where += " AND (jp.moderation_status = 'visible' OR jp.client_id = :rcid)"
+                params.setdefault("rcid", requesting_client_id)
+            else:
+                where += " AND jp.moderation_status = 'visible'"
+
             if category:
                 where += " AND jp.project_category = :category"
                 params["category"] = category
@@ -669,6 +692,7 @@ class JobPostFunctions:
             db = get_db()
             query = _JOB_POST_SELECT + """
                 WHERE jp.status = 'active'
+                  AND jp.moderation_status = 'visible'
                   AND (jp.job_title ILIKE '%' || :term || '%'
                     OR jp.job_description ILIKE '%' || :term || '%')
                 GROUP BY jp.job_post_id, c.full_name, c.profile_picture_url
@@ -707,7 +731,12 @@ class JobPostFunctions:
 
     @staticmethod
     def get_job_post_by_id(job_post_id: str) -> Optional[Dict]:
-        """Fetch a job post by ID with role_count, client_name, and live proposal_count."""
+        """Fetch a job post by ID with role_count, client_name, and live proposal_count.
+        No visibility gating - this is the trusted/internal fetch used by every caller
+        that already has its own authorization (ownership asserts, role/file/contract
+        operations, etc.) and just needs the record regardless of moderation_status.
+        For a viewer-facing fetch that should hide non-visible posts from strangers, use
+        get_job_post_by_id_for_viewer() instead."""
         try:
             db = get_db()
             query = _JOB_POST_SELECT + """
@@ -716,18 +745,39 @@ class JobPostFunctions:
             """
             rows = db.execute_query(query, {"job_post_id": job_post_id})
 
+            if not rows:
+                return None
 
-            if rows:
-                logger("JOB_POST_FUNCTIONS", f"Job post {job_post_id} found", level="INFO")
-                return convert_uuids_to_str(dict(rows[0]))
-
-
-            return None
-
+            logger("JOB_POST_FUNCTIONS", f"Job post {job_post_id} found", level="INFO")
+            return convert_uuids_to_str(dict(rows[0]))
 
         except Exception as e:
             logger("JOB_POST_FUNCTIONS", f"Error fetching job post: {str(e)}", level="ERROR")
             raise
+
+    @staticmethod
+    def get_job_post_by_id_for_viewer(job_post_id: str, viewer_user_id: Optional[str]) -> Optional[Dict]:
+        """Same fetch as get_job_post_by_id(), but with visibility gating applied for a
+        specific viewer (or no viewer at all - pass None for an anonymous/public caller
+        like the share-link page).
+
+        If the post is not 'visible' (still 'scanning' or 'blocked'), only two viewers get
+        the real data: the owning client, or a freelancer with an active contract already
+        tied to this job (blocking content must never disrupt work already in progress).
+        Anyone else gets None, same as if the post genuinely didn't exist - no leak that a
+        hidden post is under moderation."""
+        job_post = JobPostFunctions.get_job_post_by_id(job_post_id)
+        if not job_post:
+            return None
+
+        if job_post.get("moderation_status") != "visible":
+            if not viewer_user_id or not JobPostFunctions._viewer_can_see_hidden_job_post(
+                job_post_id, job_post.get("client_id"), viewer_user_id
+            ):
+                logger("JOB_POST_FUNCTIONS", f"Job post {job_post_id} hidden from viewer {viewer_user_id} (moderation_status={job_post.get('moderation_status')})", level="INFO")
+                return None
+
+        return job_post
 
     @staticmethod
     def increment_view_count(job_post_id: str) -> None:
@@ -742,12 +792,20 @@ class JobPostFunctions:
             raise
 
     @staticmethod
-    def get_job_posts_by_client_id(client_id: str) -> List[Dict]:
-        """Fetch all job posts for a client with role_count, client_name, and live proposal_count."""
+    def get_job_posts_by_client_id(client_id: str, viewer_user_id: Optional[str] = None) -> List[Dict]:
+        """Fetch all job posts for a client with role_count, client_name, and live proposal_count.
+        The client themselves sees everything including 'scanning'/'blocked' posts; anyone
+        else only sees 'visible' ones."""
         try:
             db = get_db()
-            query = _JOB_POST_SELECT + """
+            is_owner = bool(viewer_user_id) and bool(get_db().execute_query(
+                "SELECT 1 FROM client WHERE client_id = :cid AND user_id = :uid",
+                {"cid": client_id, "uid": viewer_user_id},
+            ))
+            moderation_clause = "" if is_owner else "AND jp.moderation_status = 'visible'"
+            query = _JOB_POST_SELECT + f"""
                 WHERE jp.client_id = :client_id
+                {moderation_clause}
                 GROUP BY jp.job_post_id, c.full_name, c.profile_picture_url
                 ORDER BY jp.created_at DESC
             """
@@ -771,7 +829,7 @@ class JobPostFunctions:
             query = """
                 SELECT jp.project_category AS category, COUNT(*) AS count
                 FROM job_post jp
-                WHERE jp.status = 'active'
+                WHERE jp.status = 'active' AND jp.moderation_status = 'visible'
                 GROUP BY jp.project_category
                 ORDER BY count DESC
             """
@@ -837,6 +895,7 @@ class JobPostFunctions:
                 "is_ai_generated":    is_ai_generated,
                 "proposal_count":     0,
                 "project_category":   project_category,  # ← NEW
+                "moderation_status":  "scanning",
             }
 
 
@@ -868,6 +927,7 @@ class JobPostFunctions:
                 "proposal_count": 0,
                 "closure_reason": None,
                 "closure_note": None,
+                "scanned_at": None,
             }
 
 
@@ -912,6 +972,91 @@ class JobPostFunctions:
             logger("JOB_POST_FUNCTIONS", f"Error updating job post: {str(e)}", level="ERROR")
             raise
 
+
+    @staticmethod
+    async def run_job_post_scan(job_post_id: str, scan_text: str, client_user_id: str) -> None:
+        """scanning -> scan -> visible | blocked. Mirrors ProposalFunctions.run_proposal_scan.
+
+        Replaces the old pre-moderation-queue + held_active_contract path entirely: a job
+        post is never auto-closed for content reasons anymore. 'blocked' only hides it from
+        new/public viewers (see get_job_post_by_id's viewer_user_id handling and
+        browse/search's moderation filter) - the owning client and any freelancer already
+        under an active contract on this job keep full access, so live work is never
+        disrupted. The client is notified immediately so they can fix and resubmit, same as
+        proposals/portfolio entries."""
+        try:
+            JobPostFunctions.update_job_post(job_post_id, {"moderation_status": "scanning"})
+
+            if scan_text and scan_text.strip():
+                result = await asyncio.to_thread(scan_harmful_text_with_ml_fallback, scan_text)
+            else:
+                result = {"is_flagged": False, "detected_labels": []}
+
+            scanned_at = datetime.now(timezone.utc)
+
+            if result["is_flagged"]:
+                JobPostFunctions.update_job_post(job_post_id, {
+                    "moderation_status": "blocked",
+                    "scanned_at": scanned_at,
+                })
+                logger(
+                    "JOB_POST_FUNCTIONS",
+                    f"Job post {job_post_id} blocked, labels={result.get('detected_labels')}",
+                    level="WARNING",
+                )
+                insert_harmful_text_queue_entry(
+                    "job_post", job_post_id, client_user_id, scan_text, result
+                )
+                labels = [_LABEL_DISPLAY_NAMES.get(l, l) for l in result.get("detected_labels", [])]
+                try:
+                    await NotificationFunctions.notify(
+                        recipient_user_id=client_user_id,
+                        notif_type="job_post_blocked",
+                        title="Job Post Needs Changes",
+                        body=f"Your job post was flagged for {', '.join(labels) or 'a policy violation'}. Edit and resubmit.",
+                        data={"job_post_id": job_post_id},
+                    )
+                except Exception as notif_err:
+                    logger("JOB_POST_FUNCTIONS", f"Blocked-job-post notification failed (non-fatal): {notif_err}", level="WARNING")
+            else:
+                JobPostFunctions.update_job_post(job_post_id, {
+                    "moderation_status": "visible",
+                    "scanned_at": scanned_at,
+                })
+
+        except Exception as e:
+            logger("JOB_POST_FUNCTIONS", f"Job post scan failed for {job_post_id}: {e}", level="ERROR")
+
+    @staticmethod
+    def _viewer_can_see_hidden_job_post(job_post_id: str, client_id: Optional[str], viewer_user_id: str) -> bool:
+        """True if viewer_user_id is either the job post's owning client, or a freelancer
+        with a live (not cancelled/completed) contract tied to this job post - the two
+        parties for whom a 'blocked' post must never disappear, since blocking is about
+        stopping new exposure, not disrupting work already underway."""
+        try:
+            row = get_db().execute_query(
+                """
+                SELECT
+                    EXISTS(
+                        SELECT 1 FROM client
+                        WHERE client_id = :cid AND user_id = :uid
+                    ) AS is_owner,
+                    EXISTS(
+                        SELECT 1 FROM contract c
+                        JOIN freelancer f ON f.freelancer_id = c.freelancer_id
+                        WHERE c.job_post_id = :jid AND f.user_id = :uid
+                          AND c.status IN ('active', 'under_review', 'revision_requested')
+                    ) AS is_contracted_freelancer
+                """,
+                {"cid": client_id, "uid": viewer_user_id, "jid": job_post_id},
+            )
+            if not row:
+                return False
+            r = dict(row[0])
+            return bool(r.get("is_owner")) or bool(r.get("is_contracted_freelancer"))
+        except Exception as e:
+            logger("JOB_POST_FUNCTIONS", f"Error checking viewer access for hidden job {job_post_id}: {str(e)}", level="ERROR")
+            return False
 
     @staticmethod
     def delete_job_post(job_post_id: str) -> bool:

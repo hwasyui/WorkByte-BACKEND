@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from datetime import timedelta
+import asyncio
 import sys, os
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -50,7 +51,8 @@ auth_router = APIRouter(prefix="/auth", tags=["Authentication"])
 async def register(user: UserRegister):
     """Register a new user (freelancer or client)."""
     try:
-        result = register_user(
+        result = await asyncio.to_thread(
+            register_user,
             email=user.email,
             password=user.password,
             user_type=user.user_type,
@@ -73,7 +75,7 @@ async def register(user: UserRegister):
 async def verify_email(request: EmailVerificationRequest):
     """Verify a newly registered user's email address with an OTP."""
     try:
-        result = verify_email_otp(request.email, request.otp)
+        result = await asyncio.to_thread(verify_email_otp, request.email, request.otp)
         logger("AUTH", f"Email verified for {request.email}", "POST /auth/verify-email", "INFO")
         return ResponseSchema.success(result, 200)
     except HTTPException as e:
@@ -89,7 +91,7 @@ async def verify_email(request: EmailVerificationRequest):
 async def resend_verification(request: ResendVerificationRequest):
     """Send a fresh email verification OTP."""
     try:
-        result = resend_email_verification(request.email)
+        result = await asyncio.to_thread(resend_email_verification, request.email)
         logger("AUTH", f"Verification email resent to {request.email}", "POST /auth/resend-verification", "INFO")
         return ResponseSchema.success(result, 200)
     except HTTPException as e:
@@ -105,25 +107,30 @@ async def resend_verification(request: ResendVerificationRequest):
 async def login(credentials: UserLogin):
     """Validate credentials and return JWT access token directly."""
     try:
-        user = authenticate_user(credentials.email, credentials.password)
-        if not user:
+        def _do_login():
+            user = authenticate_user(credentials.email, credentials.password)
+            if not user:
+                return None
+            access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+            access_token = create_access_token(
+                data={"sub": user.email}, expires_delta=access_token_expires
+            )
+            refresh_token = create_refresh_token(user.user_id)
+            return {
+                "access_token":  access_token,
+                "token_type":    "bearer",
+                "expires_in":    ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+                "refresh_token": refresh_token,
+                "refresh_token_expires_in": REFRESH_TOKEN_EXPIRE_DAYS * 86400,
+            }
+
+        payload = await asyncio.to_thread(_do_login)
+        if payload is None:
             logger("AUTH", f"Login failed for {credentials.email}: invalid credentials", "POST /auth/login", "WARNING")
             return ResponseSchema.error("Invalid email or password", 401)
 
-        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        access_token = create_access_token(
-            data={"sub": user.email}, expires_delta=access_token_expires
-        )
-        refresh_token = create_refresh_token(user.user_id)
-
         logger("AUTH", f"Login successful for {credentials.email}", "POST /auth/login", "INFO")
-        return ResponseSchema.success({
-            "access_token":  access_token,
-            "token_type":    "bearer",
-            "expires_in":    ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-            "refresh_token": refresh_token,
-            "refresh_token_expires_in": REFRESH_TOKEN_EXPIRE_DAYS * 86400,
-        }, 200)
+        return ResponseSchema.success(payload, 200)
 
     except HTTPException as e:
         logger("AUTH", f"Login failed for {credentials.email}: {e.detail}", "POST /auth/login", "WARNING")
@@ -161,7 +168,7 @@ async def get_me(current_user: UserInDB = Depends(get_current_user)):
 async def forgot_password(request: ForgotPasswordRequest):
     """Request a password reset OTP sent to the given email."""
     try:
-        result = request_password_reset(request.email)
+        result = await asyncio.to_thread(request_password_reset, request.email)
         logger("AUTH", f"Password reset requested for {request.email}", "POST /auth/forgot-password", "INFO")
         return ResponseSchema.success(result, 200)
     except HTTPException as e:
@@ -177,7 +184,7 @@ async def forgot_password(request: ForgotPasswordRequest):
 async def reset_password_route(request: ResetPasswordRequest):
     """Verify the OTP and set a new password."""
     try:
-        result = reset_password(request.email, request.otp, request.new_password)
+        result = await asyncio.to_thread(reset_password, request.email, request.otp, request.new_password)
         logger("AUTH", f"Password reset successful for {request.email}", "POST /auth/reset-password", "INFO")
         return ResponseSchema.success(result, 200)
     except HTTPException as e:
@@ -196,7 +203,7 @@ async def add_second_role(
 ):
     """Add a freelancer or client profile to an existing account."""
     try:
-        result = add_role(current_user, payload.role, payload.full_name)
+        result = await asyncio.to_thread(add_role, current_user, payload.role, payload.full_name)
         logger("AUTH", f"Role '{payload.role}' added for user {current_user.user_id}", "POST /auth/add-role", "INFO")
         return ResponseSchema.success(result, 201)
     except HTTPException as e:
@@ -215,19 +222,23 @@ async def refresh_token_endpoint(payload: RefreshRequest):
     The old refresh token is revoked immediately; each token can only be used once.
     """
     try:
-        user, new_refresh = use_refresh_token(payload.refresh_token)
-        access_token = create_access_token(
-            data={"sub": user.email},
-            expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
-        )
-        logger("AUTH", f"Token refreshed for {user.email}", "POST /auth/refresh", "INFO")
-        return ResponseSchema.success({
-            "access_token":  access_token,
-            "token_type":    "bearer",
-            "expires_in":    ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-            "refresh_token": new_refresh,
-            "refresh_token_expires_in": REFRESH_TOKEN_EXPIRE_DAYS * 86400,
-        }, 200)
+        def _do_refresh():
+            user, new_refresh = use_refresh_token(payload.refresh_token)
+            access_token = create_access_token(
+                data={"sub": user.email},
+                expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
+            )
+            return user.email, {
+                "access_token":  access_token,
+                "token_type":    "bearer",
+                "expires_in":    ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+                "refresh_token": new_refresh,
+                "refresh_token_expires_in": REFRESH_TOKEN_EXPIRE_DAYS * 86400,
+            }
+
+        email, result = await asyncio.to_thread(_do_refresh)
+        logger("AUTH", f"Token refreshed for {email}", "POST /auth/refresh", "INFO")
+        return ResponseSchema.success(result, 200)
     except HTTPException as e:
         logger("AUTH", f"Token refresh failed: {e.detail}", "POST /auth/refresh", "WARNING")
         return ResponseSchema.error(e.detail, e.status_code)
@@ -248,7 +259,7 @@ async def change_password_endpoint(
     are revoked on success, logging out other devices.
     """
     try:
-        result = change_password(current_user, payload.old_password, payload.new_password)
+        result = await asyncio.to_thread(change_password, current_user, payload.old_password, payload.new_password)
         logger("AUTH", f"Password changed for {current_user.email}", "POST /auth/change-password", "INFO")
         return ResponseSchema.success(result, 200)
     except HTTPException as e:
@@ -267,7 +278,7 @@ async def set_password_endpoint(
 ):
     """Set the first real password for an authenticated OAuth-only account."""
     try:
-        result = set_password(current_user, payload.new_password)
+        result = await asyncio.to_thread(set_password, current_user, payload.new_password)
         logger("AUTH", f"Password login enabled for {current_user.email}", "POST /auth/set-password", "INFO")
         return ResponseSchema.success(result, 200)
     except HTTPException as e:
@@ -286,7 +297,7 @@ async def logout(payload: RefreshRequest):
     The current access token remains valid until it naturally expires (max 30 min).
     """
     try:
-        revoke_refresh_token(payload.refresh_token)
+        await asyncio.to_thread(revoke_refresh_token, payload.refresh_token)
         logger("AUTH", "Refresh token revoked via logout", "POST /auth/logout", "INFO")
         return ResponseSchema.success({"message": "Logged out successfully"}, 200)
     except Exception as e:

@@ -44,8 +44,15 @@ def _parse_meta(raw) -> Optional[Dict]:
         return None
 
 
-def _get_user_profile(user_id: str) -> Dict:
-    """Return minimal display info for any user_id."""
+def _get_user_profile(user_id: Optional[str]) -> Dict:
+    """Return minimal display info for any user_id. A None user_id means that side of
+    the thread/message has been anonymized (the account was deleted while the other
+    party kept theirs) - shown as a "Deleted User" placeholder, not a raw null."""
+    if user_id is None:
+        return {
+            "user_id": None, "full_name": "Deleted User", "profile_picture_url": None,
+            "role": "user", "freelancer_id": None, "client_id": None,
+        }
     db = get_db()
     rows = db.execute_query(
         """

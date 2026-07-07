@@ -151,7 +151,7 @@ def _html(title: str, subtitle: str, deep_link: str, badge: str = "WorkByte") ->
 async def share_job_post(job_post_id: str):
     """Open the job post in the app; fall back to the app store page."""
     try:
-        job = JobPostFunctions.get_job_post_by_id(job_post_id)
+        job = JobPostFunctions.get_job_post_by_id_for_viewer(job_post_id, viewer_user_id=None)
         if not job:
             title = "Job Post"
             subtitle = "View this job on WorkByte."

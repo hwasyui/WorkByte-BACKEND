@@ -13,7 +13,7 @@ from functions.access_control import assert_freelancer_owns, get_freelancer_prof
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.portfolio.portfolio_functions import PortfolioFunctions
-from routes.admin.admin_functions import queue_harmful_text_scan
+from routes.freelancers.freelancer_functions import FreelancerFunctions
 from ai_related.job_engine.embedding_manager import mark_freelancer_dirty, mark_portfolio_dirty
 
 portfolio_router = APIRouter(prefix="/portfolios", tags=["Portfolio"])
@@ -24,7 +24,7 @@ async def get_all_portfolios(limit: Optional[int] = None, current_user: UserInDB
     """Fetch all portfolios - Authenticated users only - JSON response."""
     try:
         freelancer = get_freelancer_profile_for_user(current_user)
-        portfolios = PortfolioFunctions.get_portfolios_by_freelancer_id(freelancer["freelancer_id"])
+        portfolios = PortfolioFunctions.get_portfolios_by_freelancer_id(freelancer["freelancer_id"], visible_only=False)
         success_msg = f"Retrieved {len(portfolios)} portfolios for freelancer {freelancer['freelancer_id']}"
         logger("PORTFOLIO", success_msg, "GET /portfolios", "INFO")
         return ResponseSchema.success(portfolios, 200)
@@ -46,6 +46,15 @@ async def get_portfolio(portfolio_id: str, current_user: UserInDB = Depends(get_
             error_msg = f"Portfolio {portfolio_id} not found"
             logger("PORTFOLIO", error_msg, "GET /portfolios/{portfolio_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
+
+        if portfolio.get("moderation_status") != "visible":
+            freelancer = FreelancerFunctions.get_freelancer_by_user_id(current_user.user_id)
+            is_owner = freelancer and str(freelancer["freelancer_id"]) == str(portfolio["freelancer_id"])
+            if not is_owner:
+                error_msg = f"Portfolio {portfolio_id} not found"
+                logger("PORTFOLIO", error_msg, "GET /portfolios/{portfolio_id}", "WARNING")
+                return ResponseSchema.error(error_msg, 404)
+
         success_msg = f"Retrieved portfolio {portfolio_id}"
         logger("PORTFOLIO", success_msg, "GET /portfolios/{portfolio_id}", "INFO")
         return ResponseSchema.success(portfolio, 200)
@@ -57,9 +66,12 @@ async def get_portfolio(portfolio_id: str, current_user: UserInDB = Depends(get_
 
 @portfolio_router.get("/freelancer/{freelancer_id}", response_model=List[PortfolioResponse])
 async def get_portfolios_by_freelancer(freelancer_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch all portfolios for a specific freelancer - Authenticated users only - JSON response."""
+    """Fetch all portfolios for a specific freelancer - Authenticated users only - JSON response.
+    The owner sees their own blocked/scanning entries too; anyone else only sees visible ones."""
     try:
-        portfolios = PortfolioFunctions.get_portfolios_by_freelancer_id(freelancer_id)
+        freelancer = FreelancerFunctions.get_freelancer_by_user_id(current_user.user_id)
+        is_owner = freelancer and str(freelancer["freelancer_id"]) == str(freelancer_id)
+        portfolios = PortfolioFunctions.get_portfolios_by_freelancer_id(freelancer_id, visible_only=not is_owner)
         success_msg = f"Retrieved {len(portfolios)} portfolios for freelancer {freelancer_id}"
         logger("PORTFOLIO", success_msg, "GET /portfolios/freelancer/{freelancer_id}", "INFO")
         return ResponseSchema.success(portfolios, 200)
@@ -89,14 +101,9 @@ async def create_portfolio(portfolio: PortfolioCreate, current_user: UserInDB = 
         mark_portfolio_dirty(str(new_portfolio["portfolio_id"]))
 
         _scan_text = " ".join(filter(None, [portfolio.project_title, portfolio.project_description]))
-        if _scan_text.strip():
-            asyncio.create_task(asyncio.to_thread(
-                queue_harmful_text_scan,
-                "freelancer_profile",
-                str(portfolio.freelancer_id),
-                str(current_user.user_id),
-                _scan_text,
-            ))
+        asyncio.create_task(PortfolioFunctions.run_portfolio_scan(
+            str(new_portfolio["portfolio_id"]), _scan_text, str(current_user.user_id),
+        ))
 
         success_msg = f"Created portfolio {portfolio_id} for freelancer {portfolio.freelancer_id}"
         logger("PORTFOLIO", success_msg, "POST /portfolios", "INFO")
@@ -135,14 +142,9 @@ async def update_portfolio(portfolio_id: str, portfolio_update: PortfolioUpdate,
             updated_portfolio.get("project_title", ""),
             updated_portfolio.get("project_description", ""),
         ]))
-        if _scan_text.strip():
-            asyncio.create_task(asyncio.to_thread(
-                queue_harmful_text_scan,
-                "freelancer_profile",
-                str(existing_portfolio["freelancer_id"]),
-                str(current_user.user_id),
-                _scan_text,
-            ))
+        asyncio.create_task(PortfolioFunctions.run_portfolio_scan(
+            portfolio_id, _scan_text, str(current_user.user_id),
+        ))
 
         success_msg = f"Updated portfolio {portfolio_id}"
         logger("PORTFOLIO", success_msg, "PUT /portfolios/{portfolio_id}", "INFO")

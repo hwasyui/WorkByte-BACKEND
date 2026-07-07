@@ -1,11 +1,25 @@
+import asyncio
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
+from datetime import datetime, timezone
 from functions.db_manager import get_db
 from functions.logger import logger
+from routes.admin.admin_moderation import scan_harmful_text_with_ml_fallback, insert_harmful_text_queue_entry
+from routes.notifications.notification_functions import NotificationFunctions
 from typing import List, Optional, Dict
 import uuid
+
+# harm labels reported to the freelancer when an entry gets blocked, never the matched text
+_LABEL_DISPLAY_NAMES = {
+    "toxic": "toxicity",
+    "toxicity": "toxicity",
+    "obscene": "obscenity",
+    "threat": "threats",
+    "insult": "insults",
+    "identity_hate": "identity-based hate speech",
+}
 
 def convert_uuids_to_str(data: Dict) -> Dict:
     """Convert all UUID objects in dict to strings."""
@@ -66,33 +80,36 @@ class WorkExperienceFunctions:
             raise
 
     @staticmethod
-    def get_work_experiences_by_freelancer_id(freelancer_id: str) -> List[Dict]:
-        """Fetch all work experiences for a freelancer."""
+    def get_work_experiences_by_freelancer_id(freelancer_id: str, visible_only: bool = True) -> List[Dict]:
+        """Fetch all work experiences for a freelancer. visible_only=False is for the owner
+        viewing their own list (they must still see blocked/scanning entries)."""
         try:
             db = get_db()
             conditions = [("freelancer_id", "=", freelancer_id)]
+            if visible_only:
+                conditions.append(("moderation_status", "=", "visible"))
             rows = db.fetch_data(
                 table_name="work_experience",
                 conditions=conditions,
                 order_by="start_date DESC"
             )
-            
+
             logger("WORK_EXPERIENCE_FUNCTIONS", f"Fetched {len(rows)} work experiences for freelancer {freelancer_id}", level="INFO")
             return [convert_uuids_to_str(dict(row)) for row in rows]
-        
+
         except Exception as e:
             logger("WORK_EXPERIENCE_FUNCTIONS", f"Error fetching work experiences: {str(e)}", level="ERROR")
             raise
 
     @staticmethod
-    def create_work_experience(freelancer_id: str, job_title: str, company_name: str, 
+    def create_work_experience(freelancer_id: str, job_title: str, company_name: str,
                                start_date, end_date=None, location: Optional[str] = None,
                                is_current: Optional[bool] = False, description: Optional[str] = None) -> Dict:
         """Create a new work experience."""
         try:
             db = get_db()
             work_experience_id = str(uuid.uuid4())
-            
+
             work_experience_data = {
                 "work_experience_id": work_experience_id,
                 "freelancer_id": freelancer_id,
@@ -102,14 +119,15 @@ class WorkExperienceFunctions:
                 "start_date": start_date,
                 "end_date": end_date,
                 "is_current": is_current,
-                "description": description
+                "description": description,
+                "moderation_status": "scanning",
             }
-            
+
             db.insert_data(table_name="work_experience", data=work_experience_data)
-            
+
             logger("WORK_EXPERIENCE_FUNCTIONS", f"Work experience {work_experience_id} created", level="INFO")
             return convert_uuids_to_str(work_experience_data)
-        
+
         except Exception as e:
             logger("WORK_EXPERIENCE_FUNCTIONS", f"Error creating work experience: {str(e)}", level="ERROR")
             raise
@@ -120,20 +138,67 @@ class WorkExperienceFunctions:
         try:
             db = get_db()
             update_data = {k: v for k, v in update_data.items() if v is not None}
-            
+
             if not update_data:
                 logger("WORK_EXPERIENCE_FUNCTIONS", "No data to update", level="WARNING")
                 return WorkExperienceFunctions.get_work_experience_by_id(work_experience_id)
-            
+
             conditions = [("work_experience_id", "=", work_experience_id)]
             db.update_data(table_name="work_experience", data=update_data, conditions=conditions)
-            
+
             logger("WORK_EXPERIENCE_FUNCTIONS", f"Work experience {work_experience_id} updated", level="INFO")
             return WorkExperienceFunctions.get_work_experience_by_id(work_experience_id)
-        
+
         except Exception as e:
             logger("WORK_EXPERIENCE_FUNCTIONS", f"Error updating work experience: {str(e)}", level="ERROR")
             raise
+
+    @staticmethod
+    async def run_work_experience_scan(work_experience_id: str, scan_text: str, freelancer_user_id: str) -> None:
+        """scanning -> scan -> visible | blocked. Mirrors ProposalFunctions.run_proposal_scan -
+        content_type/content_id are this entry's own ('work_experience', work_experience_id)."""
+        try:
+            WorkExperienceFunctions.update_work_experience(work_experience_id, {"moderation_status": "scanning"})
+
+            if scan_text and scan_text.strip():
+                result = await asyncio.to_thread(scan_harmful_text_with_ml_fallback, scan_text)
+            else:
+                result = {"is_flagged": False, "detected_labels": []}
+
+            scanned_at = datetime.now(timezone.utc)
+
+            if result["is_flagged"]:
+                WorkExperienceFunctions.update_work_experience(work_experience_id, {
+                    "moderation_status": "blocked",
+                    "scanned_at": scanned_at,
+                })
+                logger(
+                    "WORK_EXPERIENCE_FUNCTIONS",
+                    f"Work experience {work_experience_id} blocked, labels={result.get('detected_labels')}",
+                    level="WARNING",
+                )
+                insert_harmful_text_queue_entry(
+                    "work_experience", work_experience_id, freelancer_user_id, scan_text, result
+                )
+                labels = [_LABEL_DISPLAY_NAMES.get(l, l) for l in result.get("detected_labels", [])]
+                try:
+                    await NotificationFunctions.notify(
+                        recipient_user_id=freelancer_user_id,
+                        notif_type="work_experience_blocked",
+                        title="Work Experience Entry Needs Changes",
+                        body=f"Your work experience entry was flagged for {', '.join(labels) or 'a policy violation'}. Edit and resubmit.",
+                        data={"work_experience_id": work_experience_id},
+                    )
+                except Exception as notif_err:
+                    logger("WORK_EXPERIENCE_FUNCTIONS", f"Blocked-entry notification failed (non-fatal): {notif_err}", level="WARNING")
+            else:
+                WorkExperienceFunctions.update_work_experience(work_experience_id, {
+                    "moderation_status": "visible",
+                    "scanned_at": scanned_at,
+                })
+
+        except Exception as e:
+            logger("WORK_EXPERIENCE_FUNCTIONS", f"Work experience scan failed for {work_experience_id}: {e}", level="ERROR")
 
     @staticmethod
     def delete_work_experience(work_experience_id: str) -> bool:

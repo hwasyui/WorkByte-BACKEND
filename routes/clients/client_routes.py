@@ -15,7 +15,38 @@ from functions.response_utils import ResponseSchema
 from routes.clients.client_functions import ClientFunctions
 from functions.minio_client import upload_client_profile_picture, delete_file, BUCKET_USER_ASSETS
 from mimetypes import guess_type as guess_mime
-from routes.admin.admin_functions import queue_harmful_text_scan
+from routes.admin.admin_moderation import scan_harmful_text_with_ml_fallback
+
+_IDENTITY_FIELD_LABEL_NAMES = {
+    "toxic": "toxicity",
+    "toxicity": "toxicity",
+    "obscene": "obscenity",
+    "threat": "threats",
+    "insult": "insults",
+    "identity_hate": "identity-based hate speech",
+}
+
+
+async def _scan_identity_fields_or_reject(scan_text: str, field_label: str = "profile") -> Optional[Dict]:
+    """Synchronous scan-then-reject for name/bio, mirroring the DM message flow
+    (routes/dm/dm_routes.py send_message). Fails OPEN if the scan itself errors -
+    blast radius is one profile, so blocking a legitimate save because the model
+    crashed is worse than letting it through for a later re-scan pass."""
+    if not scan_text or not scan_text.strip():
+        return None
+    try:
+        harm_result = await asyncio.to_thread(scan_harmful_text_with_ml_fallback, scan_text)
+    except Exception as e:
+        logger("CLIENT", f"Identity-field scan errored, failing open (allowing save): {e}", level="WARNING")
+        return None
+    if harm_result["is_flagged"]:
+        labels = [_IDENTITY_FIELD_LABEL_NAMES.get(l, l) for l in harm_result.get("detected_labels", [])]
+        logger("CLIENT", f"Blocked {field_label} save, labels={harm_result.get('detected_labels')}", level="WARNING")
+        return {
+            "message": f"Your {field_label} couldn't be saved. It was flagged for {', '.join(labels) or 'a policy violation'}.",
+            "status": 400,
+        }
+    return None
 
 client_router = APIRouter(prefix="/clients", tags=["Clients"])
 
@@ -137,6 +168,11 @@ async def create_client(
             )
             logger("CLIENT", f"Client avatar uploaded: {profile_picture_url}", level="DEBUG")
 
+        _scan_text = " ".join(filter(None, [client.full_name, client.bio]))
+        rejection = await _scan_identity_fields_or_reject(_scan_text, "profile")
+        if rejection:
+            return ResponseSchema.error(rejection["message"], rejection["status"])
+
         new_client = ClientFunctions.create_client(
             client_id=client_id,
             user_id=current_user.user_id,
@@ -145,16 +181,6 @@ async def create_client(
             website_url=client.website_url,
             profile_picture_url=profile_picture_url
         )
-
-        _scan_text = " ".join(filter(None, [client.full_name, client.bio]))
-        if _scan_text.strip():
-            asyncio.create_task(asyncio.to_thread(
-                queue_harmful_text_scan,
-                "client_profile",
-                str(new_client["client_id"]),
-                str(current_user.user_id),
-                _scan_text,
-            ))
 
         success_msg = f"Created client {client_id} for user {client.user_id} with full name '{client.full_name}'"
         logger("CLIENT", success_msg, "POST /clients", "INFO")
@@ -205,20 +231,15 @@ async def update_client(
             )
             logger("CLIENT", f"Client avatar uploaded: {update_data['profile_picture_url']}", level="DEBUG")
 
-        updated_client = ClientFunctions.update_client(client_id, update_data)
-
         _scan_text = " ".join(filter(None, [
-            updated_client.get("full_name", ""),
-            updated_client.get("bio", ""),
+            update_data.get("full_name") if "full_name" in update_data else existing.get("full_name", ""),
+            update_data.get("bio") if "bio" in update_data else existing.get("bio", ""),
         ]))
-        if _scan_text.strip():
-            asyncio.create_task(asyncio.to_thread(
-                queue_harmful_text_scan,
-                "client_profile",
-                str(client_id),
-                str(current_user.user_id),
-                _scan_text,
-            ))
+        rejection = await _scan_identity_fields_or_reject(_scan_text, "profile")
+        if rejection:
+            return ResponseSchema.error(rejection["message"], rejection["status"])
+
+        updated_client = ClientFunctions.update_client(client_id, update_data)
 
         success_msg = f"Updated client {client_id} with fields: {', '.join(update_data.keys())}"
         logger("CLIENT", success_msg, "PUT /clients/{identifier}", "INFO")

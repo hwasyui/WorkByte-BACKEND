@@ -409,8 +409,13 @@ class FreelancerFunctions:
             logger("FREELANCER_FUNCTIONS", f"Error fetching freelancer skills: {str(e)}", level="ERROR")
             raise
 
-def get_comprehensive_freelancer_profile(freelancer_id: str) -> Optional[Dict]:
-    """Get complete freelancer profile with all related data."""
+def get_comprehensive_freelancer_profile(freelancer_id: str, viewer_user_id: Optional[str] = None) -> Optional[Dict]:
+    """Get complete freelancer profile with all related data.
+
+    viewer_user_id identifies who's asking: if it's the freelancer themselves, they see
+    every education/work_experience/portfolio entry including ones still 'scanning' or
+    'blocked' by moderation (so they know what to fix); anyone else only sees 'visible'
+    entries - a flagged entry simply doesn't exist as far as they can tell."""
     try:
         db = get_db()
 
@@ -422,6 +427,7 @@ def get_comprehensive_freelancer_profile(freelancer_id: str) -> Optional[Dict]:
         if not freelancer_rows:
             return None
         freelancer = dict(freelancer_rows[0])
+        is_owner = viewer_user_id is not None and str(freelancer.get("user_id")) == str(viewer_user_id)
 
         skills_query = """
             SELECT fs.freelancer_skill_id, fs.proficiency_level, fs.created_at,
@@ -435,23 +441,32 @@ def get_comprehensive_freelancer_profile(freelancer_id: str) -> Optional[Dict]:
         skills_rows = db.execute_query(skills_query, {"freelancer_id": freelancer_id})
         skills = [dict(row) for row in skills_rows] if skills_rows else []
 
+        education_conditions = [("freelancer_id", "=", freelancer_id)]
+        if not is_owner:
+            education_conditions.append(("moderation_status", "=", "visible"))
         education_rows = db.fetch_data(
             table_name="education",
-            conditions=[("freelancer_id", "=", freelancer_id)],
+            conditions=education_conditions,
             order_by="start_date DESC"
         )
         education = [dict(row) for row in education_rows] if education_rows else []
 
+        work_experience_conditions = [("freelancer_id", "=", freelancer_id)]
+        if not is_owner:
+            work_experience_conditions.append(("moderation_status", "=", "visible"))
         work_experience_rows = db.fetch_data(
             table_name="work_experience",
-            conditions=[("freelancer_id", "=", freelancer_id)],
+            conditions=work_experience_conditions,
             order_by="start_date DESC"
         )
         work_experience = [dict(row) for row in work_experience_rows] if work_experience_rows else []
 
+        portfolio_conditions = [("freelancer_id", "=", freelancer_id)]
+        if not is_owner:
+            portfolio_conditions.append(("moderation_status", "=", "visible"))
         portfolio_rows = db.fetch_data(
             table_name="portfolio",
-            conditions=[("freelancer_id", "=", freelancer_id)],
+            conditions=portfolio_conditions,
             order_by="created_at DESC"
         )
         portfolio = [dict(row) for row in portfolio_rows] if portfolio_rows else []

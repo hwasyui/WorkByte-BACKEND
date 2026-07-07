@@ -162,15 +162,40 @@ class UserFunctions:
 
     @staticmethod
     def delete_user(user_id: str) -> bool:
-        """Delete a user (cascades to freelancer/client profiles)."""
+        """Delete a user (cascades to freelancer/client profiles).
+
+        DM history is not destroyed by this: dm_thread/dm_message's user columns are
+        ON DELETE SET NULL, so deleting this user just anonymizes their side of any
+        shared thread - the other participant keeps their copy. Only once BOTH sides of
+        a thread are gone does the thread get purged, which is what the pre/post steps
+        here handle: find threads where the *other* side is already NULL (that
+        participant was deleted earlier) before deleting, then remove exactly those
+        threads once this user's row (and the delete transaction) has actually gone
+        through - never before, so a failed delete never leaves an orphan purge behind.
+        """
         try:
             db = get_db()
+
+            orphaned_threads = db.execute_query(
+                """
+                SELECT thread_id FROM dm_thread
+                WHERE (user_a_id = :uid AND user_b_id IS NULL)
+                   OR (user_b_id = :uid AND user_a_id IS NULL)
+                """,
+                {"uid": user_id},
+            )
+
             conditions = [("user_id", "=", user_id)]
             db.delete_data(table_name="users", conditions=conditions)
-            
+
+            for row in orphaned_threads or []:
+                thread_id = str(row["thread_id"])
+                db.delete_data(table_name="dm_thread", conditions=[("thread_id", "=", thread_id)])
+                logger("USERS_FUNCTIONS", f"Purged DM thread {thread_id}: both participants deleted", level="INFO")
+
             logger("USERS_FUNCTIONS", f"User {user_id} deleted", level="INFO")
             return True
-        
+
         except Exception as e:
             logger("USERS_FUNCTIONS", f"Error deleting user {user_id}: {str(e)}", level="ERROR")
             raise

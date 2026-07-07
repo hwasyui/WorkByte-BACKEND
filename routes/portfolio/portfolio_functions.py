@@ -1,11 +1,25 @@
+import asyncio
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
+from datetime import datetime, timezone
 from functions.db_manager import get_db
 from functions.logger import logger
+from routes.admin.admin_moderation import scan_harmful_text_with_ml_fallback, insert_harmful_text_queue_entry
+from routes.notifications.notification_functions import NotificationFunctions
 from typing import List, Optional, Dict
 import uuid
+
+# harm labels reported to the freelancer when an entry gets blocked, never the matched text
+_LABEL_DISPLAY_NAMES = {
+    "toxic": "toxicity",
+    "toxicity": "toxicity",
+    "obscene": "obscenity",
+    "threat": "threats",
+    "insult": "insults",
+    "identity_hate": "identity-based hate speech",
+}
 
 def convert_uuids_to_str(data: Dict) -> Dict:
     """Convert all UUID objects in dict to strings."""
@@ -66,20 +80,23 @@ class PortfolioFunctions:
             raise
 
     @staticmethod
-    def get_portfolios_by_freelancer_id(freelancer_id: str) -> List[Dict]:
-        """Fetch all portfolios for a freelancer."""
+    def get_portfolios_by_freelancer_id(freelancer_id: str, visible_only: bool = True) -> List[Dict]:
+        """Fetch all portfolios for a freelancer. visible_only=False is for the owner
+        viewing their own list (they must still see blocked/scanning entries)."""
         try:
             db = get_db()
             conditions = [("freelancer_id", "=", freelancer_id)]
+            if visible_only:
+                conditions.append(("moderation_status", "=", "visible"))
             rows = db.fetch_data(
                 table_name="portfolio",
                 conditions=conditions,
                 order_by="created_at DESC"
             )
-            
+
             logger("PORTFOLIO_FUNCTIONS", f"Fetched {len(rows)} portfolios for freelancer {freelancer_id}", level="INFO")
             return [convert_uuids_to_str(dict(row)) for row in rows]
-        
+
         except Exception as e:
             logger("PORTFOLIO_FUNCTIONS", f"Error fetching portfolios: {str(e)}", level="ERROR")
             raise
@@ -92,7 +109,7 @@ class PortfolioFunctions:
         try:
             db = get_db()
             portfolio_id = str(uuid.uuid4())
-            
+
             portfolio_data = {
                 "portfolio_id": portfolio_id,
                 "freelancer_id": freelancer_id,
@@ -101,14 +118,15 @@ class PortfolioFunctions:
                 "project_url": project_url,
                 "completion_date": completion_date,
                 "is_auto_generated": is_auto_generated,
-                "contract_id": contract_id
+                "contract_id": contract_id,
+                "moderation_status": "scanning",
             }
-            
+
             db.insert_data(table_name="portfolio", data=portfolio_data)
-            
+
             logger("PORTFOLIO_FUNCTIONS", f"Portfolio {portfolio_id} created", level="INFO")
             return convert_uuids_to_str(portfolio_data)
-        
+
         except Exception as e:
             logger("PORTFOLIO_FUNCTIONS", f"Error creating portfolio: {str(e)}", level="ERROR")
             raise
@@ -119,20 +137,68 @@ class PortfolioFunctions:
         try:
             db = get_db()
             update_data = {k: v for k, v in update_data.items() if v is not None}
-            
+
             if not update_data:
                 logger("PORTFOLIO_FUNCTIONS", "No data to update", level="WARNING")
                 return PortfolioFunctions.get_portfolio_by_id(portfolio_id)
-            
+
             conditions = [("portfolio_id", "=", portfolio_id)]
             db.update_data(table_name="portfolio", data=update_data, conditions=conditions)
-            
+
             logger("PORTFOLIO_FUNCTIONS", f"Portfolio {portfolio_id} updated", level="INFO")
             return PortfolioFunctions.get_portfolio_by_id(portfolio_id)
-        
+
         except Exception as e:
             logger("PORTFOLIO_FUNCTIONS", f"Error updating portfolio: {str(e)}", level="ERROR")
             raise
+
+    @staticmethod
+    async def run_portfolio_scan(portfolio_id: str, scan_text: str, freelancer_user_id: str) -> None:
+        """scanning -> scan -> visible | blocked. Mirrors ProposalFunctions.run_proposal_scan -
+        content_type/content_id are this portfolio's own ('portfolio', portfolio_id), not the
+        freelancer's, so a flag can be traced back to the exact entry that caused it."""
+        try:
+            PortfolioFunctions.update_portfolio(portfolio_id, {"moderation_status": "scanning"})
+
+            if scan_text and scan_text.strip():
+                result = await asyncio.to_thread(scan_harmful_text_with_ml_fallback, scan_text)
+            else:
+                result = {"is_flagged": False, "detected_labels": []}
+
+            scanned_at = datetime.now(timezone.utc)
+
+            if result["is_flagged"]:
+                PortfolioFunctions.update_portfolio(portfolio_id, {
+                    "moderation_status": "blocked",
+                    "scanned_at": scanned_at,
+                })
+                logger(
+                    "PORTFOLIO_FUNCTIONS",
+                    f"Portfolio {portfolio_id} blocked, labels={result.get('detected_labels')}",
+                    level="WARNING",
+                )
+                insert_harmful_text_queue_entry(
+                    "portfolio", portfolio_id, freelancer_user_id, scan_text, result
+                )
+                labels = [_LABEL_DISPLAY_NAMES.get(l, l) for l in result.get("detected_labels", [])]
+                try:
+                    await NotificationFunctions.notify(
+                        recipient_user_id=freelancer_user_id,
+                        notif_type="portfolio_blocked",
+                        title="Portfolio Entry Needs Changes",
+                        body=f"Your portfolio entry was flagged for {', '.join(labels) or 'a policy violation'}. Edit and resubmit.",
+                        data={"portfolio_id": portfolio_id},
+                    )
+                except Exception as notif_err:
+                    logger("PORTFOLIO_FUNCTIONS", f"Blocked-portfolio notification failed (non-fatal): {notif_err}", level="WARNING")
+            else:
+                PortfolioFunctions.update_portfolio(portfolio_id, {
+                    "moderation_status": "visible",
+                    "scanned_at": scanned_at,
+                })
+
+        except Exception as e:
+            logger("PORTFOLIO_FUNCTIONS", f"Portfolio scan failed for {portfolio_id}: {e}", level="ERROR")
 
     @staticmethod
     def delete_portfolio(portfolio_id: str) -> bool:

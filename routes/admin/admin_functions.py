@@ -24,21 +24,12 @@ from routes.notifications.notification_functions import NotificationFunctions
 
 AUTO_REMOVE_DAYS  = 30
 
-# total_score = sum of all 5 label scores (each 0-1, max 5.0)
-CONTENT_AUTO_CLOSE_THRESHOLD_PROFILE = 0.90
-CONTENT_AUTO_CLOSE_THRESHOLD_JOB     = 0.85
-
 REPORT_AUTO_ACTION_THRESHOLD = 10   # min reports to trigger auto-action
 REPORT_AUTO_ACTION_DAYS      = 30   # min age (days) of oldest report
 
 SCAM_SOFT_FLAG_THRESHOLD = 0.25  # suspicious but not auto-closed; goes to admin queue for manual review
 
 # Default closure / ban messages (admin can override via admin_note / ban_message)
-DEFAULT_CLOSURE_REASON_CONTENT = "content_violation"
-DEFAULT_CLOSURE_NOTE_CONTENT   = (
-    "This job post was removed due to a content policy violation. "
-    "Submit an appeal if you believe this was a mistake."
-)
 DEFAULT_CLOSURE_REASON_SCAM    = "scam"
 DEFAULT_CLOSURE_NOTE_SCAM      = (
     "This job post was removed due to suspected fraudulent activity. "
@@ -70,7 +61,7 @@ _MOD_SORT_COLS = {
     "created_at":   "cmq.created_at",
     "total_score":  "(cmq.toxic_score + cmq.obscene_score + cmq.threat_score + cmq.insult_score + cmq.identity_hate_score)",
     "content_type": "cmq.content_type",
-    "status":       "cmq.status",
+    "reviewed_at":  "cmq.reviewed_at",
 }
 _SCAM_SORT_COLS = {
     "created_at": "sf.created_at",
@@ -136,19 +127,6 @@ def _active_contracts_for_job_post(job_post_id: str) -> List[Dict]:
     ))
 
 
-def _client_user_id_for_job_post(job_post_id: str) -> Optional[str]:
-    row = _row(get_db().execute_query(
-        """
-        SELECT cl.user_id
-        FROM job_post jp
-        JOIN client cl ON cl.client_id = jp.client_id
-        WHERE jp.job_post_id = :jid
-        """,
-        params={"jid": job_post_id},
-    ))
-    return str(row["user_id"]) if row else None
-
-
 def queue_harmful_text_scan(
     content_type: str,
     content_id: str,
@@ -164,117 +142,6 @@ def queue_harmful_text_scan(
     if not result["is_flagged"]:
         return None
     return insert_harmful_text_queue_entry(content_type, content_id, user_id, text, result)
-
-
-def _auto_approve_expired():
-    """
-    Process pending moderation items whose 30-day window has closed.
-    High cumulative label score → flag confirmed (status='approved') → auto-close job/ban user.
-    Low score → flag dismissed as false positive (status='rejected').
-    """
-    expired = _rows(get_db().execute_query(
-        """
-        SELECT *,
-               (toxic_score + obscene_score +
-                threat_score + insult_score + identity_hate_score) AS total_score
-        FROM harmful_text_queue
-        WHERE status = 'pending' AND auto_approve_at <= NOW()
-        """,
-        params={},
-    ))
-    for item in expired:
-        total      = float(item.get("total_score") or 0)
-        ctype      = item.get("content_type", "")
-        content_id = str(item.get("content_id", ""))
-        user_id    = str(item.get("user_id", ""))
-        mid        = str(item.get("moderation_id", ""))
-
-        threshold = (
-            CONTENT_AUTO_CLOSE_THRESHOLD_JOB
-            if ctype == "job_post"
-            else CONTENT_AUTO_CLOSE_THRESHOLD_PROFILE
-        )
-
-        if total >= threshold:
-            new_status = "approved"  # flag confirmed: harmful content actioned
-            if ctype == "job_post":
-                active_contracts = _active_contracts_for_job_post(content_id)
-                if active_contracts:
-                    # a human has to decide what happens to live, paid work - don't auto-close under it
-                    new_status = "held_active_contract"
-                    logger(
-                        "ADMIN",
-                        f"Job post {content_id} flag confirmed (total_score={total:.2f} >= {threshold}) but NOT "
-                        f"auto-closed: {len(active_contracts)} active contract(s) in progress, needs manual admin review",
-                        level="WARNING",
-                    )
-                    client_user_id = _client_user_id_for_job_post(content_id)
-                    if client_user_id:
-                        _fire_notification(NotificationFunctions.notify(
-                            recipient_user_id=client_user_id,
-                            notif_type="job_post_flagged_held",
-                            title="Job Post Under Review",
-                            body="Your job post was flagged for a content policy violation. Since it has an active contract, an admin will review it manually instead of an automatic closure.",
-                            data={"job_post_id": content_id},
-                        ))
-                    for contract in active_contracts:
-                        _fire_notification(NotificationFunctions.notify(
-                            recipient_user_id=str(contract["freelancer_user_id"]),
-                            notif_type="job_post_flagged_held",
-                            title="Job Post Under Review",
-                            body="The job post tied to your active contract was flagged for a content policy violation and is under manual admin review. Your contract is not affected yet.",
-                            data={"job_post_id": content_id, "contract_id": str(contract["contract_id"])},
-                        ))
-                else:
-                    get_db().execute_query(
-                        """
-                        UPDATE job_post
-                        SET status = 'closed',
-                            closure_reason = :reason,
-                            closure_note   = :note
-                        WHERE job_post_id = :id
-                        """,
-                        params={
-                            "id":     content_id,
-                            "reason": DEFAULT_CLOSURE_REASON_CONTENT,
-                            "note":   DEFAULT_CLOSURE_NOTE_CONTENT,
-                        },
-                    )
-                    _fire_notification(ProposalFunctions.notify_proposal_owners_of_job_closure(
-                        content_id, "flagged for a content policy violation"
-                    ))
-                    logger("ADMIN", f"Auto-closed {ctype} {content_id}, total_score={total:.2f} >= {threshold}", level="WARNING")
-            else:
-                logger("ADMIN", f"Auto-closed {ctype} {content_id}, total_score={total:.2f} >= {threshold}", level="WARNING")
-        else:
-            new_status = "rejected"  # flag dismissed: false positive
-            logger("ADMIN", f"Auto-dismissed {ctype} {content_id}, total_score={total:.2f} < {threshold}", level="INFO")
-
-        get_db().execute_query(
-            """
-            UPDATE harmful_text_queue
-            SET status = :status, actioned_at = NOW()
-            WHERE moderation_id = :mid
-            """,
-            params={"status": new_status, "mid": mid},
-        )
-
-
-def force_expire_moderation(moderation_ids: List[str]) -> None:
-    """Backdate auto_approve_at for specific items then immediately run the sweep (testing utility)."""
-    if not moderation_ids:
-        return
-    placeholders = ", ".join(f":id_{i}" for i in range(len(moderation_ids)))
-    params = {f"id_{i}": mid for i, mid in enumerate(moderation_ids)}
-    get_db().execute_query(
-        f"""
-        UPDATE harmful_text_queue
-        SET auto_approve_at = NOW() - INTERVAL '1 minute'
-        WHERE moderation_id IN ({placeholders}) AND status = 'pending'
-        """,
-        params=params,
-    )
-    _auto_approve_expired()
 
 
 def force_expire_scam_flags(flag_ids: List[str]) -> None:
@@ -295,14 +162,16 @@ def force_expire_scam_flags(flag_ids: List[str]) -> None:
 
 
 def list_moderation_queue(
-    status: str = "pending",
+    reviewed: Optional[bool] = None,
     content_type: str = "all",
     sort_by: str = "created_at",
     sort_dir: str = "desc",
     page: int = 1,
     page_size: int = 20,
 ) -> List[Dict]:
-    _auto_approve_expired()
+    """Browse the harmful-text audit trail. Plain history - nothing here gates or
+    triggers anything; reviewed is just whether an admin has looked at a row yet
+    (None = don't filter, True = only reviewed, False = only unreviewed)."""
     offset    = (page - 1) * page_size
     sort_col  = _MOD_SORT_COLS.get(sort_by, "cmq.created_at")
     direction = "ASC" if sort_dir.lower() == "asc" else "DESC"
@@ -317,7 +186,7 @@ def list_moderation_queue(
                u.email AS user_email
         FROM harmful_text_queue cmq
         JOIN users u ON u.user_id = cmq.user_id
-        WHERE (:status = 'all' OR cmq.status = :status)
+        WHERE (:reviewed IS NULL OR (cmq.reviewed_at IS NOT NULL) = :reviewed)
           AND (
                 (:content_type = 'all' AND cmq.content_type != 'proposal')
                 OR (:content_type != 'all' AND cmq.content_type = :content_type)
@@ -326,7 +195,7 @@ def list_moderation_queue(
         LIMIT :limit OFFSET :offset
         """,
         params={
-            "status":       status,
+            "reviewed":     reviewed,
             "content_type": content_type,
             "limit":        page_size,
             "offset":       offset,
@@ -334,77 +203,29 @@ def list_moderation_queue(
     ))
 
 
-def action_moderation_item(
+def mark_moderation_item_reviewed(
     moderation_id: str,
-    action: str,  # 'approve' | 'reject'
     admin_user_id: str,
     admin_note: Optional[str] = None,
 ) -> Optional[Dict]:
-    """
-    Approve or reject a pending moderation item.
-    Rejected job posts are closed; rejected profiles are not deleted
-    (admin may handle separately).
-    """
-    new_status = "approved" if action == "approve" else "rejected"
-    updated = _row(get_db().execute_query(
+    """Mark an audit-trail row as looked at. Bookkeeping only - no side effects, no
+    action taken on the underlying content. If an admin decides real action is
+    warranted after reviewing (e.g. closing a job post or banning an account), that
+    goes through the dedicated endpoint for it (admin_close_job, admin_close_account,
+    etc.), not through this."""
+    return _row(get_db().execute_query(
         """
         UPDATE harmful_text_queue
-        SET status = :status, admin_user_id = :admin_id,
-            admin_note = :note, actioned_at = NOW()
-        WHERE moderation_id = :mid AND status = 'pending'
+        SET admin_user_id = :admin_id, admin_note = :note, reviewed_at = NOW()
+        WHERE moderation_id = :mid AND reviewed_at IS NULL
         RETURNING *
         """,
         params={
-            "status":   new_status,
             "admin_id": admin_user_id,
             "note":     admin_note,
             "mid":      moderation_id,
         },
     ))
-
-    if updated and new_status == "approved":  # approved = flag confirmed → take action
-        content_type = updated.get("content_type", "")
-        content_id   = str(updated.get("content_id", ""))
-        if content_type == "job_post":
-            closure_note = admin_note or DEFAULT_CLOSURE_NOTE_CONTENT
-            get_db().execute_query(
-                """
-                UPDATE job_post
-                SET status = 'closed',
-                    closure_reason = :reason,
-                    closure_note   = :note
-                WHERE job_post_id = :id
-                """,
-                params={
-                    "id":     content_id,
-                    "reason": DEFAULT_CLOSURE_REASON_CONTENT,
-                    "note":   closure_note,
-                },
-            )
-            logger("ADMIN", f"Job post {content_id} closed after moderation rejection", level="INFO")
-
-            active_contracts = _active_contracts_for_job_post(content_id)
-            if active_contracts:
-                logger(
-                    "ADMIN",
-                    f"Job post {content_id} closed by admin {admin_user_id} while "
-                    f"{len(active_contracts)} active contract(s) were in progress",
-                    level="WARNING",
-                )
-                for contract in active_contracts:
-                    _fire_notification(NotificationFunctions.notify(
-                        recipient_user_id=str(contract["freelancer_user_id"]),
-                        notif_type="job_post_flagged_held",
-                        title="Job Post Closed",
-                        body="The job post tied to your active contract was closed by an administrator for a content policy violation. Your contract is not affected yet - contact support if you have questions.",
-                        data={"job_post_id": content_id, "contract_id": str(contract["contract_id"])},
-                    ))
-
-            _fire_notification(ProposalFunctions.notify_proposal_owners_of_job_closure(
-                content_id, "flagged for a content policy violation"
-            ))
-
-    return updated
 
 
 def queue_scam_scan(
@@ -917,13 +738,14 @@ def force_expire_reports(target_type: str, target_id: str) -> None:
 
 def run_moderation_sweeps() -> None:
     """
-    Run all three time-based moderation sweeps together.
+    Run the remaining time-based sweeps together (scam-flag auto-remove, report
+    auto-actions). Harmful-text moderation no longer has a time-based sweep of its
+    own - it's a plain audit trail now, nothing "expires into" an action.
 
     Called lazily by admin dashboard/queue endpoints, and periodically by
     moderation_sweep_worker.moderation_sweep_loop() so expired items get
     actioned even when no admin is logged in.
     """
-    _auto_approve_expired()
     _process_auto_remove()
     _process_report_auto_actions()
 
@@ -1512,8 +1334,8 @@ def get_admin_dashboard_stats() -> Dict:
         return int(row["cnt"]) if row else 0
 
     return {
-        "pending_moderation_items": _count(
-            "SELECT COUNT(*) AS cnt FROM harmful_text_queue WHERE status = 'pending' AND content_type != 'proposal'"
+        "unreviewed_moderation_items": _count(
+            "SELECT COUNT(*) AS cnt FROM harmful_text_queue WHERE reviewed_at IS NULL AND content_type != 'proposal'"
         ),
         "pending_scam_flags": _count(
             "SELECT COUNT(*) AS cnt FROM scam_job_flags WHERE status = 'pending'"
@@ -1523,15 +1345,6 @@ def get_admin_dashboard_stats() -> Dict:
         ),
         "banned_clients": _count(
             "SELECT COUNT(*) AS cnt FROM client_scam_record WHERE is_banned = TRUE"
-        ),
-        "auto_approved_last_24h": _count(
-            """
-            SELECT COUNT(*) AS cnt FROM harmful_text_queue
-            WHERE status = 'approved'
-              AND admin_user_id IS NULL
-              AND content_type != 'proposal'
-              AND actioned_at >= NOW() - INTERVAL '24 hours'
-            """
         ),
         "auto_removed_last_24h": _count(
             """

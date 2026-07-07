@@ -13,7 +13,7 @@ from functions.access_control import assert_freelancer_owns, get_freelancer_prof
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.education.education_functions import EducationFunctions
-from routes.admin.admin_functions import queue_harmful_text_scan
+from routes.freelancers.freelancer_functions import FreelancerFunctions
 from ai_related.job_engine.embedding_manager import mark_freelancer_dirty
 
 education_router = APIRouter(prefix="/educations", tags=["Educations"])
@@ -24,7 +24,7 @@ async def get_all_educations(limit: Optional[int] = None, current_user: UserInDB
     """Fetch all educations - Authenticated users only - JSON response."""
     try:
         freelancer = get_freelancer_profile_for_user(current_user)
-        educations = EducationFunctions.get_educations_by_freelancer_id(freelancer["freelancer_id"])
+        educations = EducationFunctions.get_educations_by_freelancer_id(freelancer["freelancer_id"], visible_only=False)
         success_msg = f"Retrieved {len(educations)} educations for freelancer {freelancer['freelancer_id']}"
         logger("EDUCATION", success_msg, "GET /educations", "INFO")
         return ResponseSchema.success(educations, 200)
@@ -46,6 +46,15 @@ async def get_education(education_id: str, current_user: UserInDB = Depends(get_
             error_msg = f"Education {education_id} not found"
             logger("EDUCATION", error_msg, "GET /educations/{education_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
+
+        if education.get("moderation_status") != "visible":
+            freelancer = FreelancerFunctions.get_freelancer_by_user_id(current_user.user_id)
+            is_owner = freelancer and str(freelancer["freelancer_id"]) == str(education["freelancer_id"])
+            if not is_owner:
+                error_msg = f"Education {education_id} not found"
+                logger("EDUCATION", error_msg, "GET /educations/{education_id}", "WARNING")
+                return ResponseSchema.error(error_msg, 404)
+
         success_msg = f"Retrieved education {education_id}"
         logger("EDUCATION", success_msg, "GET /educations/{education_id}", "INFO")
         return ResponseSchema.success(education, 200)
@@ -57,9 +66,12 @@ async def get_education(education_id: str, current_user: UserInDB = Depends(get_
 
 @education_router.get("/freelancer/{freelancer_id}", response_model=List[EducationResponse])
 async def get_educations_by_freelancer(freelancer_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch all educations for a specific freelancer - Authenticated users only - JSON response."""
+    """Fetch all educations for a specific freelancer - Authenticated users only - JSON response.
+    The owner sees their own blocked/scanning entries too; anyone else only sees visible ones."""
     try:
-        educations = EducationFunctions.get_educations_by_freelancer_id(freelancer_id)
+        freelancer = FreelancerFunctions.get_freelancer_by_user_id(current_user.user_id)
+        is_owner = freelancer and str(freelancer["freelancer_id"]) == str(freelancer_id)
+        educations = EducationFunctions.get_educations_by_freelancer_id(freelancer_id, visible_only=not is_owner)
         success_msg = f"Retrieved {len(educations)} educations for freelancer {freelancer_id}"
         logger("EDUCATION", success_msg, "GET /educations/freelancer/{freelancer_id}", "INFO")
         return ResponseSchema.success(educations, 200)
@@ -93,14 +105,9 @@ async def create_education(education: EducationCreate, current_user: UserInDB = 
             education.institution_name, education.degree, education.field_of_study,
             education.grade, education.description,
         ]))
-        if _scan_text.strip():
-            asyncio.create_task(asyncio.to_thread(
-                queue_harmful_text_scan,
-                "freelancer_profile",
-                str(education.freelancer_id),
-                str(current_user.user_id),
-                _scan_text,
-            ))
+        asyncio.create_task(EducationFunctions.run_education_scan(
+            str(new_education["education_id"]), _scan_text, str(current_user.user_id),
+        ))
 
         success_msg = f"Created education {education_id} for freelancer {education.freelancer_id}"
         logger("EDUCATION", success_msg, "POST /educations", "INFO")
@@ -141,14 +148,9 @@ async def update_education(education_id: str, education_update: EducationUpdate,
             updated_education.get("grade", ""),
             updated_education.get("description", ""),
         ]))
-        if _scan_text.strip():
-            asyncio.create_task(asyncio.to_thread(
-                queue_harmful_text_scan,
-                "freelancer_profile",
-                str(existing_education["freelancer_id"]),
-                str(current_user.user_id),
-                _scan_text,
-            ))
+        asyncio.create_task(EducationFunctions.run_education_scan(
+            education_id, _scan_text, str(current_user.user_id),
+        ))
 
         success_msg = f"Updated education {education_id}"
         logger("EDUCATION", success_msg, "PUT /educations/{education_id}", "INFO")

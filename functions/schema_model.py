@@ -435,6 +435,8 @@ class WorkExperienceResponse(BaseModel):
     end_date: Optional[date] = None
     is_current: Optional[bool] = False
     description: Optional[str] = None
+    moderation_status: Optional[str] = "scanning"
+    scanned_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
@@ -476,6 +478,8 @@ class EducationResponse(BaseModel):
     is_current: Optional[bool] = False
     grade: Optional[str] = None
     description: Optional[str] = None
+    moderation_status: Optional[str] = "scanning"
+    scanned_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
@@ -530,8 +534,10 @@ class JobPostResponse(BaseModel):
     proposal_count: Optional[int] = 0
     role_count: int = 0
     available_positions: Optional[int] = 0               
-    closure_reason: Optional[str] = None     
-    closure_note: Optional[str] = None 
+    closure_reason: Optional[str] = None
+    closure_note: Optional[str] = None
+    moderation_status: Optional[str] = "scanning"
+    scanned_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     posted_at: Optional[datetime] = None
@@ -873,6 +879,8 @@ class PortfolioResponse(BaseModel):
     file_url: Optional[str] = None
     thumbnail_url: Optional[str] = None
     tags: Optional[List[str]] = None
+    moderation_status: Optional[str] = "scanning"
+    scanned_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 

@@ -5,13 +5,10 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
 from functions.db_manager import get_db
 from functions.logger import logger
-
-AUTO_APPROVE_DAYS: int = 30
 
 _KEYWORDS_PATH = os.path.join(os.path.dirname(__file__), "moderation_keywords.json")
 
@@ -168,14 +165,16 @@ def insert_harmful_text_queue_entry(
     result: Dict,
 ) -> Optional[Dict]:
     """
-    Insert an already-flagged scan result into harmful_text_queue as an audit/review
-    record. Shared by queue_harmful_text_scan() (job posts, freelancer/client profiles,
-    which scan-then-queue in one step) and the proposal instant-block path (which has
-    already scanned and just needs the record persisted, not a second scan run).
-    content_type: 'job_post' | 'freelancer_profile' | 'client_profile' | 'proposal'
+    Insert an already-flagged scan result into harmful_text_queue as a plain audit
+    record - nothing reads this row to decide an action; it exists purely so an admin
+    can browse what's been flagged over time (optionally marking one reviewed via
+    mark_moderation_item_reviewed(), which is bookkeeping only, not a decision with a
+    side effect). Shared by queue_harmful_text_scan() (manual admin scan utility) and
+    every content type's own instant-block scan (job_post, portfolio, education,
+    work_experience, proposal), which have already scanned and just need the record
+    persisted, not a second scan run.
     """
     scan_method = result.get("scan_method", "unknown")
-    auto_approve_at = datetime.utcnow() + timedelta(days=AUTO_APPROVE_DAYS)
     try:
         row = _row(get_db().execute_query(
             """
@@ -183,12 +182,12 @@ def insert_harmful_text_queue_entry(
                 content_type, content_id, user_id,
                 toxic_score, obscene_score,
                 threat_score, insult_score, identity_hate_score,
-                detected_labels, flagged_text, auto_approve_at
+                detected_labels, flagged_text
             ) VALUES (
                 :content_type, :content_id, :user_id,
                 :toxic_score, :obscene_score,
                 :threat_score, :insult_score, :identity_hate_score,
-                CAST(:detected_labels AS JSONB), :flagged_text, :auto_approve_at
+                CAST(:detected_labels AS JSONB), :flagged_text
             )
             RETURNING *
             """,
@@ -203,7 +202,6 @@ def insert_harmful_text_queue_entry(
                 "identity_hate_score":  result["identity_hate_score"],
                 "detected_labels":      json.dumps(result["detected_labels"]),
                 "flagged_text":         text[:500],
-                "auto_approve_at":      auto_approve_at,
             },
         ))
         logger(

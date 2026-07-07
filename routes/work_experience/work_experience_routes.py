@@ -13,7 +13,7 @@ from functions.access_control import assert_freelancer_owns, get_freelancer_prof
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.work_experience.work_experience_functions import WorkExperienceFunctions
-from routes.admin.admin_functions import queue_harmful_text_scan
+from routes.freelancers.freelancer_functions import FreelancerFunctions
 from ai_related.job_engine.embedding_manager import mark_freelancer_dirty
 
 work_experience_router = APIRouter(prefix="/work-experiences", tags=["Work Experiences"])
@@ -24,7 +24,7 @@ async def get_all_work_experiences(limit: Optional[int] = None, current_user: Us
     """Fetch all work experiences - Authenticated users only - JSON response."""
     try:
         freelancer = get_freelancer_profile_for_user(current_user)
-        experiences = WorkExperienceFunctions.get_work_experiences_by_freelancer_id(freelancer["freelancer_id"])
+        experiences = WorkExperienceFunctions.get_work_experiences_by_freelancer_id(freelancer["freelancer_id"], visible_only=False)
         success_msg = f"Retrieved {len(experiences)} work experiences for freelancer {freelancer['freelancer_id']}"
         logger("WORK_EXPERIENCE", success_msg, "GET /work-experiences", "INFO")
         return ResponseSchema.success(experiences, 200)
@@ -46,6 +46,15 @@ async def get_work_experience(work_experience_id: str, current_user: UserInDB = 
             error_msg = f"Work experience {work_experience_id} not found"
             logger("WORK_EXPERIENCE", error_msg, "GET /work-experiences/{work_experience_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
+
+        if experience.get("moderation_status") != "visible":
+            freelancer = FreelancerFunctions.get_freelancer_by_user_id(current_user.user_id)
+            is_owner = freelancer and str(freelancer["freelancer_id"]) == str(experience["freelancer_id"])
+            if not is_owner:
+                error_msg = f"Work experience {work_experience_id} not found"
+                logger("WORK_EXPERIENCE", error_msg, "GET /work-experiences/{work_experience_id}", "WARNING")
+                return ResponseSchema.error(error_msg, 404)
+
         success_msg = f"Retrieved work experience {work_experience_id}"
         logger("WORK_EXPERIENCE", success_msg, "GET /work-experiences/{work_experience_id}", "INFO")
         return ResponseSchema.success(experience, 200)
@@ -57,9 +66,12 @@ async def get_work_experience(work_experience_id: str, current_user: UserInDB = 
 
 @work_experience_router.get("/freelancer/{freelancer_id}", response_model=List[WorkExperienceResponse])
 async def get_work_experiences_by_freelancer(freelancer_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch all work experiences for a specific freelancer - Authenticated users only - JSON response."""
+    """Fetch all work experiences for a specific freelancer - Authenticated users only - JSON response.
+    The owner sees their own blocked/scanning entries too; anyone else only sees visible ones."""
     try:
-        experiences = WorkExperienceFunctions.get_work_experiences_by_freelancer_id(freelancer_id)
+        freelancer = FreelancerFunctions.get_freelancer_by_user_id(current_user.user_id)
+        is_owner = freelancer and str(freelancer["freelancer_id"]) == str(freelancer_id)
+        experiences = WorkExperienceFunctions.get_work_experiences_by_freelancer_id(freelancer_id, visible_only=not is_owner)
         success_msg = f"Retrieved {len(experiences)} work experiences for freelancer {freelancer_id}"
         logger("WORK_EXPERIENCE", success_msg, "GET /work-experiences/freelancer/{freelancer_id}", "INFO")
         return ResponseSchema.success(experiences, 200)
@@ -92,14 +104,9 @@ async def create_work_experience(work_experience: WorkExperienceCreate, current_
             work_experience.job_title, work_experience.company_name,
             work_experience.location, work_experience.description,
         ]))
-        if _scan_text.strip():
-            asyncio.create_task(asyncio.to_thread(
-                queue_harmful_text_scan,
-                "freelancer_profile",
-                str(work_experience.freelancer_id),
-                str(current_user.user_id),
-                _scan_text,
-            ))
+        asyncio.create_task(WorkExperienceFunctions.run_work_experience_scan(
+            str(new_experience["work_experience_id"]), _scan_text, str(current_user.user_id),
+        ))
 
         success_msg = f"Created work experience {work_experience_id} for freelancer {work_experience.freelancer_id}"
         logger("WORK_EXPERIENCE", success_msg, "POST /work-experiences", "INFO")
@@ -139,14 +146,9 @@ async def update_work_experience(work_experience_id: str, work_experience_update
             updated_experience.get("location", ""),
             updated_experience.get("description", ""),
         ]))
-        if _scan_text.strip():
-            asyncio.create_task(asyncio.to_thread(
-                queue_harmful_text_scan,
-                "freelancer_profile",
-                str(existing_experience["freelancer_id"]),
-                str(current_user.user_id),
-                _scan_text,
-            ))
+        asyncio.create_task(WorkExperienceFunctions.run_work_experience_scan(
+            work_experience_id, _scan_text, str(current_user.user_id),
+        ))
 
         success_msg = f"Updated work experience {work_experience_id}"
         logger("WORK_EXPERIENCE", success_msg, "PUT /work-experiences/{work_experience_id}", "INFO")
