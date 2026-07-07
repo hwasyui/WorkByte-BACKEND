@@ -1,4 +1,4 @@
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 import os
 import sys
 
@@ -424,7 +424,7 @@ class ContractFunctions:
 
             update_data = {
                 "status": "cancelled",
-                "end_date": date.today(),
+                "end_date": datetime.now(timezone.utc).date(),
                 "cancelled_by": cancelled_by,
             }
             if reason:
@@ -449,4 +449,36 @@ class ContractFunctions:
             return updated_contract
         except Exception as e:
             logger("CONTRACT_FUNCTIONS", f"Error cancelling contract: {str(e)}", level="ERROR")
+            raise
+
+    @staticmethod
+    def report_payment(contract_id: str, amount: float, reported_by: str, note: Optional[str] = None) -> Optional[Dict]:
+        """Client self-reports a payment made off-platform (payment stays outside the
+        system by design - see business decision). Cumulative: adds to whatever total_paid
+        already holds, so partial payments before a later cancel remain on record as
+        context the freelancer can dispute if it's wrong."""
+        try:
+            contract = ContractFunctions.get_contract_by_id(contract_id)
+            if not contract:
+                raise Exception("Contract not found")
+
+            current_total = float(contract.get("total_paid") or 0)
+            new_total = current_total + amount
+            updated_contract = ContractFunctions.update_contract(contract_id, {"total_paid": new_total})
+
+            try:
+                DMFunctions.send_system_event(
+                    contract_id=contract_id,
+                    actor_id=reported_by,
+                    message_text=f"Payment of {amount:,.2f} reported. Total paid so far: {new_total:,.2f}.",
+                    event_type="payment_reported",
+                    metadata={"amount": amount, "total_paid": new_total, "note": note},
+                )
+            except Exception:
+                pass
+
+            logger("CONTRACT_FUNCTIONS", f"Contract {contract_id} payment reported: +{amount} (total {new_total})", level="INFO")
+            return updated_contract
+        except Exception as e:
+            logger("CONTRACT_FUNCTIONS", f"Error reporting payment: {str(e)}", level="ERROR")
             raise

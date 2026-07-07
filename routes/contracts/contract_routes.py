@@ -4,6 +4,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 import json
+from sqlalchemy.exc import IntegrityError
 from fastapi import APIRouter, Body, Depends, Response, BackgroundTasks, HTTPException
 from functions.minio_client import (
     download_file,
@@ -14,7 +15,7 @@ from functions.minio_client import (
 from routes.reviews.review_routes import trigger_review_pipeline_on_completion
 from typing import List, Optional
 import uuid
-from functions.schema_model import CancelContractRequest, ContractCreate, ContractUpdate, ContractResponse, ContractGenerateRequest
+from functions.schema_model import CancelContractRequest, ContractCreate, ContractUpdate, ContractResponse, ContractGenerateRequest, ReportPaymentRequest
 from functions.schema_model import UserInDB
 from functions.authentication import get_current_user
 from functions.access_control import (
@@ -54,6 +55,15 @@ def _render_notification(template: str, subs: dict) -> str:
     template = template.replace("{pdf_url}", "").strip()
 
     return template
+
+# Fields that feed contract_generation_functions.py's PDF render (see
+# build_generation_context / render_contract_pdf) - editing any of these after a PDF has
+# already been generated makes contract_pdf_url stale, so update_contract() below clears
+# it to force a regenerate before the next download.
+_PDF_RELEVANT_FIELDS = {
+    "contract_title", "role_title", "agreed_budget", "budget_currency",
+    "payment_structure", "agreed_duration", "start_date", "end_date",
+}
 
 contract_router = APIRouter(prefix="/contracts", tags=["Contracts"])
 
@@ -257,26 +267,35 @@ async def create_contract(contract: ContractCreate, current_user: UserInDB = Dep
         if proposal.get("job_role_id") and str(proposal["job_role_id"]) != str(contract.job_role_id):
             return ResponseSchema.error("Contract job role does not match the proposal's job role", 400)
 
-        new_contract = ContractFunctions.create_contract(
-            contract_id=contract_id,
-            job_post_id=contract.job_post_id,
-            job_role_id=contract.job_role_id,
-            proposal_id=contract.proposal_id,
-            freelancer_id=contract.freelancer_id,
-            client_id=contract.client_id,
-            contract_title=contract.contract_title,
-            agreed_budget=contract.agreed_budget,
-            payment_structure=contract.payment_structure,
-            start_date=contract.start_date,
-            role_title=contract.role_title,
-            budget_currency=contract.budget_currency,
-            agreed_duration=contract.agreed_duration,
-            status=contract.status,
-            end_date=contract.end_date,
-            actual_completion_date=contract.actual_completion_date,
-            total_hours_worked=contract.total_hours_worked,
-            total_paid=contract.total_paid,
-        )
+        # The SELECT-based pre-check above can't fully close the window between two
+        # concurrent "accept proposal" clicks - contract.proposal_id has a UNIQUE
+        # constraint as the real backstop, so a race here surfaces as an IntegrityError
+        # rather than silently creating a second contract for the same proposal.
+        try:
+            new_contract = ContractFunctions.create_contract(
+                contract_id=contract_id,
+                job_post_id=contract.job_post_id,
+                job_role_id=contract.job_role_id,
+                proposal_id=contract.proposal_id,
+                freelancer_id=contract.freelancer_id,
+                client_id=contract.client_id,
+                contract_title=contract.contract_title,
+                agreed_budget=contract.agreed_budget,
+                payment_structure=contract.payment_structure,
+                start_date=contract.start_date,
+                role_title=contract.role_title,
+                budget_currency=contract.budget_currency,
+                agreed_duration=contract.agreed_duration,
+                status=contract.status,
+                end_date=contract.end_date,
+                actual_completion_date=contract.actual_completion_date,
+                total_hours_worked=contract.total_hours_worked,
+                total_paid=contract.total_paid,
+            )
+        except IntegrityError:
+            return ResponseSchema.error(
+                f"A contract already exists for this proposal (proposal_id: {contract.proposal_id})", 409
+            )
 
         logger("CONTRACT", f"Created contract {contract_id}", "POST /contracts", "INFO")
 
@@ -483,6 +502,17 @@ async def update_contract(contract_id: str, contract_update: ContractUpdate, bac
 
         updated_contract = ContractFunctions.update_contract(contract_id, update_data)
 
+        if existing_contract.get("contract_pdf_url") and _PDF_RELEVANT_FIELDS.intersection(update_data.keys()):
+            get_db().execute_query(
+                """UPDATE contract
+                   SET contract_pdf_url = NULL, contract_pdf_generated_at = NULL
+                   WHERE contract_id = :cid""",
+                {"cid": contract_id},
+            )
+            updated_contract["contract_pdf_url"] = None
+            updated_contract["contract_pdf_generated_at"] = None
+            logger("CONTRACT", f"Contract {contract_id} PDF invalidated after edit to {sorted(_PDF_RELEVANT_FIELDS.intersection(update_data.keys()))}", "PUT /contracts/{contract_id}", "INFO")
+
         if update_data.get("status") == "completed" and existing_contract.get("status") != "completed":
             mark_contract_dirty(contract_id)
             db = get_db()
@@ -547,6 +577,63 @@ async def update_contract(contract_id: str, contract_update: ContractUpdate, bac
     except Exception as e:
         logger("CONTRACT", f"Failed to update contract {contract_id}: {str(e)}", "PUT /contracts/{contract_id}", "ERROR")
         return ResponseSchema.error(f"Failed to update contract {contract_id}: {str(e)}", 500)
+
+
+# Payment self-report (payment itself stays off-platform - see business decision;
+# this just gives total_paid a real write path and a DM trail either party can point to)
+
+
+@contract_router.put("/{contract_id}/report-payment")
+async def report_payment(
+    contract_id: str,
+    payload: ReportPaymentRequest,
+    current_user: UserInDB = Depends(get_current_user),
+):
+    """Client self-reports a payment made outside the platform. Cumulative on
+    top of whatever total_paid already holds."""
+    try:
+        contract = ContractFunctions.get_contract_by_id(contract_id)
+        if not contract:
+            return ResponseSchema.error(f"Contract {contract_id} not found", 404)
+
+        assert_current_user_is_contract_party(current_user, contract)
+
+        if not current_user.client_id or str(contract["client_id"]) != str(
+            get_client_profile_for_user(current_user)["client_id"]
+        ):
+            return ResponseSchema.error("Only the client on this contract can report a payment", 403)
+
+        if payload.amount <= 0:
+            return ResponseSchema.error("amount must be greater than 0", 400)
+
+        updated_contract = ContractFunctions.report_payment(
+            contract_id=contract_id,
+            amount=payload.amount,
+            reported_by=str(current_user.user_id),
+            note=payload.note,
+        )
+
+        try:
+            freelancer = FreelancerFunctions.get_freelancer_by_id(str(contract["freelancer_id"]))
+            if freelancer:
+                await NotificationFunctions.notify(
+                    recipient_user_id=str(freelancer["user_id"]),
+                    notif_type="payment_reported",
+                    title="Payment Reported",
+                    body=f"The client reported a payment of {payload.amount:,.2f} on \"{contract.get('contract_title')}\"",
+                    data={"contract_id": contract_id, "amount": payload.amount},
+                )
+        except Exception as notif_err:
+            logger("CONTRACT", f"Payment-report notification failed (non-fatal): {notif_err}", "PUT /contracts/{contract_id}/report-payment", "WARNING")
+
+        logger("CONTRACT", f"Contract {contract_id} payment reported by {current_user.user_id}", "PUT /contracts/{contract_id}/report-payment", "INFO")
+        return ResponseSchema.success(updated_contract, 200)
+    except HTTPException as e:
+        logger("CONTRACT", f"HTTP {e.status_code}: {e.detail}", "PUT /contracts/{contract_id}/report-payment", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
+    except Exception as e:
+        logger("CONTRACT", f"Failed to report payment for {contract_id}: {str(e)}", "PUT /contracts/{contract_id}/report-payment", "ERROR")
+        return ResponseSchema.error(f"Failed to report payment: {str(e)}", 500)
 
 
 # Cancel endpoint

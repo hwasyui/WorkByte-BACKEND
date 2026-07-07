@@ -1133,7 +1133,12 @@ class RevisionRequest(BaseModel):
 
 class CancelContractRequest(BaseModel):
     reason: Optional[str] = None
-    
+
+class ReportPaymentRequest(BaseModel):
+    amount: float
+    note: Optional[str] = None
+
+
 # Comprehensive freelancer profile
 class FreelancerSkillWithDetails(BaseModel):
     freelancer_skill_id: str
