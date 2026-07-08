@@ -2,12 +2,26 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
+from datetime import datetime, timezone
 from functions.db_manager import get_db
 from functions.logger import logger
 from typing import List, Optional, Dict
 import uuid
-from routes.contracts.contract_functions import ContractFunctions
+from routes.contracts.contract_functions import ContractFunctions, _fire_notification, _already_notified, _count_notifications
 from routes.dm.dm_functions import DMFunctions
+from routes.notifications.notification_functions import NotificationFunctions
+from routes.clients.client_functions import ClientFunctions
+
+REMINDER_DAYS = 3        # first nudge to the client
+FINAL_WARNING_DAYS = 6   # last warning before auto-approve
+AUTO_APPROVE_DAYS = 7    # auto-approve fires (business decision: protects freelancer
+                         # from an unresponsive client, without cutting the client's
+                         # ability to still act - a revision request or dispute any
+                         # time before day 7 takes the submission out of 'submitted'
+                         # and out of this sweep's query entirely, resetting the timer
+                         # for free without a dedicated "reset" column)
+AUTO_APPROVE_BAN_THRESHOLD = 3  # lifetime count of auto-approved contracts before the
+                                # client's account is closed directly (business decision)
 
 def convert_uuids_to_str(data: Dict) -> Dict:
     """Convert all UUID objects in dict to strings."""
@@ -341,3 +355,122 @@ class ContractSubmissionFunctions:
         except Exception as e:
             logger("CONTRACT_SUBMISSION_FUNCTIONS", f"Error approving submission: {str(e)}", level="ERROR")
             raise
+
+    @staticmethod
+    def run_autoapprove_sweep() -> int:
+        """Client-gone-silent protection (business decision): reminder at day 3, final
+        warning at day 6, auto-approve at day 7 - reusing approve_latest_submission so
+        rating/AI-review/portfolio side effects are identical to a manual approve.
+
+        No 'reset' column needed: the moment a client requests a revision, the
+        submission's status leaves 'submitted' and the contract leaves 'under_review',
+        so the WHERE clause below stops matching that row on its own - same for a
+        dispute (contract.status becomes 'disputed'). Reminder dedup goes through the
+        existing `notifications` table instead of new columns."""
+        try:
+            rows = get_db().execute_query(
+                """
+                SELECT DISTINCT ON (cs.contract_id)
+                    cs.submission_id, cs.contract_id, cs.submitted_at,
+                    c.freelancer_id, c.client_id, c.contract_title
+                FROM contract_submission cs
+                JOIN contract c ON c.contract_id = cs.contract_id
+                WHERE c.status = 'under_review' AND cs.status = 'submitted'
+                ORDER BY cs.contract_id, cs.submitted_at DESC
+                """,
+                {},
+            )
+
+            now = datetime.now(timezone.utc)
+            auto_approved = 0
+            for row in rows or []:
+                contract_id = str(row["contract_id"])
+                submission_id = str(row["submission_id"])
+                submitted_at = row["submitted_at"]
+                if submitted_at.tzinfo is None:
+                    submitted_at = submitted_at.replace(tzinfo=timezone.utc)
+                days_elapsed = (now - submitted_at).days
+
+                client = ClientFunctions.get_client_by_id(str(row["client_id"]))
+                if not client:
+                    continue
+                client_user_id = str(client["user_id"])
+                title = row.get("contract_title") or "your contract"
+
+                if days_elapsed >= AUTO_APPROVE_DAYS:
+                    ContractSubmissionFunctions.approve_latest_submission(contract_id)
+                    try:
+                        from ai_related.review_analysis.review_pipeline import run_post_completion_pipeline
+                        _fire_notification(run_post_completion_pipeline(contract_id))
+                    except Exception:
+                        pass
+
+                    # Penalty tracking (business decision): a client who lets contracts
+                    # auto-approve from silence 3+ times (lifetime) gets the account
+                    # closed directly, reusing the same admin_close_account primitive
+                    # any human-admin ban uses. Counted via the existing `notifications`
+                    # table (COUNT of this specific notif_type ever sent to this client)
+                    # instead of a new counter column. Count BEFORE sending so the
+                    # message tone can escalate with the strike this occurrence becomes.
+                    strike_count = _count_notifications("contract_auto_approved", client_user_id) + 1
+                    if strike_count >= AUTO_APPROVE_BAN_THRESHOLD:
+                        strike_body = (
+                            f"\"{title}\" was auto-approved after {AUTO_APPROVE_DAYS} days without a response - "
+                            f"that's {strike_count} contract(s) auto-approved from inactivity, so your account has been closed."
+                        )
+                    elif strike_count == AUTO_APPROVE_BAN_THRESHOLD - 1:
+                        strike_body = (
+                            f"Warning: \"{title}\" was auto-approved after {AUTO_APPROVE_DAYS} days without a response - "
+                            f"that's {strike_count} contracts auto-approved from inactivity. One more and your account will be closed automatically."
+                        )
+                    else:
+                        strike_body = f"\"{title}\" was auto-approved after {AUTO_APPROVE_DAYS} days without a response from you. Please respond to submissions promptly to avoid account restrictions."
+
+                    _fire_notification(NotificationFunctions.notify(
+                        recipient_user_id=client_user_id,
+                        notif_type="contract_auto_approved",
+                        title="Contract Auto-Approved",
+                        body=strike_body,
+                        data={"contract_id": contract_id},
+                    ))
+                    if strike_count >= AUTO_APPROVE_BAN_THRESHOLD:
+                        from routes.admin.admin_functions import admin_close_account
+                        admin_close_account(
+                            user_id=client_user_id,
+                            admin_user_id="system:autoapprove_penalty",
+                            reason=f"Account automatically closed: {strike_count} contracts auto-approved from client inactivity.",
+                        )
+                        logger(
+                            "CONTRACT_SUBMISSION_FUNCTIONS",
+                            f"Client {client_user_id} auto-banned after {strike_count} auto-approved contracts",
+                            level="WARNING",
+                        )
+
+                    auto_approved += 1
+                    continue
+
+                if days_elapsed >= FINAL_WARNING_DAYS:
+                    if not _already_notified("contract_autoapprove_final_warning", "submission_id", submission_id):
+                        _fire_notification(NotificationFunctions.notify(
+                            recipient_user_id=str(client["user_id"]),
+                            notif_type="contract_autoapprove_final_warning",
+                            title="Final Reminder: Review Pending Work",
+                            body=f"\"{title}\" will be auto-approved in {AUTO_APPROVE_DAYS - days_elapsed} day(s) if you don't act.",
+                            data={"contract_id": contract_id, "submission_id": submission_id},
+                        ))
+                elif days_elapsed >= REMINDER_DAYS:
+                    if not _already_notified("contract_autoapprove_reminder", "submission_id", submission_id):
+                        _fire_notification(NotificationFunctions.notify(
+                            recipient_user_id=str(client["user_id"]),
+                            notif_type="contract_autoapprove_reminder",
+                            title="Reminder: Review Pending Work",
+                            body=f"Submitted work on \"{title}\" is still waiting for your review.",
+                            data={"contract_id": contract_id, "submission_id": submission_id},
+                        ))
+
+            if auto_approved:
+                logger("CONTRACT_SUBMISSION_FUNCTIONS", f"Autoapprove sweep: auto-approved {auto_approved} submission(s)", level="INFO")
+            return auto_approved
+        except Exception as e:
+            logger("CONTRACT_SUBMISSION_FUNCTIONS", f"Error in autoapprove sweep: {str(e)}", level="ERROR")
+            return 0

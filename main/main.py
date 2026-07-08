@@ -17,6 +17,8 @@ from routes.oauth.oauth_routes import oauth_router
 from ai_related.job_engine.job_engine_routes import router as job_engine_router
 from ai_related.job_engine.sweep_worker import embedding_sweep_loop
 from routes.admin.moderation_sweep_worker import moderation_sweep_loop
+from routes.contracts.contract_deadline_worker import contract_deadline_loop
+from routes.contract_submissions.contract_autoapprove_worker import contract_autoapprove_loop
 from routes.users.users_routes import users_router
 from routes.freelancers.freelancer_routes import freelancer_router
 from routes.clients.client_routes import client_router
@@ -78,6 +80,12 @@ async def lifespan(app: FastAPI):
 
     moderation_sweep_task = asyncio.create_task(moderation_sweep_loop())
     logger("LIFESPAN", "Moderation sweep worker started (auto-approve/auto-remove/report actions run regardless of admin login)", level="INFO")
+
+    contract_deadline_task = asyncio.create_task(contract_deadline_loop())
+    logger("LIFESPAN", "Contract deadline sweep worker started (informational overdue notifications)", level="INFO")
+
+    contract_autoapprove_task = asyncio.create_task(contract_autoapprove_loop())
+    logger("LIFESPAN", "Contract autoapprove sweep worker started (reminder/final-warning/auto-approve on stalled submissions)", level="INFO")
 
     def _warmup_harmful_text():
         try:

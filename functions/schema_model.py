@@ -1,6 +1,6 @@
 from fastapi import File, Form, Request, UploadFile
 from pydantic import BaseModel, EmailStr, field_validator
-from typing import Optional, Any, Dict, List
+from typing import Optional, Any, Dict, List, Literal
 from datetime import date, datetime
 
 # Authentication
@@ -1137,6 +1137,14 @@ class CancelContractRequest(BaseModel):
 class ReportPaymentRequest(BaseModel):
     amount: float
     note: Optional[str] = None
+
+class RaiseDisputeRequest(BaseModel):
+    reason: str
+
+class ArbitrateDisputeRequest(BaseModel):
+    outcome: Literal["approve", "cancel", "revise"]
+    note: Optional[str] = None
+    new_deadline: Optional[date] = None
 
 
 # Comprehensive freelancer profile

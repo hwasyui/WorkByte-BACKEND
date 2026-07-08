@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import List, Optional
 from pydantic import BaseModel
 
-from functions.schema_model import UserInDB
+from functions.schema_model import UserInDB, ArbitrateDisputeRequest
 from functions.authentication import get_current_user, get_admin_user
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
@@ -42,6 +42,8 @@ from routes.admin.admin_functions import (
     resolve_appeal,
     submit_appeal,
 )
+from routes.contracts.contract_functions import ContractFunctions
+from routes.clients.client_functions import ClientFunctions
 
 admin_router   = APIRouter(prefix="/admin",   tags=["Admin"])
 reports_router = APIRouter(prefix="/reports", tags=["Reports"])
@@ -754,6 +756,108 @@ async def admin_get_user(
     except Exception as e:
         logger("ADMIN", f"Get user detail error: {e}", "GET /admin/users/{user_id}", "ERROR")
         return ResponseSchema.error(f"Failed to fetch user: {e}", 500)
+
+
+@admin_router.put("/contracts/{contract_id}/arbitrate")
+async def admin_arbitrate_contract_dispute(
+    contract_id: str,
+    payload: ArbitrateDisputeRequest,
+    current_user: UserInDB = Depends(get_admin_user),
+):
+    """
+    Resolve a disputed contract (status must be 'disputed', set via
+    PUT /contracts/{contract_id}/dispute). Three outcomes:
+      - approve: force-complete, reusing the same completion path as a manual approve.
+      - cancel:  force-cancel, reusing the same path as a manual cancel.
+      - revise:  send back for another revision round with a new deadline.
+    """
+    try:
+        contract = ContractFunctions.get_contract_by_id(contract_id)
+        if not contract:
+            return ResponseSchema.error(f"Contract {contract_id} not found", 404)
+
+        if contract["status"] != "disputed":
+            return ResponseSchema.error(
+                f"Cannot arbitrate a contract with status '{contract['status']}' - must be 'disputed'", 400,
+            )
+
+        if payload.outcome == "revise" and not payload.new_deadline:
+            return ResponseSchema.error("new_deadline is required when outcome is 'revise'", 400)
+
+        updated_contract = ContractFunctions.arbitrate_dispute(
+            contract_id=contract_id,
+            outcome=payload.outcome,
+            admin_user_id=str(current_user.user_id),
+            note=payload.note,
+            new_deadline=payload.new_deadline,
+        )
+
+        try:
+            from routes.freelancers.freelancer_functions import FreelancerFunctions
+            from routes.clients.client_functions import ClientFunctions
+            from routes.notifications.notification_functions import NotificationFunctions
+
+            fl = FreelancerFunctions.get_freelancer_by_id(str(contract["freelancer_id"]))
+            cl = ClientFunctions.get_client_by_id(str(contract["client_id"]))
+            body = f"Admin resolved the dispute on \"{contract.get('contract_title')}\": {payload.outcome}."
+            for party in (fl, cl):
+                if party:
+                    await NotificationFunctions.notify(
+                        recipient_user_id=str(party["user_id"]),
+                        notif_type="dispute_resolved",
+                        title="Dispute Resolved",
+                        body=body,
+                        data={"contract_id": contract_id, "outcome": payload.outcome},
+                    )
+        except Exception as notif_err:
+            logger("ADMIN", f"Dispute-resolved notification failed (non-fatal): {notif_err}", "PUT /admin/contracts/{contract_id}/arbitrate", "WARNING")
+
+        logger("ADMIN", f"Contract {contract_id} dispute arbitrated by admin {current_user.user_id}: {payload.outcome}", "PUT /admin/contracts/{contract_id}/arbitrate", "INFO")
+        return ResponseSchema.success(updated_contract, 200)
+    except ValueError as e:
+        logger("ADMIN", f"Validation error: {e}", "PUT /admin/contracts/{contract_id}/arbitrate", "WARNING")
+        return ResponseSchema.error(str(e), 400)
+    except Exception as e:
+        logger("ADMIN", f"Failed to arbitrate dispute for contract {contract_id}: {e}", "PUT /admin/contracts/{contract_id}/arbitrate", "ERROR")
+        return ResponseSchema.error(f"Failed to arbitrate dispute: {e}", 500)
+
+
+@admin_router.get("/clients/{client_id}/autoapprove-history")
+async def admin_get_client_autoapprove_history(
+    client_id: str,
+    current_user: UserInDB = Depends(get_admin_user),
+):
+    """
+    Read-only audit trail for the 3-strike auto-approve penalty (monitoring only -
+    no action taken here; the ban itself already happens automatically at strike 3
+    without any admin input). Meant for reviewing a client's pattern before deciding
+    an appeal: which contracts triggered a strike, when, and the account's current
+    ban/reliability state - all derived from existing data, nothing new stored.
+    """
+    try:
+        client = ClientFunctions.get_client_by_id_or_user_id(client_id)
+        if not client:
+            return ResponseSchema.error(f"Client {client_id} not found", 404)
+
+        user_id = str(client["user_id"])
+        user_detail = get_admin_user_detail(user_id) or {}
+        history = ContractFunctions.get_client_autoapprove_history(user_id)
+
+        result = {
+            "client_id": str(client["client_id"]),
+            "email": user_detail.get("email"),
+            "strike_count": len(history),
+            "reliability_label": ContractFunctions.get_client_reliability_label(user_id),
+            "is_banned": user_detail.get("is_report_banned", False),
+            "ban_reason": user_detail.get("ban_reason"),
+            "banned_at": user_detail.get("report_banned_at"),
+            "history": history,
+        }
+        logger("ADMIN", f"Retrieved autoapprove history for client {client_id}", "GET /admin/clients/{client_id}/autoapprove-history", "INFO")
+        return ResponseSchema.success(result, 200)
+    except Exception as e:
+        logger("ADMIN", f"Failed to fetch autoapprove history for client {client_id}: {e}", "GET /admin/clients/{client_id}/autoapprove-history", "ERROR")
+        return ResponseSchema.error(f"Failed to fetch autoapprove history: {e}", 500)
 
 
 @reports_router.get("/reasons")

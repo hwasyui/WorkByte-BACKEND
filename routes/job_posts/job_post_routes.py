@@ -425,8 +425,20 @@ async def update_job_post(job_post_id: str, job_post_update: JobPostUpdate, curr
             )
 
         if "job_title" in update_data or "job_description" in update_data:
-            _scan_text = f"{updated_job_post.get('job_title', '')} {updated_job_post.get('job_description', '')}"
+            _title = updated_job_post.get("job_title", "") or ""
+            _desc  = updated_job_post.get("job_description", "") or ""
+            _scan_text = f"{_title} {_desc}"
             asyncio.create_task(JobPostFunctions.run_job_post_scan(job_post_id, _scan_text, str(current_user.user_id)))
+
+            # Scam detection previously only ran once, at POST /job-posts creation time -
+            # editing title/description afterwards re-scanned for harmful text but never
+            # for scam, so a client could post a clean job, get past the initial screen,
+            # then edit in scam content (wire transfer/upfront-fee asks, etc.) and it
+            # would never be caught. Mirrors the exact same background-task pattern
+            # used at creation (job_post_routes.py POST /job-posts).
+            asyncio.create_task(asyncio.to_thread(
+                queue_scam_scan, job_post_id, str(existing_job_post["client_id"]), _scan_text, _title, _desc,
+            ))
 
         mark_job_dirty(job_post_id)
         success_msg = f"Updated job post {job_post_id}"

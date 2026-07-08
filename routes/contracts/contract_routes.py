@@ -4,7 +4,6 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 import json
-from sqlalchemy.exc import IntegrityError
 from fastapi import APIRouter, Body, Depends, Response, BackgroundTasks, HTTPException
 from functions.minio_client import (
     download_file,
@@ -15,7 +14,7 @@ from functions.minio_client import (
 from routes.reviews.review_routes import trigger_review_pipeline_on_completion
 from typing import List, Optional
 import uuid
-from functions.schema_model import CancelContractRequest, ContractCreate, ContractUpdate, ContractResponse, ContractGenerateRequest, ReportPaymentRequest
+from functions.schema_model import CancelContractRequest, ContractCreate, ContractUpdate, ContractResponse, ContractGenerateRequest, ReportPaymentRequest, RaiseDisputeRequest
 from functions.schema_model import UserInDB
 from functions.authentication import get_current_user
 from functions.access_control import (
@@ -267,35 +266,26 @@ async def create_contract(contract: ContractCreate, current_user: UserInDB = Dep
         if proposal.get("job_role_id") and str(proposal["job_role_id"]) != str(contract.job_role_id):
             return ResponseSchema.error("Contract job role does not match the proposal's job role", 400)
 
-        # The SELECT-based pre-check above can't fully close the window between two
-        # concurrent "accept proposal" clicks - contract.proposal_id has a UNIQUE
-        # constraint as the real backstop, so a race here surfaces as an IntegrityError
-        # rather than silently creating a second contract for the same proposal.
-        try:
-            new_contract = ContractFunctions.create_contract(
-                contract_id=contract_id,
-                job_post_id=contract.job_post_id,
-                job_role_id=contract.job_role_id,
-                proposal_id=contract.proposal_id,
-                freelancer_id=contract.freelancer_id,
-                client_id=contract.client_id,
-                contract_title=contract.contract_title,
-                agreed_budget=contract.agreed_budget,
-                payment_structure=contract.payment_structure,
-                start_date=contract.start_date,
-                role_title=contract.role_title,
-                budget_currency=contract.budget_currency,
-                agreed_duration=contract.agreed_duration,
-                status=contract.status,
-                end_date=contract.end_date,
-                actual_completion_date=contract.actual_completion_date,
-                total_hours_worked=contract.total_hours_worked,
-                total_paid=contract.total_paid,
-            )
-        except IntegrityError:
-            return ResponseSchema.error(
-                f"A contract already exists for this proposal (proposal_id: {contract.proposal_id})", 409
-            )
+        new_contract = ContractFunctions.create_contract(
+            contract_id=contract_id,
+            job_post_id=contract.job_post_id,
+            job_role_id=contract.job_role_id,
+            proposal_id=contract.proposal_id,
+            freelancer_id=contract.freelancer_id,
+            client_id=contract.client_id,
+            contract_title=contract.contract_title,
+            agreed_budget=contract.agreed_budget,
+            payment_structure=contract.payment_structure,
+            start_date=contract.start_date,
+            role_title=contract.role_title,
+            budget_currency=contract.budget_currency,
+            agreed_duration=contract.agreed_duration,
+            status=contract.status,
+            end_date=contract.end_date,
+            actual_completion_date=contract.actual_completion_date,
+            total_hours_worked=contract.total_hours_worked,
+            total_paid=contract.total_paid,
+        )
 
         logger("CONTRACT", f"Created contract {contract_id}", "POST /contracts", "INFO")
 
@@ -634,6 +624,65 @@ async def report_payment(
     except Exception as e:
         logger("CONTRACT", f"Failed to report payment for {contract_id}: {str(e)}", "PUT /contracts/{contract_id}/report-payment", "ERROR")
         return ResponseSchema.error(f"Failed to report payment: {str(e)}", 500)
+
+
+# Dispute endpoint (either party can raise; admin resolves via /admin/contracts/{id}/arbitrate)
+
+
+@contract_router.put("/{contract_id}/dispute")
+async def raise_dispute(
+    contract_id: str,
+    payload: RaiseDisputeRequest,
+    current_user: UserInDB = Depends(get_current_user),
+):
+    """
+    Either party raises a dispute while work is under review or being revised.
+    Moves the contract to 'disputed' - only an admin can resolve it from there
+    (PUT /admin/contracts/{contract_id}/arbitrate).
+    """
+    try:
+        contract = ContractFunctions.get_contract_by_id(contract_id)
+        if not contract:
+            return ResponseSchema.error(f"Contract {contract_id} not found", 404)
+
+        assert_current_user_is_contract_party(current_user, contract)
+
+        disputable_statuses = {"under_review", "revision_requested"}
+        if contract["status"] not in disputable_statuses:
+            return ResponseSchema.error(
+                f"Cannot raise a dispute on a contract with status '{contract['status']}'", 400,
+            )
+
+        updated_contract = ContractFunctions.raise_dispute(
+            contract_id=contract_id,
+            raised_by=str(current_user.user_id),
+            reason=payload.reason,
+        )
+
+        try:
+            fl = FreelancerFunctions.get_freelancer_by_id(str(contract["freelancer_id"]))
+            cl = ClientFunctions.get_client_by_id(str(contract["client_id"]))
+            is_client_raising = current_user.client_id and str(current_user.user_id) == str(cl["user_id"])
+            other_party = fl if is_client_raising else cl
+
+            await NotificationFunctions.notify(
+                recipient_user_id=str(other_party["user_id"]),
+                notif_type="contract_disputed",
+                title="Contract Under Dispute",
+                body=f"A dispute was raised on \"{contract.get('contract_title')}\". An admin will review it.",
+                data={"contract_id": contract_id},
+            )
+        except Exception as notif_err:
+            logger("CONTRACT", f"Dispute notification failed (non-fatal): {notif_err}", "PUT /contracts/{contract_id}/dispute", "WARNING")
+
+        logger("CONTRACT", f"Contract {contract_id} disputed by {current_user.user_id}", "PUT /contracts/{contract_id}/dispute", "INFO")
+        return ResponseSchema.success(updated_contract, 200)
+    except HTTPException as e:
+        logger("CONTRACT", f"HTTP {e.status_code}: {e.detail}", "PUT /contracts/{contract_id}/dispute", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
+    except Exception as e:
+        logger("CONTRACT", f"Failed to raise dispute for {contract_id}: {str(e)}", "PUT /contracts/{contract_id}/dispute", "ERROR")
+        return ResponseSchema.error(f"Failed to raise dispute: {str(e)}", 500)
 
 
 # Cancel endpoint

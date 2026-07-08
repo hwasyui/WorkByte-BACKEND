@@ -1,4 +1,5 @@
 from datetime import datetime, date, timezone
+import asyncio
 import os
 import sys
 
@@ -10,6 +11,45 @@ from functions.logger import logger
 from typing import List, Optional, Dict
 import uuid
 from routes.proposals.proposal_functions import ProposalFunctions
+from routes.notifications.notification_functions import NotificationFunctions
+from routes.freelancers.freelancer_functions import FreelancerFunctions
+from routes.clients.client_functions import ClientFunctions
+
+
+def _fire_notification(coro) -> None:
+    """Schedule a notify() coroutine from sync code, whether this runs on the
+    event loop thread (route handlers) or a plain worker thread (sweep loop)."""
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+    if loop and loop.is_running():
+        loop.create_task(coro)
+    else:
+        asyncio.run(coro)
+
+
+def _already_notified(notif_type: str, key_field: str, key_value: str) -> bool:
+    """Dedup check against the existing `notifications` table (data JSONB column) -
+    avoids adding purpose-built dedup columns for one-shot sweep notifications.
+    key_field must always be a trusted literal ("contract_id", "submission_id", ...),
+    never user input - it's interpolated into the JSONB path, not bound as a param."""
+    rows = get_db().execute_query(
+        f"SELECT 1 FROM notifications WHERE type = :ntype AND data->>'{key_field}' = :key LIMIT 1",
+        {"ntype": notif_type, "key": key_value},
+    )
+    return bool(rows)
+
+
+def _count_notifications(notif_type: str, recipient_user_id: str) -> int:
+    """Lifetime count of a given notification type sent to one recipient - reused as a
+    strike counter (e.g. how many times a client has let a contract auto-approve) so
+    penalty logic doesn't need a dedicated counter column."""
+    rows = get_db().execute_query(
+        "SELECT COUNT(*) AS cnt FROM notifications WHERE type = :ntype AND recipient_id = :rid",
+        {"ntype": notif_type, "rid": recipient_user_id},
+    )
+    return int(rows[0]["cnt"]) if rows else 0
 
 
 def convert_uuids_to_str(data: Dict) -> Dict:
@@ -481,4 +521,177 @@ class ContractFunctions:
             return updated_contract
         except Exception as e:
             logger("CONTRACT_FUNCTIONS", f"Error reporting payment: {str(e)}", level="ERROR")
+            raise
+
+    @staticmethod
+    def notify_overdue_contracts() -> int:
+        """Informational-only deadline sweep (business decision: no automatic status
+        change - freelancer/client resolve it themselves, this just turns on visibility).
+        Dedup goes through the existing `notifications` table instead of a dedicated
+        column: one notification per contract, ever, is enough since the deadline
+        itself doesn't move unless the contract is edited."""
+        try:
+            overdue = get_db().execute_query(
+                """
+                SELECT contract_id, freelancer_id, client_id, contract_title, end_date
+                FROM contract
+                WHERE status IN ('active', 'under_review', 'revision_requested')
+                  AND end_date < CURRENT_DATE
+                """,
+                {},
+            )
+            notified = 0
+            for row in overdue or []:
+                contract_id = str(row["contract_id"])
+                if _already_notified("contract_overdue", "contract_id", contract_id):
+                    continue
+
+                freelancer = FreelancerFunctions.get_freelancer_by_id(str(row["freelancer_id"]))
+                client = ClientFunctions.get_client_by_id(str(row["client_id"]))
+                title = row.get("contract_title") or "your contract"
+                body = f"\"{title}\" is past its deadline ({row['end_date']}). Status hasn't changed automatically - please coordinate directly."
+
+                if client:
+                    _fire_notification(NotificationFunctions.notify(
+                        recipient_user_id=str(client["user_id"]),
+                        notif_type="contract_overdue",
+                        title="Contract Past Deadline",
+                        body=body,
+                        data={"contract_id": contract_id},
+                    ))
+                if freelancer:
+                    _fire_notification(NotificationFunctions.notify(
+                        recipient_user_id=str(freelancer["user_id"]),
+                        notif_type="contract_overdue",
+                        title="Contract Past Deadline",
+                        body=body,
+                        data={"contract_id": contract_id},
+                    ))
+                notified += 1
+
+            if notified:
+                logger("CONTRACT_FUNCTIONS", f"Overdue sweep: notified {notified} contract(s)", level="INFO")
+            return notified
+        except Exception as e:
+            logger("CONTRACT_FUNCTIONS", f"Error in overdue contract sweep: {str(e)}", level="ERROR")
+            return 0
+
+    # A client sits at this many lifetime auto-approved contracts one strike away
+    # from AUTO_APPROVE_BAN_THRESHOLD (3, see contract_submission_functions.py) before
+    # the qualitative label below flips - gives freelancers a signal right when it
+    # matters, without exposing the raw strike count (product decision).
+    _RELIABILITY_WARNING_THRESHOLD = 2
+
+    @staticmethod
+    def get_client_reliability_label(client_user_id: str) -> str:
+        """Qualitative signal for freelancers deciding whether to work with a client -
+        derived on read from the same `contract_auto_approved` notification count used
+        for the ban penalty, no separate storage needed."""
+        count = _count_notifications("contract_auto_approved", client_user_id)
+        if count >= ContractFunctions._RELIABILITY_WARNING_THRESHOLD:
+            return "Kurang Responsif"
+        return "Responsif"
+
+    @staticmethod
+    def get_client_autoapprove_history(client_user_id: str) -> List[Dict]:
+        """Read-only audit trail for admin review (e.g. when a client appeals the
+        3-strike auto-ban) - which contracts triggered a strike and when, so admin
+        doesn't have to reconstruct it by hand from raw notification rows. Derived
+        entirely from the existing `notifications` + `contract` tables, nothing new
+        stored. This is monitoring only - it does not expose any approve/cancel
+        action, the ban itself already happens automatically without admin input."""
+        rows = get_db().execute_query(
+            """
+            SELECT n.data->>'contract_id' AS contract_id, n.created_at AS notified_at,
+                   n.body, c.contract_title, c.status AS contract_status
+            FROM notifications n
+            LEFT JOIN contract c ON c.contract_id = (n.data->>'contract_id')::uuid
+            WHERE n.recipient_id = :uid AND n.type = 'contract_auto_approved'
+            ORDER BY n.created_at ASC
+            """,
+            {"uid": client_user_id},
+        )
+        return [dict(row) for row in rows or []]
+
+    @staticmethod
+    def raise_dispute(contract_id: str, raised_by: str, reason: str) -> Optional[Dict]:
+        """Flip a contract into 'disputed' (status/value both already exist in the
+        contract_status enum - see create_table.sql). The reason and every subsequent
+        arbitration action are kept as DM system-event history on the contract's thread
+        rather than dedicated columns, per the no-new-schema constraint for this pass."""
+        try:
+            contract = ContractFunctions.get_contract_by_id(contract_id)
+            if not contract:
+                raise Exception("Contract not found")
+
+            updated_contract = ContractFunctions.update_contract(contract_id, {"status": "disputed"})
+
+            try:
+                DMFunctions.send_system_event(
+                    contract_id=contract_id,
+                    actor_id=raised_by,
+                    message_text=f"Dispute raised: {reason}",
+                    event_type="dispute_raised",
+                    metadata={"raised_by": raised_by, "reason": reason},
+                )
+            except Exception:
+                pass
+
+            logger("CONTRACT_FUNCTIONS", f"Contract {contract_id} disputed by {raised_by}", level="INFO")
+            return updated_contract
+        except Exception as e:
+            logger("CONTRACT_FUNCTIONS", f"Error raising dispute: {str(e)}", level="ERROR")
+            raise
+
+    @staticmethod
+    def arbitrate_dispute(
+        contract_id: str,
+        outcome: str,
+        admin_user_id: str,
+        note: Optional[str] = None,
+        new_deadline: Optional[date] = None,
+    ) -> Optional[Dict]:
+        """Admin resolves a disputed contract. Reuses the exact same completion/cancel/
+        revision-request functions the manual flows use, so rating/AI-review/portfolio
+        side effects stay consistent regardless of how the contract got there."""
+        from routes.contract_submissions.contract_submission_functions import ContractSubmissionFunctions
+
+        try:
+            contract = ContractFunctions.get_contract_by_id(contract_id)
+            if not contract:
+                raise Exception("Contract not found")
+
+            if outcome == "approve":
+                latest_submission = ContractSubmissionFunctions.get_latest_submission_by_contract_id(contract_id)
+                if latest_submission and latest_submission.get("status") == "submitted":
+                    ContractSubmissionFunctions.approve_latest_submission(contract_id)
+                else:
+                    ContractFunctions.update_contract(contract_id, {"status": "completed"})
+                from ai_related.review_analysis.review_pipeline import run_post_completion_pipeline
+                _fire_notification(run_post_completion_pipeline(contract_id))
+            elif outcome == "cancel":
+                ContractFunctions.cancel_contract(contract_id, cancelled_by=admin_user_id, reason=note)
+            elif outcome == "revise":
+                if not new_deadline:
+                    raise ValueError("new_deadline is required when outcome='revise'")
+                ContractSubmissionFunctions.request_revision_for_latest_submission(contract_id, note=note)
+                ContractFunctions.update_contract(contract_id, {"end_date": new_deadline})
+            else:
+                raise ValueError(f"Invalid outcome: {outcome}")
+
+            try:
+                DMFunctions.send_system_event(
+                    contract_id=contract_id,
+                    actor_id=admin_user_id,
+                    message_text=f"Dispute resolved by admin: {outcome}." + (f" {note}" if note else ""),
+                    event_type="dispute_resolved",
+                    metadata={"outcome": outcome, "note": note, "resolved_by": admin_user_id},
+                )
+            except Exception:
+                pass
+
+            logger("CONTRACT_FUNCTIONS", f"Contract {contract_id} dispute arbitrated: {outcome}", level="INFO")
+            return ContractFunctions.get_contract_by_id(contract_id)
+        except Exception as e:
+            logger("CONTRACT_FUNCTIONS", f"Error arbitrating dispute: {str(e)}", level="ERROR")
             raise
