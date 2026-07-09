@@ -17,89 +17,81 @@ RELEVANCE_THRESHOLD = 0.3
 EVIDENCE_CAP = 3
 
 
-def _retrieve_job_context(db, job_post_id: str) -> dict:
+def _retrieve_role_context(db, job_role_id: str) -> dict:
     """
-    Retrieve a job post with all its roles and required/preferred skills from the DB.
+    Retrieve a single job role, its parent job post fields, and its required/preferred
+    skills from the DB.
 
     Args:
         db: Active database connection.
-        job_post_id: UUID string of the job post to retrieve.
+        job_role_id: UUID string of the job role to retrieve.
 
     Returns:
-        Dict with job post fields plus a ``roles`` list, each role containing its
-        aggregated skills. Returns an empty dict if the job post is not found.
+        Dict with job post fields plus role fields and a ``skills`` list. Returns an
+        empty dict if the job role is not found.
     """
-    logger("RAG_ANALYSER", f"Retrieving job context | job_post_id={job_post_id}", level="DEBUG")
+    logger("RAG_ANALYSER", f"Retrieving role context | job_role_id={job_role_id}", level="DEBUG")
 
-    job_rows = db.execute_query(
+    role_rows = db.execute_query(
         """
-        SELECT job_title, job_description, project_type, project_scope,
-               estimated_duration, deadline
-        FROM job_post
-        WHERE job_post_id = :jpid
-        """,
-        {"jpid": job_post_id},
-    )
-    if not job_rows:
-        logger("RAG_ANALYSER", f"Job post not found | job_post_id={job_post_id}", level="WARNING")
-        return {}
-    job = dict(job_rows[0])
-
-    roles = db.execute_query(
-        """
-        SELECT jr.role_title,
-               jr.role_description,
-               COALESCE(
-                   array_agg(
-                       s.skill_name || ' (' ||
-                       CASE WHEN jrs.is_required THEN 'required' ELSE 'preferred' END ||
-                       CASE WHEN jrs.importance_level IS NOT NULL
-                            THEN ', ' || jrs.importance_level::text
-                            ELSE ''
-                       END || ')'
-                   ) FILTER (WHERE s.skill_name IS NOT NULL),
-                   ARRAY[]::text[]
-               ) AS skills
+        SELECT jr.job_role_id, jr.job_post_id, jr.role_title, jr.role_description,
+               jp.job_title, jp.job_description, jp.project_type, jp.project_scope,
+               jp.estimated_duration, jp.deadline
         FROM job_role jr
-        LEFT JOIN job_role_skill jrs ON jrs.job_role_id = jr.job_role_id
-        LEFT JOIN skill s            ON s.skill_id       = jrs.skill_id
-        WHERE jr.job_post_id = :jpid
-        GROUP BY jr.job_role_id, jr.role_title, jr.role_description
-        ORDER BY jr.display_order
+        JOIN job_post jp ON jp.job_post_id = jr.job_post_id
+        WHERE jr.job_role_id = :jrid
         """,
-        {"jpid": job_post_id},
+        {"jrid": job_role_id},
     )
-    job["roles"] = [dict(r) for r in roles]
+    if not role_rows:
+        logger("RAG_ANALYSER", f"Job role not found | job_role_id={job_role_id}", level="WARNING")
+        return {}
+    role = dict(role_rows[0])
 
-    total_skills = sum(len(r.get("skills") or []) for r in job["roles"])
+    skill_rows = db.execute_query(
+        """
+        SELECT s.skill_name || ' (' ||
+               CASE WHEN jrs.is_required THEN 'required' ELSE 'preferred' END ||
+               CASE WHEN jrs.importance_level IS NOT NULL
+                    THEN ', ' || jrs.importance_level::text
+                    ELSE ''
+               END || ')' AS skill_str
+        FROM job_role_skill jrs
+        JOIN skill s ON s.skill_id = jrs.skill_id
+        WHERE jrs.job_role_id = :jrid
+        """,
+        {"jrid": job_role_id},
+    )
+    role["skills"] = [r["skill_str"] for r in skill_rows]
+
     logger(
         "RAG_ANALYSER",
-        f"Job context retrieved | job_post_id={job_post_id} | title='{job['job_title']}' "
-        f"| roles={len(job['roles'])} | total_skills={total_skills}",
+        f"Role context retrieved | job_role_id={job_role_id} | job_title='{role['job_title']}' "
+        f"| role_title='{role['role_title']}' | skills={len(role['skills'])}",
         level="DEBUG",
     )
-    return job
+    return role
 
 
-def _retrieve_freelancer_context(db, freelancer_id: str, job_post_id: str | None = None) -> dict:
+def _retrieve_freelancer_context(db, freelancer_id: str, job_role_id: str | None = None) -> dict:
     """
     Retrieve a freelancer's full profile including skills, portfolio items,
     and recent work experience.
 
-    Portfolio items are ranked by cosine similarity to the target job when both
-    portfolio_embedding vectors and the job_embedding are available.  This surfaces
+    Portfolio items are ranked by cosine similarity to the target role when both
+    portfolio_embedding vectors and the role's embedding are available.  This surfaces
     the most *relevant* external projects rather than just the most recent ones.
     Falls back to recency order when embeddings are not yet ready.
 
     Args:
         db: Active database connection.
         freelancer_id: UUID string of the freelancer.
-        job_post_id: UUID of the job being analysed.  When provided, portfolio
-            items are ranked by relevance to the job instead of by recency.
+        job_role_id: UUID of the role being analysed.  When provided, portfolio
+            items are ranked by relevance to the role instead of by recency.
 
     Returns:
         Dict with profile fields plus ``skills``, ``portfolio`` (up to EVIDENCE_CAP candidates,
-        for the evidence gate in analyse_job_match to draw from), ``portfolio_retrieval_method``,
+        for the evidence gate in analyse_role_match to draw from), ``portfolio_retrieval_method``,
         and ``work_experience`` (up to 3) lists.
         Returns an empty dict if the freelancer is not found.
     """
@@ -132,7 +124,7 @@ def _retrieve_freelancer_context(db, freelancer_id: str, job_post_id: str | None
     fc["skills"] = [dict(s) for s in skills]
 
     portfolio_method = "recency_fallback"
-    if job_post_id:
+    if job_role_id:
         portfolio_embed_check = db.execute_query(
             """
             SELECT COUNT(*) AS cnt
@@ -143,11 +135,11 @@ def _retrieve_freelancer_context(db, freelancer_id: str, job_post_id: str | None
         )
         has_portfolio_embeddings = portfolio_embed_check and int(portfolio_embed_check[0]["cnt"]) > 0
 
-        job_embed_check = db.execute_query(
-            "SELECT 1 FROM job_role_embedding WHERE job_post_id = :jpid AND embedding_vector IS NOT NULL LIMIT 1",
-            {"jpid": job_post_id},
+        role_embed_check = db.execute_query(
+            "SELECT 1 FROM job_role_embedding WHERE job_role_id = :jrid AND embedding_vector IS NOT NULL LIMIT 1",
+            {"jrid": job_role_id},
         )
-        has_job_embedding = bool(job_embed_check)
+        has_job_embedding = bool(role_embed_check)
 
         if has_portfolio_embeddings and has_job_embedding:
             portfolio_rows = db.execute_query(
@@ -155,24 +147,18 @@ def _retrieve_freelancer_context(db, freelancer_id: str, job_post_id: str | None
                 SELECT p.project_title,
                        p.project_description,
                        p.project_url,
-                       ROUND((1 - (pe.embedding_vector <=> best_role.embedding_vector))::numeric, 3) AS relevance_score
+                       ROUND((1 - (pe.embedding_vector <=> jre.embedding_vector))::numeric, 3) AS relevance_score
                 FROM portfolio_embedding pe
                 JOIN portfolio p ON p.portfolio_id = pe.portfolio_id
-                CROSS JOIN LATERAL (
-                    SELECT jre.embedding_vector
-                    FROM job_role_embedding jre
-                    WHERE jre.job_post_id = :jpid
-                      AND jre.embedding_vector IS NOT NULL
-                    ORDER BY jre.embedding_vector <=> pe.embedding_vector
-                    LIMIT 1
-                ) best_role
+                JOIN job_role_embedding jre
+                     ON jre.job_role_id = :jrid AND jre.embedding_vector IS NOT NULL
                 WHERE pe.freelancer_id = :fid
                   AND pe.embedding_vector IS NOT NULL
                   AND COALESCE(p.is_auto_generated, FALSE) = FALSE
-                ORDER BY pe.embedding_vector <=> best_role.embedding_vector
+                ORDER BY pe.embedding_vector <=> jre.embedding_vector
                 LIMIT {EVIDENCE_CAP}
                 """,
-                {"fid": freelancer_id, "jpid": job_post_id},
+                {"fid": freelancer_id, "jrid": job_role_id},
             )
             portfolio_method = "vector_similarity"
             logger(
@@ -238,15 +224,15 @@ def _retrieve_freelancer_context(db, freelancer_id: str, job_post_id: str | None
     return fc
 
 
-def _retrieve_past_contracts(db, freelancer_id: str, job_post_id: str) -> list[dict]:
+def _retrieve_past_contracts(db, freelancer_id: str, job_role_id: str) -> list[dict]:
     """
     Fetch the most relevant completed contracts for the freelancer, ordered by
-    cosine similarity to the target job when embeddings are available, or by
+    cosine similarity to the target role when embeddings are available, or by
     recency if the sweep worker hasn't run yet.
     """
     logger(
         "RAG_ANALYSER",
-        f"Retrieving past contracts (RAG context) | freelancer_id={freelancer_id} | job_post_id={job_post_id}",
+        f"Retrieving past contracts (RAG context) | freelancer_id={freelancer_id} | job_role_id={job_role_id}",
         level="DEBUG",
     )
 
@@ -263,11 +249,11 @@ def _retrieve_past_contracts(db, freelancer_id: str, job_post_id: str) -> list[d
     )
     has_embeddings = embedding_check and int(embedding_check[0]["cnt"]) > 0
 
-    job_embedding_check = db.execute_query(
-        "SELECT 1 FROM job_role_embedding WHERE job_post_id = :jpid AND embedding_vector IS NOT NULL LIMIT 1",
-        {"jpid": job_post_id},
+    role_embedding_check = db.execute_query(
+        "SELECT 1 FROM job_role_embedding WHERE job_role_id = :jrid AND embedding_vector IS NOT NULL LIMIT 1",
+        {"jrid": job_role_id},
     )
-    has_job_embedding = bool(job_embedding_check)
+    has_job_embedding = bool(role_embedding_check)
 
     if has_embeddings and has_job_embedding:
         logger("RAG_ANALYSER", "Using vector similarity to rank past contracts", level="DEBUG")
@@ -278,18 +264,12 @@ def _retrieve_past_contracts(db, freelancer_id: str, job_post_id: str) -> list[d
                    c.status                        AS contract_status,
                    ROUND(AVG(rr.score), 1)         AS overall_rating,
                    rwc.overall_comment             AS review_text,
-                   1 - (ce.embedding_vector <=> best_role.embedding_vector) AS similarity
+                   1 - (ce.embedding_vector <=> jre.embedding_vector) AS similarity
             FROM contract_embedding ce
             JOIN contract c  ON c.contract_id   = ce.contract_id
             JOIN job_post jp ON jp.job_post_id  = c.job_post_id
-            CROSS JOIN LATERAL (
-                SELECT jre.embedding_vector
-                FROM job_role_embedding jre
-                WHERE jre.job_post_id = :jpid
-                  AND jre.embedding_vector IS NOT NULL
-                ORDER BY jre.embedding_vector <=> ce.embedding_vector
-                LIMIT 1
-            ) best_role
+            JOIN job_role_embedding jre
+                 ON jre.job_role_id = :jrid AND jre.embedding_vector IS NOT NULL
             LEFT JOIN reviews rv  ON rv.contract_id = c.contract_id AND rv.status = 'published'
             LEFT JOIN review_written_content rwc ON rwc.review_id = rv.id
             LEFT JOIN review_ratings rr ON rr.review_id = rv.id
@@ -297,11 +277,11 @@ def _retrieve_past_contracts(db, freelancer_id: str, job_post_id: str) -> list[d
               AND ce.embedding_vector IS NOT NULL
               AND c.status = 'completed'
             GROUP BY jp.job_title, jp.job_description, c.status, rwc.overall_comment,
-                     ce.embedding_vector, best_role.embedding_vector
-            ORDER BY ce.embedding_vector <=> best_role.embedding_vector
+                     ce.embedding_vector, jre.embedding_vector
+            ORDER BY ce.embedding_vector <=> jre.embedding_vector
             LIMIT {EVIDENCE_CAP}
             """,
-            {"fid": freelancer_id, "jpid": job_post_id},
+            {"fid": freelancer_id, "jrid": job_role_id},
         )
         retrieval_method = "vector_similarity"
     else:
@@ -405,67 +385,69 @@ def _build_evidence_list(past_contracts: list[dict], portfolio_candidates: list[
     return evidence, stats
 
 
-def _build_prompt(job: dict, fc: dict, evidence: list[dict]) -> tuple[str, list[dict]]:
+def _build_prompt(role: dict, fc: dict, evidence: list[dict]) -> tuple[str, dict]:
     """
-    Build the grounded LLM prompt from job, freelancer, and evidence context.
+    Build the grounded LLM prompt from role, freelancer, and evidence context.
 
     ``evidence`` is the relevance-gated, contract-first merged list built by
     _build_evidence_list: verified contracts fill priority slots first, portfolio
     items fill any remaining slots up to EVIDENCE_CAP total. Each item is labeled
     by source so the LLM still knows contracts are the more credible evidence.
 
-    Analysis is ROLE-CENTRIC: each role receives a full independent evaluation
-    (match_score, recommendation, strengths, gaps, skill_tips) based on its own
-    required skills. The job post description is context only.
+    Analysis is for a single ROLE: it receives a full evaluation (match_score,
+    recommendation, strengths, gaps, skill_tips) based on its own required skills.
+    The parent job post description is context only.
 
-    Pre-computes skill matching per role so the LLM receives explicit evidence
+    Pre-computes skill matching for the role so the LLM receives explicit evidence
     (matched/missing skills, coverage %) rather than having to infer it.
 
     Returns:
-        (prompt_string, role_analyses_list); the list is passed to analyse_job_match
+        (prompt_string, role_analysis); role_analysis is passed to analyse_role_match
         so it can stitch pre-computed fields back into the result without relying on
         the LLM to copy them verbatim.
     """
-    # Pre-compute per-role skill matching
     freelancer_skill_map = {
         s["skill_name"].lower(): s for s in fc.get("skills", [])
     }
 
-    role_analyses = []
-    for role in job.get("roles", []):
-        skills_list = role.get("skills") or []
-        required, preferred = [], []
-        for skill_str in skills_list:
-            name = skill_str.split("(")[0].strip()
-            if "(required" in skill_str.lower():
-                required.append(name)
-            else:
-                preferred.append(name)
+    skills_list = role.get("skills") or []
+    required, preferred = [], []
+    for skill_str in skills_list:
+        name = skill_str.split("(")[0].strip()
+        if "(required" in skill_str.lower():
+            required.append(name)
+        else:
+            preferred.append(name)
 
-        matched_req  = [s for s in required  if s.lower() in freelancer_skill_map]
-        missing_req  = [s for s in required  if s.lower() not in freelancer_skill_map]
-        matched_pref = [s for s in preferred if s.lower() in freelancer_skill_map]
-        coverage_pct = int(len(matched_req) / len(required) * 100) if required else 100
+    matched_req  = [s for s in required  if s.lower() in freelancer_skill_map]
+    missing_req  = [s for s in required  if s.lower() not in freelancer_skill_map]
+    matched_pref = [s for s in preferred if s.lower() in freelancer_skill_map]
+    coverage_pct = int(len(matched_req) / len(required) * 100) if required else 100
 
-        role_analyses.append({
-            "role_title":    role.get("role_title", ""),
-            "role_desc":     (role.get("role_description") or "")[:200],
-            "required":      required,
-            "preferred":     preferred,
-            "matched_req":   matched_req,
-            "missing_req":   missing_req,
-            "matched_pref":  matched_pref,
-            "coverage_pct":  coverage_pct,
-        })
+    ra = {
+        "role_title":    role.get("role_title", ""),
+        "role_desc":     (role.get("role_description") or "")[:200],
+        "required":      required,
+        "preferred":     preferred,
+        "matched_req":   matched_req,
+        "missing_req":   missing_req,
+        "matched_pref":  matched_pref,
+        "coverage_pct":  coverage_pct,
+    }
 
     # Build context
     lines = []
 
     lines.append("JOB POST (background context)")
-    lines.append(f"Title:       {job.get('job_title', '')}")
-    lines.append(f"Type:        {job.get('project_type', '')} / {job.get('project_scope', '')}")
-    lines.append(f"Duration:    {job.get('estimated_duration', 'N/A')}")
-    lines.append(f"Description: {(job.get('job_description') or '')[:400]}")
+    lines.append(f"Title:       {role.get('job_title', '')}")
+    lines.append(f"Type:        {role.get('project_type', '')} / {role.get('project_scope', '')}")
+    lines.append(f"Duration:    {role.get('estimated_duration', 'N/A')}")
+    lines.append(f"Description: {(role.get('job_description') or '')[:400]}")
+
+    lines.append("\nROLE")
+    lines.append(f"Title:       {ra['role_title']}")
+    if ra["role_desc"]:
+        lines.append(f"Description: {ra['role_desc']}")
 
     lines.append("\nFREELANCER PROFILE")
     lines.append(f"Name:         {fc.get('full_name', '')}")
@@ -511,72 +493,59 @@ def _build_prompt(job: dict, fc: dict, evidence: list[dict]) -> tuple[str, list[
     else:
         lines.append("\nEVIDENCE\nNo completed contracts or portfolio items on-platform yet.")
 
-    # Per-role skill match section (primary evidence)
-    lines.append("\nPER-ROLE SKILL MATCH (pre-computed, primary evidence for scoring)")
-    for ra in role_analyses:
-        lines.append(f"\n  ROLE: {ra['role_title']}")
-        if ra["role_desc"]:
-            lines.append(f"  Description: {ra['role_desc']}")
-        lines.append(f"  Required skill coverage: {len(ra['matched_req'])}/{len(ra['required'])} = {ra['coverage_pct']}%")
-        if ra["matched_req"]:
-            matched_with_level = []
-            for s in ra["matched_req"]:
-                lvl = freelancer_skill_map.get(s.lower(), {}).get("proficiency_level", "")
-                matched_with_level.append(f"{s}[{lvl}]" if lvl else s)
-            lines.append(f"  Required PRESENT: {', '.join(matched_with_level)} ✓")
-        if ra["missing_req"]:
-            lines.append(f"  Required ABSENT:  {', '.join(ra['missing_req'])} ✗")
-        if not ra["required"]:
-            lines.append("  No required skills specified")
-        if ra["matched_pref"]:
-            lines.append(f"  Preferred PRESENT: {', '.join(ra['matched_pref'])}")
+    # Skill match section (primary evidence)
+    lines.append("\nSKILL MATCH (pre-computed, primary evidence for scoring)")
+    lines.append(f"Required skill coverage: {len(ra['matched_req'])}/{len(ra['required'])} = {ra['coverage_pct']}%")
+    if ra["matched_req"]:
+        matched_with_level = []
+        for s in ra["matched_req"]:
+            lvl = freelancer_skill_map.get(s.lower(), {}).get("proficiency_level", "")
+            matched_with_level.append(f"{s}[{lvl}]" if lvl else s)
+        lines.append(f"Required PRESENT: {', '.join(matched_with_level)} ✓")
+    if ra["missing_req"]:
+        lines.append(f"Required ABSENT:  {', '.join(ra['missing_req'])} ✗")
+    if not ra["required"]:
+        lines.append("No required skills specified")
+    if ra["matched_pref"]:
+        lines.append(f"Preferred PRESENT: {', '.join(ra['matched_pref'])}")
 
     context = "\n".join(lines)
 
-    # Per-role JSON template
-    roles_template = json.dumps(
-        [
-            {
-                "role_title":               ra["role_title"],
-                "match_score":              0,
-                "recommendation":           "apply or consider or skip",
-                "recommendation_reason":    "",
-                "matching_skills":          ra["matched_req"],
-                "missing_required_skills":  ra["missing_req"],
-                "strengths":                [],
-                "gaps":                     [],
-                "skill_tips":               []
-            }
-            for ra in role_analyses
-        ],
+    # JSON template
+    result_template = json.dumps(
+        {
+            "match_score":              0,
+            "recommendation":           "apply or consider or skip",
+            "recommendation_reason":    "",
+            "matching_skills":          ra["matched_req"],
+            "missing_required_skills":  ra["missing_req"],
+            "strengths":                [],
+            "gaps":                     [],
+            "skill_tips":               []
+        },
         indent=2,
     )
 
-    # Coverage band rules per role (injected into prompt so model can apply per-role)
-    role_bands = "\n".join(
-        f"  {ra['role_title']}: coverage={ra['coverage_pct']}% → "
-        + (
-            "score 10-35, recommendation skip"   if ra["coverage_pct"] <= 33 else
-            "score 36-59, recommendation consider" if ra["coverage_pct"] <= 60 else
-            "score 60-74, recommendation apply"  if ra["coverage_pct"] <= 80 else
-            "score 75-100, recommendation apply"
-        )
-        for ra in role_analyses
+    # Coverage band rule (injected into prompt so the model can apply it)
+    band = (
+        "score 10-35, recommendation skip"     if ra["coverage_pct"] <= 33 else
+        "score 36-59, recommendation consider" if ra["coverage_pct"] <= 60 else
+        "score 60-74, recommendation apply"    if ra["coverage_pct"] <= 80 else
+        "score 75-100, recommendation apply"
     )
 
-    prompt = f"""You are an AI job matching assistant. Analyse the freelancer's fit for EACH ROLE SEPARATELY and independently. The job post description is background only, each role must be evaluated on its own required skills and description.
+    prompt = f"""You are an AI job matching assistant. Analyse the freelancer's fit for THIS ROLE. The job post description is background context only; the role must be evaluated on its own required skills and description.
 
 {context}
 
-Score each role holistically (0-100) considering:
+Score the role holistically (0-100) considering:
   1. Required skill coverage (shown above, primary factor)
   2. Proficiency levels of matched skills
   3. Directly relevant past contracts (as evidence of experience, not platform credibility)
   4. Portfolio items that demonstrate the role's core skills
   5. Work experience relevance to this specific role
 
-Scoring guidance per role (skill coverage reference):
-{role_bands}
+Scoring guidance (skill coverage reference): coverage={ra['coverage_pct']}% → {band}
 
 Use coverage as the primary anchor but adjust based on evidence of relevant experience from past
 contracts and portfolio. A freelancer with 50% required skills but directly relevant past work
@@ -588,33 +557,28 @@ Use "you", "your", "you have", "you are missing" - never "the freelancer", "they
 Example: "Your advanced Python skills cover the core of this role." NOT "The freelancer has advanced Python skills."
 
 Respond ONLY with valid JSON (no markdown, no explanation before or after):
-{{
-  "overall_match_score": <integer, score of the BEST matching role>,
-  "overall_recommendation": "<apply/consider/skip, based on BEST fitting role>",
-  "overall_recommendation_reason": "<one sentence in second person: which role(s) fit you well and which don't>",
-  "roles": {roles_template}
-}}
+{result_template}
 
-Rules for EACH role object (ALL fields required, never omit):
-- match_score: integer 0-100 holistic score for THIS role
+Rules (ALL fields required, never omit):
+- match_score: integer 0-100 holistic score for this role
 - recommendation: "apply" if score ≥65, "consider" if 40-64, "skip" if <40
-- recommendation_reason: 2-3 sentences in second person, cite THIS role's skill coverage, relevant
+- recommendation_reason: 2-3 sentences in second person, cite this role's skill coverage, relevant
   past contracts or portfolio items by name, and your experience level. Be specific and detailed.
 - matching_skills: already filled, do NOT change
 - missing_required_skills: already filled, do NOT change
-- strengths: 3-5 detailed items in second person, specific to THIS role. For each strength, explain
+- strengths: 3-5 detailed items in second person, specific to this role. For each strength, explain
   WHY it matters for this role and reference concrete evidence (e.g. specific past contract name,
   portfolio project name, your proficiency level, your work experience). Do not write generic statements.
 - gaps: 2-4 items in second person about MISSING SKILLS or EXPERIENCE only, do NOT mention metrics,
   ratings, or success rates. For each gap explain: (a) what skill/experience you are missing,
   (b) why it matters for this role, and (c) how significant it is.
   Write [] if there are truly no skill/experience gaps.
-- skill_tips: 2-3 specific, actionable tips for THIS role addressed directly to you. Name exact
+- skill_tips: 2-3 specific, actionable tips for this role addressed directly to you. Name exact
   technologies, certifications, or project types to pursue to close each gap. Be concrete, not generic.
 
 Return ONLY the JSON."""
 
-    return prompt, role_analyses
+    return prompt, ra
 
 
 def _parse_llm_json(raw: str, source: str) -> dict:
@@ -735,9 +699,8 @@ async def _call_llm(prompt: str) -> dict:
         logger(
             "RAG_ANALYSER",
             f"LLM JSON parsed | source=groq | time={llm_ms:.0f}ms "
-            f"| overall_match_score={result.get('overall_match_score', result.get('match_score'))} "
-            f"| overall_recommendation={result.get('overall_recommendation', result.get('recommendation'))} "
-            f"| roles={len(result.get('roles', []))}",
+            f"| match_score={result.get('match_score')} "
+            f"| recommendation={result.get('recommendation')}",
             level="INFO",
         )
         logger("RAG_ANALYSER", f"LLM result (full JSON) | source=groq |\n{json.dumps(result, indent=2, default=str)}", level="DEBUG")
@@ -752,29 +715,30 @@ async def _call_llm(prompt: str) -> dict:
         return {"error": str(exc)}
 
 
-async def analyse_job_match(db, freelancer_id: str, job_post_id: str) -> dict:
+async def analyse_role_match(db, freelancer_id: str, job_role_id: str) -> dict:
     """
-    Full RAG pipeline: retrieve job + freelancer context + past contracts from
+    Full RAG pipeline: retrieve role + freelancer context + past contracts from
     the DB, build a grounded prompt, call the LLM, and return the structured
-    JSON result (match_score, strengths, gaps, recommendation, skill_tips).
+    JSON result (match_score, strengths, gaps, recommendation, skill_tips) for
+    this single role.
     Returns {"error": "..."} on failure.
     """
     t_start = time.perf_counter()
     logger(
         "RAG_ANALYSER",
-        f"RAG analysis started | freelancer_id={freelancer_id} | job_post_id={job_post_id}",
+        f"RAG analysis started | freelancer_id={freelancer_id} | job_role_id={job_role_id}",
         level="INFO",
     )
 
     t_retrieval = time.perf_counter()
-    job            = _retrieve_job_context(db, job_post_id)
-    fc             = _retrieve_freelancer_context(db, freelancer_id, job_post_id=job_post_id)
-    past_contracts = _retrieve_past_contracts(db, freelancer_id, job_post_id)
+    role           = _retrieve_role_context(db, job_role_id)
+    fc             = _retrieve_freelancer_context(db, freelancer_id, job_role_id=job_role_id)
+    past_contracts = _retrieve_past_contracts(db, freelancer_id, job_role_id)
     retrieval_ms   = (time.perf_counter() - t_retrieval) * 1000
 
-    if not job:
-        logger("RAG_ANALYSER", f"Aborting, job post not found | job_post_id={job_post_id}", level="WARNING")
-        return {"error": "Job post not found"}
+    if not role:
+        logger("RAG_ANALYSER", f"Aborting, job role not found | job_role_id={job_role_id}", level="WARNING")
+        return {"error": "Job role not found"}
     if not fc:
         logger("RAG_ANALYSER", f"Aborting, freelancer not found | freelancer_id={freelancer_id}", level="WARNING")
         return {"error": "Freelancer profile not found"}
@@ -782,7 +746,7 @@ async def analyse_job_match(db, freelancer_id: str, job_post_id: str) -> dict:
     logger(
         "RAG_ANALYSER",
         f"Context retrieval complete | time={retrieval_ms:.1f}ms "
-        f"| job_roles={len(job.get('roles', []))} "
+        f"| role_title='{role.get('role_title')}' "
         f"| freelancer_skills={len(fc.get('skills', []))} "
         f"| past_contracts={len(past_contracts)}",
         level="INFO",
@@ -799,88 +763,69 @@ async def analyse_job_match(db, freelancer_id: str, job_post_id: str) -> dict:
     )
 
     t_prompt = time.perf_counter()
-    prompt, role_analyses = _build_prompt(job, fc, evidence)
+    prompt, ra = _build_prompt(role, fc, evidence)
     prompt_ms = (time.perf_counter() - t_prompt) * 1000
     logger(
         "RAG_ANALYSER",
-        f"Prompt built | chars={len(prompt)} | roles={len(role_analyses)} | time={prompt_ms:.1f}ms",
+        f"Prompt built | chars={len(prompt)} | time={prompt_ms:.1f}ms",
         level="DEBUG",
     )
 
     result = await _call_llm(prompt)
 
-    # Post-process each role: stitch in pre-computed skill lists and apply a
-    # coverage-based ceiling so the LLM can't wildly overscore a poor match.
-    # The LLM still controls the actual score (considering portfolio, past
-    # contracts, ratings, experience); we only cap the maximum possible value.
-    if "roles" in result and isinstance(result["roles"], list):
-        ra_by_title = {ra["role_title"]: ra for ra in role_analyses}
-        for role_result in result["roles"]:
-            ra = ra_by_title.get(role_result.get("role_title"), {})
-            if not ra:
-                continue
+    # Stitch in pre-computed skill lists and apply a coverage-based ceiling so
+    # the LLM can't wildly overscore a poor match. The LLM still controls the
+    # actual score (considering portfolio, past contracts, ratings, experience);
+    # we only cap the maximum possible value. Skipped when the LLM call itself
+    # failed (result has only an "error" key at this point).
+    if "error" not in result:
+        # Always use server-computed skill lists; LLM value is discarded
+        result["matching_skills"]         = ra["matched_req"]
+        result["missing_required_skills"] = ra["missing_req"]
 
-            # Always use server-computed skill lists; LLM value is discarded
-            role_result["matching_skills"]         = ra["matched_req"]
-            role_result["missing_required_skills"] = ra["missing_req"]
+        # Ceiling: coverage_pct + 30, so 0% → max 30, 35% → max 65, 70%+ → 100.
+        # The +30 offset means 35% required skill coverage is the minimum to ever
+        # reach "apply" (35+30=65). The LLM cannot exceed this regardless of how
+        # strong the portfolio or past contracts are, keeping skill coverage as the
+        # primary gate while still giving qualitative evidence 30 points of influence.
+        ceiling   = min(100, ra["coverage_pct"] + 30)
+        raw_score = int(result.get("match_score") or 0)
+        result["match_score"] = min(ceiling, raw_score)
 
-            # Ceiling: coverage_pct + 30, so 0% → max 30, 35% → max 65, 70%+ → 100.
-            # The +30 offset means 35% required skill coverage is the minimum to ever
-            # reach "apply" (35+30=65). The LLM cannot exceed this regardless of how
-            # strong the portfolio or past contracts are, keeping skill coverage as the
-            # primary gate while still giving qualitative evidence 30 points of influence.
-            ceiling   = min(100, ra["coverage_pct"] + 30)
-            raw_score = int(role_result.get("match_score") or 0)
-            role_result["match_score"] = min(ceiling, raw_score)
-
-            # Recommendation always derived from the (capped) score
-            s = role_result["match_score"]
-            role_result["recommendation"] = (
-                "apply" if s >= 65 else ("consider" if s >= 40 else "skip")
-            )
-
-            # Guarantee all fields the frontend expects are always present
-            role_result.setdefault("recommendation_reason", "")
-            role_result.setdefault("strengths", [])
-            role_result.setdefault("gaps", [])
-            role_result.setdefault("skill_tips", [])
-
-    # Overall = best role score (the freelancer applies for the role they fit)
-    role_scores = [r.get("match_score", 0) for r in result.get("roles", [])]
-    if role_scores:
-        best = max(role_scores)
-        result["overall_match_score"] = best
-        result["overall_recommendation"] = (
-            "apply" if best >= 65 else ("consider" if best >= 40 else "skip")
+        # Recommendation always derived from the (capped) score
+        s = result["match_score"]
+        result["recommendation"] = (
+            "apply" if s >= 65 else ("consider" if s >= 40 else "skip")
         )
 
-    # Top-level aliases for the route logger and any flat consumers
-    result["match_score"]    = result.get("overall_match_score",    result.get("match_score"))
-    result["recommendation"] = result.get("overall_recommendation", result.get("recommendation"))
-    result.setdefault("overall_match_score", 0)
-    result.setdefault("overall_recommendation", "skip")
-    result.setdefault("overall_recommendation_reason", "")
-    result.setdefault("roles", [])
+        # Guarantee all fields the frontend expects are always present
+        result.setdefault("recommendation_reason", "")
+        result.setdefault("strengths", [])
+        result.setdefault("gaps", [])
+        result.setdefault("skill_tips", [])
 
-    result["job_post_id"]   = job_post_id
+    result.setdefault("match_score", 0)
+    result.setdefault("recommendation", "skip")
+    result.setdefault("recommendation_reason", "")
+
+    result["role_title"]    = ra["role_title"]
+    result["job_role_id"]   = job_role_id
+    result["job_post_id"]   = role.get("job_post_id")
     result["freelancer_id"] = freelancer_id
     result["rag_sources"]   = {
         "past_contracts_used": sum(1 for e in evidence if e["source"] == "contract"),
         "portfolio_items":     sum(1 for e in evidence if e["source"] == "portfolio"),
         "work_experience":     len(fc.get("work_experience", [])),
         "freelancer_skills":   len(fc.get("skills", [])),
-        "job_roles":           len(job.get("roles", [])),
         "evidence_path":       evidence_stats["path"],
     }
 
     total_ms = (time.perf_counter() - t_start) * 1000
     status = "success" if "error" not in result else "error"
-    role_scores = [r.get("match_score") for r in result.get("roles", [])]
     logger(
         "RAG_ANALYSER",
         f"RAG analysis complete | status={status} | total_time={total_ms:.0f}ms "
-        f"| overall_score={result.get('match_score', 'N/A')} "
-        f"| role_scores={role_scores} "
+        f"| match_score={result.get('match_score', 'N/A')} "
         f"| recommendation={result.get('recommendation', 'N/A')}",
         level="INFO",
     )

@@ -9,7 +9,7 @@ from functions.response_utils import ResponseSchema
 from functions.logger import logger
 from functions.db_manager import get_db
 from ai_related.job_engine.sweep_worker import run_sweep_once
-from ai_related.job_engine.rag_analyser import analyse_job_match
+from ai_related.job_engine.rag_analyser import analyse_role_match
 from ai_related.job_engine.embedding_manager import mark_job_dirty
 
 router = APIRouter(prefix="/ai/job-engine", tags=["Job Engine"])
@@ -30,14 +30,14 @@ def _serialize_rows(rows) -> list:
     return result
 
 
-@router.get("/analyse/job/{job_post_id}")
-async def analyse_job(
-    job_post_id: str,
+@router.get("/analyse/role/{job_role_id}")
+async def analyse_role(
+    job_role_id: str,
     current_user: UserInDB = Depends(get_freelancer_user),
 ):
     """
-    RAG + LLM analysis of the freelancer's fit for a specific job.
-    Retrieves job requirements, the freelancer's profile, and relevant past
+    RAG + LLM analysis of the freelancer's fit for a specific job role.
+    Retrieves the role's requirements, the freelancer's profile, and relevant past
     contracts from the DB, then asks the LLM for a structured JSON response
     with match_score, strengths, gaps, recommendation, and skill_tips.
     LLM calls can take 5-30s; this is user-triggered so the latency is acceptable.
@@ -50,18 +50,18 @@ async def analyse_job(
 
         logger(
             "JOB_ENGINE",
-            f"analyse/job request started | freelancer_id={fid} | job_post_id={job_post_id}",
+            f"analyse/role request started | freelancer_id={fid} | job_role_id={job_role_id}",
             level="INFO",
         )
 
-        result = await analyse_job_match(db, fid, job_post_id)
+        result = await analyse_role_match(db, fid, job_role_id)
 
         total_ms = (time.perf_counter() - t_request) * 1000
 
         if "error" in result and len(result) == 1:
             logger(
                 "JOB_ENGINE",
-                f"RAG analysis returned error | freelancer_id={fid} | job_post_id={job_post_id} "
+                f"RAG analysis returned error | freelancer_id={fid} | job_role_id={job_role_id} "
                 f"| error={result['error']} | time={total_ms:.0f}ms",
                 level="WARNING",
             )
@@ -69,7 +69,7 @@ async def analyse_job(
 
         logger(
             "JOB_ENGINE",
-            f"analyse/job complete | freelancer_id={fid} | job_post_id={job_post_id} "
+            f"analyse/role complete | freelancer_id={fid} | job_role_id={job_role_id} "
             f"| match_score={result.get('match_score')} | recommendation={result.get('recommendation')} "
             f"| total_time={total_ms:.0f}ms",
             level="INFO",
