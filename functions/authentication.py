@@ -154,6 +154,18 @@ def revoke_refresh_token(raw: str) -> None:
         params={"token_hash": token_hash},
     )
 
+def revoke_all_refresh_tokens_for_user(user_id: str) -> None:
+    """Revoke every live refresh token for a user, logging them out of all
+    devices. Used by change_password and by every path that bans an account -
+    a live session/refresh token must not outlive the ban that was just
+    applied. Access tokens already issued still work until they naturally
+    expire (short-lived JWT, not tracked server-side); this only stops them
+    from being silently renewed."""
+    get_db().execute_query(
+        "UPDATE refresh_tokens SET revoked_at = NOW() WHERE user_id = :uid AND revoked_at IS NULL",
+        params={"uid": user_id},
+    )
+
 def create_email_verification_otp(user_id: str, email: str) -> dict:
     """Create, store, and email a new verification OTP."""
     otp_code = generate_otp()
@@ -540,10 +552,7 @@ def change_password(user: UserInDB, old_password: str, new_password: str) -> dic
         params={"password": new_hash, "user_id": user.user_id},
     )
     # Revoke all existing refresh tokens so other devices are logged out.
-    get_db().execute_query(
-        "UPDATE refresh_tokens SET revoked_at = NOW() WHERE user_id = :uid AND revoked_at IS NULL",
-        params={"uid": user.user_id},
-    )
+    revoke_all_refresh_tokens_for_user(user.user_id)
     logger("AUTH", f"Password changed for {user.email}", level="INFO")
     return {"message": "Password changed successfully"}
 

@@ -336,6 +336,9 @@ async def get_job_post(job_post_id: str, current_user: UserInDB = Depends(get_cu
 async def create_job_post(job_post: JobPostCreate, current_user: UserInDB = Depends(get_current_user)):
     """Create a new job post - Authenticated users only - JSON body accepted."""
     try:
+        if current_user.is_report_banned:
+            return ResponseSchema.error("Your account is restricted and cannot post new jobs", 403)
+
         job_post_id = job_post.job_post_id or str(uuid.uuid4())
         client = get_client_profile_for_user(current_user)
         if job_post.client_id and str(job_post.client_id) != str(client["client_id"]):

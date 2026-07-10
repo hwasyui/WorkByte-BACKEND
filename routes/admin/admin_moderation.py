@@ -17,6 +17,7 @@ with open(_KEYWORDS_PATH, "r", encoding="utf-8") as _f:
 
 _LABEL_KEYWORDS: Dict[str, List[str]] = _kw_data["content_labels"]
 _SCAM_KEYWORDS: List[str] = _kw_data["scam_keywords"]
+_PREFIX_KEYWORDS: set = set(_kw_data.get("prefix_keywords", []))
 
 # Scam thresholds (also documented in moderation_keywords.json _meta)
 SCAM_FLAG_THRESHOLD: float = 0.10       # ≥ 1 keyword match → admin review queue
@@ -30,6 +31,23 @@ _ML_LABEL_REMAP = {
 
 def _normalize(text: str) -> str:
     return re.sub(r"\s+", " ", text.lower().strip())
+
+
+def _keyword_hits(keywords: List[str], normalized_text: str) -> List[str]:
+    """
+    Word-boundary keyword matching - plain substring matching (`kw in text`)
+    false-flags text where the keyword is just a fragment of an unrelated word
+    (e.g. a keyword "ass" would match inside "class" or "assignment"). Requiring
+    \\b on both sides fixes that for ordinary keywords; the handful of
+    intentionally-truncated stems in _PREFIX_KEYWORDS only get a left boundary
+    so they keep matching their longer word forms.
+    """
+    hits = []
+    for kw in keywords:
+        pattern = rf"\b{re.escape(kw)}" if kw in _PREFIX_KEYWORDS else rf"\b{re.escape(kw)}\b"
+        if re.search(pattern, normalized_text):
+            hits.append(kw)
+    return hits
 
 
 def scan_harmful_text(text: str) -> Dict:
@@ -47,7 +65,7 @@ def scan_harmful_text(text: str) -> Dict:
     detected: List[str] = []
 
     for label, keywords in _LABEL_KEYWORDS.items():
-        hits = sum(1 for kw in keywords if kw in normalized)
+        hits = len(_keyword_hits(keywords, normalized))
         score = round(min(hits * 0.35, 1.0), 4)
         scores[label] = score
         if hits > 0:
@@ -74,7 +92,7 @@ def scan_for_scam(text: str) -> Dict:
     Keyword list and threshold rationale: moderation_keywords.json.
     """
     normalized = _normalize(text)
-    matched = [kw for kw in _SCAM_KEYWORDS if kw in normalized]
+    matched = _keyword_hits(_SCAM_KEYWORDS, normalized)
     score = round(min(len(matched) / 6.0, 1.0), 4)
     return {
         "scam_score":        score,

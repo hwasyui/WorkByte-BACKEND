@@ -3,8 +3,14 @@
     "source": "Manually curated keyword lists covering the same six-label taxonomy as Google's Perspective API and the Jigsaw Toxic Comment Classification dataset (the dataset the ML model was trained on). These serve as a deterministic fallback when the ML model (RoBERTa, F1=0.71) is unavailable. Labels mirror the ML model schema exactly.",
     "content_scoring": "score = min(hit_count \u00d7 0.35, 1.0).  1 keyword hit \u2192 0.35 score (flags for admin review).  2 hits \u2192 0.70.  3+ hits \u2192 1.0.  Auto-action threshold: sum of all 6 label scores \u2265 0.85 (job_post) or \u2265 0.90 (profiles) after 30 days with no manual admin action.",
     "scam_scoring": "score = min(matched_keywords / 6.0, 1.0).  Flag-for-review threshold: 0.10 (\u2248 1 keyword match \u2192 16.7%).  Auto-remove threshold: 0.85 (\u2248 5+ keyword matches \u2192 83%) after 30 days.",
-    "last_reviewed": "2025-05-13"
+    "last_reviewed": "2025-05-13",
+    "prefix_keywords": "Entries listed in `prefix_keywords` below are deliberately truncated word-stems meant to catch multiple forms (e.g. \"homophob\" -> homophobic/homophobia). The matcher only requires a word-boundary on the left for these; everything else requires \\bword\\b on both sides so a keyword can't false-flag as a fragment inside an unrelated word."
   },
+  "prefix_keywords": [
+    "prostitut",
+    "homophob",
+    "white supremac"
+  ],
   "content_labels": {
     "toxic": [
       "hate you",

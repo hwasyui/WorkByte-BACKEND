@@ -50,7 +50,6 @@ from routes.admin.admin_routes import admin_router, reports_router, appeals_rout
 from routes.notifications.notification_routes import notification_router
 from routes.share.share_routes import share_router
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage startup (database init, model warmup, sweep worker) and shutdown."""
@@ -77,7 +76,7 @@ async def lifespan(app: FastAPI):
 
     sweep_task = asyncio.create_task(embedding_sweep_loop())
     logger("LIFESPAN", "Embedding sweep worker started (handles dirty records and manual /embed/ calls regardless of mode)", level="INFO")
-
+    
     moderation_sweep_task = asyncio.create_task(moderation_sweep_loop())
     logger("LIFESPAN", "Moderation sweep worker started (auto-approve/auto-remove/report actions run regardless of admin login)", level="INFO")
 

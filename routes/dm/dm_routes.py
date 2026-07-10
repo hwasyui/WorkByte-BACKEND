@@ -103,6 +103,10 @@ def _is_receiver(thread: dict, user_id: str) -> bool:
     return str(user_id) != str(thread.get("initiator_id", ""))
 
 
+def _other_participant(thread: dict, user_id: str) -> str:
+    return str(thread["user_b_id"]) if str(user_id) == str(thread["user_a_id"]) else str(thread["user_a_id"])
+
+
 # POST /dm/threads
 
 
@@ -118,6 +122,18 @@ async def start_thread(
             403,
         )
 
+    if current_user.is_report_banned:
+        return ResponseSchema.error("Your account is restricted and cannot start new conversations", 403)
+
+    if DMFunctions.is_blocked_between(str(current_user.user_id), str(payload.participant_id)):
+        return ResponseSchema.error("You can't start a conversation with this user.", 403)
+
+    # No relationship required to send a first message (TikTok-style message
+    # request) - a client can always open with one bubble to any freelancer.
+    # What actually limits spam is the existing cap in DMFunctions.send_message:
+    # while the thread sits in 'request' status, the initiator is capped at 1
+    # message until the recipient accepts. That cap - not a pre-connection
+    # requirement - is the real anti-cold-spam mechanism here.
     existing = DMFunctions.get_thread_by_users(
         str(current_user.user_id), str(payload.participant_id)
     )
@@ -324,6 +340,10 @@ async def send_message(
             return ResponseSchema.error("Thread not found", 404)
         if not _is_participant(thread, str(current_user.user_id)):
             return ResponseSchema.error("Access denied", 403)
+        if current_user.is_report_banned:
+            return ResponseSchema.error("Your account is restricted and cannot send messages", 403)
+        if DMFunctions.is_blocked_between(str(current_user.user_id), _other_participant(thread, str(current_user.user_id))):
+            return ResponseSchema.error("You can't send messages to this user.", 403)
         if not payload.message_text.strip():
             return ResponseSchema.error("message_text cannot be empty", 400)
         if len(payload.message_text) > _MAX_MESSAGE_LENGTH:
@@ -389,6 +409,10 @@ async def send_message_with_attachment(
             return ResponseSchema.error("Thread not found", 404)
         if not _is_participant(thread, str(current_user.user_id)):
             return ResponseSchema.error("Access denied", 403)
+        if current_user.is_report_banned:
+            return ResponseSchema.error("Your account is restricted and cannot send messages", 403)
+        if DMFunctions.is_blocked_between(str(current_user.user_id), _other_participant(thread, str(current_user.user_id))):
+            return ResponseSchema.error("You can't send messages to this user.", 403)
 
         text = (message_text or "").strip()
         if not text and (not file or not file.filename):
@@ -485,6 +509,63 @@ async def send_message_with_attachment(
             "ERROR",
         )
         return ResponseSchema.error(str(e), 500)
+
+# Block-list: per-user, not per-thread - blocking someone stops both starting
+# new threads and sending in any existing thread, in either direction.
+
+
+@dm_router.post("/block/{user_id}", status_code=201)
+async def block_user(
+    user_id: str,
+    current_user: UserInDB = Depends(get_current_user),
+):
+    if str(user_id) == str(current_user.user_id):
+        return ResponseSchema.error("You can't block yourself", 400)
+    try:
+        # Block can't be used to dodge a live contract - if the two of you still
+        # have unfinished business together, that has to go through the appeal
+        # system (optionally with proof) so admin can see it, not a silent block.
+        if DMFunctions.has_ongoing_contract_between(str(current_user.user_id), user_id):
+            return ResponseSchema.error(
+                "You can't block someone you have an ongoing contract with. "
+                "Submit an appeal (with optional proof) if you need admin to step in.",
+                409,
+            )
+        result = DMFunctions.block_user(str(current_user.user_id), user_id)
+        logger("DM", f"User {current_user.user_id} blocked {user_id}", "POST /dm/block/{user_id}", "INFO")
+        return ResponseSchema.success(result, 201)
+    except Exception as e:
+        logger("DM", f"Failed to block user: {e}", "POST /dm/block/{user_id}", "ERROR")
+        return ResponseSchema.error(str(e), 500)
+
+
+@dm_router.delete("/block/{user_id}")
+async def unblock_user(
+    user_id: str,
+    current_user: UserInDB = Depends(get_current_user),
+):
+    try:
+        removed = DMFunctions.unblock_user(str(current_user.user_id), user_id)
+        if not removed:
+            return ResponseSchema.error("You haven't blocked this user", 404)
+        logger("DM", f"User {current_user.user_id} unblocked {user_id}", "DELETE /dm/block/{user_id}", "INFO")
+        return ResponseSchema.success("Unblocked successfully", 200)
+    except Exception as e:
+        logger("DM", f"Failed to unblock user: {e}", "DELETE /dm/block/{user_id}", "ERROR")
+        return ResponseSchema.error(str(e), 500)
+
+
+@dm_router.get("/blocked")
+async def list_blocked_users(
+    current_user: UserInDB = Depends(get_current_user),
+):
+    try:
+        blocked = DMFunctions.get_blocked_users(str(current_user.user_id))
+        return ResponseSchema.success({"blocked": blocked, "count": len(blocked)}, 200)
+    except Exception as e:
+        logger("DM", f"Failed to list blocked users: {e}", "GET /dm/blocked", "ERROR")
+        return ResponseSchema.error(str(e), 500)
+
 
 # PUT /dm/threads/{thread_id}/read
 

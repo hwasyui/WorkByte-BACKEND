@@ -203,12 +203,10 @@ def check_ats_compliance(raw_text: str) -> dict:
     return {"ats_score": score, "ats_flags": flags}
 
 
-# ─────────────────────────────────────────────────────────────────────────
 # XGBoost scoring models (match / ATS tier / section scores).
-# Trained offline — see cv_analysis_xgb_models/xgboost_cv_analysis_final.ipynb.
+# Trained offline - see cv_analysis_xgb_models/xgboost_cv_analysis_final.ipynb.
 # All numeric CV scoring comes from these models; the LLM (below) only writes
 # the narrative assessment and recommendations grounded in these numbers.
-# ─────────────────────────────────────────────────────────────────────────
 
 _XGB_MODELS_DIR = Path(__file__).parent / "cv_analysis_xgb_models"
 _XGB_PCA_DIR = _XGB_MODELS_DIR / "model_pkl"

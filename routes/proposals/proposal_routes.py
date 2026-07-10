@@ -4,6 +4,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from fastapi import APIRouter, Depends, Query
+from sqlalchemy.exc import IntegrityError
 from typing import List, Optional
 import uuid
 from functions.schema_model import ProposalCreate, ProposalUpdate, ProposalResponse
@@ -132,6 +133,9 @@ async def create_proposal(
 ):
     """Freelancer submits a proposal; freelancer_id is derived from token."""
     try:
+        if current_user.is_report_banned:
+            return ResponseSchema.error("Your account is restricted and cannot submit new proposals", 403)
+
         freelancer = FreelancerFunctions.get_freelancer_by_user_id(current_user.user_id)
         if not freelancer:
             return ResponseSchema.error("Freelancer profile not found for this account", 404)
@@ -171,19 +175,19 @@ async def create_proposal(
 
         if existing:
             return ResponseSchema.error(duplicate_message, 409)
-
-        new_proposal = ProposalFunctions.create_proposal(
-            job_post_id=proposal.job_post_id,
-            freelancer_id=freelancer_id,
-            cover_letter=proposal.cover_letter,
-            proposed_budget=proposal.proposed_budget,
-            job_role_id=proposal.job_role_id,
-            proposed_duration=proposal.proposed_duration,
-            status=proposal.status if proposal.status else "pending",
-            is_ai_generated=proposal.is_ai_generated,
-        )
-
-        # neutral wording, no mention of moderation - the proposal is saved but not visible to the client yet
+        try:
+            new_proposal = ProposalFunctions.create_proposal(
+                job_post_id=proposal.job_post_id,
+                freelancer_id=freelancer_id,
+                cover_letter=proposal.cover_letter,
+                proposed_budget=proposal.proposed_budget,
+                job_role_id=proposal.job_role_id,
+                proposed_duration=proposal.proposed_duration,
+                status=proposal.status if proposal.status else "pending",
+                is_ai_generated=proposal.is_ai_generated,
+            )
+        except IntegrityError:
+            return ResponseSchema.error(duplicate_message, 409)
         try:
             await NotificationFunctions.notify(
                 recipient_user_id=str(current_user.user_id),
@@ -279,12 +283,33 @@ async def update_proposal_status(
         elif is_proposal_client:
             if status not in ("accepted", "rejected"):
                 return ResponseSchema.error("Clients can only set status to 'accepted' or 'rejected'", 403)
+            # Rejecting is fine even while restricted (it's not a new commitment, and
+            # it frees the freelancer to look elsewhere); only block the action that
+            # starts new paid work.
+            if status == "accepted" and current_user.is_report_banned:
+                return ResponseSchema.error("Your account is restricted and cannot accept new proposals", 403)
             if proposal.get("moderation_status") != "visible":
                 return ResponseSchema.error(f"Proposal {proposal_id} not found", 404)
             if job_row and job_row[0]["status"] != "active":
                 return ResponseSchema.error("This job post is no longer active", 400)
+            if status == "accepted" and proposal.get("job_role_id"):
+                role_row = get_db().execute_query(
+                    "SELECT positions_filled, positions_available FROM job_role WHERE job_role_id = :jrid",
+                    {"jrid": str(proposal["job_role_id"])},
+                )
+                if role_row and role_row[0]["positions_filled"] >= role_row[0]["positions_available"]:
+                    return ResponseSchema.error("This role has already been fully staffed", 409)
 
-        updated = ProposalFunctions.update_proposal(proposal_id, {"status": status})
+        # Atomic status-flip guarded by WHERE status='pending' - the check above
+        # (line ~275) is a plain read, so a client's accept and the freelancer's
+        # withdraw can still both pass it if they land close together. This is
+        # the real guard: only one of the two competing requests can match a
+        # still-pending row.
+        updated = ProposalFunctions.update_status_if_pending(proposal_id, status)
+        if not updated:
+            return ResponseSchema.error(
+                "This proposal was just decided by the other party and can no longer be changed", 409
+            )
 
         # Notify freelancer on accept/reject
         if status in ("accepted", "rejected") and is_proposal_client:

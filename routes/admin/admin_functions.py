@@ -11,6 +11,7 @@ from fastapi import HTTPException
 
 from functions.db_manager import get_db
 from functions.logger import logger
+from functions.authentication import revoke_all_refresh_tokens_for_user
 from routes.admin.admin_moderation import (
     scan_harmful_text,
     scan_for_scam,
@@ -125,6 +126,37 @@ def _active_contracts_for_job_post(job_post_id: str) -> List[Dict]:
         """,
         params={"jid": job_post_id},
     ))
+
+
+def _notify_contract_counterparties_of_ban(user_id: str) -> None:
+    """When a user gets banned, whoever they're mid-contract with (as either
+    freelancer or client, in any non-terminal status) has no way to know
+    anything happened - the job-post-closure notifications only cover
+    contracts tied to a job post the banned user's account owns as a client,
+    not contracts where the banned user is the freelancer, or contracts on
+    jobs owned by someone else entirely. Contract mechanics stay untouched
+    (freeze-asymmetric design); this is just the missing notification."""
+    rows = _rows(get_db().execute_query(
+        """
+        SELECT c.contract_id, c.contract_title,
+               CASE WHEN f.user_id = :uid THEN cl.user_id ELSE f.user_id END AS counterparty_user_id
+        FROM contract c
+        JOIN freelancer f ON f.freelancer_id = c.freelancer_id
+        JOIN client cl    ON cl.client_id    = c.client_id
+        WHERE c.status IN ('active', 'under_review', 'revision_requested', 'disputed')
+          AND (f.user_id = :uid OR cl.user_id = :uid)
+        """,
+        params={"uid": user_id},
+    ))
+    for row in rows:
+        _fire_notification(NotificationFunctions.notify(
+            recipient_user_id=str(row["counterparty_user_id"]),
+            notif_type="contract_counterparty_banned",
+            title="Account Restriction on Your Contract",
+            body=f"The other party on \"{row['contract_title']}\" has had their account restricted. "
+                 "Your contract is not affected yet - contact support or raise a dispute if you need help resolving anything.",
+            data={"contract_id": str(row["contract_id"])},
+        ))
 
 
 def queue_harmful_text_scan(
@@ -523,19 +555,21 @@ def get_client_scam_record(client_id: str) -> Optional[Dict]:
 
 def _process_report_auto_actions():
     """
-    Auto-ban users / close job posts that have ≥10 reports
-    with the oldest report ≥30 days old.
+    Auto-ban users / close job posts that have ≥10 reports from distinct
+    reporters, with the oldest report ≥30 days old. Counting distinct
+    reporter_id (not raw row count) so one actor spamming reports against the
+    same target can't single-handedly trigger an auto-action.
     Skips targets that already have a record in report_auto_actions.
     """
     # User targets
     user_targets = _rows(get_db().execute_query(
         """
-        SELECT reported_user_id AS target_id, COUNT(*) AS report_count
+        SELECT reported_user_id AS target_id, COUNT(DISTINCT reporter_id) AS report_count
         FROM user_reports
         WHERE reported_user_id IS NOT NULL
           AND status IN ('pending', 'accepted')
         GROUP BY reported_user_id
-        HAVING COUNT(*) >= :threshold
+        HAVING COUNT(DISTINCT reporter_id) >= :threshold
            AND MIN(created_at) <= NOW() - (:days * INTERVAL '1 day')
         """,
         params={
@@ -566,7 +600,9 @@ def _process_report_auto_actions():
                 "msg":    DEFAULT_BAN_MESSAGE_REPORTS,
             },
         )
-        get_db().execute_query(
+        revoke_all_refresh_tokens_for_user(tid)
+        _notify_contract_counterparties_of_ban(tid)
+        closed_jobs = _rows(get_db().execute_query(
             """
             UPDATE job_post
             SET status = 'closed',
@@ -574,13 +610,14 @@ def _process_report_auto_actions():
                 closure_note   = :note
             WHERE client_id = (SELECT client_id FROM client WHERE user_id = :uid)
               AND status = 'active'
+            RETURNING job_post_id
             """,
             params={
                 "uid":    tid,
                 "reason": DEFAULT_CLOSURE_REASON_REPORTS,
                 "note":   DEFAULT_CLOSURE_NOTE_REPORTS,
             },
-        )
+        ))
         get_db().execute_query(
             """
             INSERT INTO report_auto_actions (target_type, target_id, report_count)
@@ -591,15 +628,54 @@ def _process_report_auto_actions():
         )
         logger("ADMIN", f"User {tid} report-banned ({t['report_count']} reports); active jobs closed", level="WARNING")
 
+        for job in closed_jobs:
+            job_post_id = str(job["job_post_id"])
+
+            active_contracts = _active_contracts_for_job_post(job_post_id)
+            for contract in active_contracts:
+                _fire_notification(NotificationFunctions.notify(
+                    recipient_user_id=str(contract["freelancer_user_id"]),
+                    notif_type="job_post_flagged_held",
+                    title="Job Post Closed",
+                    body="The job post tied to your active contract was closed because its client's account was reported and auto-restricted. Your contract is not affected yet - contact support if you have questions.",
+                    data={"job_post_id": job_post_id, "contract_id": str(contract["contract_id"])},
+                ))
+
+            ProposalFunctions.auto_reject_pending_proposals_on_job_closure(job_post_id)
+            _fire_notification(ProposalFunctions.notify_proposal_owners_of_job_closure(
+                job_post_id, DEFAULT_CLOSURE_NOTE_REPORTS
+            ))
+
+        # If the banned user is a freelancer, their pending proposals on OTHER
+        # clients' jobs aren't covered by the job-closure loop above (those
+        # jobs aren't theirs) - reject them too so no client unknowingly
+        # accepts a proposal from someone already banned.
+        freelancer_row = _row(get_db().execute_query(
+            "SELECT freelancer_id FROM freelancer WHERE user_id = :uid",
+            params={"uid": tid},
+        ))
+        if freelancer_row:
+            rejected = ProposalFunctions.auto_reject_pending_proposals_for_freelancer(
+                str(freelancer_row["freelancer_id"])
+            )
+            for row in rejected:
+                _fire_notification(NotificationFunctions.notify(
+                    recipient_user_id=str(row["client_user_id"]),
+                    notif_type="proposal_rejected",
+                    title="Proposal No Longer Available",
+                    body=f"The proposal you received for \"{row['job_title']}\" is no longer available.",
+                    data={"proposal_id": str(row["proposal_id"]), "job_post_id": str(row["job_post_id"])},
+                ))
+
     # Job post targets
     job_targets = _rows(get_db().execute_query(
         """
-        SELECT job_post_id AS target_id, COUNT(*) AS report_count
+        SELECT job_post_id AS target_id, COUNT(DISTINCT reporter_id) AS report_count
         FROM user_reports
         WHERE job_post_id IS NOT NULL
           AND status IN ('pending', 'accepted')
         GROUP BY job_post_id
-        HAVING COUNT(*) >= :threshold
+        HAVING COUNT(DISTINCT reporter_id) >= :threshold
            AND MIN(created_at) <= NOW() - (:days * INTERVAL '1 day')
         """,
         params={
@@ -615,20 +691,21 @@ def _process_report_auto_actions():
         ))
         if existing:
             continue
-        get_db().execute_query(
+        updated = _row(get_db().execute_query(
             """
             UPDATE job_post
             SET status = 'closed',
                 closure_reason = :reason,
                 closure_note   = :note
             WHERE job_post_id = :jid
+            RETURNING job_post_id
             """,
             params={
                 "jid":    tid,
                 "reason": DEFAULT_CLOSURE_REASON_REPORTS,
                 "note":   DEFAULT_CLOSURE_NOTE_REPORTS,
             },
-        )
+        ))
         get_db().execute_query(
             """
             INSERT INTO report_auto_actions (target_type, target_id, report_count)
@@ -638,6 +715,22 @@ def _process_report_auto_actions():
             params={"tid": tid, "cnt": int(t["report_count"])},
         )
         logger("ADMIN", f"Job post {tid} closed via report threshold ({t['report_count']} reports)", level="WARNING")
+
+        if updated:
+            active_contracts = _active_contracts_for_job_post(tid)
+            for contract in active_contracts:
+                _fire_notification(NotificationFunctions.notify(
+                    recipient_user_id=str(contract["freelancer_user_id"]),
+                    notif_type="job_post_flagged_held",
+                    title="Job Post Closed",
+                    body="The job post tied to your active contract was closed after being reported by multiple users. Your contract is not affected yet - contact support if you have questions.",
+                    data={"job_post_id": tid, "contract_id": str(contract["contract_id"])},
+                ))
+
+            ProposalFunctions.auto_reject_pending_proposals_on_job_closure(tid)
+            _fire_notification(ProposalFunctions.notify_proposal_owners_of_job_closure(
+                tid, DEFAULT_CLOSURE_NOTE_REPORTS
+            ))
 
 
 def list_report_auto_actions(page: int = 1, page_size: int = 20) -> List[Dict]:
@@ -680,12 +773,12 @@ def list_report_targets(
             ur.job_post_id,
             CASE WHEN ur.reported_user_id IS NOT NULL THEN 'user' ELSE 'job_post' END AS target_type,
             ur.reported_type,
-            COUNT(*)            AS report_count,
+            COUNT(DISTINCT ur.reporter_id) AS report_count,
             MIN(ur.created_at)  AS oldest_report,
             MAX(ur.created_at)  AS latest_report,
             u.email             AS target_email,
             jp.job_title        AS target_job_title,
-            (COUNT(*) >= :auto_threshold
+            (COUNT(DISTINCT ur.reporter_id) >= :auto_threshold
              AND MIN(ur.created_at) <= NOW() - (:auto_days * INTERVAL '1 day')
             )                   AS threshold_met
         FROM user_reports ur
@@ -698,7 +791,7 @@ def list_report_targets(
             OR (:target_type = 'job_post' AND ur.job_post_id      IS NOT NULL)
           )
         GROUP BY ur.reported_user_id, ur.job_post_id, u.email, jp.job_title, ur.reported_type
-        HAVING COUNT(*) >= :min_count
+        HAVING COUNT(DISTINCT ur.reporter_id) >= :min_count
         ORDER BY {sort_col} {direction}
         LIMIT :limit OFFSET :offset
         """,
@@ -752,9 +845,19 @@ def run_moderation_sweeps() -> None:
 
 _MAX_APPEALS_PER_TARGET = 2
 
-def submit_appeal(user_id: str, target_type: str, target_id: str, message: str) -> Optional[Dict]:
+# There's no ticketing system behind this - it's a static contact surfaced once
+# in-app appeals are exhausted, so a user who believes the ban/closure is wrong
+# still has somewhere to go instead of a dead end.
+SUPPORT_CONTACT_EMAIL = os.getenv("SUPPORT_CONTACT_EMAIL", "support@workbyte.app")
+
+
+def submit_appeal(
+    user_id: str, target_type: str, target_id: str, message: str,
+    proof_file_url: Optional[str] = None,
+) -> Optional[Dict]:
     """
-    User submits an appeal against a ban or job-post closure.
+    User submits an appeal against a ban, job-post closure, or a contract
+    counterparty they couldn't block directly (see POST /dm/block).
 
     Rules:
       - Cannot appeal while a pending appeal already exists for the same target.
@@ -787,21 +890,25 @@ def submit_appeal(user_id: str, target_type: str, target_id: str, message: str) 
         if len(existing) >= _MAX_APPEALS_PER_TARGET:
             raise HTTPException(
                 status_code=400,
-                detail="You have reached the maximum number of appeals for this item.",
+                detail=(
+                    "You have reached the maximum number of appeals for this item. "
+                    f"If you believe this is a mistake, contact support at {SUPPORT_CONTACT_EMAIL}."
+                ),
             )
 
     try:
         row = _row(get_db().execute_query(
             """
-            INSERT INTO appeals (user_id, target_type, target_id, message)
-            VALUES (:user_id, :target_type, :target_id, :message)
+            INSERT INTO appeals (user_id, target_type, target_id, message, proof_file_url)
+            VALUES (:user_id, :target_type, :target_id, :message, :proof_file_url)
             RETURNING *
             """,
             params={
-                "user_id":     user_id,
-                "target_type": target_type,
-                "target_id":   target_id,
-                "message":     message,
+                "user_id":        user_id,
+                "target_type":    target_type,
+                "target_id":      target_id,
+                "message":        message,
+                "proof_file_url": proof_file_url,
             },
         ))
         attempt = len(existing) + 1
@@ -899,8 +1006,12 @@ def get_appeal_status(user_id: str, target_type: str, target_id: str) -> Dict:
         "can_appeal":        False,
         "appeals_remaining": 0,
         "state":             "rejected_final",
-        "message":           "You have exhausted all appeals for this case. No further appeal is possible.",
+        "message": (
+            "You have exhausted all in-app appeals for this case. "
+            f"If you believe this is a mistake, contact support at {SUPPORT_CONTACT_EMAIL}."
+        ),
         "restriction_reason": restriction_reason,
+        "support_contact":   SUPPORT_CONTACT_EMAIL,
     }
 
 
@@ -1230,6 +1341,10 @@ def admin_close_job(
                     data={"job_post_id": job_post_id, "contract_id": str(contract["contract_id"])},
                 ))
 
+        # Pending proposals can never be decided on a closed job post - reject
+        # them the same way a client's own close does, so applicants aren't left
+        # pointing at a dead job forever.
+        ProposalFunctions.auto_reject_pending_proposals_on_job_closure(job_post_id)
         _fire_notification(ProposalFunctions.notify_proposal_owners_of_job_closure(
             job_post_id, closure_note
         ))
@@ -1283,7 +1398,17 @@ def admin_close_account(
         },
     ))
     if updated:
-        get_db().execute_query(
+        # A ban must kill any session already in the user's hands, not just
+        # block future logins - otherwise a device that's already signed in
+        # keeps working straight through the ban.
+        revoke_all_refresh_tokens_for_user(user_id)
+
+        # Whoever this user is mid-contract with (as either freelancer or
+        # client) needs to know - the job-post-closure notifications below
+        # only cover contracts on job posts this user owns as a client.
+        _notify_contract_counterparties_of_ban(user_id)
+
+        closed_jobs = _rows(get_db().execute_query(
             """
             UPDATE job_post
             SET status = 'closed',
@@ -1291,14 +1416,55 @@ def admin_close_account(
                 closure_note   = :note
             WHERE client_id = (SELECT client_id FROM client WHERE user_id = :uid)
               AND status = 'active'
+            RETURNING job_post_id
             """,
             params={
                 "uid":    user_id,
                 "reason": DEFAULT_CLOSURE_REASON_ADMIN,
                 "note":   DEFAULT_CLOSURE_NOTE_ADMIN,
             },
-        )
-        logger("ADMIN", f"Account {user_id} force-closed by admin {admin_user_id}; active jobs closed", level="WARNING")
+        ))
+        logger("ADMIN", f"Account {user_id} force-closed by admin {admin_user_id}; active jobs closed; sessions revoked", level="WARNING")
+
+        for job in closed_jobs:
+            job_post_id = str(job["job_post_id"])
+
+            active_contracts = _active_contracts_for_job_post(job_post_id)
+            for contract in active_contracts:
+                _fire_notification(NotificationFunctions.notify(
+                    recipient_user_id=str(contract["freelancer_user_id"]),
+                    notif_type="job_post_flagged_held",
+                    title="Job Post Closed",
+                    body="The job post tied to your active contract was closed because its client's account was restricted. Your contract is not affected yet - contact support if you have questions.",
+                    data={"job_post_id": job_post_id, "contract_id": str(contract["contract_id"])},
+                ))
+
+            ProposalFunctions.auto_reject_pending_proposals_on_job_closure(job_post_id)
+            _fire_notification(ProposalFunctions.notify_proposal_owners_of_job_closure(
+                job_post_id, DEFAULT_CLOSURE_NOTE_ADMIN
+            ))
+
+        # If the banned user is a freelancer, their pending proposals on OTHER
+        # clients' jobs (not covered by the job-closure loop above, since those
+        # jobs aren't theirs to close) must not sit there unresolved either - a
+        # client could otherwise unknowingly accept a proposal from someone
+        # already banned.
+        freelancer_row = _row(get_db().execute_query(
+            "SELECT freelancer_id FROM freelancer WHERE user_id = :uid",
+            params={"uid": user_id},
+        ))
+        if freelancer_row:
+            rejected = ProposalFunctions.auto_reject_pending_proposals_for_freelancer(
+                str(freelancer_row["freelancer_id"])
+            )
+            for row in rejected:
+                _fire_notification(NotificationFunctions.notify(
+                    recipient_user_id=str(row["client_user_id"]),
+                    notif_type="proposal_rejected",
+                    title="Proposal No Longer Available",
+                    body=f"The proposal you received for \"{row['job_title']}\" is no longer available.",
+                    data={"proposal_id": str(row["proposal_id"]), "job_post_id": str(row["job_post_id"])},
+                ))
     return updated
 
 

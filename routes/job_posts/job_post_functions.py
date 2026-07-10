@@ -12,8 +12,6 @@ from typing import List, Optional, Dict, Any
 import uuid
 import math
 import re
-import json
-import urllib.request
 from datetime import datetime, timezone
 
 # harm labels reported to the client when a job post gets blocked, never the matched text
@@ -68,167 +66,8 @@ _JOB_POST_SELECT = """
 """
 
 
-_SCOPE_MARKET_CACHE_PATH = os.path.join(os.path.dirname(__file__), "project_scope_market_cache.json")
-_SCOPE_CACHE_REFRESH_SECONDS = 7 * 24 * 60 * 60  # weekly refresh
-_scope_market_cache: dict[str, Any] | None = None
-_GLOBAL_MONTHLY_ROLE_BUDGET_USD = {
-    "entry": 1600.0,
-    "intermediate": 3200.0,
-    "expert": 6000.0,
-    "default": 2800.0,
-}
-
-
 class JobPostFunctions:
     """Handle all job post-related database operations."""
-
-
-    @staticmethod
-    def _now_utc_iso() -> str:
-        return datetime.now(timezone.utc).isoformat()
-
-
-    @staticmethod
-    def _load_scope_market_cache() -> Dict[str, Any]:
-        global _scope_market_cache
-        if _scope_market_cache is not None:
-            return _scope_market_cache
-
-
-        try:
-            with open(_SCOPE_MARKET_CACHE_PATH, encoding="utf-8") as fh:
-                _scope_market_cache = json.load(fh)
-        except Exception:
-            _scope_market_cache = {
-                "fx_rates_fetched_at": None,
-                "fx_rates": {"USD": 1.0},
-                "country_income_benchmarks": {},
-            }
-        return _scope_market_cache
-
-
-    @staticmethod
-    def _save_scope_market_cache() -> None:
-        global _scope_market_cache
-        cache = JobPostFunctions._load_scope_market_cache()
-        with open(_SCOPE_MARKET_CACHE_PATH, "w", encoding="utf-8") as fh:
-            json.dump(cache, fh, indent=2, sort_keys=True)
-        _scope_market_cache = cache
-
-
-    @staticmethod
-    def _cache_is_stale(fetched_at: Optional[str]) -> bool:
-        if not fetched_at:
-            return True
-        try:
-            ts = datetime.fromisoformat(fetched_at)
-            if ts.tzinfo is None:
-                ts = ts.replace(tzinfo=timezone.utc)
-            return (datetime.now(timezone.utc) - ts).total_seconds() >= _SCOPE_CACHE_REFRESH_SECONDS
-        except Exception:
-            return True
-
-
-    @staticmethod
-    def _refresh_scope_fx_rates_if_needed() -> Dict[str, float]:
-        cache = JobPostFunctions._load_scope_market_cache()
-        if not JobPostFunctions._cache_is_stale(cache.get("fx_rates_fetched_at")) and cache.get("fx_rates"):
-            return {k.upper(): float(v) for k, v in cache["fx_rates"].items()}
-
-
-        try:
-            with urllib.request.urlopen(
-                "https://api.frankfurter.app/latest?from=USD", timeout=4
-            ) as resp:
-                data = json.loads(resp.read())
-            rates = {k.upper(): float(v) for k, v in data.get("rates", {}).items()}
-            rates["USD"] = 1.0
-            cache["fx_rates"] = rates
-            cache["fx_rates_fetched_at"] = JobPostFunctions._now_utc_iso()
-            JobPostFunctions._save_scope_market_cache()
-            logger("JOB_POST_FUNCTIONS", f"Project-scope FX cache refreshed | {len(rates)} currencies", level="INFO")
-            return rates
-        except Exception as e:
-            logger("JOB_POST_FUNCTIONS", f"Project-scope FX refresh failed ({e}); using cached rates", level="WARNING")
-            return {k.upper(): float(v) for k, v in cache.get("fx_rates", {"USD": 1.0}).items()}
-
-
-    @staticmethod
-    def _to_usd_scope(amount: float, currency: Optional[str]) -> float:
-        if amount is None or amount <= 0:
-            return 0.0
-        code = (currency or "USD").upper()
-        rates = JobPostFunctions._refresh_scope_fx_rates_if_needed()
-        rate = float(rates.get(code, 1.0))
-        if rate <= 0:
-            return float(amount)
-        return float(amount) / rate
-
-
-    @staticmethod
-    def _fetch_country_income_benchmark(country_code: str) -> Optional[Dict[str, Any]]:
-        """
-        Fetch annual GNI per capita in current USD from World Bank,
-        then derive a monthly benchmark in USD.
-        """
-        normalized = (country_code or "").strip().upper()
-        if not normalized:
-            return None
-
-
-        url = (
-            f"https://api.worldbank.org/v2/country/{normalized}/indicator/NY.GNP.PCAP.CD"
-            "?format=json&per_page=10"
-        )
-        try:
-            with urllib.request.urlopen(url, timeout=6) as resp:
-                payload = json.loads(resp.read())
-
-
-            rows = payload[1] if isinstance(payload, list) and len(payload) > 1 else []
-            for row in rows:
-                value = row.get("value")
-                year = row.get("date")
-                if value is not None:
-                    annual_usd = float(value)
-                    return {
-                        "country_code": normalized,
-                        "source": "world_bank_gni_per_capita_current_usd",
-                        "indicator": "NY.GNP.PCAP.CD",
-                        "year": year,
-                        "annual_income_usd": annual_usd,
-                        "monthly_income_usd": annual_usd / 12.0,
-                        "fetched_at": JobPostFunctions._now_utc_iso(),
-                    }
-        except Exception as e:
-            logger("JOB_POST_FUNCTIONS", f"Income benchmark fetch failed for {normalized}: {e}", level="WARNING")
-        return None
-
-
-    @staticmethod
-    def _get_country_income_benchmark(country_code: Optional[str]) -> Optional[Dict[str, Any]]:
-        normalized = (country_code or "").strip().upper()
-        if not normalized:
-            return None
-
-
-        cache = JobPostFunctions._load_scope_market_cache()
-        benchmarks = cache.setdefault("country_income_benchmarks", {})
-        cached = benchmarks.get(normalized)
-        if cached and not JobPostFunctions._cache_is_stale(cached.get("fetched_at")):
-            return cached
-
-
-        live = JobPostFunctions._fetch_country_income_benchmark(normalized)
-        if live:
-            benchmarks[normalized] = live
-            if not cache.get("fetched_at"):
-                cache["fetched_at"] = JobPostFunctions._now_utc_iso()
-            JobPostFunctions._save_scope_market_cache()
-            return live
-
-
-        return cached
 
 
     @staticmethod
@@ -257,43 +96,23 @@ class JobPostFunctions:
 
 
     @staticmethod
-    def _estimate_contributor_count(project_type: str, role_count: int) -> int:
-        normalized_project_type = (project_type or "").strip().lower()
-        minimum_for_type = 2 if normalized_project_type == "team" else 1
-        return max(role_count, minimum_for_type)
-
-
-    @staticmethod
-    def _calculate_roles_budget_usd(roles: Optional[List[Dict[str, Any]]]) -> Optional[float]:
+    def _estimate_total_positions(role_count: int, roles: Optional[List[Dict[str, Any]]]) -> int:
+        """Total headcount the job post is asking for - summed across every role's
+        positions_available, not just a count of distinct roles. This is the real
+        "how many people" signal (a team of 2 roles needing 5 freelancers each is a
+        bigger project than 2 roles needing 1 each). Falls back to role_count when
+        no per-role detail was sent."""
         if not roles:
-            return None
+            return max(role_count, 1)
 
-
-        total_budget_usd = 0.0
-        has_budget = False
+        total = 0
         for role in roles:
-            role_budget = role.get("role_budget")
-            if role_budget is None:
-                continue
             try:
-                positions_available = max(int(role.get("positions_available") or 1), 1)
+                total += max(int(role.get("positions_available") or 1), 1)
             except (ValueError, TypeError):
-                positions_available = 1
-            budget_currency = role.get("budget_currency") or "USD"
-            total_budget_usd += JobPostFunctions._to_usd_scope(float(role_budget), budget_currency) * positions_available
-            has_budget = True
+                total += 1
 
-
-        return total_budget_usd if has_budget else None
-
-
-    @staticmethod
-    def _get_global_monthly_role_budget_usd(experience_level: str) -> float:
-        normalized_experience = (experience_level or "").strip().lower()
-        return _GLOBAL_MONTHLY_ROLE_BUDGET_USD.get(
-            normalized_experience,
-            _GLOBAL_MONTHLY_ROLE_BUDGET_USD["default"],
-        )
+        return max(total, role_count, 1)
 
 
     # NEW: Category inference
@@ -394,27 +213,20 @@ class JobPostFunctions:
         roles: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         """
-        Heuristic scope calculator.
+        Heuristic scope calculator based on timeline, role/headcount complexity,
+        seniority, and description depth. Deliberately budget-free: two jobs with
+        identical scope but very different pay shouldn't get different scope labels.
         Returns a recommendation only; does not persist anything.
         """
         score = 0
         reasons: List[str] = []
 
-
         normalized_project_type = (project_type or "").strip().lower()
         normalized_experience = (experience_level or "").strip().lower()
         normalized_role_count = max(int(role_count or len(roles or []) or 1), 1)
-        contributor_count = JobPostFunctions._estimate_contributor_count(
-            normalized_project_type,
-            normalized_role_count,
-        )
+        total_positions = JobPostFunctions._estimate_total_positions(normalized_role_count, roles)
         description_word_count = len((job_description or "").split())
         duration_days = working_days or JobPostFunctions._estimate_days_from_duration(estimated_duration)
-        duration_months_estimate = max((duration_days or 30) / 30.0, 1.0)
-        budget_usd = JobPostFunctions._calculate_roles_budget_usd(roles)
-        monthly_budget_benchmark_usd = JobPostFunctions._get_global_monthly_role_budget_usd(normalized_experience)
-        budget_to_market_multiple = None
-
 
         if duration_days is not None:
             if duration_days >= 61:
@@ -427,7 +239,6 @@ class JobPostFunctions:
                 score += 1
                 reasons.append(f"Short-to-moderate timeline detected ({duration_days} days).")
 
-
         if normalized_role_count >= 4:
             score += 3
             reasons.append(f"High role complexity detected ({normalized_role_count} roles).")
@@ -435,11 +246,9 @@ class JobPostFunctions:
             score += 1
             reasons.append(f"Multiple roles detected ({normalized_role_count} roles).")
 
-
         if normalized_project_type == "team":
             score += 1
             reasons.append("Team-based project increases coordination complexity.")
-
 
         if normalized_experience == "expert":
             score += 2
@@ -448,30 +257,15 @@ class JobPostFunctions:
             score += 1
             reasons.append("Intermediate-level experience requirement suggests moderate complexity.")
 
-
-        if budget_usd is not None:
-            baseline = monthly_budget_benchmark_usd * duration_months_estimate * contributor_count
-            if baseline > 0:
-                budget_to_market_multiple = budget_usd / baseline
-                if budget_to_market_multiple >= 2.25:
-                    score += 3
-                    reasons.append(
-                        f"Combined role budget is high versus a global freelance benchmark: about {budget_to_market_multiple:.2f}x for {contributor_count} contributor(s) over {duration_months_estimate:.1f} months."
-                    )
-                elif budget_to_market_multiple >= 1.0:
-                    score += 2
-                    reasons.append(
-                        f"Combined role budget is moderate-to-high versus a global freelance benchmark: about {budget_to_market_multiple:.2f}x for {contributor_count} contributor(s) over {duration_months_estimate:.1f} months."
-                    )
-                elif budget_to_market_multiple >= 0.55:
-                    score += 1
-                    reasons.append(
-                        f"Combined role budget is moderate versus a global freelance benchmark: about {budget_to_market_multiple:.2f}x for {contributor_count} contributor(s) over {duration_months_estimate:.1f} months."
-                    )
-                else:
-                    reasons.append(
-                        f"Combined role budget is relatively low versus a global freelance benchmark: about {budget_to_market_multiple:.2f}x for {contributor_count} contributor(s) over {duration_months_estimate:.1f} months."
-                    )
+        if total_positions >= 6:
+            score += 3
+            reasons.append(f"Large headcount requested ({total_positions} position(s) across all roles).")
+        elif total_positions >= 3:
+            score += 2
+            reasons.append(f"Moderate headcount requested ({total_positions} position(s) across all roles).")
+        elif total_positions >= 2:
+            score += 1
+            reasons.append(f"More than one position requested ({total_positions} position(s) across all roles).")
 
         if description_word_count >= 180:
             score += 2
@@ -480,7 +274,6 @@ class JobPostFunctions:
             score += 1
             reasons.append(f"Moderately detailed job description detected ({description_word_count} words).")
 
-
         if score >= 7:
             recommended_scope = "large"
         elif score >= 3:
@@ -488,17 +281,14 @@ class JobPostFunctions:
         else:
             recommended_scope = "small"
 
-
         non_empty_signals = sum([
             1 if duration_days is not None else 0,
             1 if normalized_role_count is not None else 0,
             1 if normalized_project_type else 0,
             1 if normalized_experience else 0,
-            1 if budget_usd is not None else 0,
             1 if description_word_count > 0 else 0,
         ])
         confidence = "high" if non_empty_signals >= 5 else "medium" if non_empty_signals >= 3 else "low"
-
 
         return {
             "recommended_project_scope": recommended_scope,
@@ -510,14 +300,9 @@ class JobPostFunctions:
                 "working_days": working_days,
                 "estimated_duration": estimated_duration,
                 "duration_days_estimate": duration_days,
-                "duration_months_estimate": round(duration_months_estimate, 2),
                 "experience_level": normalized_experience or None,
                 "role_count": normalized_role_count,
-                "contributor_count_estimate": contributor_count,
-                "budget_usd": round(budget_usd, 2) if budget_usd is not None else None,
-                "roles_budget_summary": roles or [],
-                "global_monthly_role_budget_benchmark_usd": monthly_budget_benchmark_usd,
-                "budget_to_market_multiple": round(budget_to_market_multiple, 3) if budget_to_market_multiple is not None else None,
+                "total_positions_estimate": total_positions,
                 "job_description_word_count": description_word_count,
             },
             "reasons": reasons or ["Insufficient complexity signals found; defaulting to small scope."],

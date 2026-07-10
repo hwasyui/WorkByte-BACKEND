@@ -34,7 +34,7 @@ _client = Minio(
     secure=MINIO_SECURE,
 )
 
-PRIVATE_BUCKETS = {"contract-assets", "contract-submissions", "message-attachments", "proposal-files", "cv-files"}
+PRIVATE_BUCKETS = {"contract-assets", "contract-submissions", "message-attachments", "proposal-files", "cv-files", "appeal-proofs"}
 
 BUCKET_JOB_FILES            = "job-files"
 BUCKET_PROPOSAL_FILES       = "proposal-files"
@@ -42,6 +42,7 @@ BUCKET_USER_ASSETS          = "user-assets"
 BUCKET_CONTRACT_SUBMISSIONS = "contract-submissions"
 BUCKET_MESSAGE_ATTACHMENTS  = "message-attachments"
 BUCKET_CV_FILES             = "cv-files"
+BUCKET_APPEAL_PROOFS        = "appeal-proofs"
 
 BUCKET_MAP = {
     "job-files":            BUCKET_JOB_FILES,
@@ -50,6 +51,7 @@ BUCKET_MAP = {
     "contract-submissions": BUCKET_CONTRACT_SUBMISSIONS,
     "message-attachments":  BUCKET_MESSAGE_ATTACHMENTS,
     "cv-files":             BUCKET_CV_FILES,
+    "appeal-proofs":        BUCKET_APPEAL_PROOFS,
 }
 
 
@@ -61,6 +63,7 @@ _ALL_BUCKETS = [
     "message-attachments",
     "contract-assets",
     "cv-files",
+    "appeal-proofs",
 ]
 _PUBLIC_READ_BUCKETS = {"user-assets", "job-files"}
 
@@ -222,3 +225,15 @@ def upload_thread_attachment(thread_id: str, message_id: str, file_name: str, fi
         file_bytes=file_bytes,
         content_type=content_type or guess_mime(file_name),
     )
+
+def upload_appeal_proof_file(appeal_id: str, file_name: str, file_bytes: bytes, content_type: str = None) -> str:
+    """Resolves to a full URL here (like upload_cv_file) so proof_file_url stays
+    a drop-in value readable straight off the appeals row, no extra resolve step
+    needed in every appeal-listing endpoint."""
+    stored = upload_file(
+        bucket=BUCKET_APPEAL_PROOFS,
+        path=f"{appeal_id}/{file_name}",
+        file_bytes=file_bytes,
+        content_type=content_type or guess_mime(file_name),
+    )
+    return resolve_file_url(BUCKET_APPEAL_PROOFS, stored)

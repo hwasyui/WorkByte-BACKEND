@@ -152,6 +152,27 @@ class ContractFunctions:
             raise
 
     @staticmethod
+    def get_contracts_by_user_id(user_id: str) -> List[Dict]:
+        """Fetch all contracts where this user is the freelancer or the client (via their
+        user_id), any status - used to pre-check account deletability, since
+        contract.freelancer_id/client_id are ON DELETE RESTRICT."""
+        try:
+            rows = get_db().execute_query(
+                """
+                SELECT c.*
+                FROM contract c
+                LEFT JOIN freelancer f ON f.freelancer_id = c.freelancer_id
+                LEFT JOIN client cl    ON cl.client_id     = c.client_id
+                WHERE f.user_id = :uid OR cl.user_id = :uid
+                """,
+                {"uid": user_id},
+            )
+            return [convert_uuids_to_str(dict(row)) for row in rows]
+        except Exception as e:
+            logger("CONTRACT_FUNCTIONS", f"Error fetching contracts for user: {str(e)}", level="ERROR")
+            raise
+
+    @staticmethod
     def get_contract_by_proposal_id(proposal_id: str) -> Optional[Dict]:
         """Fetch the contract already created from a given proposal, if any."""
         try:
@@ -222,6 +243,26 @@ class ContractFunctions:
             db = get_db()
             contract_id = contract_id or str(uuid.uuid4())
 
+            # Fill-tracking (business decision: hiring is tracked per role, not per
+            # job post - a team project keeps other roles open once one is filled).
+            # Claim the slot with a single atomic UPDATE before the contract row
+            # even exists: Postgres serializes the write, so positions_filled <
+            # positions_available means two concurrent contract creations for the
+            # same role can't both succeed - whichever commits first consumes the
+            # last slot, the second matches zero rows and is rejected outright
+            # instead of creating a second contract for an already-filled role.
+            role_fill_rows = db.execute_query(
+                """
+                UPDATE job_role
+                SET positions_filled = positions_filled + 1
+                WHERE job_role_id = :jrid AND positions_filled < positions_available
+                RETURNING positions_filled, positions_available
+                """,
+                {"jrid": job_role_id},
+            )
+            if not role_fill_rows:
+                raise ValueError("This role has already been fully staffed - no remaining positions to contract.")
+
             contract_data = {
                 "contract_id": contract_id,
                 "job_post_id": job_post_id,
@@ -243,7 +284,31 @@ class ContractFunctions:
                 "total_paid": total_paid,
             }
 
-            db.insert_data(table_name="contract", data=contract_data)
+            try:
+                db.insert_data(table_name="contract", data=contract_data)
+            except Exception:
+                # Contract row failed after the slot was already claimed - give
+                # the slot back so it isn't stuck reserved for nothing.
+                db.execute_query(
+                    "UPDATE job_role SET positions_filled = GREATEST(positions_filled - 1, 0) WHERE job_role_id = :jrid",
+                    {"jrid": job_role_id},
+                )
+                raise
+
+            filled, available = role_fill_rows[0]["positions_filled"], role_fill_rows[0]["positions_available"]
+            logger("CONTRACT_FUNCTIONS", f"Role {job_role_id} now {filled}/{available} positions filled", level="INFO")
+            if filled >= available:
+                rejected = ProposalFunctions.auto_reject_pending_proposals_for_filled_role(
+                    job_role_id, exclude_proposal_id=proposal_id
+                )
+                for row in rejected:
+                    _fire_notification(NotificationFunctions.notify(
+                        recipient_user_id=str(row["freelancer_user_id"]),
+                        notif_type="role_filled",
+                        title="Position Filled",
+                        body=f"The \"{row['role_title']}\" position you applied for has been filled by another freelancer.",
+                        data={"job_role_id": job_role_id},
+                    ))
 
             # Resolve actual user_id from client profile
             client_rows = db.fetch_data(
@@ -410,13 +475,49 @@ class ContractFunctions:
             )
 
     @staticmethod
-    def _revert_proposal_on_contract_removal(proposal_id: str) -> None:
+    def _notify_role_reopened(job_role_id: str) -> None:
+        """Tell freelancers who were auto-rejected when this role filled up
+        (see auto_reject_pending_proposals_for_filled_role) that it's open
+        again now a slot freed up. Reuses the 'role_filled' notification log
+        as the recipient list - same reuse-the-notifications-table pattern as
+        the auto-approve strike counter - instead of a dedicated column
+        tracking who got turned away for capacity reasons specifically."""
+        try:
+            role = get_db().execute_query(
+                "SELECT role_title FROM job_role WHERE job_role_id = :jrid",
+                {"jrid": job_role_id},
+            )
+            role_title = role[0]["role_title"] if role else "a role"
+
+            recipients = get_db().execute_query(
+                """
+                SELECT DISTINCT recipient_id
+                FROM notifications
+                WHERE type = 'role_filled' AND data->>'job_role_id' = :jrid
+                """,
+                {"jrid": job_role_id},
+            )
+            for row in recipients or []:
+                _fire_notification(NotificationFunctions.notify(
+                    recipient_user_id=str(row["recipient_id"]),
+                    notif_type="role_reopened",
+                    title="Position Open Again",
+                    body=f"The \"{role_title}\" position you previously applied for has opened up again.",
+                    data={"job_role_id": job_role_id},
+                ))
+        except Exception as e:
+            logger("CONTRACT_FUNCTIONS", f"Failed to notify role-reopened for {job_role_id} (non-fatal): {e}", level="WARNING")
+
+    @staticmethod
+    def _revert_proposal_on_contract_removal(proposal_id: str, job_role_id: Optional[str] = None) -> None:
         """Keep proposal.status truthful once its contract is gone: 'accepted'
         is only supposed to mean there's a live contract behind it, so once
         that contract is cancelled/deleted, flip the proposal to 'rejected'
         instead of leaving it stuck showing 'accepted' for work that no
-        longer exists. Non-fatal - this must never break the actual
-        cancel/delete operation."""
+        longer exists. Also frees the role's filled slot back up - otherwise
+        positions_filled only ever goes up and a cancelled/deleted contract
+        would permanently "waste" a slot the role could actually rehire for.
+        Non-fatal - this must never break the actual cancel/delete operation."""
         try:
             proposal = ProposalFunctions.get_proposal_by_id(str(proposal_id))
             if proposal and proposal.get("status") == "accepted":
@@ -426,6 +527,17 @@ class ContractFunctions:
                     f"Proposal {proposal_id} reverted to 'rejected' after its contract was removed",
                     level="INFO",
                 )
+            if job_role_id:
+                get_db().execute_query(
+                    """
+                    UPDATE job_role
+                    SET positions_filled = GREATEST(positions_filled - 1, 0)
+                    WHERE job_role_id = :jrid
+                    """,
+                    {"jrid": job_role_id},
+                )
+                logger("CONTRACT_FUNCTIONS", f"Role {job_role_id} released one filled position after contract removal", level="INFO")
+                ContractFunctions._notify_role_reopened(job_role_id)
         except Exception as e:
             logger(
                 "CONTRACT_FUNCTIONS",
@@ -443,7 +555,9 @@ class ContractFunctions:
             logger("CONTRACT_FUNCTIONS", f"Contract {contract_id} deleted", level="INFO")
 
             if contract and contract.get("proposal_id"):
-                ContractFunctions._revert_proposal_on_contract_removal(contract["proposal_id"])
+                ContractFunctions._revert_proposal_on_contract_removal(
+                    contract["proposal_id"], contract.get("job_role_id")
+                )
 
             return True
         except Exception as e:
@@ -472,7 +586,9 @@ class ContractFunctions:
             updated_contract = ContractFunctions.update_contract(contract_id, update_data)
 
             if contract.get("proposal_id"):
-                ContractFunctions._revert_proposal_on_contract_removal(contract["proposal_id"])
+                ContractFunctions._revert_proposal_on_contract_removal(
+                    contract["proposal_id"], contract.get("job_role_id")
+                )
 
             try:
                 DMFunctions.send_system_event(

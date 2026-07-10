@@ -12,8 +12,14 @@ from functions.access_control import assert_user_owns
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.users.users_functions import UserFunctions
+from routes.contracts.contract_functions import ContractFunctions
+from routes.notifications.notification_functions import NotificationFunctions
 
 users_router = APIRouter(prefix="/users", tags=["Users"])
+
+# Statuses that mean a contract is still unresolved - completed/cancelled are the
+# only terminal states, everything else means real work or money is still pending.
+NON_TERMINAL_CONTRACT_STATUSES = {"active", "under_review", "revision_requested", "disputed"}
 
 
 @users_router.get("", response_model=List[UserResponseDetail])
@@ -142,7 +148,42 @@ async def delete_user(user_id: str, current_user: UserInDB = Depends(get_current
             error_msg = f"User {user_id} not found for deletion"
             logger("USER", error_msg, "DELETE /users/{user_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
-        
+
+        # contract.freelancer_id/client_id are ON DELETE RESTRICT - without this
+        # pre-check, deleting a user with any contract raises a raw DB integrity
+        # error that surfaces as an ugly 500 further down.
+        contracts = ContractFunctions.get_contracts_by_user_id(user_id)
+        in_progress = [c for c in contracts if c["status"] in NON_TERMINAL_CONTRACT_STATUSES]
+        if in_progress:
+            error_msg = (
+                f"Cannot delete this account - {len(in_progress)} contract(s) are still in "
+                "progress (active, under review, revision requested, or disputed). "
+                "You can delete your account once they're completed or cancelled."
+            )
+            logger("USER", error_msg, "DELETE /users/{user_id}", "WARNING")
+            await NotificationFunctions.notify(
+                recipient_user_id=user_id,
+                notif_type="account_deletion_blocked",
+                title="Account Deletion Blocked",
+                body="You tried to delete your account, but you still have contract(s) in "
+                     "progress. Finish or cancel them first, then you can delete your account.",
+                data={"contract_ids": [c["contract_id"] for c in in_progress]},
+            )
+            return ResponseSchema.error(error_msg, 409)
+
+        if contracts:
+            # Only completed/cancelled contracts remain. contract.freelancer_id/client_id
+            # are ON DELETE RESTRICT with no exception for terminal statuses, so the
+            # database itself still refuses this delete - lifting that would mean
+            # anonymizing the account instead of hard-deleting it (schema change), not
+            # something to silently attempt here.
+            error_msg = (
+                "Cannot delete this account - it has completed contract history that the "
+                "platform retains permanently. Contact support if you need this handled."
+            )
+            logger("USER", error_msg, "DELETE /users/{user_id}", "WARNING")
+            return ResponseSchema.error(error_msg, 409)
+
         UserFunctions.delete_user(user_id)
         success_msg = f"User {user_id} deleted successfully"
         logger("USER", success_msg, "DELETE /users/{user_id}", "INFO")

@@ -301,6 +301,24 @@ class ProposalFunctions:
             raise
 
     @staticmethod
+    def update_status_if_pending(proposal_id: str, new_status: str) -> Optional[Dict]:
+        """Atomically move a proposal off 'pending' - the WHERE status='pending'
+        guard makes accept/reject/withdraw race-safe: if a client's accept and
+        the freelancer's withdraw land at nearly the same moment, only the one
+        that actually matches a still-pending row succeeds; the loser gets zero
+        rows back instead of silently overwriting the winner's decision."""
+        rows = get_db().execute_query(
+            """
+            UPDATE proposal
+            SET status = :new_status
+            WHERE proposal_id = :pid AND status = 'pending'
+            RETURNING *
+            """,
+            {"pid": proposal_id, "new_status": new_status},
+        )
+        return dict(rows[0]) if rows else None
+
+    @staticmethod
     async def run_proposal_scan(proposal_id: str, cover_letter: str, freelancer_user_id: str) -> None:
         """shared scan path for create and edit: scanning -> scan -> visible | blocked.
         the row is edited in place, never deleted or resubmitted as a new row."""
@@ -384,6 +402,79 @@ class ProposalFunctions:
         except Exception as e:
             logger("PROPOSAL_FUNCTIONS", f"Failed to auto-reject pending proposals for job post {job_post_id}: {e}", level="ERROR")
             return 0
+
+    @staticmethod
+    def auto_reject_pending_proposals_for_filled_role(job_role_id: str, exclude_proposal_id: Optional[str] = None) -> List[Dict]:
+        """When a role's positions_available is fully hired, its still-'pending'
+        proposals for that SAME role can never be decided (accept would double-book
+        a slot that no longer exists) - without this they'd sit unresolved forever
+        with no signal to the applicant that the role moved on. Other roles under
+        the same job post (team projects) are untouched - only this specific role
+        is done hiring. exclude_proposal_id skips the just-accepted proposal that
+        triggered the fill, since it's already 'accepted', not 'pending'."""
+        try:
+            rows = get_db().execute_query(
+                """
+                SELECT p.proposal_id, f.user_id AS freelancer_user_id, jr.role_title
+                FROM proposal p
+                JOIN freelancer f ON f.freelancer_id = p.freelancer_id
+                JOIN job_role jr  ON jr.job_role_id   = p.job_role_id
+                WHERE p.job_role_id = :jrid AND p.status = 'pending'
+                  AND (:exclude_id IS NULL OR p.proposal_id != CAST(:exclude_id AS uuid))
+                """,
+                params={"jrid": job_role_id, "exclude_id": exclude_proposal_id},
+            )
+        except Exception as e:
+            logger("PROPOSAL_FUNCTIONS", f"Failed to look up pending proposals for filled role {job_role_id}: {e}", level="ERROR")
+            return []
+
+        for row in rows or []:
+            ProposalFunctions.update_proposal(str(row["proposal_id"]), {"status": "rejected"})
+
+        if rows:
+            logger(
+                "PROPOSAL_FUNCTIONS",
+                f"Auto-rejected {len(rows)} pending proposal(s) for filled role {job_role_id}",
+                level="INFO",
+            )
+        return [dict(r) for r in (rows or [])]
+
+    @staticmethod
+    def auto_reject_pending_proposals_for_freelancer(freelancer_id: str) -> List[Dict]:
+        """When a freelancer's account gets banned, their still-'pending' proposals
+        sitting on OTHER clients' jobs are left dangling otherwise - a client could
+        unknowingly accept a proposal from someone already banned, with no signal
+        anything is wrong. Only 'pending' is touched; 'accepted' proposals are left
+        alone (freeze-asymmetric ban design - banning one party must never silently
+        cancel an engagement already underway).
+
+        Returns the affected rows (proposal_id, job_post_id, job_title, client_user_id)
+        so the caller can notify each affected client."""
+        try:
+            rows = get_db().execute_query(
+                """
+                SELECT p.proposal_id, p.job_post_id, jp.job_title, cl.user_id AS client_user_id
+                FROM proposal p
+                JOIN job_post jp ON jp.job_post_id = p.job_post_id
+                JOIN client cl   ON cl.client_id   = jp.client_id
+                WHERE p.freelancer_id = :fid AND p.status = 'pending'
+                """,
+                params={"fid": freelancer_id},
+            )
+        except Exception as e:
+            logger("PROPOSAL_FUNCTIONS", f"Failed to look up pending proposals for banned freelancer {freelancer_id}: {e}", level="ERROR")
+            return []
+
+        for row in rows or []:
+            ProposalFunctions.update_proposal(str(row["proposal_id"]), {"status": "rejected"})
+
+        if rows:
+            logger(
+                "PROPOSAL_FUNCTIONS",
+                f"Auto-rejected {len(rows)} pending proposal(s) for banned freelancer {freelancer_id}",
+                level="INFO",
+            )
+        return [dict(r) for r in (rows or [])]
 
     @staticmethod
     async def notify_proposal_owners_of_job_closure(job_post_id: str, reason: str) -> None:

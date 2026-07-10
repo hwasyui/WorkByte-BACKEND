@@ -1,5 +1,5 @@
 from fastapi import File, Form, Request, UploadFile
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional, Any, Dict, List, Literal
 from datetime import date, datetime
 
@@ -571,7 +571,7 @@ class JobPostScopeRoleInput(BaseModel):
     role_budget: Optional[float] = None
     budget_currency: Optional[str] = "USD"
     budget_type: Optional[str] = None
-    positions_available: Optional[int] = 1
+    positions_available: Optional[int] = Field(1, ge=1)
     is_required: Optional[bool] = True
 
 # Job roles
@@ -583,7 +583,7 @@ class JobRoleCreate(BaseModel):
     budget_currency: Optional[str] = "USD"
     budget_type: str  # fixed, negotiable
     role_description: Optional[str] = None
-    positions_available: Optional[int] = 1
+    positions_available: Optional[int] = Field(1, ge=1)
     is_required: Optional[bool] = True
     display_order: Optional[int] = 0
 
@@ -593,7 +593,7 @@ class JobRoleUpdate(BaseModel):
     budget_currency: Optional[str] = None
     budget_type: Optional[str] = None
     role_description: Optional[str] = None
-    positions_available: Optional[int] = None
+    positions_available: Optional[int] = Field(None, ge=1)
     is_required: Optional[bool] = None
     display_order: Optional[int] = None
 

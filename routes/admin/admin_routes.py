@@ -1,8 +1,9 @@
 import os
 import sys
+import uuid
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from typing import List, Optional
 from pydantic import BaseModel
 
@@ -10,6 +11,7 @@ from functions.schema_model import UserInDB, ArbitrateDisputeRequest
 from functions.authentication import get_current_user, get_admin_user
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
+from functions.minio_client import upload_appeal_proof_file, guess_mime, validate_file_size
 from routes.admin.admin_functions import (
     VALID_REPORT_REASONS,
     mark_moderation_item_reviewed,
@@ -77,12 +79,6 @@ class ReportCreateBody(BaseModel):
     job_post_id:      Optional[str] = None  # required for job_post reports
     reasons:          List[str] = []         # subset of VALID_REPORT_REASONS
     custom_reason:    Optional[str] = None
-
-
-class AppealSubmitBody(BaseModel):
-    target_type: str   # 'user' | 'job_post'
-    target_id:   str
-    message:     str
 
 
 class ForceExpireReportBody(BaseModel):
@@ -893,30 +889,51 @@ async def user_get_appeal_status(
 
 @appeals_router.post("")
 async def user_submit_appeal(
-    body: AppealSubmitBody,
+    target_type: str = Form(...),
+    target_id:   str = Form(...),
+    message:     str = Form(...),
+    proof:       Optional[UploadFile] = File(None),
     current_user: UserInDB = Depends(get_current_user),
 ):
-    """Submit an appeal against a job-post closure or account restriction.
+    """Submit an appeal against a job-post closure, account restriction, or a
+    contract counterparty (e.g. one that couldn't be blocked because a contract
+    is still ongoing - see POST /dm/block).
 
     Args:
-        body.target_type: 'user' (account ban) or 'job_post' (post closure).
-        body.target_id: UUID of the target being appealed.
-        body.message: Appeal message text.
+        target_type: 'user' (account ban / counterparty) or 'job_post' (post closure).
+        target_id: UUID of the target being appealed.
+        message: Appeal message text.
+        proof: optional evidence file (screenshot, document, etc.), same size
+            cap as every other upload in the app (see validate_file_size).
     """
     try:
-        if body.target_type not in ("user", "job_post"):
+        if target_type not in ("user", "job_post"):
             return ResponseSchema.error("target_type must be 'user' or 'job_post'", 400)
-        if not body.message.strip():
+        if not message.strip():
             return ResponseSchema.error("Appeal message cannot be empty", 400)
+
+        proof_file_url = None
+        if proof and proof.filename:
+            file_bytes = await proof.read()
+            validate_file_size(file_bytes, proof.filename)
+            appeal_id_for_path = str(uuid.uuid4())
+            proof_file_url = upload_appeal_proof_file(
+                appeal_id=appeal_id_for_path,
+                file_name=proof.filename,
+                file_bytes=file_bytes,
+                content_type=proof.content_type or guess_mime(proof.filename),
+            )
+
         appeal = submit_appeal(
             user_id=current_user.user_id,
-            target_type=body.target_type,
-            target_id=body.target_id,
-            message=body.message,
+            target_type=target_type,
+            target_id=target_id,
+            message=message,
+            proof_file_url=proof_file_url,
         )
         if not appeal:
             return ResponseSchema.error("Failed to submit appeal", 500)
-        logger("APPEAL", f"User {current_user.user_id} appealed {body.target_type} {body.target_id}", "POST /appeals", "INFO")
+        logger("APPEAL", f"User {current_user.user_id} appealed {target_type} {target_id}", "POST /appeals", "INFO")
         return ResponseSchema.success({"message": "Appeal submitted successfully", "appeal_id": str(appeal["appeal_id"])}, 201)
     except HTTPException as e:
         return ResponseSchema.error(e.detail, e.status_code)
