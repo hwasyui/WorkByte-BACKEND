@@ -39,3 +39,17 @@ def check_and_increment_daily_usage(freelancer_id: str) -> tuple[bool, int]:
     )
     count_today = row[0]["request_count"]
     return count_today <= DAILY_JOB_FIT_ANALYSIS_LIMIT, count_today
+
+
+def get_daily_usage(freelancer_id: str) -> int:
+    """Read-only lookup of today's count - does not increment. Used to let the frontend
+    show "X of N used today" without spending a real analysis call to find out."""
+    db = get_db()
+    row = db.execute_query(
+        """
+        SELECT request_count FROM job_fit_analysis_usage
+        WHERE freelancer_id = :fid AND usage_date = CURRENT_DATE
+        """,
+        {"fid": freelancer_id},
+    )
+    return row[0]["request_count"] if row else 0

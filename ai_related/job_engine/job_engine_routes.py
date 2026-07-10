@@ -1,6 +1,7 @@
 import time
 import uuid
 from fastapi import APIRouter, Depends
+from fastapi.responses import JSONResponse
 
 from functions.schema_model import UserInDB
 from functions.authentication import get_current_user, get_freelancer_user
@@ -11,7 +12,9 @@ from functions.db_manager import get_db
 from ai_related.job_engine.sweep_worker import run_sweep_once
 from ai_related.job_engine.rag_analyser import analyse_role_match
 from ai_related.job_engine.embedding_manager import mark_job_dirty
-from ai_related.job_engine.usage_limits import check_and_increment_daily_usage, DAILY_JOB_FIT_ANALYSIS_LIMIT
+from ai_related.job_engine.usage_limits import (
+    check_and_increment_daily_usage, get_daily_usage, DAILY_JOB_FIT_ANALYSIS_LIMIT,
+)
 
 router = APIRouter(prefix="/ai/job-engine", tags=["Job Engine"])
 
@@ -57,10 +60,16 @@ async def analyse_role(
                 f"| count_today={count_today} | limit={DAILY_JOB_FIT_ANALYSIS_LIMIT}",
                 level="WARNING",
             )
-            return ResponseSchema.error(
-                f"You've reached today's limit of {DAILY_JOB_FIT_ANALYSIS_LIMIT} job-fit analyses. "
-                f"Try again tomorrow.",
-                429,
+            return JSONResponse(
+                status_code=429,
+                content={
+                    "status": "error",
+                    "details": f"You've reached today's limit of {DAILY_JOB_FIT_ANALYSIS_LIMIT} "
+                               f"job-fit analyses. Try again tomorrow.",
+                    "usage_today": count_today,
+                    "usage_limit": DAILY_JOB_FIT_ANALYSIS_LIMIT,
+                    "remaining_today": 0,
+                },
             )
 
         logger(
@@ -90,11 +99,37 @@ async def analyse_role(
             f"| total_time={total_ms:.0f}ms",
             level="INFO",
         )
+        result["usage_today"] = count_today
+        result["usage_limit"] = DAILY_JOB_FIT_ANALYSIS_LIMIT
+        result["remaining_today"] = max(0, DAILY_JOB_FIT_ANALYSIS_LIMIT - count_today)
         return ResponseSchema.success(result, 200)
 
     except Exception as e:
         total_ms = (time.perf_counter() - t_request) * 1000
         logger("JOB_ENGINE", f"Error in RAG analysis after {total_ms:.0f}ms | error={e}", level="ERROR")
+        return ResponseSchema.error(str(e), 500)
+
+
+@router.get("/usage")
+async def get_usage(
+    current_user: UserInDB = Depends(get_freelancer_user),
+):
+    """
+    Read-only lookup of today's job-fit analysis usage - does not spend a call or touch
+    the count. Lets the frontend show "X of N used today" (or disable the button ahead of
+    time) without needing to trigger a real analysis and inspect its response first.
+    """
+    try:
+        freelancer = get_freelancer_profile_for_user(current_user)
+        fid = str(freelancer["freelancer_id"])
+        count_today = get_daily_usage(fid)
+        return ResponseSchema.success({
+            "usage_today": count_today,
+            "usage_limit": DAILY_JOB_FIT_ANALYSIS_LIMIT,
+            "remaining_today": max(0, DAILY_JOB_FIT_ANALYSIS_LIMIT - count_today),
+        }, 200)
+    except Exception as e:
+        logger("JOB_ENGINE", f"Error fetching job-fit usage: {e}", level="ERROR")
         return ResponseSchema.error(str(e), 500)
 
 
