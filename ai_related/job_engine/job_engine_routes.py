@@ -11,6 +11,7 @@ from functions.db_manager import get_db
 from ai_related.job_engine.sweep_worker import run_sweep_once
 from ai_related.job_engine.rag_analyser import analyse_role_match
 from ai_related.job_engine.embedding_manager import mark_job_dirty
+from ai_related.job_engine.usage_limits import check_and_increment_daily_usage, DAILY_JOB_FIT_ANALYSIS_LIMIT
 
 router = APIRouter(prefix="/ai/job-engine", tags=["Job Engine"])
 
@@ -48,9 +49,24 @@ async def analyse_role(
         fid = str(freelancer["freelancer_id"])
         db = get_db()
 
+        allowed, count_today = check_and_increment_daily_usage(fid)
+        if not allowed:
+            logger(
+                "JOB_ENGINE",
+                f"analyse/role rejected, daily limit reached | freelancer_id={fid} "
+                f"| count_today={count_today} | limit={DAILY_JOB_FIT_ANALYSIS_LIMIT}",
+                level="WARNING",
+            )
+            return ResponseSchema.error(
+                f"You've reached today's limit of {DAILY_JOB_FIT_ANALYSIS_LIMIT} job-fit analyses. "
+                f"Try again tomorrow.",
+                429,
+            )
+
         logger(
             "JOB_ENGINE",
-            f"analyse/role request started | freelancer_id={fid} | job_role_id={job_role_id}",
+            f"analyse/role request started | freelancer_id={fid} | job_role_id={job_role_id} "
+            f"| usage_today={count_today}/{DAILY_JOB_FIT_ANALYSIS_LIMIT}",
             level="INFO",
         )
 
@@ -58,7 +74,7 @@ async def analyse_role(
 
         total_ms = (time.perf_counter() - t_request) * 1000
 
-        if "error" in result and len(result) == 1:
+        if "error" in result:
             logger(
                 "JOB_ENGINE",
                 f"RAG analysis returned error | freelancer_id={fid} | job_role_id={job_role_id} "

@@ -100,9 +100,8 @@ async def create_portfolio(portfolio: PortfolioCreate, current_user: UserInDB = 
         mark_freelancer_dirty(str(portfolio.freelancer_id))
         mark_portfolio_dirty(str(new_portfolio["portfolio_id"]))
 
-        _scan_text = " ".join(filter(None, [portfolio.project_title, portfolio.project_description]))
         asyncio.create_task(PortfolioFunctions.run_portfolio_scan(
-            str(new_portfolio["portfolio_id"]), _scan_text, str(current_user.user_id),
+            str(new_portfolio["portfolio_id"]), portfolio.project_title, portfolio.project_description, str(current_user.user_id),
         ))
 
         success_msg = f"Created portfolio {portfolio_id} for freelancer {portfolio.freelancer_id}"
@@ -138,12 +137,9 @@ async def update_portfolio(portfolio_id: str, portfolio_update: PortfolioUpdate,
         mark_freelancer_dirty(str(existing_portfolio["freelancer_id"]))
         mark_portfolio_dirty(portfolio_id)
 
-        _scan_text = " ".join(filter(None, [
-            updated_portfolio.get("project_title", ""),
-            updated_portfolio.get("project_description", ""),
-        ]))
         asyncio.create_task(PortfolioFunctions.run_portfolio_scan(
-            portfolio_id, _scan_text, str(current_user.user_id),
+            portfolio_id, updated_portfolio.get("project_title", ""),
+            updated_portfolio.get("project_description", ""), str(current_user.user_id),
         ))
 
         success_msg = f"Updated portfolio {portfolio_id}"

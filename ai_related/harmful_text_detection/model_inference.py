@@ -1,11 +1,36 @@
+import asyncio
 import os
 import pickle
+from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Optional, Tuple
 
 import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 from ai_related.harmful_text_detection.preprocessing import TextPreprocessor
+
+# A single forward pass claims every thread PyTorch is allowed to use. Left at PyTorch's
+# default (one thread per vCPU), a scan running here competes with every other request
+# this same process is handling for all 4 cores. Capping it below the core count leaves
+# headroom so concurrent requests interleave instead of fighting for the same cores, and
+# pairs with _MODEL_EXECUTOR below to bound how many forward passes run at once.
+_TORCH_THREADS = int(os.getenv("HARMFUL_TEXT_TORCH_THREADS", "2"))
+torch.set_num_threads(_TORCH_THREADS)
+
+# Dedicated pool for tokenize+forward-pass work, isolated from the app's shared default
+# thread pool (the one asyncio.to_thread uses for everything else - DB queries, file I/O,
+# other blocking calls). max_workers is the actual concurrency limit: since only N threads
+# exist in this pool, only N calls can physically run at once, no separate semaphore
+# needed. The fast (Rust) tokenizer is not safe to call concurrently from multiple threads
+# on the same instance (raises "Already borrowed" under real concurrency), so tokenization
+# has to go through this same pool too, not just the forward pass.
+_MAX_CONCURRENT_SCANS = int(os.getenv("HARMFUL_TEXT_MAX_CONCURRENT_SCANS", "2"))
+_MODEL_EXECUTOR = ThreadPoolExecutor(max_workers=_MAX_CONCURRENT_SCANS, thread_name_prefix="harmful-text")
+
+
+def shutdown_executor() -> None:
+    """Called from main.py's lifespan teardown so worker threads don't outlive the app."""
+    _MODEL_EXECUTOR.shutdown(wait=True, cancel_futures=True)
 
 
 LABEL_SCHEMA = {
@@ -18,7 +43,12 @@ LABEL_SCHEMA = {
 REVERSE_LABEL_SCHEMA = {v: k for k, v in LABEL_SCHEMA.items()}
 
 _MODEL_DIR = os.path.join(os.path.dirname(__file__), "machine_learning", "models")
-_REQUIRED_MODEL_FILES = ["config.json", "model.safetensors", "tokenizer.json"]
+# config.pkl carries the per-label tuned thresholds (best_thresholds) and is required,
+# not optional: without it a redeploy that forgets the file would silently fall back to
+# threshold 0.5 for every label instead of failing loudly, and upstream callers would
+# silently fall back to keyword-only scanning (which catches ~1 of 7 evasions - see
+# HARMFUL_TEXT.md section 17) instead of being told the model is unavailable.
+_REQUIRED_MODEL_FILES = ["config.json", "model.safetensors", "tokenizer.json", "config.pkl"]
 
 # training used 128-token windows, so long text is chunked the same way at inference
 _CHUNK_MAX_LENGTH = 128
@@ -163,7 +193,7 @@ def load_model(model_type: str = "best") -> Tuple[torch.nn.Module, AutoTokenizer
     return _model, _tokenizer, _device, resolved_model
 
 
-def predict(text: str, model_type: str = "best", threshold: Optional[float] = None) -> dict:
+async def predict(text: str, model_type: str = "best", threshold: Optional[float] = None) -> dict:
     """
     predict harmful content labels for text.
 
@@ -175,12 +205,24 @@ def predict(text: str, model_type: str = "best", threshold: Optional[float] = No
 
     returns dict with text, labels, scores, is_harmful.
     """
-    return batch_predict([text], model_type=model_type, threshold=threshold)[0]
+    results = await batch_predict([text], model_type=model_type, threshold=threshold)
+    return results[0]
 
 
-def batch_predict(texts: list, model_type: str = "best", threshold: Optional[float] = None) -> list:
+async def batch_predict(texts: list, model_type: str = "best", threshold: Optional[float] = None) -> list:
     """predict labels for multiple texts. long texts are split into overlapping
-    128-token chunks and a label is flagged if any chunk crosses its threshold."""
+    128-token chunks and a label is flagged if any chunk crosses its threshold.
+
+    Callers never touch threads/executors directly - this just awaits the result.
+    The actual tokenize+forward-pass work runs on _MODEL_EXECUTOR (see module docstring
+    above), so no asyncio.to_thread() is needed at the call site."""
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(_MODEL_EXECUTOR, _batch_predict_sync, texts, model_type, threshold)
+
+
+def _batch_predict_sync(texts: list, model_type: str, threshold: Optional[float]) -> list:
+    """the actual blocking work, run inside _MODEL_EXECUTOR by batch_predict() above.
+    Not called directly by anything outside this module."""
     model, tokenizer, device, resolved_model = load_model(model_type)
 
     cleaned_texts = [_preprocessor.clean_text(text) for text in texts]
@@ -197,6 +239,7 @@ def batch_predict(texts: list, model_type: str = "best", threshold: Optional[flo
         return results
 
     infer_texts = [cleaned_texts[index] for index in infer_indices]
+
     encoding = tokenizer(
         infer_texts,
         max_length=_CHUNK_MAX_LENGTH,

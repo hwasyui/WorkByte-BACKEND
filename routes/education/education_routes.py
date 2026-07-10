@@ -101,12 +101,11 @@ async def create_education(education: EducationCreate, current_user: UserInDB = 
         
         mark_freelancer_dirty(str(education.freelancer_id))
 
-        _scan_text = " ".join(filter(None, [
-            education.institution_name, education.degree, education.field_of_study,
-            education.grade, education.description,
+        _short_text = " ".join(filter(None, [
+            education.institution_name, education.degree, education.field_of_study, education.grade,
         ]))
         asyncio.create_task(EducationFunctions.run_education_scan(
-            str(new_education["education_id"]), _scan_text, str(current_user.user_id),
+            str(new_education["education_id"]), _short_text, education.description, str(current_user.user_id),
         ))
 
         success_msg = f"Created education {education_id} for freelancer {education.freelancer_id}"
@@ -141,15 +140,14 @@ async def update_education(education_id: str, education_update: EducationUpdate,
         
         mark_freelancer_dirty(str(existing_education["freelancer_id"]))
 
-        _scan_text = " ".join(filter(None, [
+        _short_text = " ".join(filter(None, [
             updated_education.get("institution_name", ""),
             updated_education.get("degree", ""),
             updated_education.get("field_of_study", ""),
             updated_education.get("grade", ""),
-            updated_education.get("description", ""),
         ]))
         asyncio.create_task(EducationFunctions.run_education_scan(
-            education_id, _scan_text, str(current_user.user_id),
+            education_id, _short_text, updated_education.get("description", ""), str(current_user.user_id),
         ))
 
         success_msg = f"Updated education {education_id}"

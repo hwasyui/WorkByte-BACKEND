@@ -1,4 +1,3 @@
-import asyncio
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -21,7 +20,7 @@ from routes.dm.dm_functions import DMFunctions
 from routes.notifications.notification_functions import NotificationFunctions
 from routes.freelancers.freelancer_functions import FreelancerFunctions
 from routes.clients.client_functions import ClientFunctions
-from routes.admin.admin_moderation import scan_harmful_text_with_ml_fallback
+from routes.admin.admin_moderation import scan_harmful_text_with_ml_fallback, ML_SCAN_TIMEOUT_BLOCKING_SECONDS
 
 
 dm_router = APIRouter(prefix="/dm", tags=["Direct Messages"])
@@ -352,7 +351,7 @@ async def send_message(
                 400,
             )
 
-        harm_result = await asyncio.to_thread(scan_harmful_text_with_ml_fallback, payload.message_text)
+        harm_result = await scan_harmful_text_with_ml_fallback(payload.message_text, timeout=ML_SCAN_TIMEOUT_BLOCKING_SECONDS)
         if harm_result["is_flagged"]:
             labels = harm_result.get("detected_labels", [])
             logger("DM", f"Blocked toxic message from {current_user.user_id} in thread {thread_id}, labels={labels}", "POST /dm/threads/{thread_id}/messages", "WARNING")
@@ -424,7 +423,7 @@ async def send_message_with_attachment(
             )
 
         if text:
-            harm_result = await asyncio.to_thread(scan_harmful_text_with_ml_fallback, text)
+            harm_result = await scan_harmful_text_with_ml_fallback(text, timeout=ML_SCAN_TIMEOUT_BLOCKING_SECONDS)
             if harm_result["is_flagged"]:
                 labels = harm_result.get("detected_labels", [])
                 logger(

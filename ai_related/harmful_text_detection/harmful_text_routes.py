@@ -34,7 +34,7 @@ async def detect_harmful_text(input_data: TextInput, model_type: str = "best", t
         if threshold is not None and not 0.0 <= threshold <= 1.0:
             raise HTTPException(status_code=400, detail="Threshold must be between 0.0 and 1.0")
 
-        result = predict(input_data.text, model_type=model_type, threshold=threshold)
+        result = await predict(input_data.text, model_type=model_type, threshold=threshold)
 
         logger("HARMFUL_TEXT", f"Detection complete | is_harmful={result['is_harmful']} | labels={result['labels']}", level="INFO")
         return ResponseSchema.success(result)
@@ -58,7 +58,7 @@ async def detect_harmful_text_batch(input_data: BatchTextInput, model_type: str 
         if any(not text or not text.strip() for text in input_data.texts):
             raise HTTPException(status_code=400, detail="Texts list cannot contain empty values")
 
-        results = batch_predict(input_data.texts, model_type=model_type, threshold=threshold)
+        results = await batch_predict(input_data.texts, model_type=model_type, threshold=threshold)
 
         harmful_count = sum(1 for r in results if r["is_harmful"])
         logger("HARMFUL_TEXT", f"Batch complete | batch_size={len(results)} | harmful={harmful_count}", level="INFO")

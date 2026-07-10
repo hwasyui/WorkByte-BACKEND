@@ -1,4 +1,3 @@
-import asyncio
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -773,7 +772,7 @@ class JobPostFunctions:
             JobPostFunctions.update_job_post(job_post_id, {"moderation_status": "scanning"})
 
             if scan_text and scan_text.strip():
-                result = await asyncio.to_thread(scan_harmful_text_with_ml_fallback, scan_text)
+                result = await scan_harmful_text_with_ml_fallback(scan_text)
             else:
                 result = {"is_flagged": False, "detected_labels": []}
 

@@ -18,6 +18,8 @@ from routes.freelancer_skills.freelancer_skill_functions import FreelancerSkillF
 from routes.work_experience.work_experience_functions import WorkExperienceFunctions
 from routes.education.education_functions import EducationFunctions
 from ai_related.cv_analysis.cv_analysis import (
+    is_cv_text_too_sparse,
+    CV_EXTRACTION_FAILED_MESSAGE,
     build_freelancer_profile_text,
     get_profile_skill_names,
     extract_skills_from_text,
@@ -91,8 +93,8 @@ async def upload_and_analyze_cv(
                 detail="Unsupported file type. Please upload a PDF or DOCX.",
             )
 
-        if not raw_text:
-            raise HTTPException(status_code=422, detail="Unable to extract text from the uploaded CV.")
+        if is_cv_text_too_sparse(raw_text):
+            raise HTTPException(status_code=422, detail=CV_EXTRACTION_FAILED_MESSAGE)
 
         logger("CV_UPLOAD", f"Extracted {len(raw_text)} chars from CV", level="DEBUG")
 

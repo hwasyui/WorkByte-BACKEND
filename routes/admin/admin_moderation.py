@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 import re
@@ -6,6 +7,24 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from typing import Dict, List, Optional
+
+# Ceiling on how long a caller waits for the ML model before falling back to keyword
+# scanning. Without this, a caller just awaits scan_harmful_text_with_ml_fallback()
+# forever if the model's executor queue backs up under load - the wait would be
+# invisible (no error, no timeout) until it was very large, the same failure shape as
+# the deadlock this concurrency work started from, just hidden one layer deeper now
+# that callers no longer see the executor directly.
+#
+# Two values, not one: background scans (education/work_experience/portfolio/job_post/
+# proposal - fired via asyncio.create_task, moderation_status starts 'scanning' and the
+# caller's HTTP response has already returned) can afford to wait the full ceiling since
+# no one is looking at a spinner. Scans that block the caller's HTTP response (DM message
+# send, freelancer/client bio save) should give up sooner - measured worst-case latency
+# under 60-way concurrent load was 9.36s (HARMFUL_TEXT.md section 22), so 15s clears that
+# with room to spare without making someone wait as long as the background ceiling for no
+# reason.
+_ML_SCAN_TIMEOUT_SECONDS = float(os.getenv("HARMFUL_TEXT_SCAN_TIMEOUT_SECONDS", "30"))
+ML_SCAN_TIMEOUT_BLOCKING_SECONDS = float(os.getenv("HARMFUL_TEXT_SCAN_TIMEOUT_BLOCKING_SECONDS", "15"))
 
 from functions.db_manager import get_db
 from functions.logger import logger
@@ -22,6 +41,11 @@ _PREFIX_KEYWORDS: set = set(_kw_data.get("prefix_keywords", []))
 # Scam thresholds (also documented in moderation_keywords.json _meta)
 SCAM_FLAG_THRESHOLD: float = 0.10       # ≥ 1 keyword match → admin review queue
 SCAM_AUTO_REMOVE_THRESHOLD: float = 0.85  # ≥ 5 matches + 30 days → auto-remove
+
+# Below this word count, an SBERT embedding of title+description carries too little
+# signal for the ML model to score reliably (e.g. "desc" false-flagging as scam) —
+# use the deterministic keyword scan instead.
+SCAM_MIN_TEXT_WORDS: int = 15
 
 # ML label names → DB/keyword naming convention
 _ML_LABEL_REMAP = {
@@ -111,6 +135,12 @@ def scan_for_scam_with_ml_fallback(title: str, description: str) -> Dict:
     ('sbert_rf' or 'keyword') so callers can log which path ran.
     """
     combined = f"{title} {description}"
+
+    if len(combined.split()) < SCAM_MIN_TEXT_WORDS:
+        result = scan_for_scam(combined)
+        result["scan_method"] = "keyword_short_text"
+        return result
+
     try:
         from ai_related.job_scam_detection.scam_detector import predict_scam
 
@@ -135,22 +165,28 @@ def scan_for_scam_with_ml_fallback(title: str, description: str) -> Dict:
         return scan_for_scam(combined)
 
 
-def scan_harmful_text_with_ml_fallback(text: str) -> Dict:
+async def scan_harmful_text_with_ml_fallback(text: str, timeout: Optional[float] = None) -> Dict:
     """
     primary harmful text scan entry point.
 
     1. runs inference with the best available trained model (chunked for long
        text, each label uses its own tuned threshold from config.pkl).
-    2. on any failure (model files missing, cuda oom, etc.) logs a warning
+    2. on any failure (model files missing, cuda oom, timeout, etc.) logs a warning
        and transparently falls back to keyword matching.
 
     return shape is identical to scan_harmful_text() plus a 'scan_method' key
-    ('ml' or 'keyword') so callers can log which path was taken.
+    ('ml' or 'keyword') so callers can log which path was taken. Callers just
+    `await` this directly - no asyncio.to_thread() needed, the ML call is natively
+    async. `timeout` defaults to _ML_SCAN_TIMEOUT_SECONDS (background scans); callers
+    that block the user's HTTP response should pass ML_SCAN_TIMEOUT_BLOCKING_SECONDS
+    instead so a slow model degrades to keyword-only well before the request feels
+    frozen, not after the same long wait a background scan can afford.
     """
+    effective_timeout = timeout if timeout is not None else _ML_SCAN_TIMEOUT_SECONDS
     try:
         from ai_related.harmful_text_detection.model_inference import predict
 
-        ml = predict(text, model_type="best")
+        ml = await asyncio.wait_for(predict(text, model_type="best"), timeout=effective_timeout)
 
         # Map ML label names to the DB/keyword naming convention
         normalized_labels = [_ML_LABEL_REMAP.get(lbl, lbl) for lbl in ml["labels"]]
@@ -166,6 +202,13 @@ def scan_harmful_text_with_ml_fallback(text: str) -> Dict:
             "scan_method":          "ml",
         }
 
+    except asyncio.TimeoutError:
+        logger(
+            "HARMFUL_TEXT",
+            f"ML harmful text scan timed out after {effective_timeout}s; falling back to keyword scan",
+            level="WARNING",
+        )
+        return scan_harmful_text(text)
     except Exception as exc:
         logger(
             "HARMFUL_TEXT",
@@ -173,6 +216,36 @@ def scan_harmful_text_with_ml_fallback(text: str) -> Dict:
             level="WARNING",
         )
         return scan_harmful_text(text)
+
+
+_NO_MATCH_RESULT: Dict = {
+    "toxic_score": 0.0, "obscene_score": 0.0, "threat_score": 0.0,
+    "insult_score": 0.0, "identity_hate_score": 0.0,
+    "detected_labels": [], "is_flagged": False, "scan_method": "none",
+}
+
+
+async def scan_short_and_long_text(short_text: str, long_text: str) -> Dict:
+    """
+    Routes context-free short fields (institution_name, degree, job_title,
+    company_name, project_title, ...) and a long-context field (description/bio)
+    through the right scanner each, per HARMFUL_TEXT.md section 17: a 1-4 word field
+    gives the ML model nothing to condition on, so it matches vocabulary rather than
+    meaning ('Kill Chain Analysis' scores threat=0.995, identical confidence to
+    'kill yourself'). Short fields are keyword-only; the long field goes through the
+    ML model with keyword fallback, since it has real sentence context.
+
+    Short fields are checked first - if flagged, that result is returned without ever
+    calling the ML model. Return shape matches scan_harmful_text_with_ml_fallback().
+    """
+    if short_text and short_text.strip():
+        short_result = scan_harmful_text(short_text)
+        if short_result["is_flagged"]:
+            return short_result
+
+    if not long_text or not long_text.strip():
+        return _NO_MATCH_RESULT
+    return await scan_harmful_text_with_ml_fallback(long_text)
 
 
 def insert_harmful_text_queue_entry(

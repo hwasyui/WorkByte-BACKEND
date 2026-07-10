@@ -13,6 +13,8 @@ from functions.response_utils import ResponseSchema
 from functions.minio_client import validate_file_size
 from ai_related.cv_analysis.cv_analysis import (
     extract_cv_text,
+    is_cv_text_too_sparse,
+    CV_EXTRACTION_FAILED_MESSAGE,
     build_freelancer_profile_text,
     get_profile_skill_names,
     extract_skills_from_text,
@@ -48,11 +50,8 @@ async def analyze_cv(
         await cv_file.seek(0)
 
         cv_text = await extract_cv_text(cv_file)
-        if not cv_text:
-            raise HTTPException(
-                status_code=422,
-                detail="Unable to extract text from the uploaded CV. Ensure the file contains readable text.",
-            )
+        if is_cv_text_too_sparse(cv_text):
+            raise HTTPException(status_code=422, detail=CV_EXTRACTION_FAILED_MESSAGE)
 
         freelancer = FreelancerFunctions.get_freelancer_by_user_id(current_user.user_id)
         if not freelancer:

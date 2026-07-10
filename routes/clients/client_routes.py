@@ -1,4 +1,3 @@
-import asyncio
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -16,7 +15,7 @@ from routes.clients.client_functions import ClientFunctions
 from routes.contracts.contract_functions import ContractFunctions
 from functions.minio_client import upload_client_profile_picture, delete_file, BUCKET_USER_ASSETS, validate_file_size
 from mimetypes import guess_type as guess_mime
-from routes.admin.admin_moderation import scan_harmful_text_with_ml_fallback
+from routes.admin.admin_moderation import scan_harmful_text, scan_harmful_text_with_ml_fallback, ML_SCAN_TIMEOUT_BLOCKING_SECONDS
 
 _IDENTITY_FIELD_LABEL_NAMES = {
     "toxic": "toxicity",
@@ -28,26 +27,40 @@ _IDENTITY_FIELD_LABEL_NAMES = {
 }
 
 
-async def _scan_identity_fields_or_reject(scan_text: str, field_label: str = "profile") -> Optional[Dict]:
-    """Synchronous scan-then-reject for name/bio, mirroring the DM message flow
-    (routes/dm/dm_routes.py send_message). Fails OPEN if the scan itself errors -
-    blast radius is one profile, so blocking a legitimate save because the model
-    crashed is worse than letting it through for a later re-scan pass."""
-    if not scan_text or not scan_text.strip():
+def _reject_for(harm_result: Dict, field_label: str) -> Optional[Dict]:
+    if not harm_result["is_flagged"]:
+        return None
+    labels = [_IDENTITY_FIELD_LABEL_NAMES.get(l, l) for l in harm_result.get("detected_labels", [])]
+    logger("CLIENT", f"Blocked {field_label} save, labels={harm_result.get('detected_labels')}", level="WARNING")
+    return {
+        "message": f"Your {field_label} couldn't be saved. It was flagged for {', '.join(labels) or 'a policy violation'}.",
+        "status": 400,
+    }
+
+
+async def _scan_identity_fields_or_reject(short_text: str, long_text: str, field_label: str = "profile") -> Optional[Dict]:
+    """Scan-then-reject for name/bio, mirroring the DM message flow
+    (routes/dm/dm_routes.py send_message).
+
+    full_name carries no context - a 1-4 word field gives the ML model nothing to
+    condition on, so it matches vocabulary rather than meaning. It goes through the
+    deterministic keyword list only. bio has real sentence context, so it still goes
+    through the ML model, and fails OPEN if that scan errors - blast radius is one
+    profile, so blocking a legitimate save because the model crashed is worse than
+    letting it through for a later re-scan pass."""
+    if short_text and short_text.strip():
+        rejection = _reject_for(scan_harmful_text(short_text), field_label)
+        if rejection:
+            return rejection
+
+    if not long_text or not long_text.strip():
         return None
     try:
-        harm_result = await asyncio.to_thread(scan_harmful_text_with_ml_fallback, scan_text)
+        harm_result = await scan_harmful_text_with_ml_fallback(long_text, timeout=ML_SCAN_TIMEOUT_BLOCKING_SECONDS)
     except Exception as e:
         logger("CLIENT", f"Identity-field scan errored, failing open (allowing save): {e}", level="WARNING")
         return None
-    if harm_result["is_flagged"]:
-        labels = [_IDENTITY_FIELD_LABEL_NAMES.get(l, l) for l in harm_result.get("detected_labels", [])]
-        logger("CLIENT", f"Blocked {field_label} save, labels={harm_result.get('detected_labels')}", level="WARNING")
-        return {
-            "message": f"Your {field_label} couldn't be saved. It was flagged for {', '.join(labels) or 'a policy violation'}.",
-            "status": 400,
-        }
-    return None
+    return _reject_for(harm_result, field_label)
 
 client_router = APIRouter(prefix="/clients", tags=["Clients"])
 
@@ -191,8 +204,7 @@ async def create_client(
             )
             logger("CLIENT", f"Client avatar uploaded: {profile_picture_url}", level="DEBUG")
 
-        _scan_text = " ".join(filter(None, [client.full_name, client.bio]))
-        rejection = await _scan_identity_fields_or_reject(_scan_text, "profile")
+        rejection = await _scan_identity_fields_or_reject(client.full_name, client.bio, "profile")
         if rejection:
             return ResponseSchema.error(rejection["message"], rejection["status"])
 
@@ -255,11 +267,9 @@ async def update_client(
             )
             logger("CLIENT", f"Client avatar uploaded: {update_data['profile_picture_url']}", level="DEBUG")
 
-        _scan_text = " ".join(filter(None, [
-            update_data.get("full_name") if "full_name" in update_data else existing.get("full_name", ""),
-            update_data.get("bio") if "bio" in update_data else existing.get("bio", ""),
-        ]))
-        rejection = await _scan_identity_fields_or_reject(_scan_text, "profile")
+        _short_text = update_data.get("full_name") if "full_name" in update_data else existing.get("full_name", "")
+        _long_text = update_data.get("bio") if "bio" in update_data else existing.get("bio", "")
+        rejection = await _scan_identity_fields_or_reject(_short_text, _long_text, "profile")
         if rejection:
             return ResponseSchema.error(rejection["message"], rejection["status"])
 

@@ -16,13 +16,13 @@ from routes.freelancers.freelancer_functions import FreelancerFunctions, get_com
 from ai_related.job_engine.embedding_manager import mark_freelancer_dirty
 from functions.minio_client import upload_freelancer_profile_picture, delete_file, BUCKET_USER_ASSETS, validate_file_size, MAX_UPLOAD_FILE_SIZE_BYTES
 from mimetypes import guess_type as guess_mime
-from ai_related.cv_analysis.cv_analysis import parse_cv_for_profile
+from ai_related.cv_analysis.cv_analysis import parse_cv_for_profile, is_cv_text_too_sparse, CV_EXTRACTION_FAILED_MESSAGE
 from routes.cv_upload.cv_upload_functions import (
     _extract_text_from_pdf,
     _extract_text_from_docx,
     _extract_text_from_image,
 )
-from routes.admin.admin_moderation import scan_harmful_text_with_ml_fallback
+from routes.admin.admin_moderation import scan_harmful_text, scan_harmful_text_with_ml_fallback, ML_SCAN_TIMEOUT_BLOCKING_SECONDS
 
 _IDENTITY_FIELD_LABEL_NAMES = {
     "toxic": "toxicity",
@@ -34,29 +34,43 @@ _IDENTITY_FIELD_LABEL_NAMES = {
 }
 
 
-async def _scan_identity_fields_or_reject(scan_text: str, field_label: str = "profile") -> Optional[Dict]:
-    """Synchronous scan-then-reject for name/title/bio, mirroring the DM message flow
+def _reject_for(harm_result: Dict, field_label: str) -> Optional[Dict]:
+    if not harm_result["is_flagged"]:
+        return None
+    labels = [_IDENTITY_FIELD_LABEL_NAMES.get(l, l) for l in harm_result.get("detected_labels", [])]
+    logger("FREELANCER", f"Blocked {field_label} save, labels={harm_result.get('detected_labels')}", level="WARNING")
+    return {
+        "message": f"Your {field_label} couldn't be saved. It was flagged for {', '.join(labels) or 'a policy violation'}.",
+        "status": 400,
+    }
+
+
+async def _scan_identity_fields_or_reject(short_text: str, long_text: str, field_label: str = "profile") -> Optional[Dict]:
+    """Scan-then-reject for name/title/bio, mirroring the DM message flow
     (routes/dm/dm_routes.py send_message): scan inline, reject outright if flagged, no
-    queue, no async window where bad content is briefly live. Unlike DM, this fails OPEN
-    if the scan itself errors (not just fails to flag) - blast radius is one profile, so
-    blocking a legitimate save because the model crashed is worse than letting it through
-    for a later re-scan pass. Returns an error dict to return to the caller, or None if
-    the save should proceed."""
-    if not scan_text or not scan_text.strip():
+    queue, no async window where bad content is briefly live.
+
+    full_name and title carry no context - a 1-4 word field gives the ML model nothing
+    to condition on, so it matches vocabulary rather than meaning ('Kill Chain Analysis'
+    scores as confidently as 'kill yourself'; 'Gay Rights Advocate' scores as
+    identity_hate). Those go through the deterministic keyword list only. bio has real
+    sentence context, so it still goes through the ML model, and fails OPEN if that scan
+    errors - blast radius is one profile, so blocking a legitimate save because the model
+    crashed is worse than letting it through for a later re-scan pass. Returns an error
+    dict to return to the caller, or None if the save should proceed."""
+    if short_text and short_text.strip():
+        rejection = _reject_for(scan_harmful_text(short_text), field_label)
+        if rejection:
+            return rejection
+
+    if not long_text or not long_text.strip():
         return None
     try:
-        harm_result = await asyncio.to_thread(scan_harmful_text_with_ml_fallback, scan_text)
+        harm_result = await scan_harmful_text_with_ml_fallback(long_text, timeout=ML_SCAN_TIMEOUT_BLOCKING_SECONDS)
     except Exception as e:
         logger("FREELANCER", f"Identity-field scan errored, failing open (allowing save): {e}", level="WARNING")
         return None
-    if harm_result["is_flagged"]:
-        labels = [_IDENTITY_FIELD_LABEL_NAMES.get(l, l) for l in harm_result.get("detected_labels", [])]
-        logger("FREELANCER", f"Blocked {field_label} save, labels={harm_result.get('detected_labels')}", level="WARNING")
-        return {
-            "message": f"Your {field_label} couldn't be saved. It was flagged for {', '.join(labels) or 'a policy violation'}.",
-            "status": 400,
-        }
-    return None
+    return _reject_for(harm_result, field_label)
 
 _DOCX_MIMES = {
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -153,8 +167,8 @@ async def create_freelancer(
             )
             logger("FREELANCER", f"Freelancer avatar uploaded: {profile_picture_url}", level="DEBUG")
 
-        _scan_text = " ".join(filter(None, [freelancer.full_name, freelancer.title, freelancer.bio]))
-        rejection = await _scan_identity_fields_or_reject(_scan_text, "profile")
+        _short_text = " ".join(filter(None, [freelancer.full_name, freelancer.title]))
+        rejection = await _scan_identity_fields_or_reject(_short_text, freelancer.bio, "profile")
         if rejection:
             return ResponseSchema.error(rejection["message"], rejection["status"])
 
@@ -211,8 +225,8 @@ async def parse_cv_for_autofill(
         else:
             return ResponseSchema.error("Unsupported file type. Please upload a PDF, DOCX, or image.", 400)
 
-        if not raw_text:
-            return ResponseSchema.error("Unable to extract text from the uploaded CV.", 422)
+        if is_cv_text_too_sparse(raw_text):
+            return ResponseSchema.error(CV_EXTRACTION_FAILED_MESSAGE, 422)
 
         parsed_profile = await parse_cv_for_profile(raw_text)
 
@@ -267,12 +281,12 @@ async def update_freelancer(
             )
             logger("FREELANCER", f"Freelancer avatar uploaded: {update_data['profile_picture_url']}", level="DEBUG")
 
-        _scan_text = " ".join(filter(None, [
+        _short_text = " ".join(filter(None, [
             update_data.get("full_name") or existing.get("full_name", ""),
             update_data.get("title") if "title" in update_data else existing.get("title", ""),
-            update_data.get("bio") if "bio" in update_data else existing.get("bio", ""),
         ]))
-        rejection = await _scan_identity_fields_or_reject(_scan_text, "profile")
+        _long_text = update_data.get("bio") if "bio" in update_data else existing.get("bio", "")
+        rejection = await _scan_identity_fields_or_reject(_short_text, _long_text, "profile")
         if rejection:
             return ResponseSchema.error(rejection["message"], rejection["status"])
 

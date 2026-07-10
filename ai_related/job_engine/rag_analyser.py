@@ -564,8 +564,9 @@ def _parse_llm_json(raw: str, source: str) -> dict:
 
 _GROQ_CHAT_URL = "https://api.groq.com/openai/v1/chat/completions"
 _GROQ_RAG_MODELS = [
-    "llama-3.3-70b-versatile",  # primary: best quality available on Groq free tier
-    "llama-3.1-8b-instant",     # fallback: separate rate-limit bucket, fast
+    "openai/gpt-oss-120b",       # primary
+    "llama-3.3-70b-versatile",   # fallback 1: separate rate-limit bucket
+    "llama-3.1-8b-instant",      # fallback 2: separate rate-limit bucket, fast
 ]
 
 
@@ -600,11 +601,20 @@ async def _call_groq_rag(prompt: str) -> str:
                 except httpx.HTTPStatusError as e:
                     status = e.response.status_code if e.response is not None else None
                     text = e.response.text if e.response is not None else ""
-                    if status == 429 and attempt < max_retries:
-                        delay = base_delay * (2 ** (attempt - 1)) + random.uniform(0.0, 0.5)
-                        logger("RAG_ANALYSER", f"GROQ rate limit on {model}, retry {attempt}/{max_retries} after {delay:.1f}s", level="WARNING")
-                        await asyncio.sleep(delay)
-                        continue
+                    if status == 429:
+                        if attempt < max_retries:
+                            delay = base_delay * (2 ** (attempt - 1)) + random.uniform(0.0, 0.5)
+                            logger("RAG_ANALYSER", f"GROQ rate limit on {model}, retry {attempt}/{max_retries} after {delay:.1f}s", level="WARNING")
+                            await asyncio.sleep(delay)
+                            continue
+                        # retries exhausted on this model specifically - fall through to the
+                        # next model in _GROQ_RAG_MODELS rather than aborting the whole call.
+                        # Previously this fell through to `raise` on the final attempt, which
+                        # skipped every remaining fallback model entirely - a rate-limited
+                        # primary model meant the request failed even when a fallback model
+                        # was perfectly available.
+                        logger("RAG_ANALYSER", f"GROQ rate limit persisted on {model} after {max_retries} attempts, trying next model", level="WARNING")
+                        break
                     if status == 400 and any(k in text.lower() for k in ("decommissioned", "model_not_found", "not supported")):
                         logger("RAG_ANALYSER", f"GROQ model {model} unavailable, trying next", level="WARNING")
                         break

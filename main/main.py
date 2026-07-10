@@ -150,6 +150,20 @@ async def lifespan(app: FastAPI):
     logger("LIFESPAN", "Moderation sweep worker stopped", level="INFO")
 
     try:
+        from ai_related.harmful_text_detection.model_inference import shutdown_executor as shutdown_harmful_text_executor
+        shutdown_harmful_text_executor()
+        logger("LIFESPAN", "Harmful text model executor shut down", level="INFO")
+    except Exception as e:
+        logger("LIFESPAN", f"Error shutting down harmful text executor: {str(e)}", level="ERROR")
+
+    try:
+        from ai_related.job_engine.embedding_service import shutdown_executor as shutdown_embedding_executor
+        shutdown_embedding_executor()
+        logger("LIFESPAN", "Embedding model executor shut down", level="INFO")
+    except Exception as e:
+        logger("LIFESPAN", f"Error shutting down embedding executor: {str(e)}", level="ERROR")
+
+    try:
         close_db()
         logger("LIFESPAN", "Application shutdown complete - database connections closed", level="INFO")
     except Exception as e:

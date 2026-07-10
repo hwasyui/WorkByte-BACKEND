@@ -6,26 +6,26 @@ Num labels: 5
 Labels    : ['toxicity', 'obscene', 'threat', 'insult', 'identity_hate']
 
 Test Metrics (tuned thresholds):
-  f1                  : 0.8470
-  precision           : 0.7830
-  recall              : 0.9279
-  jaccard             : 0.7598
-  hamming_loss        : 0.0707
-  accuracy            : 0.9293
-  subset_accuracy     : 0.7285
+  f1                  : 0.8519
+  precision           : 0.7933
+  recall              : 0.9253
+  jaccard             : 0.7651
+  hamming_loss        : 0.0682
+  accuracy            : 0.9318
+  subset_accuracy     : 0.7402
 
 Per-Label Detail:
-  toxicity            : F1=0.9274  P=0.8792  R=0.9811  t=0.22
-  obscene             : F1=0.8221  P=0.7736  R=0.8772  t=0.58
-  threat              : F1=0.8805  P=0.8327  R=0.9342  t=0.16
-  insult              : F1=0.7287  P=0.6092  R=0.9064  t=0.34
-  identity_hate       : F1=0.8763  P=0.8201  R=0.9407  t=0.42
+  toxicity            : F1=0.9280  P=0.8920  R=0.9671  t=0.5
+  obscene             : F1=0.8224  P=0.7644  R=0.8900  t=0.38
+  threat              : F1=0.8936  P=0.8553  R=0.9356  t=0.58
+  insult              : F1=0.7311  P=0.6163  R=0.8984  t=0.28
+  identity_hate       : F1=0.8844  P=0.8387  R=0.9354  t=0.38
 
 Best Thresholds:
-  toxicity            : 0.220
-  obscene             : 0.580
-  threat              : 0.160
-  insult              : 0.340
-  identity_hate       : 0.420
+  toxicity            : 0.500
+  obscene             : 0.380
+  threat              : 0.580
+  insult              : 0.280
+  identity_hate       : 0.380
 
-Train time: 23.6 min
+Train time: 33.7 min

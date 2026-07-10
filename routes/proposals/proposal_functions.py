@@ -1,4 +1,3 @@
-import asyncio
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -331,7 +330,7 @@ class ProposalFunctions:
                 JobPostFunctions._sync_proposal_count(job_post_id)
 
             if cover_letter and cover_letter.strip():
-                result = await asyncio.to_thread(scan_harmful_text_with_ml_fallback, cover_letter)
+                result = await scan_harmful_text_with_ml_fallback(cover_letter)
             else:
                 result = {"is_flagged": False, "detected_labels": []}
 

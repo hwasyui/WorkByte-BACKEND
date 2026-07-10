@@ -1,4 +1,3 @@
-import asyncio
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -6,7 +5,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 from datetime import datetime, timezone
 from functions.db_manager import get_db
 from functions.logger import logger
-from routes.admin.admin_moderation import scan_harmful_text_with_ml_fallback, insert_harmful_text_queue_entry
+from routes.admin.admin_moderation import scan_short_and_long_text, insert_harmful_text_queue_entry
 from routes.notifications.notification_functions import NotificationFunctions
 from typing import List, Optional, Dict
 import uuid
@@ -153,17 +152,20 @@ class PortfolioFunctions:
             raise
 
     @staticmethod
-    async def run_portfolio_scan(portfolio_id: str, scan_text: str, freelancer_user_id: str) -> None:
+    async def run_portfolio_scan(portfolio_id: str, short_text: str, long_text: str, freelancer_user_id: str) -> None:
         """scanning -> scan -> visible | blocked. Mirrors ProposalFunctions.run_proposal_scan -
         content_type/content_id are this portfolio's own ('portfolio', portfolio_id), not the
-        freelancer's, so a flag can be traced back to the exact entry that caused it."""
+        freelancer's, so a flag can be traced back to the exact entry that caused it.
+
+        project_title carries no context - a 1-4 word field gives the ML model nothing to
+        condition on, so it is keyword-only (short_text). project_description has real
+        sentence context, so it goes through the ML model (long_text). See
+        scan_short_and_long_text() in admin_moderation.py."""
         try:
             PortfolioFunctions.update_portfolio(portfolio_id, {"moderation_status": "scanning"})
 
-            if scan_text and scan_text.strip():
-                result = await asyncio.to_thread(scan_harmful_text_with_ml_fallback, scan_text)
-            else:
-                result = {"is_flagged": False, "detected_labels": []}
+            result = await scan_short_and_long_text(short_text, long_text)
+            scan_text = " ".join(filter(None, [short_text, long_text]))
 
             scanned_at = datetime.now(timezone.utc)
 

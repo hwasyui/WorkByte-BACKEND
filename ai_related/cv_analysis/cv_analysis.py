@@ -25,6 +25,22 @@ def _normalize_text(text: str) -> str:
     return re.sub(r"\s+", " ", text.strip()).lower()
 
 
+# Below this word count, extraction almost certainly failed silently (a scanned/
+# image-based CV with no real OCR signal, a corrupted PDF yielding a few stray
+# header words, etc.) rather than the CV genuinely being this sparse — a real CV
+# always has far more than this from name/contact/one work or education entry alone.
+MIN_CV_TEXT_WORDS = 25
+
+CV_EXTRACTION_FAILED_MESSAGE = (
+    "We couldn't read enough text from this CV — it may be a scanned image or have "
+    "an unusual layout our parser can't handle. Please fill in your profile manually instead."
+)
+
+
+def is_cv_text_too_sparse(text: Optional[str]) -> bool:
+    return len((text or "").split()) < MIN_CV_TEXT_WORDS
+
+
 async def extract_cv_text(cv_file: UploadFile) -> str:
     """Returns "" when extraction yields no text; raises ValueError for empty
     files or unsupported types."""
@@ -389,7 +405,7 @@ def compute_overall_score(section_overall_pct: float, ats_label: str) -> int:
     return result
 
 
-def _call_groq(system_prompt: str, user_prompt: str, json_mode: bool = False, max_tokens: int = 1500) -> Any:
+def _call_groq(system_prompt: str, user_prompt: str, json_mode: bool = False, max_tokens: int = 4000) -> Any:
     """Call GROQ LLM and return the response. Retries once on a JSON-schema
     failure — gpt-oss-20b occasionally produces malformed nested JSON, and a
     resample on the same prompt usually succeeds since generation isn't
@@ -506,7 +522,7 @@ async def analyze_cv_with_llm(
     )
 
     try:
-        result = await asyncio.to_thread(_call_groq, system, user, json_mode=True, max_tokens=2500)
+        result = await asyncio.to_thread(_call_groq, system, user, json_mode=True, max_tokens=4000)
         if not isinstance(result, dict):
             raise ValueError(f"LLM returned {type(result).__name__} instead of dict")
         sections = result.get("sections", [])
@@ -600,7 +616,7 @@ async def parse_cv_for_profile(cv_text: str) -> Dict[str, Any]:
 
     groq_result: Dict[str, Any] = {}
     try:
-        groq_result = await asyncio.to_thread(_call_groq, system, user, json_mode=True, max_tokens=3000)
+        groq_result = await asyncio.to_thread(_call_groq, system, user, json_mode=True, max_tokens=4000)
         logger(
             "CV_ANALYSIS",
             f"GROQ extracted skills={len(groq_result.get('skills', []))} "

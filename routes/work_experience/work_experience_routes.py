@@ -100,12 +100,11 @@ async def create_work_experience(work_experience: WorkExperienceCreate, current_
         
         mark_freelancer_dirty(str(work_experience.freelancer_id))
 
-        _scan_text = " ".join(filter(None, [
-            work_experience.job_title, work_experience.company_name,
-            work_experience.location, work_experience.description,
+        _short_text = " ".join(filter(None, [
+            work_experience.job_title, work_experience.company_name, work_experience.location,
         ]))
         asyncio.create_task(WorkExperienceFunctions.run_work_experience_scan(
-            str(new_experience["work_experience_id"]), _scan_text, str(current_user.user_id),
+            str(new_experience["work_experience_id"]), _short_text, work_experience.description, str(current_user.user_id),
         ))
 
         success_msg = f"Created work experience {work_experience_id} for freelancer {work_experience.freelancer_id}"
@@ -140,14 +139,13 @@ async def update_work_experience(work_experience_id: str, work_experience_update
         
         mark_freelancer_dirty(str(existing_experience["freelancer_id"]))
 
-        _scan_text = " ".join(filter(None, [
+        _short_text = " ".join(filter(None, [
             updated_experience.get("job_title", ""),
             updated_experience.get("company_name", ""),
             updated_experience.get("location", ""),
-            updated_experience.get("description", ""),
         ]))
         asyncio.create_task(WorkExperienceFunctions.run_work_experience_scan(
-            work_experience_id, _scan_text, str(current_user.user_id),
+            work_experience_id, _short_text, updated_experience.get("description", ""), str(current_user.user_id),
         ))
 
         success_msg = f"Updated work experience {work_experience_id}"

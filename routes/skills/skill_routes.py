@@ -1,4 +1,3 @@
-import asyncio
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -12,7 +11,7 @@ from functions.authentication import get_current_user
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.skills.skill_functions import SkillFunctions
-from routes.admin.admin_moderation import scan_harmful_text_with_ml_fallback
+from routes.admin.admin_moderation import scan_harmful_text
 
 skill_router = APIRouter(prefix="/skills", tags=["Skills"])
 
@@ -131,15 +130,19 @@ async def get_skill(skill_id: str, current_user: UserInDB = Depends(get_current_
 
 @skill_router.post("", response_model=SkillResponse, status_code=201)
 async def create_skill(skill: SkillCreate, current_user: UserInDB = Depends(get_current_user)):
-    """Create a new skill. skill is a shared, global lookup table with no single owner
-    (visible to every user via autocomplete/search), so unlike the identity-field scans
-    this fails CLOSED: if the scan itself errors, the create is rejected rather than
-    letting an unscanned name into a table everyone sees."""
+    """Create a new skill. skill_name carries no context - a 1-4 word field gives the ML
+    model nothing to condition on, so it matches vocabulary rather than meaning (e.g.
+    'Kill Chain Analysis' would score as confidently as 'kill yourself'). It is scanned
+    with the deterministic keyword list only, never the ML model. skill is also a
+    shared, global lookup table with no single owner (visible to every user via
+    autocomplete/search), so unlike the identity-field scans this fails CLOSED: if the
+    scan itself errors, the create is rejected rather than letting an unscanned name
+    into a table everyone sees."""
     try:
         scan_text = skill.skill_name or ""
         if scan_text.strip():
             try:
-                harm_result = await asyncio.to_thread(scan_harmful_text_with_ml_fallback, scan_text)
+                harm_result = scan_harmful_text(scan_text)
             except Exception as e:
                 logger("SKILL", f"Skill-name scan errored, failing closed (rejecting create): {e}", level="WARNING")
                 return ResponseSchema.error("Couldn't verify this skill name right now. Please try again shortly.", 503)

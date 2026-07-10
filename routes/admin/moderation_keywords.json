@@ -3,8 +3,10 @@
     "source": "Manually curated keyword lists covering the same six-label taxonomy as Google's Perspective API and the Jigsaw Toxic Comment Classification dataset (the dataset the ML model was trained on). These serve as a deterministic fallback when the ML model (RoBERTa, F1=0.71) is unavailable. Labels mirror the ML model schema exactly.",
     "content_scoring": "score = min(hit_count \u00d7 0.35, 1.0).  1 keyword hit \u2192 0.35 score (flags for admin review).  2 hits \u2192 0.70.  3+ hits \u2192 1.0.  Auto-action threshold: sum of all 6 label scores \u2265 0.85 (job_post) or \u2265 0.90 (profiles) after 30 days with no manual admin action.",
     "scam_scoring": "score = min(matched_keywords / 6.0, 1.0).  Flag-for-review threshold: 0.10 (\u2248 1 keyword match \u2192 16.7%).  Auto-remove threshold: 0.85 (\u2248 5+ keyword matches \u2192 83%) after 30 days.",
-    "last_reviewed": "2025-05-13",
-    "prefix_keywords": "Entries listed in `prefix_keywords` below are deliberately truncated word-stems meant to catch multiple forms (e.g. \"homophob\" -> homophobic/homophobia). The matcher only requires a word-boundary on the left for these; everything else requires \\bword\\b on both sides so a keyword can't false-flag as a fragment inside an unrelated word."
+    "last_reviewed": "2026-07-10",
+    "prefix_keywords": "Entries listed in `prefix_keywords` below are deliberately truncated word-stems meant to catch multiple forms (e.g. \"homophob\" -> homophobic/homophobia). The matcher only requires a word-boundary on the left for these; everything else requires \\bword\\b on both sides so a keyword can't false-flag as a fragment inside an unrelated word.",
+    "identity_hate_slurs": "A small curated slur list was added 2026-07-10 alongside the pre-existing phrase-only entries, which caught no slurs at all. Deliberately excludes terms that double as real surnames or fragments of innocent words (e.g. 'coon', 'chink', 'dyke' - see HARMFUL_TEXT.md section 17), which would false-flag real names and phrases like 'a chink in the armor'.",
+    "self_harm_keywords": "'kill yourself' / 'kys' were added 2026-07-10. The pre-existing 'kill you' entry does not match 'kill yourself' once word-boundary matching is applied."
   },
   "prefix_keywords": [
     "prostitut",
@@ -59,6 +61,8 @@
     "threat": [
       "i will kill",
       "kill you",
+      "kill yourself",
+      "kys",
       "threaten you",
       "hurt you",
       "beat you",
@@ -95,7 +99,17 @@
       "ethnic cleansing",
       "religious hatred",
       "go back to your country",
-      "your kind"
+      "your kind",
+      "nigger",
+      "nigga",
+      "faggot",
+      "spic",
+      "kike",
+      "wetback",
+      "raghead",
+      "gook",
+      "tranny",
+      "beaner"
     ]
   },
   "scam_keywords": [

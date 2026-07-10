@@ -27,8 +27,8 @@ class TextPreprocessor:
 
         text = re.sub(r'<[^>]+>', '', text)
 
-        text = re.sub(r'@\w+', '', text)
-        text = re.sub(r'#\w+', '', text)
+        text = re.sub(r'@(\w+)', r'\1', text)
+        text = re.sub(r'#(\w+)', r'\1', text)
 
         text = re.sub(r'[^\w\s.,!?-]', '', text)
 

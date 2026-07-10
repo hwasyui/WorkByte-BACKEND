@@ -46,6 +46,11 @@ DEFAULT_BAN_MESSAGE_REPORTS    = (
     "Your account has been restricted due to multiple community reports. "
     "Submit an appeal if you believe this was a mistake."
 )
+DEFAULT_BAN_REASON_SCAM        = "scam"
+DEFAULT_BAN_MESSAGE_SCAM       = (
+    "Your account has been restricted due to confirmed fraudulent job postings. "
+    "Submit an appeal if you believe this was a mistake."
+)
 DEFAULT_CLOSURE_REASON_ADMIN   = "admin_override"
 DEFAULT_CLOSURE_NOTE_ADMIN     = (
     "This job post was closed by an administrator. "
@@ -159,7 +164,7 @@ def _notify_contract_counterparties_of_ban(user_id: str) -> None:
         ))
 
 
-def queue_harmful_text_scan(
+async def queue_harmful_text_scan(
     content_type: str,
     content_id: str,
     user_id: str,
@@ -170,7 +175,7 @@ def queue_harmful_text_scan(
     content_type: 'job_post' | 'freelancer_profile' | 'client_profile'
     Returns the inserted row dict, or None if content is clean.
     """
-    result = scan_harmful_text_with_ml_fallback(text)
+    result = await scan_harmful_text_with_ml_fallback(text)
     if not result["is_flagged"]:
         return None
     return insert_harmful_text_queue_entry(content_type, content_id, user_id, text, result)
@@ -396,6 +401,25 @@ def _flag_client_for_scam(client_id: str):
                 "note":   DEFAULT_CLOSURE_NOTE_SCAM,
             },
         )
+        user_row = _row(get_db().execute_query(
+            "SELECT user_id FROM client WHERE client_id = :cid",
+            params={"cid": client_id},
+        ))
+        if user_row:
+            uid = str(user_row["user_id"])
+            get_db().execute_query(
+                """
+                UPDATE users
+                SET is_report_banned = TRUE,
+                    report_banned_at = NOW(),
+                    ban_reason  = :reason,
+                    ban_message = :msg
+                WHERE user_id = :uid
+                """,
+                params={"uid": uid, "reason": DEFAULT_BAN_REASON_SCAM, "msg": DEFAULT_BAN_MESSAGE_SCAM},
+            )
+            revoke_all_refresh_tokens_for_user(uid)
+            _notify_contract_counterparties_of_ban(uid)
         logger("ADMIN", f"Client {client_id} banned; 3+ confirmed scam jobs, active jobs closed", level="WARNING")
 
 

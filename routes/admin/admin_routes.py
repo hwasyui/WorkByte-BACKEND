@@ -170,7 +170,7 @@ async def trigger_content_scan(
     try:
         if body.content_type not in ("job_post", "freelancer_profile", "client_profile"):
             return ResponseSchema.error("content_type must be job_post, freelancer_profile, or client_profile", 400)
-        result = queue_harmful_text_scan(
+        result = await queue_harmful_text_scan(
             content_type=body.content_type,
             content_id=body.content_id,
             user_id=body.user_id,
