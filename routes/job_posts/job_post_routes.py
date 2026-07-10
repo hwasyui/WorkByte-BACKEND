@@ -322,6 +322,19 @@ async def get_job_post(job_post_id: str, current_user: UserInDB = Depends(get_cu
             error_msg = f"Job post {job_post_id} not found"
             logger("JOB_POST", error_msg, "GET /job-posts/{job_post_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
+        if job_post.get("moderation_status") == "scanning" and "job_title" not in job_post:
+            # Activation was just triggered and the background moderation scan hasn't
+            # resolved yet - tell the caller to retry shortly rather than a hard 404,
+            # and don't hand back real content before it's cleared moderation.
+            logger("JOB_POST", f"Job post {job_post_id} still scanning, told viewer to retry", "GET /job-posts/{job_post_id}", "INFO")
+            return ResponseSchema.success(
+                {
+                    "job_post_id": job_post_id,
+                    "moderation_status": "scanning",
+                    "message": "This job post is still being reviewed and isn't available yet. Try again in a moment.",
+                },
+                202,
+            )
         JobPostFunctions.increment_view_count(job_post_id)
         success_msg = f"Retrieved job post {job_post_id}"
         logger("JOB_POST", success_msg, "GET /job-posts/{job_post_id}", "INFO")

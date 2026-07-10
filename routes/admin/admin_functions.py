@@ -880,8 +880,8 @@ def submit_appeal(
     proof_file_url: Optional[str] = None,
 ) -> Optional[Dict]:
     """
-    User submits an appeal against a ban, job-post closure, or a contract
-    counterparty they couldn't block directly (see POST /dm/block).
+    User submits an appeal against a ban, job-post closure, or a problematic
+    contract counterparty.
 
     Rules:
       - Cannot appeal while a pending appeal already exists for the same target.

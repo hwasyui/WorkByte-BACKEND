@@ -896,8 +896,7 @@ async def user_submit_appeal(
     current_user: UserInDB = Depends(get_current_user),
 ):
     """Submit an appeal against a job-post closure, account restriction, or a
-    contract counterparty (e.g. one that couldn't be blocked because a contract
-    is still ongoing - see POST /dm/block).
+    problematic contract counterparty.
 
     Args:
         target_type: 'user' (account ban / counterparty) or 'job_post' (post closure).

@@ -548,17 +548,27 @@ class JobPostFunctions:
         If the post is not 'visible' (still 'scanning' or 'blocked'), only two viewers get
         the real data: the owning client, or a freelancer with an active contract already
         tied to this job (blocking content must never disrupt work already in progress).
-        Anyone else gets None, same as if the post genuinely didn't exist - no leak that a
-        hidden post is under moderation."""
+
+        For anyone else: a 'blocked' post returns None, same as if it genuinely didn't
+        exist - no leak that a hidden post is under moderation. A 'scanning' post (the
+        background moderation scan kicked off by PUT .../status=active hasn't resolved
+        yet - usually well under a second, see thread_analysis.md) instead returns a
+        minimal stub carrying only job_post_id and moderation_status, so a caller can
+        tell "not ready yet, try again shortly" apart from "doesn't exist" or "was
+        rejected" - without exposing content that hasn't cleared moderation."""
         job_post = JobPostFunctions.get_job_post_by_id(job_post_id)
         if not job_post:
             return None
 
-        if job_post.get("moderation_status") != "visible":
-            if not viewer_user_id or not JobPostFunctions._viewer_can_see_hidden_job_post(
+        status = job_post.get("moderation_status")
+        if status != "visible":
+            privileged = bool(viewer_user_id) and JobPostFunctions._viewer_can_see_hidden_job_post(
                 job_post_id, job_post.get("client_id"), viewer_user_id
-            ):
-                logger("JOB_POST_FUNCTIONS", f"Job post {job_post_id} hidden from viewer {viewer_user_id} (moderation_status={job_post.get('moderation_status')})", level="INFO")
+            )
+            if not privileged:
+                logger("JOB_POST_FUNCTIONS", f"Job post {job_post_id} hidden from viewer {viewer_user_id} (moderation_status={status})", level="INFO")
+                if status == "scanning":
+                    return {"job_post_id": job_post_id, "moderation_status": "scanning"}
                 return None
 
         return job_post
