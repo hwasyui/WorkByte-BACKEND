@@ -2,6 +2,7 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
+from typing import Dict, Optional
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from functions.schema_model import UserInDB
 from functions.authentication import get_current_user
@@ -17,8 +18,44 @@ from ai_related.review_analysis.review_pipeline import (
     run_post_completion_pipeline,
     run_post_review_pipeline,
 )
+from routes.admin.admin_moderation import scan_harmful_text_with_ml_fallback, ML_SCAN_TIMEOUT_BLOCKING_SECONDS
 
 review_router = APIRouter(prefix="/reviews", tags=["Reviews"])
+
+_REVIEW_LABEL_NAMES = {
+    "toxic": "toxicity",
+    "toxicity": "toxicity",
+    "obscene": "obscenity",
+    "threat": "threats",
+    "insult": "insults",
+    "identity_hate": "identity-based hate speech",
+}
+
+
+async def _reject_review_text_if_harmful(client_answer: str, overall_comment: str) -> Optional[Dict]:
+    """client_answer and overall_comment both end up on a published review of a specific
+    named freelancer - unlike a DM or contract clause between two already-matched parties,
+    the freelancer being reviewed has no say in whether this goes live, so this is sync
+    reject-outright rather than the save-then-block pattern run_post_review_pipeline (fake/
+    bias detection, a different concern) already uses. Fails open on a scan error - same
+    blast-radius reasoning as bio/DM/contract text (one review, not a shared table)."""
+    combined = " ".join(t for t in (client_answer, overall_comment) if t and t.strip())
+    if not combined.strip():
+        return None
+    try:
+        harm_result = await scan_harmful_text_with_ml_fallback(combined, timeout=ML_SCAN_TIMEOUT_BLOCKING_SECONDS)
+    except Exception as e:
+        logger("REVIEW", f"Review-text scan errored, failing open (allowing save): {e}", level="WARNING")
+        return None
+    if not harm_result["is_flagged"]:
+        return None
+    detected_labels = harm_result.get("detected_labels", [])
+    labels = [_REVIEW_LABEL_NAMES.get(l, l) for l in detected_labels]
+    logger("REVIEW", f"Blocked review submission, labels={detected_labels}", level="WARNING")
+    return {
+        "message": f"This review couldn't be submitted. It was flagged for {', '.join(labels) or 'a policy violation'}.",
+        "detected_labels": detected_labels,
+    }
 
 
 # INTERNAL HELPER: import and call this from contract_routes.py
@@ -125,6 +162,10 @@ async def submit_review(
 
         if not overall_comment:
             return ResponseSchema.error("overall_comment is required.", 400)
+
+        rejection = await _reject_review_text_if_harmful(client_answer, overall_comment)
+        if rejection:
+            return ResponseSchema.error(rejection["message"], 400, extra={"detected_labels": rejection["detected_labels"]})
 
         # Fetch pre-suggested tags from job_role_skill
         suggested_tags = ReviewFunctions.get_suggested_skill_tags(review["contract_id"])

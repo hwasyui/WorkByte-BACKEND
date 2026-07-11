@@ -318,13 +318,12 @@ class ProposalFunctions:
         return dict(rows[0]) if rows else None
 
     @staticmethod
-    async def run_proposal_scan(proposal_id: str, scan_text: str, freelancer_user_id: str) -> None:
+    async def run_proposal_scan(proposal_id: str, cover_letter: str, freelancer_user_id: str) -> None:
         """shared scan path for create and edit: scanning -> scan -> visible | blocked.
-        the row is edited in place, never deleted or resubmitted as a new row. `scan_text`
-        is cover_letter (+ proposed_duration, appended 2026-07-11 - a short free-text field
-        that was never included in any scan, found during the full-field audit,
-        HARMFUL_TEXT.md) - only used for scanning, not written back to the row."""
-        cover_letter = scan_text
+        the row is edited in place, never deleted or resubmitted as a new row.
+        proposed_duration briefly rode along in this scan (2026-07-11) but was pulled back
+        out the same day - it's dropdown-constrained on the frontend, not free text, so it's
+        format-validated in proposal_routes.py instead (see HARMFUL_TEXT.md)."""
         try:
             existing = ProposalFunctions.get_proposal_by_id(proposal_id)
             job_post_id = existing.get("job_post_id") if existing else None
