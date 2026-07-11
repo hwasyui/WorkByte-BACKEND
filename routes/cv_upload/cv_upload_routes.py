@@ -13,6 +13,7 @@ from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from functions.minio_client import upload_cv_file, guess_mime, validate_file_size
 from routes.freelancers.freelancer_functions import FreelancerFunctions
+from routes.freelancers.freelancer_routes import _scan_identity_fields_or_reject
 from routes.skills.skill_functions import SkillFunctions
 from routes.freelancer_skills.freelancer_skill_functions import FreelancerSkillFunctions
 from routes.work_experience.work_experience_functions import WorkExperienceFunctions
@@ -260,9 +261,13 @@ async def apply_cv_profile(
         applied_education = 0
 
         if request.apply_bio and request.suggested_bio and request.suggested_bio.strip():
+            _bio_text = request.suggested_bio.strip()
+            rejection = await _scan_identity_fields_or_reject("", _bio_text, "bio")
+            if rejection:
+                return ResponseSchema.error(rejection["message"], rejection["status"])
             FreelancerFunctions.update_freelancer(
                 freelancer_id=freelancer_id,
-                update_data={"bio": request.suggested_bio.strip()},
+                update_data={"bio": _bio_text},
             )
             applied_bio = True
 
@@ -297,7 +302,7 @@ async def apply_cv_profile(
 
         if request.apply_work_experience and request.work_experience:
             for exp in request.work_experience:
-                WorkExperienceFunctions.create_work_experience(
+                new_experience = WorkExperienceFunctions.create_work_experience(
                     freelancer_id=freelancer_id,
                     company_name=exp.company_name,
                     job_title=exp.job_title,
@@ -307,11 +312,17 @@ async def apply_cv_profile(
                     is_current=exp.is_current,
                     description=exp.description,
                 )
+                _exp_short_text = " ".join(filter(None, [
+                    exp.job_title, exp.company_name, exp.location,
+                ]))
+                asyncio.create_task(WorkExperienceFunctions.run_work_experience_scan(
+                    str(new_experience["work_experience_id"]), _exp_short_text, exp.description, str(current_user.user_id),
+                ))
                 applied_work_experience += 1
 
         if request.apply_education and request.education:
             for edu in request.education:
-                EducationFunctions.create_education(
+                new_education = EducationFunctions.create_education(
                     freelancer_id=freelancer_id,
                     institution_name=edu.institution_name,
                     degree=edu.degree,
@@ -321,6 +332,12 @@ async def apply_cv_profile(
                     is_current=edu.is_current,
                     grade=edu.grade if edu.grade and str(edu.grade).strip() else None,
                 )
+                _edu_short_text = " ".join(filter(None, [
+                    edu.institution_name, edu.degree, edu.field_of_study, edu.grade,
+                ]))
+                asyncio.create_task(EducationFunctions.run_education_scan(
+                    str(new_education["education_id"]), _edu_short_text, None, str(current_user.user_id),
+                ))
                 applied_education += 1
 
         logger(
