@@ -1,5 +1,6 @@
 import asyncio
 import os
+import re
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
@@ -23,6 +24,20 @@ from routes.notifications.notification_functions import NotificationFunctions
 proposal_router = APIRouter(prefix="/proposals", tags=["Proposals"])
 
 _VALID_PROPOSAL_ORDER_BY = {"submitted_at", "proposed_budget", "total_jobs"}
+
+# proposed_duration is built entirely from two dropdowns in submit_proposal.dart (number
+# AND unit both fixed-choice, no free-typed field at all) - a value matching this shape
+# can't contain harmful text by construction, so this is a format check guarding direct
+# API calls, not a harmful-text scan.
+_DURATION_FORMAT_RE = re.compile(r"^\d+\s+(day|days|week|weeks|month|months)$", re.IGNORECASE)
+
+
+def _reject_proposal_duration_if_invalid(proposed_duration: Optional[str]) -> Optional[str]:
+    if not proposed_duration or not proposed_duration.strip():
+        return None
+    if _DURATION_FORMAT_RE.match(proposed_duration.strip()):
+        return None
+    return "proposed_duration must look like '<number> days|weeks|months' (e.g. '5 days')."
 
 
 @proposal_router.get("", response_model=List[ProposalResponse])
@@ -179,6 +194,11 @@ async def create_proposal(
 
         if existing:
             return ResponseSchema.error(duplicate_message, 409)
+
+        duration_error = _reject_proposal_duration_if_invalid(proposal.proposed_duration)
+        if duration_error:
+            return ResponseSchema.error(duration_error, 400)
+
         try:
             new_proposal = ProposalFunctions.create_proposal(
                 job_post_id=proposal.job_post_id,
@@ -376,6 +396,12 @@ async def update_proposal(
             return ResponseSchema.error("Proposal is still being reviewed, please wait before editing", 409)
 
         update_data = proposal_update.model_dump(exclude_unset=True)
+
+        if "proposed_duration" in update_data:
+            duration_error = _reject_proposal_duration_if_invalid(update_data.get("proposed_duration"))
+            if duration_error:
+                return ResponseSchema.error(duration_error, 400)
+
         updated = ProposalFunctions.update_proposal(proposal_id, update_data)
 
         # re-scan on every edit, not just cover_letter changes, since the row is edited in place

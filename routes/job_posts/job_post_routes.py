@@ -402,6 +402,10 @@ async def create_job_post(job_post: JobPostCreate, current_user: UserInDB = Depe
         _usr_id   = current_user.user_id
         _title    = job_post.job_title
         _desc     = job_post.job_description
+        # estimated_duration was briefly added to this scan during the 2026-07-11
+        # full-field audit, then reverted: no create/edit screen in the app sets it
+        # (job_post_model.dart only deserializes it for display), so there's nothing to
+        # defend - same reasoning as the skill.description removal elsewhere that day.
         _scan_text = f"{_title} {_desc}"
         asyncio.create_task(JobPostFunctions.run_job_post_scan(_jp_id, _scan_text, str(_usr_id)))
         asyncio.create_task(asyncio.to_thread(

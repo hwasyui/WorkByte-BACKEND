@@ -15,6 +15,7 @@ from routes.freelancers.freelancer_functions import FreelancerFunctions
 from routes.clients.client_functions import ClientFunctions
 from routes.notifications.notification_functions import NotificationFunctions
 from routes.reviews.review_routes import trigger_review_pipeline_on_completion
+from routes.admin.admin_moderation import scan_harmful_text_with_ml_fallback, ML_SCAN_TIMEOUT_BLOCKING_SECONDS
 
 
 contract_submission_router = APIRouter(
@@ -23,6 +24,37 @@ contract_submission_router = APIRouter(
 )
 
 MAX_REVISION_REQUESTS = 3  # per contract, across its whole lifetime
+
+_SUBMISSION_LABEL_NAMES = {
+    "toxic": "toxicity",
+    "toxicity": "toxicity",
+    "obscene": "obscenity",
+    "threat": "threats",
+    "insult": "insults",
+    "identity_hate": "identity-based hate speech",
+}
+
+
+async def _reject_submission_text_if_harmful(text: Optional[str], field_label: str):
+    """note/revision_note have real sentence context - ML with keyword fallback, same
+    as bio/DM. Fails open on a scan error (blast radius is one contract between two
+    already-matched parties) rather than blocking a legitimate submission/revision."""
+    if not text or not text.strip():
+        return None
+    try:
+        harm_result = await scan_harmful_text_with_ml_fallback(text, timeout=ML_SCAN_TIMEOUT_BLOCKING_SECONDS)
+    except Exception as e:
+        logger("CONTRACT_SUBMISSION", f"{field_label} scan errored, failing open (allowing save): {e}", level="WARNING")
+        return None
+    if not harm_result["is_flagged"]:
+        return None
+    detected_labels = harm_result.get("detected_labels", [])
+    labels = [_SUBMISSION_LABEL_NAMES.get(l, l) for l in detected_labels]
+    logger("CONTRACT_SUBMISSION", f"Blocked {field_label}, labels={detected_labels}", level="WARNING")
+    return {
+        "message": f"Your {field_label} couldn't be saved. It was flagged for {', '.join(labels) or 'a policy violation'}.",
+        "detected_labels": detected_labels,
+    }
 
 
 def _resolve_submission_urls(submission: dict) -> dict:
@@ -71,6 +103,10 @@ async def create_contract_submission(
 
         if not files or len(files) == 0:
             return ResponseSchema.error("At least one file is required", 400)
+
+        rejection = await _reject_submission_text_if_harmful(note, "submission note")
+        if rejection:
+            return ResponseSchema.error(rejection["message"], 400, extra={"detected_labels": rejection["detected_labels"]})
 
         ContractSubmissionFunctions.supersede_latest_revision_requested_submission(contract_id)
 
@@ -199,6 +235,10 @@ async def request_revision_for_latest_submission(
                 f"Maximum number of revision requests ({MAX_REVISION_REQUESTS}) reached for this contract",
                 400,
             )
+
+        rejection = await _reject_submission_text_if_harmful(payload.note, "revision note")
+        if rejection:
+            return ResponseSchema.error(rejection["message"], 400, extra={"detected_labels": rejection["detected_labels"]})
 
         latest_submission = ContractSubmissionFunctions.request_revision_for_latest_submission(
             contract_id=contract_id,

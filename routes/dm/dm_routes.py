@@ -138,6 +138,17 @@ async def start_thread(
             {"thread_id": existing.get("thread_id", ""), "thread": existing, "already_exists": True}, 200
         )
 
+    # A custom opening message is user-authored free text, same as any reply via
+    # POST /dm/threads/{id}/messages - must go through the same scan. The default
+    # template (message_text omitted) needs no scan: it's either a hardcoded literal
+    # or built from job_title, which was already scanned when that job post was created.
+    if payload.message_text and payload.message_text.strip():
+        harm_result = await scan_harmful_text_with_ml_fallback(payload.message_text, timeout=ML_SCAN_TIMEOUT_BLOCKING_SECONDS)
+        if harm_result["is_flagged"]:
+            detected_labels = harm_result.get("detected_labels", [])
+            logger("DM", f"Blocked opening message from {current_user.user_id} to {payload.participant_id}, labels={detected_labels}", "POST /dm/threads", "WARNING")
+            return ResponseSchema.error("Message couldn't be sent.", 400, extra={"detected_labels": detected_labels})
+
     try:
         result = DMFunctions.create_thread(
             initiator_id=str(current_user.user_id),

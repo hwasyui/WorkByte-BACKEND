@@ -16,8 +16,38 @@ from routes.job_roles.job_role_functions import JobRoleFunctions
 from routes.contracts.contract_functions import ContractFunctions
 from routes.proposals.proposal_functions import ProposalFunctions
 from ai_related.job_engine.embedding_manager import mark_job_dirty, mark_job_dirty_by_role
+from routes.admin.admin_moderation import scan_short_and_long_text
 
 job_role_router = APIRouter(prefix="/job-roles", tags=["Job Roles"])
+
+_JOB_ROLE_LABEL_NAMES = {
+    "toxic": "toxicity",
+    "toxicity": "toxicity",
+    "obscene": "obscenity",
+    "threat": "threats",
+    "insult": "insults",
+    "identity_hate": "identity-based hate speech",
+}
+
+
+async def _reject_job_role_if_harmful(role_title: str, role_description: Optional[str]) -> Optional[Dict]:
+    """role_title carries no context (1-4 words) - keyword only. role_description has
+    real sentence context - ML with keyword fallback. Same scan_short_and_long_text()
+    split already used for portfolio/education/work-experience, but sync reject-outright
+    here instead of scanning->visible|blocked: job roles are shown to freelancers
+    browsing a job post the moment they're created (no separate "public" gate exists
+    on job_role the way it does on job_post itself), so nothing should ever be saved
+    unscanned even for a moment."""
+    harm_result = await scan_short_and_long_text(role_title or "", role_description or "")
+    if not harm_result["is_flagged"]:
+        return None
+    detected_labels = harm_result.get("detected_labels", [])
+    labels = [_JOB_ROLE_LABEL_NAMES.get(l, l) for l in detected_labels]
+    logger("JOB_ROLE", f"Blocked job role save, labels={detected_labels}", level="WARNING")
+    return {
+        "message": f"This role couldn't be saved. It was flagged for {', '.join(labels) or 'a policy violation'}.",
+        "detected_labels": detected_labels,
+    }
 
 
 @job_role_router.get("", response_model=List[JobRoleResponse])
@@ -82,7 +112,11 @@ async def create_job_role(job_role: JobRoleCreate, current_user: UserInDB = Depe
         job_role_id = job_role.job_role_id or str(uuid.uuid4())
         job_post = JobPostFunctions.get_job_post_by_id(job_role.job_post_id)
         assert_client_owns(current_user, job_post["client_id"])
-        
+
+        rejection = await _reject_job_role_if_harmful(job_role.role_title, job_role.role_description)
+        if rejection:
+            return ResponseSchema.error(rejection["message"], 400, extra={"detected_labels": rejection["detected_labels"]})
+
         new_job_role = JobRoleFunctions.create_job_role(
             job_post_id=job_role.job_post_id,
             role_title=job_role.role_title,
@@ -123,8 +157,15 @@ async def update_job_role(job_role_id: str, job_role_update: JobRoleUpdate, curr
             return ResponseSchema.error(error_msg, 404)
         job_post = JobPostFunctions.get_job_post_by_id(existing_job_role["job_post_id"])
         assert_client_owns(current_user, job_post["client_id"])
-        
+
         update_data = job_role_update.model_dump(exclude_unset=True)
+
+        _role_title = update_data.get("role_title", existing_job_role.get("role_title", ""))
+        _role_description = update_data.get("role_description", existing_job_role.get("role_description", ""))
+        rejection = await _reject_job_role_if_harmful(_role_title, _role_description)
+        if rejection:
+            return ResponseSchema.error(rejection["message"], 400, extra={"detected_labels": rejection["detected_labels"]})
+
         updated_job_role = JobRoleFunctions.update_job_role(job_role_id, update_data)
         
         mark_job_dirty(str(existing_job_role["job_post_id"]))

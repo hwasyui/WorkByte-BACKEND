@@ -1,5 +1,6 @@
 import asyncio
 import os
+import re
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
@@ -13,7 +14,7 @@ from functions.minio_client import (
     BUCKET_MESSAGE_ATTACHMENTS,
 )
 from routes.reviews.review_routes import trigger_review_pipeline_on_completion
-from typing import List, Optional
+from typing import Dict, List, Optional
 import uuid
 from functions.schema_model import CancelContractRequest, ContractCreate, ContractUpdate, ContractResponse, ContractGenerateRequest, ReportPaymentRequest, RaiseDisputeRequest
 from functions.schema_model import UserInDB
@@ -36,6 +37,76 @@ from routes.proposals.proposal_functions import ProposalFunctions
 from routes.dm.dm_functions import DMFunctions, _contract_accepted_default
 from routes.notifications.notification_functions import NotificationFunctions
 from ai_related.job_engine.embedding_manager import mark_contract_dirty
+from routes.admin.admin_moderation import scan_harmful_text, scan_harmful_text_with_ml_fallback, ML_SCAN_TIMEOUT_BLOCKING_SECONDS
+
+_CONTRACT_LABEL_NAMES = {
+    "toxic": "toxicity",
+    "toxicity": "toxicity",
+    "obscene": "obscenity",
+    "threat": "threats",
+    "insult": "insults",
+    "identity_hate": "identity-based hate speech",
+}
+
+
+def _reject_contract_short_text_if_harmful(*fields: Optional[str]) -> Optional[Dict]:
+    """contract_title/role_title carry no context (1-4 words) - keyword only, same
+    rule as every other short field in the system. Synchronous since scan_harmful_text
+    never awaits anything."""
+    combined = " ".join(f for f in fields if f)
+    if not combined.strip():
+        return None
+    harm_result = scan_harmful_text(combined)
+    if not harm_result["is_flagged"]:
+        return None
+    detected_labels = harm_result.get("detected_labels", [])
+    labels = [_CONTRACT_LABEL_NAMES.get(l, l) for l in detected_labels]
+    logger("CONTRACT", f"Blocked contract save, labels={detected_labels}", level="WARNING")
+    return {
+        "message": f"This contract couldn't be saved. It was flagged for {', '.join(labels) or 'a policy violation'}.",
+        "detected_labels": detected_labels,
+    }
+
+
+async def _reject_contract_long_text_if_harmful(text: Optional[str], field_label: str) -> Optional[Dict]:
+    """confidentiality_text/additional_clauses/payment_schedule/cancellation_reason/
+    dispute reason/notification_message all have real sentence context - ML with
+    keyword fallback, same as bio/DM. Fails open (blast radius is one contract between
+    two already-matched parties, not a table everyone sees) - a scan error lets the
+    save through rather than blocking a legitimate contract action."""
+    if not text or not text.strip():
+        return None
+    try:
+        harm_result = await scan_harmful_text_with_ml_fallback(text, timeout=ML_SCAN_TIMEOUT_BLOCKING_SECONDS)
+    except Exception as e:
+        logger("CONTRACT", f"{field_label} scan errored, failing open (allowing save): {e}", level="WARNING")
+        return None
+    if not harm_result["is_flagged"]:
+        return None
+    detected_labels = harm_result.get("detected_labels", [])
+    labels = [_CONTRACT_LABEL_NAMES.get(l, l) for l in detected_labels]
+    logger("CONTRACT", f"Blocked {field_label}, labels={detected_labels}", level="WARNING")
+    return {
+        "message": f"Your {field_label} couldn't be saved. It was flagged for {', '.join(labels) or 'a policy violation'}.",
+        "detected_labels": detected_labels,
+    }
+
+
+# agreed_duration is not free prose - the frontend builds it from a free-typed number
+# TextField (keyboardType is a cosmetic hint only, not enforced) combined with a unit
+# dropdown locked to days/weeks/months (see generate_contract_screen.dart's own
+# _hydrateDuration, which parses this exact shape back on load). A value matching this
+# shape can't contain harmful text by construction, so this is a format check, not a
+# harmful-text scan - simpler and correct where the old keyword scan was overkill.
+_DURATION_FORMAT_RE = re.compile(r"^\d+\s+(day|days|week|weeks|month|months)$", re.IGNORECASE)
+
+
+def _reject_contract_duration_if_invalid(agreed_duration: Optional[str]) -> Optional[Dict]:
+    if not agreed_duration or not agreed_duration.strip():
+        return None
+    if _DURATION_FORMAT_RE.match(agreed_duration.strip()):
+        return None
+    return {"message": "agreed_duration must look like '<number> days|weeks|months' (e.g. '3 months')."}
 
 
 _DEFAULT_CONTRACT_NOTIFICATION = (
@@ -267,6 +338,13 @@ async def create_contract(contract: ContractCreate, current_user: UserInDB = Dep
         if proposal.get("job_role_id") and str(proposal["job_role_id"]) != str(contract.job_role_id):
             return ResponseSchema.error("Contract job role does not match the proposal's job role", 400)
 
+        rejection = _reject_contract_short_text_if_harmful(contract.contract_title, contract.role_title)
+        if rejection:
+            return ResponseSchema.error(rejection["message"], 400, extra={"detected_labels": rejection["detected_labels"]})
+        duration_error = _reject_contract_duration_if_invalid(contract.agreed_duration)
+        if duration_error:
+            return ResponseSchema.error(duration_error["message"], 400)
+
         try:
             new_contract = ContractFunctions.create_contract(
                 contract_id=contract_id,
@@ -358,6 +436,30 @@ async def generate_contract_pdf(contract_id: str, generation_data: ContractGener
         if generation_data.dispute_resolution not in {"negotiation", "mediation", "arbitration"}:
             return ResponseSchema.error("Invalid dispute_resolution value", 400)
 
+        # These end up baked into the generated PDF and persisted in contract_terms - a
+        # flagged clause here would ship inside an actual legal-document artifact shared
+        # with the other party, unlike the best-effort DM notification below, so this one
+        # rejects the whole request rather than degrading gracefully.
+        # governing_law is short free text (e.g. "California, USA") - keyword-only, same rule
+        # as contract_title/role_title; added 2026-07-11, missed by the original fix.
+        rejection = _reject_contract_short_text_if_harmful(generation_data.governing_law)
+        if rejection:
+            return ResponseSchema.error(rejection["message"], 400, extra={"detected_labels": rejection["detected_labels"]})
+        # agreed_duration is re-editable at generate time (same TextField+dropdown the
+        # create/update endpoints validate) but this endpoint never checked it at all
+        # until now - found while replacing the harmful-text scan with format validation.
+        duration_error = _reject_contract_duration_if_invalid(generation_data.agreed_duration)
+        if duration_error:
+            return ResponseSchema.error(duration_error["message"], 400)
+        _terms_text = " ".join(filter(None, [
+            generation_data.confidentiality_text,
+            generation_data.additional_clauses,
+            generation_data.payment_schedule,
+        ]))
+        rejection = await _reject_contract_long_text_if_harmful(_terms_text, "contract terms")
+        if rejection:
+            return ResponseSchema.error(rejection["message"], 400, extra={"detected_labels": rejection["detected_labels"]})
+
         ContractGenerationFunctions.save_generation_data(
             contract_id=contract_id,
             update_data={
@@ -404,6 +506,17 @@ async def generate_contract_pdf(contract_id: str, generation_data: ContractGener
                 freelancer_user_id = str((freelancer or {}).get("user_id", ""))
                 
                 custom_msg = generation_data.notification_message
+                if custom_msg:
+                    # notification_message previously went straight to DMFunctions.send_message()
+                    # here, bypassing the scan entirely - unlike every normal DM send, which goes
+                    # through dm_routes.py's send_message route where this same check already runs.
+                    # This whole block is best-effort (see the except below), so a flagged message
+                    # just falls back to the saved template/default rather than aborting PDF
+                    # generation - the PDF itself already passed its own (blocking) scan above.
+                    msg_rejection = await _reject_contract_long_text_if_harmful(custom_msg, "notification message")
+                    if msg_rejection:
+                        logger("CONTRACT", f"Discarded flagged contract notification_message, labels={msg_rejection['detected_labels']}", level="WARNING")
+                        custom_msg = None
                 saved_template = client_profile.get("contract_message_template")
                 raw_template = custom_msg or saved_template or _DEFAULT_CONTRACT_NOTIFICATION
 
@@ -497,6 +610,18 @@ async def update_contract(contract_id: str, contract_update: ContractUpdate, bac
                 "approve, revision, or cancel endpoints - not through this generic update",
                 400,
             )
+
+        if "contract_title" in update_data or "role_title" in update_data:
+            _contract_title = update_data.get("contract_title", existing_contract.get("contract_title", ""))
+            _role_title = update_data.get("role_title", existing_contract.get("role_title", ""))
+            rejection = _reject_contract_short_text_if_harmful(_contract_title, _role_title)
+            if rejection:
+                return ResponseSchema.error(rejection["message"], 400, extra={"detected_labels": rejection["detected_labels"]})
+
+        if "agreed_duration" in update_data:
+            duration_error = _reject_contract_duration_if_invalid(update_data.get("agreed_duration"))
+            if duration_error:
+                return ResponseSchema.error(duration_error["message"], 400)
 
         updated_contract = ContractFunctions.update_contract(contract_id, update_data)
 
@@ -604,6 +729,10 @@ async def report_payment(
         if payload.amount <= 0:
             return ResponseSchema.error("amount must be greater than 0", 400)
 
+        rejection = await _reject_contract_long_text_if_harmful(payload.note, "payment note")
+        if rejection:
+            return ResponseSchema.error(rejection["message"], 400, extra={"detected_labels": rejection["detected_labels"]})
+
         updated_contract = ContractFunctions.report_payment(
             contract_id=contract_id,
             amount=payload.amount,
@@ -660,6 +789,10 @@ async def raise_dispute(
             return ResponseSchema.error(
                 f"Cannot raise a dispute on a contract with status '{contract['status']}'", 400,
             )
+
+        rejection = await _reject_contract_long_text_if_harmful(payload.reason, "dispute reason")
+        if rejection:
+            return ResponseSchema.error(rejection["message"], 400, extra={"detected_labels": rejection["detected_labels"]})
 
         updated_contract = ContractFunctions.raise_dispute(
             contract_id=contract_id,
@@ -720,6 +853,10 @@ async def cancel_contract(
                 f"Cannot cancel a contract with status '{contract['status']}'",
                 400,
             )
+
+        rejection = await _reject_contract_long_text_if_harmful(payload.reason, "cancellation reason")
+        if rejection:
+            return ResponseSchema.error(rejection["message"], 400, extra={"detected_labels": rejection["detected_labels"]})
 
         cancelled_contract = ContractFunctions.cancel_contract(
             contract_id=contract_id,

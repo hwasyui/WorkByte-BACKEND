@@ -159,7 +159,6 @@ async def create_skill(skill: SkillCreate, current_user: UserInDB = Depends(get_
         new_skill = SkillFunctions.create_skill(
             skill_name=skill.skill_name,
             skill_category=skill.skill_category,
-            description=skill.description
         )
 
         success_msg = f"Created skill: {skill.skill_name} in category {skill.skill_category}"
@@ -186,6 +185,26 @@ async def update_skill(skill_id: str, skill_update: SkillUpdate, current_user: U
             return ResponseSchema.error(error_msg, 404)
 
         update_data = {k: v for k, v in skill_update.dict().items() if v is not None}
+
+        # PUT never scanned skill_name at all - a clean skill could be created, then edited
+        # to anything, unlike POST /skills's fail-closed create-time scan. Found during the
+        # 2026-07-11 full-field audit (HARMFUL_TEXT.md).
+        if "skill_name" in update_data:
+            try:
+                harm_result = scan_harmful_text(update_data["skill_name"])
+            except Exception as e:
+                logger("SKILL", f"Skill-name scan errored, failing closed (rejecting update): {e}", level="WARNING")
+                return ResponseSchema.error("Couldn't verify this skill name right now. Please try again shortly.", 503)
+            if harm_result["is_flagged"]:
+                detected_labels = harm_result.get("detected_labels", [])
+                labels = [_SKILL_LABEL_NAMES.get(l, l) for l in detected_labels]
+                logger("SKILL", f"Blocked skill update {skill_id} to {update_data['skill_name']!r}, labels={detected_labels}", level="WARNING")
+                return ResponseSchema.error(
+                    f"This skill name couldn't be updated. It was flagged for {', '.join(labels) or 'a policy violation'}.",
+                    400,
+                    extra={"detected_labels": detected_labels},
+                )
+
         updated_skill = SkillFunctions.update_skill(skill_id, update_data)
 
         success_msg = f"Updated skill {skill_id}"
