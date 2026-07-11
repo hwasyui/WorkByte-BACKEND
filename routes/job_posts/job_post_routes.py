@@ -15,7 +15,7 @@ from functions.schema_model import (
 )
 from functions.schema_model import UserInDB
 from functions.authentication import get_current_user
-from functions.access_control import assert_client_owns, get_client_profile_for_user, get_freelancer_profile_for_user
+from functions.access_control import assert_client_owns, get_client_profile_for_user, get_freelancer_profile_for_user, assert_client_profile_complete
 from functions.authentication import get_freelancer_user
 from routes.clients.client_functions import ClientFunctions as _ClientFunctions
 from functions.logger import logger
@@ -24,6 +24,8 @@ from functions.db_manager import get_db
 from routes.job_posts.job_post_functions import JobPostFunctions, convert_uuids_to_str
 from routes.proposals.proposal_functions import ProposalFunctions
 from routes.contracts.contract_functions import ContractFunctions
+from routes.job_files.job_file_functions import JobFileFunctions
+from routes.proposal_files.proposal_file_functions import ProposalFileFunctions
 from ai_related.job_engine.embedding_manager import mark_job_dirty
 from routes.admin.admin_functions import queue_scam_scan
 
@@ -35,6 +37,7 @@ _VALID_JOB_ORDER_BY      = {"created_at", "posted_at", "deadline", "job_title", 
 _VALID_PROJECT_TYPES     = {"individual", "team"}
 _VALID_PROJECT_SCOPES    = {"small", "medium", "large"}
 _VALID_EXPERIENCE_LEVELS = {"entry", "intermediate", "expert"}
+_MATERIAL_EDIT_FIELDS    = {"job_description", "deadline", "working_days", "estimated_duration", "experience_level"}
 _VALID_BUDGET_TYPES      = {"fixed", "negotiable"}
 
 
@@ -354,6 +357,7 @@ async def create_job_post(job_post: JobPostCreate, current_user: UserInDB = Depe
 
         job_post_id = job_post.job_post_id or str(uuid.uuid4())
         client = get_client_profile_for_user(current_user)
+        assert_client_profile_complete(client)
         if job_post.client_id and str(job_post.client_id) != str(client["client_id"]):
             return ResponseSchema.error("Cannot create a job post for another client", 403)
         
@@ -440,6 +444,12 @@ async def update_job_post(job_post_id: str, job_post_update: JobPostUpdate, curr
                 ProposalFunctions.notify_proposal_owners_of_job_closure(job_post_id, "the client closed it")
             )
 
+        material_changed_fields = sorted(_MATERIAL_EDIT_FIELDS & update_data.keys())
+        if material_changed_fields:
+            asyncio.create_task(
+                JobPostFunctions.notify_stakeholders_of_material_edit(job_post_id, material_changed_fields)
+            )
+
         if "job_title" in update_data or "job_description" in update_data:
             _title = updated_job_post.get("job_title", "") or ""
             _desc  = updated_job_post.get("job_description", "") or ""
@@ -490,6 +500,21 @@ async def delete_job_post(job_post_id: str, current_user: UserInDB = Depends(get
                 "Cancel or otherwise resolve them first.",
                 409,
             )
+
+        # Tell freelancers with a pending/accepted proposal before it gets cascaded
+        # away silently - must be awaited (not fire-and-forget) since the lookup
+        # inside needs the proposal rows to still exist.
+        await ProposalFunctions.notify_proposal_owners_of_job_closure(
+            job_post_id, "the client deleted the job post",
+            notif_type="job_post_removed", title="Job Post Removed", verb="removed",
+        )
+
+        # job_file / proposal_file rows are about to cascade away with the job
+        # post - clean up their MinIO objects first, since the DB cascade never
+        # touches storage.
+        JobFileFunctions.purge_minio_files_for_job_post(job_post_id)
+        for proposal in ProposalFunctions.get_proposals_by_job_post_id(job_post_id):
+            ProposalFileFunctions.purge_minio_files_for_proposal(proposal["proposal_id"])
 
         JobPostFunctions.delete_job_post(job_post_id)
 

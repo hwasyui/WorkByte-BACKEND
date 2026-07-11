@@ -578,7 +578,7 @@ class JobPostFunctions:
         try:
             db = get_db()
             db.execute_query(
-                "UPDATE job_post SET view_count = view_count + 1 WHERE job_post_id = :job_post_id",
+                "UPDATE job_post SET view_count = view_count + 1 WHERE job_post_id = :job_post_id AND status = 'active'",
                 {"job_post_id": job_post_id},
             )
         except Exception as e:
@@ -851,6 +851,56 @@ class JobPostFunctions:
         except Exception as e:
             logger("JOB_POST_FUNCTIONS", f"Error checking viewer access for hidden job {job_post_id}: {str(e)}", level="ERROR")
             return False
+
+    @staticmethod
+    async def notify_stakeholders_of_material_edit(job_post_id: str, changed_fields: List[str]) -> None:
+        """Tell freelancers with a pending proposal or an active contract on this
+        job post that a material field (budget/deadline/requirements-shaped) just
+        changed under them - status changes (close) already have their own notify
+        path, so this is only for edits to fields that actually affect the work."""
+        try:
+            db = get_db()
+            pending_rows = db.execute_query(
+                """
+                SELECT DISTINCT f.user_id AS freelancer_user_id
+                FROM proposal p
+                JOIN freelancer f ON f.freelancer_id = p.freelancer_id
+                WHERE p.job_post_id = :jid AND p.status = 'pending'
+                """,
+                params={"jid": job_post_id},
+            )
+            contract_rows = db.execute_query(
+                """
+                SELECT DISTINCT f.user_id AS freelancer_user_id
+                FROM contract c
+                JOIN freelancer f ON f.freelancer_id = c.freelancer_id
+                WHERE c.job_post_id = :jid
+                  AND c.status IN ('active', 'under_review', 'revision_requested', 'disputed')
+                """,
+                params={"jid": job_post_id},
+            )
+        except Exception as e:
+            logger("JOB_POST_FUNCTIONS", f"Failed to look up stakeholders for job edit notify {job_post_id}: {e}", level="ERROR")
+            return
+
+        recipient_user_ids = {str(r["freelancer_user_id"]) for r in (pending_rows or []) + (contract_rows or [])}
+        fields_text = ", ".join(sorted(changed_fields))
+
+        for user_id in recipient_user_ids:
+            try:
+                await NotificationFunctions.notify(
+                    recipient_user_id=user_id,
+                    notif_type="job_post_edited",
+                    title="Job Post Updated",
+                    body=f"A job post you're involved in was updated ({fields_text}). Review the changes to make sure they still work for you.",
+                    data={"job_post_id": job_post_id, "changed_fields": changed_fields},
+                )
+            except Exception as notif_err:
+                logger(
+                    "JOB_POST_FUNCTIONS",
+                    f"Job-edit notification failed for user {user_id} (non-fatal): {notif_err}",
+                    level="WARNING",
+                )
 
     @staticmethod
     def delete_job_post(job_post_id: str) -> bool:

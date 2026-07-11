@@ -10,7 +10,7 @@ from functions.authentication import get_freelancer_user
 from functions.schema_model import UserInDB
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
-from functions.minio_client import validate_file_size
+from functions.minio_client import validate_upload, guess_mime
 from ai_related.cv_analysis.cv_analysis import (
     extract_cv_text,
     is_cv_text_too_sparse,
@@ -46,7 +46,8 @@ async def analyze_cv(
     logger("CV_ANALYSIS", f"CV analysis request from user {current_user.user_id}", level="DEBUG")
     try:
         contents = await cv_file.read()
-        validate_file_size(contents, cv_file.filename or "CV file")
+        mime = cv_file.content_type or guess_mime(cv_file.filename or "cv")
+        validate_upload("cv", contents, mime, cv_file.filename or "CV file")
         await cv_file.seek(0)
 
         cv_text = await extract_cv_text(cv_file)

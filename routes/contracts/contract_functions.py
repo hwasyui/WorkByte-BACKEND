@@ -310,6 +310,26 @@ class ContractFunctions:
                         data={"job_role_id": job_role_id},
                     ))
 
+                # This role just went from open to full - if every other role on
+                # the job post is also already full, the post itself is now fully
+                # staffed. Only flips 'active' -> 'filled' (never touches a post
+                # a client already closed/drafted themselves).
+                all_roles_filled = db.execute_query(
+                    """
+                    SELECT NOT EXISTS (
+                        SELECT 1 FROM job_role
+                        WHERE job_post_id = :jpid AND positions_filled < positions_available
+                    ) AS all_filled
+                    """,
+                    {"jpid": job_post_id},
+                )[0]["all_filled"]
+                if all_roles_filled:
+                    db.execute_query(
+                        "UPDATE job_post SET status = 'filled' WHERE job_post_id = :jpid AND status = 'active'",
+                        {"jpid": job_post_id},
+                    )
+                    logger("CONTRACT_FUNCTIONS", f"Job post {job_post_id} auto-marked 'filled' - all roles fully staffed", level="INFO")
+
             # Resolve actual user_id from client profile
             client_rows = db.fetch_data(
                 table_name="client",
@@ -528,16 +548,27 @@ class ContractFunctions:
                     level="INFO",
                 )
             if job_role_id:
-                get_db().execute_query(
+                role_rows = get_db().execute_query(
                     """
                     UPDATE job_role
                     SET positions_filled = GREATEST(positions_filled - 1, 0)
                     WHERE job_role_id = :jrid
+                    RETURNING job_post_id, positions_filled, positions_available
                     """,
                     {"jrid": job_role_id},
                 )
                 logger("CONTRACT_FUNCTIONS", f"Role {job_role_id} released one filled position after contract removal", level="INFO")
                 ContractFunctions._notify_role_reopened(job_role_id)
+
+                # A slot just reopened on this role - if the job post had been
+                # auto-marked 'filled' (3.8), that's no longer true, so revert it
+                # back to 'active' instead of leaving it stuck looking fully
+                # staffed with an open role sitting underneath it.
+                if role_rows and role_rows[0]["positions_filled"] < role_rows[0]["positions_available"]:
+                    get_db().execute_query(
+                        "UPDATE job_post SET status = 'active' WHERE job_post_id = :jpid AND status = 'filled'",
+                        {"jpid": role_rows[0]["job_post_id"]},
+                    )
         except Exception as e:
             logger(
                 "CONTRACT_FUNCTIONS",

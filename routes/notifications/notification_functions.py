@@ -15,6 +15,8 @@ import google.auth.transport.requests
 FCM_PROJECT_ID = os.getenv("FCM_PROJECT_ID")
 FCM_SERVICE_ACCOUNT_FILE = os.getenv("FCM_SERVICE_ACCOUNT_FILE", "service-account.json")
 
+NOTIFICATION_DEDUP_WINDOW_MINUTES = 10
+
 
 def convert_uuids_to_str(data: Dict) -> Dict:
     if not data:
@@ -65,9 +67,26 @@ class NotificationFunctions:
         body: str,
         data: dict = {},
     ):
-        """Persist notification to DB + best-effort FCM push."""
+        """Persist notification to DB + best-effort FCM push. Skips insert entirely
+        if an identical notification (same recipient, type, body) already went out
+        within NOTIFICATION_DEDUP_WINDOW_MINUTES, so retries/re-fired background
+        tasks can't spam the same event over and over."""
         try:
             db = get_db()
+
+            dedup_hit = db.execute_query(
+                """
+                SELECT 1 FROM notifications
+                WHERE recipient_id = :rid AND type = :ntype AND body = :body
+                  AND created_at > NOW() - make_interval(mins => :window)
+                LIMIT 1
+                """,
+                {"rid": recipient_user_id, "ntype": notif_type, "body": body, "window": NOTIFICATION_DEDUP_WINDOW_MINUTES},
+            )
+            if dedup_hit:
+                logger("NOTIFICATION_FUNCTIONS", f"Skipped duplicate notification for user {recipient_user_id}: {notif_type} (within {NOTIFICATION_DEDUP_WINDOW_MINUTES}m window)", level="INFO")
+                return
+
             notification_id = str(uuid.uuid4())
             payload = {**data, "type": notif_type}
 

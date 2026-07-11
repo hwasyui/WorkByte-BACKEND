@@ -1,3 +1,4 @@
+import asyncio
 import os
 import sys
 import uuid
@@ -11,7 +12,7 @@ from functions.schema_model import UserInDB, ArbitrateDisputeRequest
 from functions.authentication import get_current_user, get_admin_user
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
-from functions.minio_client import upload_appeal_proof_file, guess_mime, validate_file_size
+from functions.minio_client import upload_appeal_proof_file, guess_mime, validate_upload
 from routes.admin.admin_functions import (
     VALID_REPORT_REASONS,
     mark_moderation_item_reviewed,
@@ -46,6 +47,8 @@ from routes.admin.admin_functions import (
 )
 from routes.contracts.contract_functions import ContractFunctions
 from routes.clients.client_functions import ClientFunctions
+from routes.job_posts.job_post_functions import JobPostFunctions
+from routes.notifications.notification_functions import NotificationFunctions
 
 admin_router   = APIRouter(prefix="/admin",   tags=["Admin"])
 reports_router = APIRouter(prefix="/reports", tags=["Reports"])
@@ -902,8 +905,9 @@ async def user_submit_appeal(
         target_type: 'user' (account ban / counterparty) or 'job_post' (post closure).
         target_id: UUID of the target being appealed.
         message: Appeal message text.
-        proof: optional evidence file (screenshot, document, etc.), same size
-            cap as every other upload in the app (see validate_file_size).
+        proof: optional evidence file (screenshot, document, etc.), same
+            per-use-case cap/whitelist as every other upload in the app
+            (see validate_upload).
     """
     try:
         if target_type not in ("user", "job_post"):
@@ -914,13 +918,14 @@ async def user_submit_appeal(
         proof_file_url = None
         if proof and proof.filename:
             file_bytes = await proof.read()
-            validate_file_size(file_bytes, proof.filename)
+            mime_type = proof.content_type or guess_mime(proof.filename)
+            validate_upload("appeal_proof", file_bytes, mime_type, proof.filename)
             appeal_id_for_path = str(uuid.uuid4())
             proof_file_url = upload_appeal_proof_file(
                 appeal_id=appeal_id_for_path,
                 file_name=proof.filename,
                 file_bytes=file_bytes,
-                content_type=proof.content_type or guess_mime(proof.filename),
+                content_type=mime_type,
             )
 
         appeal = submit_appeal(
@@ -994,6 +999,24 @@ async def submit_report(
         )
         if not report:
             return ResponseSchema.error("Failed to submit report", 500)
+
+        # Let the target know right away - previously they only ever found out
+        # once the 30-day/10-reporter auto-action threshold fired, which could
+        # be weeks of silence even if the report is eventually dismissed.
+        target_user_id = body.reported_user_id
+        if body.reported_type == "job_post":
+            job_post = JobPostFunctions.get_job_post_by_id(body.job_post_id)
+            if job_post:
+                owning_client = ClientFunctions.get_client_by_id_or_user_id(job_post["client_id"])
+                target_user_id = owning_client["user_id"] if owning_client else None
+        if target_user_id:
+            asyncio.create_task(NotificationFunctions.notify(
+                recipient_user_id=str(target_user_id),
+                notif_type="report_received",
+                title="A Report Was Filed",
+                body=f"Someone reported your {'job post' if body.reported_type == 'job_post' else 'profile'}. Our team will review it; no action has been taken.",
+                data={"report_id": str(report["report_id"]), "reported_type": body.reported_type},
+            ))
 
         target = body.reported_user_id or body.job_post_id
         logger("REPORT", f"User {current_user.user_id} reported {body.reported_type} {target}", "POST /reports", "INFO")

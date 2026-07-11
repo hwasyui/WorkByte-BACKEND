@@ -2,7 +2,7 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, UploadFile, HTTPException
 from typing import List, Optional, Dict
 from functions.schema_model import ProposalFileCreate, ProposalFileUpdate, ProposalFileResponse
 from functions.schema_model import UserInDB
@@ -11,7 +11,7 @@ from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.proposal_files.proposal_file_functions import ProposalFileFunctions
 from routes.proposals.proposal_functions import ProposalFunctions
-from functions.minio_client import upload_proposal_file, resolve_file_url, BUCKET_PROPOSAL_FILES, MAX_UPLOAD_FILE_SIZE_BYTES
+from functions.minio_client import upload_proposal_file, resolve_file_url, delete_file, validate_upload, BUCKET_PROPOSAL_FILES
 from mimetypes import guess_type as guess_mime
 
 proposal_file_router = APIRouter(prefix="/proposal-files", tags=["Proposal Files"])
@@ -89,11 +89,13 @@ async def create_proposal_file(
             contents = await upload.read()
             if not contents:
                 return ResponseSchema.error(f"Uploaded file '{upload.filename or 'unnamed'}' must not be empty", 400)
-            if len(contents) > MAX_UPLOAD_FILE_SIZE_BYTES:
-                return ResponseSchema.error(f"File too large: {upload.filename or 'unnamed'}. Max size is 100 MB.", 400)
 
             mime_type = upload.content_type or guess_mime(upload.filename or "attachment.bin")[0]
             mime_type = mime_type or "application/octet-stream"
+            try:
+                validate_upload("proposal_file", contents, mime_type, upload.filename or "unnamed")
+            except HTTPException as e:
+                return ResponseSchema.error(e.detail, e.status_code)
             prepared_files.append({
                 "file_name": upload.filename or "attachment.bin",
                 "file_bytes": contents,
@@ -163,9 +165,14 @@ async def delete_proposal_file(proposal_file_id: str, current_user: UserInDB = D
             error_msg = f"Proposal file {proposal_file_id} not found"
             logger("PROPOSAL_FILE", error_msg, "DELETE /proposal-files/{proposal_file_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
-        
+
+        try:
+            delete_file(BUCKET_PROPOSAL_FILES, existing_proposal_file["file_url"])
+        except Exception as minio_err:
+            logger("PROPOSAL_FILE", f"Non-fatal: failed to delete MinIO object for proposal file {proposal_file_id}: {str(minio_err)}", "DELETE /proposal-files/{proposal_file_id}", "WARNING")
+
         ProposalFileFunctions.delete_proposal_file(proposal_file_id)
-        
+
         success_msg = f"Deleted proposal file {proposal_file_id}"
         logger("PROPOSAL_FILE", success_msg, "DELETE /proposal-files/{proposal_file_id}", "INFO")
         return ResponseSchema.success("Deleted successfully", 200)

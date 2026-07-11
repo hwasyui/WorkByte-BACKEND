@@ -476,9 +476,15 @@ class ProposalFunctions:
         return [dict(r) for r in (rows or [])]
 
     @staticmethod
-    async def notify_proposal_owners_of_job_closure(job_post_id: str, reason: str) -> None:
+    async def notify_proposal_owners_of_job_closure(
+        job_post_id: str,
+        reason: str,
+        notif_type: str = "job_post_closed",
+        title: str = "Job Post Closed",
+        verb: str = "closed",
+    ) -> None:
         """tell freelancers with a pending or accepted proposal that the job post
-        they applied to just closed, no matter who or what closed it."""
+        they applied to just closed (or was removed), no matter who or what did it."""
         try:
             rows = get_db().execute_query(
                 """
@@ -497,9 +503,9 @@ class ProposalFunctions:
             try:
                 await NotificationFunctions.notify(
                     recipient_user_id=str(row["freelancer_user_id"]),
-                    notif_type="job_post_closed",
-                    title="Job Post Closed",
-                    body=f"A job post you applied to has been closed ({reason}).",
+                    notif_type=notif_type,
+                    title=title,
+                    body=f"A job post you applied to has been {verb} ({reason}).",
                     data={"job_post_id": job_post_id, "proposal_id": str(row["proposal_id"])},
                 )
             except Exception as notif_err:
@@ -518,6 +524,11 @@ class ProposalFunctions:
             # Fetch job_post_id before deleting to sync proposal_count.
             existing = ProposalFunctions.get_proposal_by_id(proposal_id)
             job_post_id = existing.get("job_post_id") if existing else None
+
+            # proposal_file rows cascade away with the proposal row below - clean up
+            # their MinIO objects first, since the DB delete never touches storage.
+            from routes.proposal_files.proposal_file_functions import ProposalFileFunctions
+            ProposalFileFunctions.purge_minio_files_for_proposal(proposal_id)
 
             conditions = [("proposal_id", "=", proposal_id)]
             db.delete_data(table_name="proposal", conditions=conditions)

@@ -899,6 +899,7 @@ class SavedJobResponse(BaseModel):
     job_post_id: str
     freelancer_id: str
     created_at: Optional[datetime] = None
+    job_post_status: Optional[str] = None
 
     class Config:
         from_attributes = True

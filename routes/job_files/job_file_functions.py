@@ -4,6 +4,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 
 from functions.db_manager import get_db
 from functions.logger import logger
+from functions.minio_client import delete_file, BUCKET_JOB_FILES
 from typing import List, Optional, Dict
 import uuid
 
@@ -129,6 +130,18 @@ class JobFileFunctions:
         except Exception as e:
             logger("JOB_FILE_FUNCTIONS", f"Error updating job file: {str(e)}", level="ERROR")
             raise
+
+    @staticmethod
+    def purge_minio_files_for_job_post(job_post_id: str) -> None:
+        """Best-effort delete of every job file's MinIO object for a job post.
+        DB rows are left alone here - they're cleaned up separately (either by
+        the caller's own delete_job_file, or by ON DELETE CASCADE when the job
+        post row itself is deleted)."""
+        for f in JobFileFunctions.get_job_files_by_job_post_id(job_post_id):
+            try:
+                delete_file(BUCKET_JOB_FILES, f["file_url"])
+            except Exception as e:
+                logger("JOB_FILE_FUNCTIONS", f"Non-fatal: failed to delete MinIO object for job file {f['job_file_id']}: {str(e)}", level="WARNING")
 
     @staticmethod
     def delete_job_file(job_file_id: str) -> bool:

@@ -4,6 +4,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 
 from functions.db_manager import get_db
 from functions.logger import logger
+from functions.minio_client import delete_file, BUCKET_PROPOSAL_FILES
 from typing import List, Optional, Dict
 import uuid
 
@@ -129,6 +130,18 @@ class ProposalFileFunctions:
         except Exception as e:
             logger("PROPOSAL_FILE_FUNCTIONS", f"Error updating proposal file: {str(e)}", level="ERROR")
             raise
+
+    @staticmethod
+    def purge_minio_files_for_proposal(proposal_id: str) -> None:
+        """Best-effort delete of every proposal file's MinIO object for a proposal.
+        DB rows are left alone here - they're cleaned up separately (either by
+        the caller's own delete_proposal_file, or by ON DELETE CASCADE when the
+        proposal row itself is deleted)."""
+        for f in ProposalFileFunctions.get_proposal_files_by_proposal_id(proposal_id):
+            try:
+                delete_file(BUCKET_PROPOSAL_FILES, f["file_url"])
+            except Exception as e:
+                logger("PROPOSAL_FILE_FUNCTIONS", f"Non-fatal: failed to delete MinIO object for proposal file {f['proposal_file_id']}: {str(e)}", level="WARNING")
 
     @staticmethod
     def delete_proposal_file(proposal_file_id: str) -> bool:

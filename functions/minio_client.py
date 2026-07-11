@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-MAX_UPLOAD_FILE_SIZE_BYTES = 100 * 1024 * 1024  # 100 MB
+MAX_UPLOAD_FILE_SIZE_BYTES = 100 * 1024 * 1024  # 100 MB - fallback for the generic upload route, which has no specific use case
 
 
 def validate_file_size(contents: bytes, file_name: str = "file") -> None:
@@ -17,6 +17,55 @@ def validate_file_size(contents: bytes, file_name: str = "file") -> None:
         raise HTTPException(
             status_code=400,
             detail=f"File too large: {file_name}. Max size is 100 MB.",
+        )
+
+
+_DOCUMENT_MIME_TYPES = {
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "text/plain",
+    "application/zip",
+    "image/jpeg",
+    "image/png",
+}
+_IMAGE_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
+
+# Per-use-case allowlist + size cap. Use cases with no entry here fall back to
+# MAX_UPLOAD_FILE_SIZE_BYTES and no MIME restriction (e.g. the generic upload route).
+ALLOWED_MIME_TYPES = {
+    "cv":             {"application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "image/jpeg", "image/png", "image/bmp", "image/tiff"},
+    "job_file":       _DOCUMENT_MIME_TYPES,
+    "proposal_file":  _DOCUMENT_MIME_TYPES,
+    "avatar":         _IMAGE_MIME_TYPES,
+    "appeal_proof":   {"application/pdf", "image/jpeg", "image/png"},
+}
+
+MAX_UPLOAD_FILE_SIZE_BYTES_BY_USE_CASE = {
+    "cv":             10 * 1024 * 1024,
+    "job_file":       25 * 1024 * 1024,
+    "proposal_file":  25 * 1024 * 1024,
+    "avatar":         5 * 1024 * 1024,
+    "appeal_proof":   20 * 1024 * 1024,
+}
+
+
+def validate_upload(use_case: str, contents: bytes, mime_type: str, file_name: str = "file") -> None:
+    """Enforce a per-use-case size cap and MIME allowlist. Falls back to the flat
+    100MB cap and no MIME restriction for use cases not in the maps above."""
+    max_size = MAX_UPLOAD_FILE_SIZE_BYTES_BY_USE_CASE.get(use_case, MAX_UPLOAD_FILE_SIZE_BYTES)
+    if len(contents) > max_size:
+        raise HTTPException(
+            status_code=400,
+            detail=f"File too large: {file_name}. Max size for this upload type is {max_size // (1024 * 1024)} MB.",
+        )
+    allowed = ALLOWED_MIME_TYPES.get(use_case)
+    if allowed and mime_type not in allowed:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported file type '{mime_type}' for {file_name}. Allowed types: {', '.join(sorted(allowed))}.",
         )
 
 

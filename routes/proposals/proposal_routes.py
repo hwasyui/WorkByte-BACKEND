@@ -3,13 +3,14 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.exc import IntegrityError
 from typing import List, Optional
 import uuid
 from functions.schema_model import ProposalCreate, ProposalUpdate, ProposalResponse
 from functions.schema_model import UserInDB
 from functions.authentication import get_current_user
+from functions.access_control import assert_freelancer_profile_complete
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from functions.db_manager import get_db
@@ -139,6 +140,7 @@ async def create_proposal(
         freelancer = FreelancerFunctions.get_freelancer_by_user_id(current_user.user_id)
         if not freelancer:
             return ResponseSchema.error("Freelancer profile not found for this account", 404)
+        assert_freelancer_profile_complete(freelancer)
 
         freelancer_id = freelancer["freelancer_id"]
 
@@ -227,6 +229,9 @@ async def create_proposal(
 
         logger("PROPOSAL", f"Proposal created by freelancer {freelancer_id}", "POST /proposals", "INFO")
         return ResponseSchema.success(new_proposal, 201)
+    except HTTPException as e:
+        logger("PROPOSAL", f"HTTP {e.status_code}: {e.detail}", "POST /proposals", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("PROPOSAL", f"Failed to create proposal: {str(e)}", "POST /proposals", "ERROR")
         return ResponseSchema.error(f"Failed to create proposal: {str(e)}", 500)

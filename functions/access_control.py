@@ -7,6 +7,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from routes.clients.client_functions import ClientFunctions
 from routes.freelancers.freelancer_functions import FreelancerFunctions
+from functions.db_manager import get_db
 
 
 def _forbidden(message: str):
@@ -33,6 +34,43 @@ def get_freelancer_profile_for_user(current_user):
     if not freelancer:
         _forbidden("Freelancer profile not found for the current user")
     return freelancer
+
+
+def assert_client_profile_complete(client: dict):
+    """Server-side mirror of Flutter's isProfileComplete check for clients
+    (profile_provider.dart) - closes the gap where the completeness prompt was
+    only ever a UI nudge, bypassable by calling the API directly."""
+    missing = []
+    if not (client.get("full_name") or "").strip():
+        missing.append("full name")
+    if not (client.get("bio") or "").strip():
+        missing.append("bio")
+    if missing:
+        _forbidden(f"Please complete your profile before posting a job. Missing: {', '.join(missing)}.")
+
+
+def assert_freelancer_profile_complete(freelancer: dict):
+    """Server-side mirror of Flutter's isProfileComplete check for freelancers
+    (profile_provider.dart) - same rationale as assert_client_profile_complete."""
+    missing = []
+    if not (freelancer.get("full_name") or "").strip():
+        missing.append("full name")
+    if not (freelancer.get("bio") or "").strip():
+        missing.append("bio")
+    if not (freelancer.get("cv_file_url") or "").strip():
+        missing.append("CV")
+
+    freelancer_id = freelancer["freelancer_id"]
+    db = get_db()
+    if not db.execute_query("SELECT 1 FROM education WHERE freelancer_id = :fid LIMIT 1", {"fid": freelancer_id}):
+        missing.append("education")
+    if not db.execute_query("SELECT 1 FROM work_experience WHERE freelancer_id = :fid LIMIT 1", {"fid": freelancer_id}):
+        missing.append("work experience")
+    if not db.execute_query("SELECT 1 FROM freelancer_skill WHERE freelancer_id = :fid LIMIT 1", {"fid": freelancer_id}):
+        missing.append("skills")
+
+    if missing:
+        _forbidden(f"Please complete your profile before submitting a proposal. Missing: {', '.join(missing)}.")
 
 
 def assert_user_owns(current_user, user_id: str):

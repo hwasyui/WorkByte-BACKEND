@@ -5,6 +5,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 
 import json
 from fastapi import APIRouter, Body, Depends, Response, BackgroundTasks, HTTPException
+from sqlalchemy.exc import IntegrityError
 from functions.minio_client import (
     download_file,
     upload_thread_attachment,
@@ -266,26 +267,33 @@ async def create_contract(contract: ContractCreate, current_user: UserInDB = Dep
         if proposal.get("job_role_id") and str(proposal["job_role_id"]) != str(contract.job_role_id):
             return ResponseSchema.error("Contract job role does not match the proposal's job role", 400)
 
-        new_contract = ContractFunctions.create_contract(
-            contract_id=contract_id,
-            job_post_id=contract.job_post_id,
-            job_role_id=contract.job_role_id,
-            proposal_id=contract.proposal_id,
-            freelancer_id=contract.freelancer_id,
-            client_id=contract.client_id,
-            contract_title=contract.contract_title,
-            agreed_budget=contract.agreed_budget,
-            payment_structure=contract.payment_structure,
-            start_date=contract.start_date,
-            role_title=contract.role_title,
-            budget_currency=contract.budget_currency,
-            agreed_duration=contract.agreed_duration,
-            status=contract.status,
-            end_date=contract.end_date,
-            actual_completion_date=contract.actual_completion_date,
-            total_hours_worked=contract.total_hours_worked,
-            total_paid=contract.total_paid,
-        )
+        try:
+            new_contract = ContractFunctions.create_contract(
+                contract_id=contract_id,
+                job_post_id=contract.job_post_id,
+                job_role_id=contract.job_role_id,
+                proposal_id=contract.proposal_id,
+                freelancer_id=contract.freelancer_id,
+                client_id=contract.client_id,
+                contract_title=contract.contract_title,
+                agreed_budget=contract.agreed_budget,
+                payment_structure=contract.payment_structure,
+                start_date=contract.start_date,
+                role_title=contract.role_title,
+                budget_currency=contract.budget_currency,
+                agreed_duration=contract.agreed_duration,
+                status=contract.status,
+                end_date=contract.end_date,
+                actual_completion_date=contract.actual_completion_date,
+                total_hours_worked=contract.total_hours_worked,
+                total_paid=contract.total_paid,
+            )
+        except IntegrityError:
+            # Race loser: another request already created a contract for this
+            # proposal between the existing_contract check above and this insert -
+            # the DB-level UNIQUE(proposal_id) constraint is what actually caught it.
+            logger("CONTRACT", f"Duplicate contract insert blocked by UNIQUE(proposal_id) for proposal {contract.proposal_id}", "POST /contracts", "WARNING")
+            return ResponseSchema.error("A contract already exists for this proposal", 409)
 
         logger("CONTRACT", f"Created contract {contract_id}", "POST /contracts", "INFO")
 

@@ -44,42 +44,57 @@ class SavedJobFunctions:
 
     @staticmethod
     def get_saved_job_by_id(saved_job_id: str) -> Optional[Dict]:
-        """Fetch a saved job by ID."""
+        """Fetch a saved job by ID, with the underlying job post's current
+        status so a caller can tell a closed/filled saved job apart from an
+        active one instead of it silently looking the same as any other."""
         try:
             db = get_db()
-            conditions = [("saved_job_id", "=", saved_job_id)]
-            rows = db.fetch_data(
-                table_name="saved_job",
-                conditions=conditions,
-                limit=1
+            rows = db.execute_query(
+                """
+                SELECT sj.saved_job_id, sj.freelancer_id, sj.job_post_id, sj.saved_at, sj.notes,
+                       jp.status AS job_post_status
+                FROM saved_job sj
+                JOIN job_post jp ON jp.job_post_id = sj.job_post_id
+                WHERE sj.saved_job_id = :sjid
+                LIMIT 1
+                """,
+                {"sjid": saved_job_id},
             )
-            
+
             if rows:
                 logger("SAVED_JOB_FUNCTIONS", f"Saved job {saved_job_id} found", level="INFO")
                 return convert_uuids_to_str(dict(rows[0]))
-            
+
             return None
-        
+
         except Exception as e:
             logger("SAVED_JOB_FUNCTIONS", f"Error fetching saved job: {str(e)}", level="ERROR")
             raise
 
     @staticmethod
     def get_saved_jobs_by_freelancer_id(freelancer_id: str, limit: Optional[int] = None) -> List[Dict]:
-        """Fetch all saved jobs for a freelancer."""
+        """Fetch all saved jobs for a freelancer, with each job post's current
+        status so closed/filled saved jobs can be flagged instead of looking
+        indistinguishable from an active one."""
         try:
             db = get_db()
-            conditions = [("freelancer_id", "=", freelancer_id)]
-            rows = db.fetch_data(
-                table_name="saved_job",
-                conditions=conditions,
-                order_by="saved_at DESC",
-                limit=limit
-            )
-            
-            logger("SAVED_JOB_FUNCTIONS", f"Fetched {len(rows)} saved jobs for freelancer {freelancer_id}", level="INFO")
-            return [convert_uuids_to_str(dict(row)) for row in rows]
-        
+            query = """
+                SELECT sj.saved_job_id, sj.freelancer_id, sj.job_post_id, sj.saved_at, sj.notes,
+                       jp.status AS job_post_status
+                FROM saved_job sj
+                JOIN job_post jp ON jp.job_post_id = sj.job_post_id
+                WHERE sj.freelancer_id = :fid
+                ORDER BY sj.saved_at DESC
+            """
+            params = {"fid": freelancer_id}
+            if limit:
+                query += " LIMIT :limit"
+                params["limit"] = limit
+            rows = db.execute_query(query, params)
+
+            logger("SAVED_JOB_FUNCTIONS", f"Fetched {len(rows or [])} saved jobs for freelancer {freelancer_id}", level="INFO")
+            return [convert_uuids_to_str(dict(row)) for row in (rows or [])]
+
         except Exception as e:
             logger("SAVED_JOB_FUNCTIONS", f"Error fetching saved jobs: {str(e)}", level="ERROR")
             raise

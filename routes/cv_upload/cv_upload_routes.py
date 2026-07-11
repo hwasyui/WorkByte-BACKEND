@@ -11,7 +11,7 @@ from functions.authentication import get_freelancer_user
 from functions.schema_model import CVUploadRequest, CVApplyRequest, UserInDB
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
-from functions.minio_client import upload_cv_file, guess_mime, validate_file_size
+from functions.minio_client import upload_cv_file, guess_mime, validate_upload
 from routes.freelancers.freelancer_functions import FreelancerFunctions
 from routes.freelancers.freelancer_routes import _scan_identity_fields_or_reject
 from routes.skills.skill_functions import SkillFunctions
@@ -67,7 +67,11 @@ async def upload_and_analyze_cv(
         contents = await file.read()
         if not contents:
             raise HTTPException(status_code=400, detail="CV file must not be empty")
-        validate_file_size(contents, file.filename or "CV file")
+
+        original_name = file.filename or "cv"
+        ext = original_name.rsplit(".", 1)[-1].lower() if "." in original_name else "pdf"
+        mime = file.content_type or guess_mime(original_name)
+        validate_upload("cv", contents, mime, original_name)
 
         logger("CV_UPLOAD", f"File: {file.filename}, size={len(contents)} bytes", level="DEBUG")
 
@@ -76,10 +80,6 @@ async def upload_and_analyze_cv(
             raise HTTPException(status_code=404, detail="Freelancer profile not found for current user")
 
         freelancer_id = freelancer["freelancer_id"]
-
-        original_name = file.filename or "cv"
-        ext = original_name.rsplit(".", 1)[-1].lower() if "." in original_name else "pdf"
-        mime = file.content_type or guess_mime(original_name)
 
         # Step 1: Extract raw text
         if ext == "docx" or mime in _DOCX_MIMES:

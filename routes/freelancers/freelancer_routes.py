@@ -14,7 +14,7 @@ from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.freelancers.freelancer_functions import FreelancerFunctions, get_comprehensive_freelancer_profile
 from ai_related.job_engine.embedding_manager import mark_freelancer_dirty
-from functions.minio_client import upload_freelancer_profile_picture, delete_file, BUCKET_USER_ASSETS, validate_file_size, MAX_UPLOAD_FILE_SIZE_BYTES
+from functions.minio_client import upload_freelancer_profile_picture, delete_file, BUCKET_USER_ASSETS, validate_upload, MAX_UPLOAD_FILE_SIZE_BYTES
 from mimetypes import guess_type as guess_mime
 from ai_related.cv_analysis.cv_analysis import parse_cv_for_profile, is_cv_text_too_sparse, CV_EXTRACTION_FAILED_MESSAGE
 from routes.cv_upload.cv_upload_functions import (
@@ -209,12 +209,14 @@ async def parse_cv_for_autofill(
         contents = await file.read()
         if not contents:
             return ResponseSchema.error("CV file must not be empty", 400)
-        if len(contents) > MAX_UPLOAD_FILE_SIZE_BYTES:
-            return ResponseSchema.error("CV file too large. Max size is 100 MB.", 400)
 
         original_name = file.filename or "cv"
         ext = original_name.rsplit(".", 1)[-1].lower() if "." in original_name else "pdf"
         mime = file.content_type or ""
+        try:
+            validate_upload("cv", contents, mime or guess_mime(original_name)[0] or "application/octet-stream", original_name)
+        except HTTPException as e:
+            return ResponseSchema.error(e.detail, e.status_code)
 
         if ext == "docx" or mime in _DOCX_MIMES:
             raw_text = await asyncio.to_thread(_extract_text_from_docx, contents)
@@ -268,10 +270,12 @@ async def update_freelancer(
             contents = await freelancer_update.profile_picture.read()
             if not contents:
                 return ResponseSchema.error("Profile picture file must not be empty", 400)
-            validate_file_size(contents, freelancer_update.profile_picture.filename or "profile picture")
             mime_type = freelancer_update.profile_picture.content_type or guess_mime(freelancer_update.profile_picture.filename or "avatar.jpg")[0]
-            if not mime_type.startswith("image/"):
-                return ResponseSchema.error("Only image files are allowed for profile pictures", 400)
+            mime_type = mime_type or "application/octet-stream"
+            try:
+                validate_upload("avatar", contents, mime_type, freelancer_update.profile_picture.filename or "profile picture")
+            except HTTPException as e:
+                return ResponseSchema.error(e.detail, e.status_code)
             logger("FREELANCER", f"Uploading freelancer avatar for user {current_user.user_id}: filename={freelancer_update.profile_picture.filename}, size={len(contents)} bytes, mime={mime_type}", level="DEBUG")
             update_data["profile_picture_url"] = upload_freelancer_profile_picture(
                 freelancer_id=current_user.user_id,
@@ -432,10 +436,8 @@ async def upload_freelancer_profile_picture_endpoint(
         contents = await file.read()
         if not contents:
             return ResponseSchema.error("Profile picture file must not be empty", 400)
-        validate_file_size(contents, file.filename or "profile picture")
-        mime_type = file.content_type or guess_mime(file.filename or "avatar.jpg")[0]
-        if not mime_type or not mime_type.startswith("image/"):
-            return ResponseSchema.error("Only image files are allowed for profile pictures", 400)
+        mime_type = file.content_type or guess_mime(file.filename or "avatar.jpg")[0] or "application/octet-stream"
+        validate_upload("avatar", contents, mime_type, file.filename or "profile picture")
 
         profile_picture_url = upload_freelancer_profile_picture(
             freelancer_id=current_user.user_id,

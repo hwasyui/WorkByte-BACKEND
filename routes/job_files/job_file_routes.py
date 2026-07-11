@@ -2,7 +2,7 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, UploadFile, HTTPException
 from typing import List, Optional, Dict
 from functions.schema_model import JobFileCreate, JobFileUpdate, JobFileResponse
 from functions.schema_model import UserInDB
@@ -11,7 +11,7 @@ from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.job_files.job_file_functions import JobFileFunctions
 from routes.job_posts.job_post_functions import JobPostFunctions
-from functions.minio_client import upload_job_file, MAX_UPLOAD_FILE_SIZE_BYTES
+from functions.minio_client import upload_job_file, delete_file, validate_upload, BUCKET_JOB_FILES
 from mimetypes import guess_type as guess_mime
 
 job_file_router = APIRouter(prefix="/job-files", tags=["Job Files"])
@@ -83,11 +83,13 @@ async def create_job_file(
             contents = await upload.read()
             if not contents:
                 return ResponseSchema.error(f"Uploaded file '{upload.filename or 'unnamed'}' must not be empty", 400)
-            if len(contents) > MAX_UPLOAD_FILE_SIZE_BYTES:
-                return ResponseSchema.error(f"File too large: {upload.filename or 'unnamed'}. Max size is 100 MB.", 400)
 
             mime_type = upload.content_type or guess_mime(upload.filename or "attachment.bin")[0]
             mime_type = mime_type or "application/octet-stream"
+            try:
+                validate_upload("job_file", contents, mime_type, upload.filename or "unnamed")
+            except HTTPException as e:
+                return ResponseSchema.error(e.detail, e.status_code)
             prepared_files.append({
                 "file_name": upload.filename or "attachment.bin",
                 "file_bytes": contents,
@@ -157,9 +159,14 @@ async def delete_job_file(job_file_id: str, current_user: UserInDB = Depends(get
             error_msg = f"Job file {job_file_id} not found"
             logger("JOB_FILE", error_msg, "DELETE /job-files/{job_file_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
-        
+
+        try:
+            delete_file(BUCKET_JOB_FILES, existing_job_file["file_url"])
+        except Exception as minio_err:
+            logger("JOB_FILE", f"Non-fatal: failed to delete MinIO object for job file {job_file_id}: {str(minio_err)}", "DELETE /job-files/{job_file_id}", "WARNING")
+
         JobFileFunctions.delete_job_file(job_file_id)
-        
+
         success_msg = f"Deleted job file {job_file_id}"
         logger("JOB_FILE", success_msg, "DELETE /job-files/{job_file_id}", "INFO")
         return ResponseSchema.success("Deleted successfully", 200)
