@@ -14,6 +14,7 @@ from functions.response_utils import ResponseSchema
 from functions.minio_client import upload_cv_file, guess_mime, validate_upload
 from routes.freelancers.freelancer_functions import FreelancerFunctions
 from routes.freelancers.freelancer_routes import _scan_identity_fields_or_reject
+from routes.admin.admin_moderation import scan_harmful_text
 from routes.skills.skill_functions import SkillFunctions
 from routes.freelancer_skills.freelancer_skill_functions import FreelancerSkillFunctions
 from routes.work_experience.work_experience_functions import WorkExperienceFunctions
@@ -48,6 +49,15 @@ cv_upload_router = APIRouter(prefix="/cv_upload", tags=["CV Upload"])
 _DOCX_MIMES = {
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "application/msword",
+}
+
+_SKILL_LABEL_NAMES = {
+    "toxic": "toxicity",
+    "toxicity": "toxicity",
+    "obscene": "obscenity",
+    "threat": "threats",
+    "insult": "insults",
+    "identity_hate": "identity-based hate speech",
 }
 
 
@@ -286,6 +296,21 @@ async def apply_cv_profile(
 
                 skill = SkillFunctions.get_skill_by_name(skill_name)
                 if not skill:
+                    # skill is a shared, global lookup table with no single owner
+                    # (visible to every user via autocomplete/search) - same fail-closed
+                    # scan as POST /skills. A flagged name is skipped rather than
+                    # aborting the whole CV-apply request, since this is one field among
+                    # several being applied in the same call.
+                    try:
+                        harm_result = scan_harmful_text(skill_name)
+                    except Exception as e:
+                        logger("CV_UPLOAD", f"Skill-name scan errored for {skill_name!r}, skipping (fail closed): {e}", level="WARNING")
+                        continue
+                    if harm_result["is_flagged"]:
+                        detected_labels = harm_result.get("detected_labels", [])
+                        labels = [_SKILL_LABEL_NAMES.get(l, l) for l in detected_labels]
+                        logger("CV_UPLOAD", f"Skipped CV-suggested skill {skill_name!r}, labels={detected_labels}", level="WARNING")
+                        continue
                     skill = SkillFunctions.create_skill(skill_name)
 
                 skill_id = str(skill["skill_id"])
