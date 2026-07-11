@@ -96,7 +96,9 @@ async def get_proposals_by_freelancer(
     current_user: UserInDB = Depends(get_current_user),
 ):
     try:
-        proposals = ProposalFunctions.get_proposals_by_freelancer_id(freelancer_id, visible_only=True)
+        freelancer = FreelancerFunctions.get_freelancer_by_user_id(current_user.user_id)
+        is_owner = freelancer and str(freelancer["freelancer_id"]) == str(freelancer_id)
+        proposals = ProposalFunctions.get_proposals_by_freelancer_id(freelancer_id, visible_only=not is_owner)
         logger("PROPOSAL", f"Retrieved {len(proposals)} proposals for freelancer {freelancer_id}", "GET /proposals/freelancer/{freelancer_id}", "INFO")
         return ResponseSchema.success(proposals, 200)
     except Exception as e:
