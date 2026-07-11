@@ -348,9 +348,9 @@ async def send_message(
 
         harm_result = await scan_harmful_text_with_ml_fallback(payload.message_text, timeout=ML_SCAN_TIMEOUT_BLOCKING_SECONDS)
         if harm_result["is_flagged"]:
-            labels = harm_result.get("detected_labels", [])
-            logger("DM", f"Blocked toxic message from {current_user.user_id} in thread {thread_id}, labels={labels}", "POST /dm/threads/{thread_id}/messages", "WARNING")
-            return ResponseSchema.error("Message couldn't be sent.", 400)
+            detected_labels = harm_result.get("detected_labels", [])
+            logger("DM", f"Blocked toxic message from {current_user.user_id} in thread {thread_id}, labels={detected_labels}", "POST /dm/threads/{thread_id}/messages", "WARNING")
+            return ResponseSchema.error("Message couldn't be sent.", 400, extra={"detected_labels": detected_labels})
 
         msg = DMFunctions.send_message(
             thread_id=thread_id,
@@ -418,14 +418,14 @@ async def send_message_with_attachment(
         if text:
             harm_result = await scan_harmful_text_with_ml_fallback(text, timeout=ML_SCAN_TIMEOUT_BLOCKING_SECONDS)
             if harm_result["is_flagged"]:
-                labels = harm_result.get("detected_labels", [])
+                detected_labels = harm_result.get("detected_labels", [])
                 logger(
                     "DM",
-                    f"Blocked toxic attachment message from {current_user.user_id} in thread {thread_id}, labels={labels}",
+                    f"Blocked toxic attachment message from {current_user.user_id} in thread {thread_id}, labels={detected_labels}",
                     "POST /dm/threads/{thread_id}/messages/upload",
                     "WARNING",
                 )
-                return ResponseSchema.error("Message couldn't be sent.", 400)
+                return ResponseSchema.error("Message couldn't be sent.", 400, extra={"detected_labels": detected_labels})
 
         msg = DMFunctions.send_message(
             thread_id=thread_id,

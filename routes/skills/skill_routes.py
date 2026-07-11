@@ -147,11 +147,13 @@ async def create_skill(skill: SkillCreate, current_user: UserInDB = Depends(get_
                 logger("SKILL", f"Skill-name scan errored, failing closed (rejecting create): {e}", level="WARNING")
                 return ResponseSchema.error("Couldn't verify this skill name right now. Please try again shortly.", 503)
             if harm_result["is_flagged"]:
-                labels = [_SKILL_LABEL_NAMES.get(l, l) for l in harm_result.get("detected_labels", [])]
-                logger("SKILL", f"Blocked skill creation '{skill.skill_name}', labels={harm_result.get('detected_labels')}", level="WARNING")
+                detected_labels = harm_result.get("detected_labels", [])
+                labels = [_SKILL_LABEL_NAMES.get(l, l) for l in detected_labels]
+                logger("SKILL", f"Blocked skill creation '{skill.skill_name}', labels={detected_labels}", level="WARNING")
                 return ResponseSchema.error(
                     f"This skill name couldn't be created. It was flagged for {', '.join(labels) or 'a policy violation'}.",
                     400,
+                    extra={"detected_labels": detected_labels},
                 )
 
         new_skill = SkillFunctions.create_skill(

@@ -170,19 +170,21 @@ class WorkExperienceFunctions:
             scanned_at = datetime.now(timezone.utc)
 
             if result["is_flagged"]:
+                detected_labels = result.get("detected_labels", [])
                 WorkExperienceFunctions.update_work_experience(work_experience_id, {
                     "moderation_status": "blocked",
                     "scanned_at": scanned_at,
+                    "detected_labels": detected_labels,
                 })
                 logger(
                     "WORK_EXPERIENCE_FUNCTIONS",
-                    f"Work experience {work_experience_id} blocked, labels={result.get('detected_labels')}",
+                    f"Work experience {work_experience_id} blocked, labels={detected_labels}",
                     level="WARNING",
                 )
                 insert_harmful_text_queue_entry(
                     "work_experience", work_experience_id, freelancer_user_id, scan_text, result
                 )
-                labels = [_LABEL_DISPLAY_NAMES.get(l, l) for l in result.get("detected_labels", [])]
+                labels = [_LABEL_DISPLAY_NAMES.get(l, l) for l in detected_labels]
                 try:
                     await NotificationFunctions.notify(
                         recipient_user_id=freelancer_user_id,
@@ -197,6 +199,7 @@ class WorkExperienceFunctions:
                 WorkExperienceFunctions.update_work_experience(work_experience_id, {
                     "moderation_status": "visible",
                     "scanned_at": scanned_at,
+                    "detected_labels": [],
                 })
 
         except Exception as e:

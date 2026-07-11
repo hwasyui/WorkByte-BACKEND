@@ -172,19 +172,21 @@ class EducationFunctions:
             scanned_at = datetime.now(timezone.utc)
 
             if result["is_flagged"]:
+                detected_labels = result.get("detected_labels", [])
                 EducationFunctions.update_education(education_id, {
                     "moderation_status": "blocked",
                     "scanned_at": scanned_at,
+                    "detected_labels": detected_labels,
                 })
                 logger(
                     "EDUCATION_FUNCTIONS",
-                    f"Education {education_id} blocked, labels={result.get('detected_labels')}",
+                    f"Education {education_id} blocked, labels={detected_labels}",
                     level="WARNING",
                 )
                 insert_harmful_text_queue_entry(
                     "education", education_id, freelancer_user_id, scan_text, result
                 )
-                labels = [_LABEL_DISPLAY_NAMES.get(l, l) for l in result.get("detected_labels", [])]
+                labels = [_LABEL_DISPLAY_NAMES.get(l, l) for l in detected_labels]
                 try:
                     await NotificationFunctions.notify(
                         recipient_user_id=freelancer_user_id,
@@ -199,6 +201,7 @@ class EducationFunctions:
                 EducationFunctions.update_education(education_id, {
                     "moderation_status": "visible",
                     "scanned_at": scanned_at,
+                    "detected_labels": [],
                 })
 
         except Exception as e:

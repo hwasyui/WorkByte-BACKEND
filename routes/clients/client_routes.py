@@ -30,11 +30,13 @@ _IDENTITY_FIELD_LABEL_NAMES = {
 def _reject_for(harm_result: Dict, field_label: str) -> Optional[Dict]:
     if not harm_result["is_flagged"]:
         return None
-    labels = [_IDENTITY_FIELD_LABEL_NAMES.get(l, l) for l in harm_result.get("detected_labels", [])]
-    logger("CLIENT", f"Blocked {field_label} save, labels={harm_result.get('detected_labels')}", level="WARNING")
+    detected_labels = harm_result.get("detected_labels", [])
+    labels = [_IDENTITY_FIELD_LABEL_NAMES.get(l, l) for l in detected_labels]
+    logger("CLIENT", f"Blocked {field_label} save, labels={detected_labels}", level="WARNING")
     return {
         "message": f"Your {field_label} couldn't be saved. It was flagged for {', '.join(labels) or 'a policy violation'}.",
         "status": 400,
+        "detected_labels": detected_labels,
     }
 
 
@@ -204,7 +206,7 @@ async def create_client(
 
         rejection = await _scan_identity_fields_or_reject(client.full_name, client.bio, "profile")
         if rejection:
-            return ResponseSchema.error(rejection["message"], rejection["status"])
+            return ResponseSchema.error(rejection["message"], rejection["status"], extra={"detected_labels": rejection["detected_labels"]})
 
         new_client = ClientFunctions.create_client(
             client_id=client_id,
@@ -267,7 +269,7 @@ async def update_client(
         _long_text = update_data.get("bio") if "bio" in update_data else existing.get("bio", "")
         rejection = await _scan_identity_fields_or_reject(_short_text, _long_text, "profile")
         if rejection:
-            return ResponseSchema.error(rejection["message"], rejection["status"])
+            return ResponseSchema.error(rejection["message"], rejection["status"], extra={"detected_labels": rejection["detected_labels"]})
 
         updated_client = ClientFunctions.update_client(client_id, update_data)
 

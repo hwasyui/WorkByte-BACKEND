@@ -264,7 +264,7 @@ async def apply_cv_profile(
             _bio_text = request.suggested_bio.strip()
             rejection = await _scan_identity_fields_or_reject("", _bio_text, "bio")
             if rejection:
-                return ResponseSchema.error(rejection["message"], rejection["status"])
+                return ResponseSchema.error(rejection["message"], rejection["status"], extra={"detected_labels": rejection["detected_labels"]})
             FreelancerFunctions.update_freelancer(
                 freelancer_id=freelancer_id,
                 update_data={"bio": _bio_text},

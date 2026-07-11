@@ -48,7 +48,7 @@ _JOB_POST_SELECT = """
         jp.is_ai_generated, jp.view_count, jp.project_category,
         jp.created_at, jp.updated_at, jp.posted_at, jp.closed_at,
         jp.closure_reason, jp.closure_note,
-        jp.moderation_status, jp.scanned_at,
+        jp.moderation_status, jp.scanned_at, jp.detected_labels,
         COUNT(DISTINCT jr.job_role_id) AS role_count,
         COALESCE(SUM(jr.positions_available), 0) AS available_positions,
         c.full_name AS client_name,
@@ -789,19 +789,21 @@ class JobPostFunctions:
             scanned_at = datetime.now(timezone.utc)
 
             if result["is_flagged"]:
+                detected_labels = result.get("detected_labels", [])
                 JobPostFunctions.update_job_post(job_post_id, {
                     "moderation_status": "blocked",
                     "scanned_at": scanned_at,
+                    "detected_labels": detected_labels,
                 })
                 logger(
                     "JOB_POST_FUNCTIONS",
-                    f"Job post {job_post_id} blocked, labels={result.get('detected_labels')}",
+                    f"Job post {job_post_id} blocked, labels={detected_labels}",
                     level="WARNING",
                 )
                 insert_harmful_text_queue_entry(
                     "job_post", job_post_id, client_user_id, scan_text, result
                 )
-                labels = [_LABEL_DISPLAY_NAMES.get(l, l) for l in result.get("detected_labels", [])]
+                labels = [_LABEL_DISPLAY_NAMES.get(l, l) for l in detected_labels]
                 try:
                     await NotificationFunctions.notify(
                         recipient_user_id=client_user_id,
@@ -816,6 +818,7 @@ class JobPostFunctions:
                 JobPostFunctions.update_job_post(job_post_id, {
                     "moderation_status": "visible",
                     "scanned_at": scanned_at,
+                    "detected_labels": [],
                 })
 
         except Exception as e:

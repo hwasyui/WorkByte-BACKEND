@@ -1,6 +1,6 @@
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
-from typing import Any
+from typing import Any, Dict, Optional
 from uuid import UUID
 from datetime import date, datetime
 from decimal import Decimal
@@ -34,11 +34,14 @@ class ResponseSchema:
         return JSONResponse(status_code=status_code, content=encoded_body)
 
     @staticmethod
-    def error(details: str, status_code: int = 400) -> JSONResponse:
-        """Build an error response."""
+    def error(details: str, status_code: int = 400, extra: Optional[Dict[str, Any]] = None) -> JSONResponse:
+        """Build an error response. `extra` merges additional top-level keys into the
+        body (e.g. {"detected_labels": [...]}) without changing the shape of `details`,
+        so existing callers that read body['details'] as a plain string are unaffected."""
         body = {
             "status": "error",
-            "details": details
+            "details": details,
+            **(extra or {}),
         }
 
         return JSONResponse(

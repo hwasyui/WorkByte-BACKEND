@@ -337,15 +337,17 @@ class ProposalFunctions:
             scanned_at = datetime.now(timezone.utc)
 
             if result["is_flagged"]:
+                detected_labels = result.get("detected_labels", [])
                 ProposalFunctions.update_proposal(proposal_id, {
                     "moderation_status": "blocked",
                     "scanned_at": scanned_at,
+                    "detected_labels": detected_labels,
                 })
                 if job_post_id:
                     JobPostFunctions._sync_proposal_count(job_post_id)
                 logger(
                     "PROPOSAL_FUNCTIONS",
-                    f"Proposal {proposal_id} blocked, labels={result.get('detected_labels')}",
+                    f"Proposal {proposal_id} blocked, labels={detected_labels}",
                     level="WARNING",
                 )
                 # audit trail only - proposals stay instant-block/edit-resubmit for the
@@ -354,7 +356,7 @@ class ProposalFunctions:
                 insert_harmful_text_queue_entry(
                     "proposal", proposal_id, freelancer_user_id, cover_letter, result
                 )
-                labels = [_LABEL_DISPLAY_NAMES.get(l, l) for l in result.get("detected_labels", [])]
+                labels = [_LABEL_DISPLAY_NAMES.get(l, l) for l in detected_labels]
                 try:
                     await NotificationFunctions.notify(
                         recipient_user_id=freelancer_user_id,
@@ -369,6 +371,7 @@ class ProposalFunctions:
                 ProposalFunctions.update_proposal(proposal_id, {
                     "moderation_status": "visible",
                     "scanned_at": scanned_at,
+                    "detected_labels": [],
                 })
                 if job_post_id:
                     JobPostFunctions._sync_proposal_count(job_post_id)

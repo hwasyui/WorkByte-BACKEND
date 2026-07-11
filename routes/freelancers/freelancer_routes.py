@@ -37,11 +37,13 @@ _IDENTITY_FIELD_LABEL_NAMES = {
 def _reject_for(harm_result: Dict, field_label: str) -> Optional[Dict]:
     if not harm_result["is_flagged"]:
         return None
-    labels = [_IDENTITY_FIELD_LABEL_NAMES.get(l, l) for l in harm_result.get("detected_labels", [])]
-    logger("FREELANCER", f"Blocked {field_label} save, labels={harm_result.get('detected_labels')}", level="WARNING")
+    detected_labels = harm_result.get("detected_labels", [])
+    labels = [_IDENTITY_FIELD_LABEL_NAMES.get(l, l) for l in detected_labels]
+    logger("FREELANCER", f"Blocked {field_label} save, labels={detected_labels}", level="WARNING")
     return {
         "message": f"Your {field_label} couldn't be saved. It was flagged for {', '.join(labels) or 'a policy violation'}.",
         "status": 400,
+        "detected_labels": detected_labels,
     }
 
 
@@ -170,7 +172,7 @@ async def create_freelancer(
         _short_text = " ".join(filter(None, [freelancer.full_name, freelancer.title]))
         rejection = await _scan_identity_fields_or_reject(_short_text, freelancer.bio, "profile")
         if rejection:
-            return ResponseSchema.error(rejection["message"], rejection["status"])
+            return ResponseSchema.error(rejection["message"], rejection["status"], extra={"detected_labels": rejection["detected_labels"]})
 
         new_freelancer = FreelancerFunctions.create_freelancer(
             freelancer_id=freelancer_id,
@@ -292,7 +294,7 @@ async def update_freelancer(
         _long_text = update_data.get("bio") if "bio" in update_data else existing.get("bio", "")
         rejection = await _scan_identity_fields_or_reject(_short_text, _long_text, "profile")
         if rejection:
-            return ResponseSchema.error(rejection["message"], rejection["status"])
+            return ResponseSchema.error(rejection["message"], rejection["status"], extra={"detected_labels": rejection["detected_labels"]})
 
         updated_freelancer = FreelancerFunctions.update_freelancer(freelancer_id=freelancer_id, update_data=update_data)
         mark_freelancer_dirty(freelancer_id)

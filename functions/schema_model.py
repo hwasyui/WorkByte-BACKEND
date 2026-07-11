@@ -437,6 +437,7 @@ class WorkExperienceResponse(BaseModel):
     description: Optional[str] = None
     moderation_status: Optional[str] = "scanning"
     scanned_at: Optional[datetime] = None
+    detected_labels: Optional[List[str]] = []
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
@@ -480,6 +481,7 @@ class EducationResponse(BaseModel):
     description: Optional[str] = None
     moderation_status: Optional[str] = "scanning"
     scanned_at: Optional[datetime] = None
+    detected_labels: Optional[List[str]] = []
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
@@ -538,6 +540,7 @@ class JobPostResponse(BaseModel):
     closure_note: Optional[str] = None
     moderation_status: Optional[str] = "scanning"
     scanned_at: Optional[datetime] = None
+    detected_labels: Optional[List[str]] = []
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     posted_at: Optional[datetime] = None
@@ -697,6 +700,7 @@ class ProposalResponse(BaseModel):
     submitted_at: Optional[datetime] = None
     moderation_status: Optional[str] = "visible"
     scanned_at: Optional[datetime] = None
+    detected_labels: Optional[List[str]] = []
 
     class Config:
         from_attributes = True
@@ -881,6 +885,7 @@ class PortfolioResponse(BaseModel):
     tags: Optional[List[str]] = None
     moderation_status: Optional[str] = "scanning"
     scanned_at: Optional[datetime] = None
+    detected_labels: Optional[List[str]] = []
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
