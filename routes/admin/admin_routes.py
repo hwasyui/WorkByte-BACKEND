@@ -16,6 +16,8 @@ from functions.minio_client import upload_appeal_proof_file, guess_mime, validat
 from routes.admin.admin_functions import (
     VALID_REPORT_REASONS,
     mark_moderation_item_reviewed,
+    bulk_mark_moderation_reviewed,
+    list_moderation_queue_by_user,
     action_report,
     action_scam_flag,
     admin_close_account,
@@ -105,10 +107,18 @@ async def admin_dashboard(current_user: UserInDB = Depends(get_admin_user)):
         return ResponseSchema.error(f"Failed to fetch dashboard stats: {e}", 500)
 
 
+_VALID_MOD_CONTENT_TYPES = (
+    "job_post", "freelancer_profile", "client_profile",
+    "portfolio", "education", "work_experience", "proposal", "all",
+)
+
+
 @admin_router.get("/moderation")
 async def list_moderation(
     reviewed:     Optional[bool] = Query(default=None, description="filter by whether an admin has looked at it yet; omit for no filter"),
     content_type: str = Query(default="all",         description="job_post | freelancer_profile | client_profile | portfolio | education | work_experience | proposal | all"),
+    min_score:    Optional[float] = Query(default=None, ge=0, le=5, description="only rows with total_score (sum of the 5 label scores, 0-5) >= this; use for a 'high severity' quick filter"),
+    max_score:    Optional[float] = Query(default=None, ge=0, le=5, description="only rows with total_score <= this"),
     sort_by:      str = Query(default="created_at",  description="created_at | total_score | content_type | reviewed_at"),
     sort_dir:     str = Query(default="desc",        description="asc | desc"),
     page:         int = Query(default=1, ge=1),
@@ -116,28 +126,59 @@ async def list_moderation(
     current_user: UserInDB = Depends(get_admin_user),
 ):
     """Browse the harmful-text audit trail. Plain history, not an action queue - filter
-    by content_type and by whether it's been reviewed yet, sort as needed."""
+    by content_type, severity (min_score/max_score), and by whether it's been reviewed
+    yet, sort as needed."""
     try:
-        _VALID_MOD_CONTENT_TYPES = (
-            "job_post", "freelancer_profile", "client_profile",
-            "portfolio", "education", "work_experience", "proposal", "all",
-        )
         if content_type not in _VALID_MOD_CONTENT_TYPES:
             return ResponseSchema.error(f"content_type must be one of: {', '.join(_VALID_MOD_CONTENT_TYPES)}", 400)
         if sort_by not in ("created_at", "total_score", "content_type", "reviewed_at"):
             return ResponseSchema.error("sort_by must be created_at, total_score, content_type, or reviewed_at", 400)
         if sort_dir not in ("asc", "desc"):
             return ResponseSchema.error("sort_dir must be asc or desc", 400)
+        if min_score is not None and max_score is not None and min_score > max_score:
+            return ResponseSchema.error("min_score must not be greater than max_score", 400)
         items = list_moderation_queue(
             reviewed=reviewed, content_type=content_type,
             sort_by=sort_by, sort_dir=sort_dir,
             page=page, page_size=page_size,
+            min_score=min_score, max_score=max_score,
         )
-        logger("ADMIN", f"Moderation queue fetched: reviewed={reviewed} content_type={content_type} sort={sort_by} {sort_dir}", "GET /admin/moderation", "INFO")
+        logger("ADMIN", f"Moderation queue fetched: reviewed={reviewed} content_type={content_type} "
+                         f"score=[{min_score},{max_score}] sort={sort_by} {sort_dir}", "GET /admin/moderation", "INFO")
         return ResponseSchema.success(items, 200)
     except Exception as e:
         logger("ADMIN", f"Moderation list error: {e}", "GET /admin/moderation", "ERROR")
         return ResponseSchema.error(f"Failed to fetch moderation queue: {e}", 500)
+
+
+@admin_router.get("/moderation/by-user")
+async def list_moderation_by_user(
+    content_type: str = Query(default="all", description="job_post | freelancer_profile | client_profile | portfolio | education | work_experience | proposal | all"),
+    sort_by:      str = Query(default="flagged_count", description="flagged_count | unreviewed_count | max_score | last_flagged_at"),
+    sort_dir:     str = Query(default="desc", description="asc | desc"),
+    page:         int = Query(default=1, ge=1),
+    page_size:    int = Query(default=20, ge=1, le=100),
+    current_user: UserInDB = Depends(get_admin_user),
+):
+    """Same audit trail as GET /admin/moderation, grouped by user (one row per flagged
+    user_id/email with flagged_count/unreviewed_count/max_score/last_flagged_at) so repeat
+    offenders are easy to spot instead of scrolling a flat per-entry list."""
+    try:
+        if content_type not in _VALID_MOD_CONTENT_TYPES:
+            return ResponseSchema.error(f"content_type must be one of: {', '.join(_VALID_MOD_CONTENT_TYPES)}", 400)
+        if sort_by not in ("flagged_count", "unreviewed_count", "max_score", "last_flagged_at"):
+            return ResponseSchema.error("sort_by must be flagged_count, unreviewed_count, max_score, or last_flagged_at", 400)
+        if sort_dir not in ("asc", "desc"):
+            return ResponseSchema.error("sort_dir must be asc or desc", 400)
+        items = list_moderation_queue_by_user(
+            content_type=content_type, sort_by=sort_by, sort_dir=sort_dir,
+            page=page, page_size=page_size,
+        )
+        logger("ADMIN", f"Moderation-by-user fetched: content_type={content_type} sort={sort_by} {sort_dir}", "GET /admin/moderation/by-user", "INFO")
+        return ResponseSchema.success(items, 200)
+    except Exception as e:
+        logger("ADMIN", f"Moderation-by-user error: {e}", "GET /admin/moderation/by-user", "ERROR")
+        return ResponseSchema.error(f"Failed to fetch moderation queue by user: {e}", 500)
 
 
 @admin_router.post("/moderation/{moderation_id}/review")
@@ -162,6 +203,34 @@ async def review_moderation(
     except Exception as e:
         logger("ADMIN", f"Review moderation error: {e}", "POST /admin/moderation/review", "ERROR")
         return ResponseSchema.error(f"Failed to mark item reviewed: {e}", 500)
+
+
+@admin_router.post("/moderation/review-all")
+async def review_all_moderation(
+    content_type: str = Query(default="all", description="only bulk-review rows of this content_type; 'all' excludes proposal, same as GET /admin/moderation"),
+    min_score:    Optional[float] = Query(default=None, ge=0, le=5, description="only bulk-review rows with total_score >= this"),
+    body: AdminActionBody = AdminActionBody(),
+    current_user: UserInDB = Depends(get_admin_user),
+):
+    """Mark every currently-unreviewed row matching content_type/min_score as reviewed
+    in one call - the 'mark all reviewed' button for whatever filtered view the admin is
+    looking at. Bookkeeping only, same as the single-item endpoint; does not touch the
+    underlying content."""
+    try:
+        if content_type not in _VALID_MOD_CONTENT_TYPES:
+            return ResponseSchema.error(f"content_type must be one of: {', '.join(_VALID_MOD_CONTENT_TYPES)}", 400)
+        count = bulk_mark_moderation_reviewed(
+            admin_user_id=current_user.user_id,
+            content_type=content_type,
+            min_score=min_score,
+            admin_note=body.admin_note,
+        )
+        logger("ADMIN", f"Bulk-reviewed {count} moderation rows (content_type={content_type}, min_score={min_score}) by {current_user.user_id}",
+               "POST /admin/moderation/review-all", "INFO")
+        return ResponseSchema.success({"reviewed_count": count}, 200)
+    except Exception as e:
+        logger("ADMIN", f"Bulk review moderation error: {e}", "POST /admin/moderation/review-all", "ERROR")
+        return ResponseSchema.error(f"Failed to bulk-review moderation queue: {e}", 500)
 
 
 @admin_router.post("/moderation/scan")

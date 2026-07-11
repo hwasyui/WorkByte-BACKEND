@@ -198,6 +198,12 @@ def force_expire_scam_flags(flag_ids: List[str]) -> None:
     _process_auto_remove()
 
 
+_MOD_TOTAL_SCORE_EXPR = (
+    "(cmq.toxic_score + cmq.obscene_score + cmq.threat_score + "
+    "cmq.insult_score + cmq.identity_hate_score)"
+)
+
+
 def list_moderation_queue(
     reviewed: Optional[bool] = None,
     content_type: str = "all",
@@ -205,10 +211,15 @@ def list_moderation_queue(
     sort_dir: str = "desc",
     page: int = 1,
     page_size: int = 20,
+    min_score: Optional[float] = None,
+    max_score: Optional[float] = None,
 ) -> List[Dict]:
     """Browse the harmful-text audit trail. Plain history - nothing here gates or
     triggers anything; reviewed is just whether an admin has looked at a row yet
-    (None = don't filter, True = only reviewed, False = only unreviewed)."""
+    (None = don't filter, True = only reviewed, False = only unreviewed).
+    min_score/max_score filter on total_score (sum of the 5 label scores, 0-5) - the
+    same number shown to the admin as "Score X/5.0", so a "high severity" quick filter
+    is just min_score=<threshold> with no separate bucket concept to keep in sync."""
     offset    = (page - 1) * page_size
     sort_col  = _MOD_SORT_COLS.get(sort_by, "cmq.created_at")
     direction = "ASC" if sort_dir.lower() == "asc" else "DESC"
@@ -218,8 +229,7 @@ def list_moderation_queue(
     return _rows(get_db().execute_query(
         f"""
         SELECT cmq.*,
-               (cmq.toxic_score + cmq.obscene_score +
-                cmq.threat_score + cmq.insult_score + cmq.identity_hate_score) AS total_score,
+               {_MOD_TOTAL_SCORE_EXPR} AS total_score,
                u.email AS user_email
         FROM harmful_text_queue cmq
         JOIN users u ON u.user_id = cmq.user_id
@@ -228,11 +238,93 @@ def list_moderation_queue(
                 (:content_type = 'all' AND cmq.content_type != 'proposal')
                 OR (:content_type != 'all' AND cmq.content_type = :content_type)
               )
+          AND (:min_score IS NULL OR {_MOD_TOTAL_SCORE_EXPR} >= :min_score)
+          AND (:max_score IS NULL OR {_MOD_TOTAL_SCORE_EXPR} <= :max_score)
         ORDER BY {sort_col} {direction}
         LIMIT :limit OFFSET :offset
         """,
         params={
             "reviewed":     reviewed,
+            "content_type": content_type,
+            "min_score":    min_score,
+            "max_score":    max_score,
+            "limit":        page_size,
+            "offset":       offset,
+        },
+    ))
+
+
+def bulk_mark_moderation_reviewed(
+    admin_user_id: str,
+    content_type: str = "all",
+    min_score: Optional[float] = None,
+    admin_note: Optional[str] = None,
+) -> int:
+    """Mark every currently-unreviewed row matching the given filters as reviewed in
+    one shot ("mark all reviewed" button) - same filters as list_moderation_queue's
+    content_type/min_score so a filtered view and its bulk action stay in sync.
+    Bookkeeping only, same as mark_moderation_item_reviewed. Returns rows updated."""
+    rows = get_db().execute_query(
+        f"""
+        UPDATE harmful_text_queue cmq
+        SET admin_user_id = :admin_id, admin_note = :note, reviewed_at = NOW()
+        WHERE cmq.reviewed_at IS NULL
+          AND (
+                (:content_type = 'all' AND cmq.content_type != 'proposal')
+                OR (:content_type != 'all' AND cmq.content_type = :content_type)
+              )
+          AND (:min_score IS NULL OR {_MOD_TOTAL_SCORE_EXPR} >= :min_score)
+        RETURNING cmq.moderation_id
+        """,
+        params={
+            "admin_id":     admin_user_id,
+            "note":         admin_note,
+            "content_type": content_type,
+            "min_score":    min_score,
+        },
+    )
+    return len(rows) if rows else 0
+
+
+_MOD_USER_SORT_COLS = {
+    "flagged_count":    "flagged_count",
+    "unreviewed_count": "unreviewed_count",
+    "max_score":        "max_score",
+    "last_flagged_at":  "last_flagged_at",
+}
+
+
+def list_moderation_queue_by_user(
+    content_type: str = "all",
+    sort_by: str = "flagged_count",
+    sort_dir: str = "desc",
+    page: int = 1,
+    page_size: int = 20,
+) -> List[Dict]:
+    """Grouped view of the harmful-text audit trail, one row per flagged user, for
+    spotting repeat offenders instead of scrolling a flat per-entry list. Same
+    content_type semantics as list_moderation_queue (proposal excluded from 'all')."""
+    offset    = (page - 1) * page_size
+    sort_col  = _MOD_USER_SORT_COLS.get(sort_by, "flagged_count")
+    direction = "ASC" if sort_dir.lower() == "asc" else "DESC"
+    return _rows(get_db().execute_query(
+        f"""
+        SELECT cmq.user_id, u.email AS user_email,
+               COUNT(*) AS flagged_count,
+               COUNT(*) FILTER (WHERE cmq.reviewed_at IS NULL) AS unreviewed_count,
+               MAX({_MOD_TOTAL_SCORE_EXPR}) AS max_score,
+               MAX(cmq.created_at) AS last_flagged_at
+        FROM harmful_text_queue cmq
+        JOIN users u ON u.user_id = cmq.user_id
+        WHERE (
+                (:content_type = 'all' AND cmq.content_type != 'proposal')
+                OR (:content_type != 'all' AND cmq.content_type = :content_type)
+              )
+        GROUP BY cmq.user_id, u.email
+        ORDER BY {sort_col} {direction}
+        LIMIT :limit OFFSET :offset
+        """,
+        params={
             "content_type": content_type,
             "limit":        page_size,
             "offset":       offset,
