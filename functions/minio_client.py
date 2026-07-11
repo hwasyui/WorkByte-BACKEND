@@ -45,8 +45,8 @@ ALLOWED_MIME_TYPES = {
 
 MAX_UPLOAD_FILE_SIZE_BYTES_BY_USE_CASE = {
     "cv":             10 * 1024 * 1024,
-    "job_file":       25 * 1024 * 1024,
-    "proposal_file":  25 * 1024 * 1024,
+    "job_file":       50 * 1024 * 1024,
+    "proposal_file":  50 * 1024 * 1024,
     "avatar":         5 * 1024 * 1024,
     "appeal_proof":   20 * 1024 * 1024,
 }
