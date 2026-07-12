@@ -94,25 +94,17 @@ def _load_config(model_type: str) -> dict:
 
 
 def _pick_best_model_type() -> str:
-    """pick whichever uploaded model has the highest test f1, so retraining a
-    better model just means uploading its folder, no code change needed."""
-    best_type = None
-    best_f1 = -1.0
-    for model_type in _MODEL_FOLDERS:
-        if not _is_model_available(model_type):
-            continue
-        f1 = _load_config(model_type).get("test_metrics", {}).get("f1", -1.0)
-        if f1 > best_f1:
-            best_f1 = f1
-            best_type = model_type
-
-    if best_type is None:
+    """'best' is pinned to bert: the offline comparison notebook (see
+    HARMFUL_TEXT.md section 15) already picked it as the winner, so there's no
+    need to re-scan and compare model folders' f1 on every request. Deploying
+    only needs the 'bert/' folder uploaded, not all three."""
+    if not _is_model_available("bert"):
         raise FileNotFoundError(
-            f"no trained model folders found in {_MODEL_DIR}. "
-            f"upload a model folder (e.g. 'bert/') with config.json, model.safetensors, "
-            f"tokenizer.json and config.pkl."
+            f"no trained 'bert' model folder found in {_MODEL_DIR}. "
+            f"upload the 'bert/' folder (config.json, model.safetensors, "
+            f"tokenizer.json, tokenizer_config.json and config.pkl) from your training run."
         )
-    return best_type
+    return "bert"
 
 
 def _normalize_model_type(model_type: str = "best") -> str:
@@ -157,8 +149,8 @@ def load_model(model_type: str = "best") -> Tuple[torch.nn.Module, AutoTokenizer
     load a trained harmful text detection model.
 
     args:
-        model_type: 'bert', 'roberta', 'distilbert', or 'best' (highest test f1
-                    among the uploaded model folders)
+        model_type: 'bert', 'roberta', 'distilbert', or 'best' (pinned to
+                    'bert' - see _pick_best_model_type)
 
     returns:
         tuple of (model, tokenizer, device, resolved_model_type)
