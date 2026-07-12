@@ -35,14 +35,12 @@ from routes.proposal_files.proposal_file_routes import proposal_file_router
 from routes.contracts.contract_routes import contract_router
 from routes.portfolio.portfolio_routes import portfolio_router
 from routes.saved_jobs.saved_job_routes import saved_job_router
-from routes.ratings.rating_routes import rating_router
-from routes.performance_ratings.performance_rating_routes import performance_rating_router
-from routes.client_trust_scores.client_trust_score_routes import client_trust_score_router
 from routes.dm.dm_routes import dm_router
 from routes.upload.upload_route import upload_router, files_router
 from routes.cv_upload.cv_upload_routes import cv_upload_router
 from routes.contract_submissions.contract_submission_routes import contract_submission_router
 from routes.reviews.review_routes import review_router
+from routes.client_reviews.client_review_routes import client_review_router
 from routes.dashboard.dashboard_routes import dashboard_router
 from ai_related.cv_analysis.cv_analysis_routes import cv_analysis_router
 from ai_related.harmful_text_detection.harmful_text_routes import harmful_text_router
@@ -78,7 +76,7 @@ async def lifespan(app: FastAPI):
     logger("LIFESPAN", "Embedding sweep worker started (handles dirty records and manual /embed/ calls regardless of mode)", level="INFO")
     
     moderation_sweep_task = asyncio.create_task(moderation_sweep_loop())
-    logger("LIFESPAN", "Moderation sweep worker started (auto-approve/auto-remove/report actions run regardless of admin login)", level="INFO")
+    logger("LIFESPAN", "Moderation sweep worker started (scam-flag auto-remove/report auto-actions run regardless of admin login - harmful-text moderation has no time-based sweep anymore)", level="INFO")
 
     contract_deadline_task = asyncio.create_task(contract_deadline_loop())
     logger("LIFESPAN", "Contract deadline sweep worker started (informational overdue notifications)", level="INFO")
@@ -209,9 +207,6 @@ app.include_router(proposal_file_router)
 app.include_router(contract_router)
 app.include_router(portfolio_router)
 app.include_router(saved_job_router)
-app.include_router(rating_router)
-app.include_router(performance_rating_router)
-app.include_router(client_trust_score_router)
 app.include_router(dm_router)
 app.include_router(upload_router)
 app.include_router(files_router)
@@ -219,6 +214,7 @@ app.include_router(cv_upload_router)
 app.include_router(cv_analysis_router)
 app.include_router(contract_submission_router)
 app.include_router(review_router)
+app.include_router(client_review_router)
 app.include_router(dashboard_router)
 app.include_router(job_engine_router)
 app.include_router(harmful_text_router)

@@ -991,39 +991,6 @@ class PerformanceRatingResponse(BaseModel):
         from_attributes = True
 
 
-# Client trust score
-class ClientTrustScoreCreate(BaseModel):
-    client_trust_score_id: Optional[str] = None
-    client_id: str
-    trust_score: Optional[float] = None
-    rating_consistency_score: Optional[float] = None
-    extreme_rating_ratio: Optional[float] = None
-    project_completion_rate: Optional[float] = None
-    average_budget_gap: Optional[float] = None
-    total_ratings_given: Optional[int] = 0
-
-class ClientTrustScoreUpdate(BaseModel):
-    trust_score: Optional[float] = None
-    rating_consistency_score: Optional[float] = None
-    extreme_rating_ratio: Optional[float] = None
-    project_completion_rate: Optional[float] = None
-    average_budget_gap: Optional[float] = None
-    total_ratings_given: Optional[int] = None
-
-class ClientTrustScoreResponse(BaseModel):
-    client_trust_score_id: str
-    client_id: str
-    trust_score: Optional[float] = None
-    rating_consistency_score: Optional[float] = None
-    extreme_rating_ratio: Optional[float] = None
-    project_completion_rate: Optional[float] = None
-    average_budget_gap: Optional[float] = None
-    total_ratings_given: Optional[int] = 0
-    last_calculated_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
 
 
 # Freelancer embeddings
@@ -1243,6 +1210,54 @@ class RedFlagAlertResponse(BaseModel):
 
 class InitiateReviewPayload(BaseModel):
     contract_id: str
+
+
+# Client reviews (freelancer reviews client - symmetric counterpart to reviews above)
+
+class ClientReviewRatingInput(BaseModel):
+    category: str  # communication | clarity_of_requirements | responsiveness | professionalism
+    score: float   # 1.0 - 5.0
+
+
+class SubmitClientReviewRequest(BaseModel):
+    ratings: List[ClientReviewRatingInput]  # must contain all 4 categories
+    freelancer_answer: str                  # answer to the AI-generated targeted question
+    overall_comment: str                    # free-form written review
+
+
+class ClientReviewResponse(BaseModel):
+    id: str
+    contract_id: str
+    reviewer_id: str
+    client_id: str
+    status: str
+    is_anonymous: bool
+    created_at: Optional[datetime] = None
+    published_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ClientReviewDetailResponse(ClientReviewResponse):
+    ratings: Optional[List[dict]] = []
+    written_content: Optional[dict] = None
+    ai_analysis: Optional[dict] = None
+
+
+class ClientTrustScoreV2Response(BaseModel):
+    client_id: str
+    trust_score: Optional[float] = None
+    weighted_review_avg_received: Optional[float] = None
+    responsiveness_score: Optional[float] = None
+    communication_sentiment: Optional[float] = None
+    authenticity_confidence: Optional[float] = None
+    consistency_score: Optional[float] = None
+    dispute_fairness_score: Optional[float] = None
+    total_reviews_received: Optional[int] = 0
+
+    class Config:
+        from_attributes = True
 
 
 # Notifications

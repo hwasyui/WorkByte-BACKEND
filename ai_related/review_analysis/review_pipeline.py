@@ -1,7 +1,7 @@
 import os
 import sys
 import asyncio
-import uuid
+from typing import Optional
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
@@ -9,6 +9,7 @@ from functions.db_manager import get_db
 from functions.logger import logger
 from routes.reviews.review_functions import ReviewFunctions
 from routes.dm.dm_functions import DMFunctions
+from routes.notifications.notification_functions import NotificationFunctions
 from ai_related.review_analysis.review_ai_functions import (
     get_targeted_question,
     compute_on_time_score,
@@ -17,7 +18,12 @@ from ai_related.review_analysis.review_ai_functions import (
     analyze_review_full,
     calculate_trust_score,
     calculate_weighted_review_avg,
+    calculate_aggregate_performance,
+    calculate_ai_trust_components,
 )
+from ai_related.review_analysis.review_ml.authenticity_detector import predict_authenticity
+from ai_related.review_analysis.review_ml.mismatch_detector import predict_mismatch
+from ai_related.review_analysis.review_ml.sentiment_detector import predict_sentiment
 
 
 def infer_project_category(role_title: str, job_title: str, job_description: str) -> str:
@@ -223,20 +229,64 @@ async def run_post_review_pipeline(review_id: str) -> None:
             communication_star_rating=communication_star_rating,
         )
 
-        overall_pass = analysis_result.get("overall_pass", True)
+        # Step 6b: Three trained classical models (review_ml/) as independent
+        # signals alongside the LLM - authenticity, sentiment-rating mismatch,
+        # and sentiment. Kept as an ensemble rather than a replacement so the
+        # pipeline still works if the Groq API is rate-limited or down.
+        review_text_for_ml = f"{overall_comment} {client_answer}".strip()
+        ml_authenticity = predict_authenticity(review_text_for_ml)
+        ml_mismatch = predict_mismatch(review_text_for_ml, avg_stars)
+        ml_sentiment = predict_sentiment(review_text_for_ml)
+
+        flag_reasons = list(analysis_result["flag_reasons"])
+
+        ml_authenticity_score = 1.0 - ml_authenticity["fake_probability"]
+        authenticity_score = round((analysis_result["authenticity_score"] + ml_authenticity_score) / 2, 3)
+        is_flagged_fake = analysis_result["is_flagged_fake"] or ml_authenticity["is_likely_fake"]
+        if ml_authenticity["is_likely_fake"] and not analysis_result["is_flagged_fake"]:
+            flag_reasons.append(
+                f"Statistical model flagged generic/templated language "
+                f"(fake_probability={ml_authenticity['fake_probability']})"
+            )
+
+        sentiment_mismatch = analysis_result["sentiment_mismatch"] or ml_mismatch["is_mismatched"]
+        if ml_mismatch["is_mismatched"] and not analysis_result["sentiment_mismatch"]:
+            flag_reasons.append(
+                f"Rating-text mismatch detected (text implies ~{ml_mismatch['predicted_rating']}★, "
+                f"actual rating {avg_stars}★)"
+            )
+
+        # Own trained classifier replaces the LLM's sentiment guess.
+        sentiment_score = ml_sentiment["sentiment_score"]
+        sentiment_label = ml_sentiment["sentiment_label"]
+
+        # is_flagged_fake is a veto, not just a contributing signal: authenticity_score
+        # is a blend of the LLM's own judgment and the ML classifier's, so a review the
+        # fake-detector specifically caught (e.g. "extremely short", "generic language")
+        # could still average out above the 0.5 threshold and auto-publish. Since
+        # is_flagged_fake already means at least one model concluded it's likely fake,
+        # it should hold the review back regardless of what the blended score says.
+        overall_pass = (
+            authenticity_score >= 0.5
+            and not is_flagged_fake
+            and not (
+                sentiment_mismatch
+                and avg_stars == 5.0
+                and sentiment_label == "negative"
+            )
+        )
 
         # Step 6: Persist AI analysis
         ReviewFunctions.save_ai_analysis(
             review_id=review_id,
-            sentiment_score=analysis_result["sentiment_score"],
-            sentiment_label=analysis_result["sentiment_label"],
-            sentiment_mismatch=analysis_result["sentiment_mismatch"],
-            authenticity_score=analysis_result["authenticity_score"],
-            is_flagged_fake=analysis_result["is_flagged_fake"],
+            sentiment_score=sentiment_score,
+            sentiment_label=sentiment_label,
+            sentiment_mismatch=sentiment_mismatch,
+            mismatch_severity=ml_mismatch["mismatch_severity"],
+            authenticity_score=authenticity_score,
+            is_flagged_fake=is_flagged_fake,
             is_flagged_coerced=analysis_result["is_flagged_coerced"],
-            flag_reasons=analysis_result["flag_reasons"],
-            bias_score=analysis_result["bias_score"],
-            bias_flags=analysis_result["bias_flags"],
+            flag_reasons=flag_reasons,
             overall_pass=overall_pass,
         )
 
@@ -253,93 +303,134 @@ async def run_post_review_pipeline(review_id: str) -> None:
             communication_summary=communication_summary,
         )
 
-        # Keep perf dict in sync for trust score calculation below
-        perf["communication_sentiment_score"] = communication_sentiment_score
-        perf["conflict_score"] = conflict_score
-
-        # Log significant bias for manual review
-        if analysis_result["bias_score"] > 0.3:
-            db.insert_data(
-                table_name="bias_detection_log",
-                data={
-                    "id": str(uuid.uuid4()),
-                    "freelancer_id": freelancer_id,
-                    "review_id": review_id,
-                    "detected_factors": analysis_result["bias_flags"],
-                    "score_before_adjustment": avg_stars,
-                    "adjustment_applied": False,
-                },
-            )
-
         # Step 7: Publish or flag
         if overall_pass:
             ReviewFunctions.publish_review(review_id)
+            try:
+                await NotificationFunctions.notify(
+                    recipient_user_id=freelancer_id,
+                    notif_type="review_published",
+                    title="New Review Received ⭐",
+                    body=f"You received a new review with an average rating of {avg_stars}★.",
+                    data={"contract_id": review["contract_id"], "review_id": review_id},
+                )
+                await NotificationFunctions.notify(
+                    recipient_user_id=review["reviewer_id"],
+                    notif_type="review_publish_confirmed",
+                    title="Your Review Was Published",
+                    body=f"Your review for {freelancer_name} is now live.",
+                    data={"contract_id": review["contract_id"], "review_id": review_id},
+                )
+            except Exception as notif_err:
+                logger("REVIEW_PIPELINE", f"Publish notification failed (non-fatal): {notif_err}", level="WARNING")
         else:
-            suppress = (
-                analysis_result["is_flagged_fake"]
-                or analysis_result["authenticity_score"] < 0.3
-            )
+            # suppressed = high-confidence bad review (authenticity very low, multiple
+            # signals agree). flagged = didn't pass, but for a softer reason (is_flagged_fake
+            # alone, bias, or the 5-star/negative-sentiment mismatch rule) - still held for
+            # admin review, not written off as almost-certainly fake/abusive.
+            suppress = authenticity_score < 0.3
             ReviewFunctions.flag_review(review_id, suppress=suppress)
-            logger("REVIEW_PIPELINE", f"Review {review_id} not published (pass={overall_pass})", level="WARNING")
+            logger("REVIEW_PIPELINE", f"Review {review_id} not published (pass={overall_pass}, suppressed={suppress})", level="WARNING")
+            try:
+                if suppress:
+                    await NotificationFunctions.notify(
+                        recipient_user_id=review["reviewer_id"],
+                        notif_type="review_suppressed",
+                        title="Your Review Couldn't Be Published",
+                        body=f"Your review for {freelancer_name} didn't pass our automated review checks and will not be published.",
+                        data={"contract_id": review["contract_id"], "review_id": review_id},
+                    )
+                else:
+                    await NotificationFunctions.notify(
+                        recipient_user_id=review["reviewer_id"],
+                        notif_type="review_flagged",
+                        title="Your Review Is Under Review",
+                        body=f"Your review for {freelancer_name} is being held for manual review before publishing. We'll notify you once it's resolved.",
+                        data={"contract_id": review["contract_id"], "review_id": review_id},
+                    )
+            except Exception as notif_err:
+                logger("REVIEW_PIPELINE", f"Hold-back notification failed (non-fatal): {notif_err}", level="WARNING")
             return  # Do not recalculate trust score for unpublished reviews
 
-        # Step 8: Recalculate trust score
-        weighted_avg, total_reviews = calculate_weighted_review_avg(freelancer_id)
-        overall_score = calculate_trust_score(
-            weighted_review_avg=weighted_avg,
-            revision_rate_score=float(perf.get("revision_rate_score") or 0.5),
-            responsiveness_score=float(perf.get("responsiveness_score") or 0.8),
-            communication_sentiment=perf.get("communication_sentiment_score"),
-            conflict_score=perf.get("conflict_score"),
-        )
-
-        # Compute category rank percentile
-        category_rank_pct = None
-        category = review.get("inferred_category")
-        if category:
-            rank_rows = db.execute_query(
-                """SELECT ROUND(
-                     100.0 * SUM(CASE WHEN overall_score < :score THEN 1 ELSE 0 END) / COUNT(*),
-                   2) as rank_pct
-                   FROM freelancer_trust_scores WHERE category = :cat""",
-                {"score": overall_score, "cat": category},
-            )
-            if rank_rows and rank_rows[0]["rank_pct"] is not None:
-                category_rank_pct = float(rank_rows[0]["rank_pct"])
-
-        # Compute plain star average across all published ratings for display
-        display_star_rows = db.execute_query(
-            """
-            SELECT AVG(rr.score) as avg_score
-            FROM review_ratings rr
-            JOIN reviews r ON r.id = rr.review_id
-            WHERE r.freelancer_id = :fid AND r.status = 'published'
-            """,
-            {"fid": freelancer_id},
-        )
-        display_star_avg = (
-            round(float(display_star_rows[0]["avg_score"]), 2)
-            if display_star_rows and display_star_rows[0]["avg_score"] is not None
-            else None
-        )
-
-        ReviewFunctions.upsert_trust_score(
-            freelancer_id=freelancer_id,
-            overall_score=overall_score,
-            weighted_review_avg=weighted_avg,
-            display_star_avg=display_star_avg,
-            revision_rate_score=float(perf.get("revision_rate_score") or 0.5),
-            responsiveness_score=float(perf.get("responsiveness_score") or 0.8),
-            communication_sentiment=perf.get("communication_sentiment_score"),
-            total_reviews=total_reviews,
-            category=category,
-            category_rank_pct=category_rank_pct,
-        )
-
-        # Step 9: Red flag check
-        ReviewFunctions.check_and_create_red_flag(freelancer_id, overall_score)
+        # Step 8-9: Recalculate trust score + red flag check
+        overall_score = recalculate_and_persist_trust_score(freelancer_id, review.get("inferred_category"))
 
         logger("REVIEW_PIPELINE", f"Post-review pipeline done | review={review_id} | trust_score={overall_score}", level="INFO")
 
     except Exception as e:
         logger("REVIEW_PIPELINE", f"Post-review pipeline failed for review {review_id}: {str(e)}", level="ERROR")
+
+
+def recalculate_and_persist_trust_score(freelancer_id: str, category: Optional[str]) -> float:
+    """
+    Recomputes and upserts a freelancer's trust score from every sub-score
+    aggregated across their FULL contract/review history (see
+    calculate_aggregate_performance/calculate_ai_trust_components), then
+    checks for a red-flag-worthy score drop. Shared by run_post_review_pipeline
+    (after a new review publishes) and the admin override-publish endpoint
+    (after a held-back review is manually approved) so both paths compute
+    the trust score the same way instead of duplicating this logic.
+    """
+    db = get_db()
+
+    weighted_avg, total_reviews = calculate_weighted_review_avg(freelancer_id)
+    aggregate_perf = calculate_aggregate_performance(freelancer_id)
+    ai_trust = calculate_ai_trust_components(freelancer_id)
+
+    overall_score = calculate_trust_score(
+        weighted_review_avg=weighted_avg,
+        on_time_score=aggregate_perf["on_time_score"],
+        revision_rate_score=aggregate_perf["revision_rate_score"],
+        responsiveness_score=aggregate_perf["responsiveness_score"],
+        communication_sentiment=aggregate_perf["communication_sentiment_score"],
+        authenticity_confidence=ai_trust["authenticity_confidence"],
+        consistency_score=ai_trust["consistency_score"],
+        coerced_ratio=aggregate_perf["coerced_ratio"],
+    )
+
+    category_rank_pct = None
+    if category:
+        rank_rows = db.execute_query(
+            """SELECT ROUND(
+                 100.0 * SUM(CASE WHEN overall_score < :score THEN 1 ELSE 0 END) / COUNT(*),
+               2) as rank_pct
+               FROM freelancer_trust_scores WHERE category = :cat""",
+            {"score": overall_score, "cat": category},
+        )
+        if rank_rows and rank_rows[0]["rank_pct"] is not None:
+            category_rank_pct = float(rank_rows[0]["rank_pct"])
+
+    display_star_rows = db.execute_query(
+        """
+        SELECT AVG(rr.score) as avg_score
+        FROM review_ratings rr
+        JOIN reviews r ON r.id = rr.review_id
+        WHERE r.freelancer_id = :fid AND r.status = 'published'
+        """,
+        {"fid": freelancer_id},
+    )
+    display_star_avg = (
+        round(float(display_star_rows[0]["avg_score"]), 2)
+        if display_star_rows and display_star_rows[0]["avg_score"] is not None
+        else None
+    )
+
+    ReviewFunctions.upsert_trust_score(
+        freelancer_id=freelancer_id,
+        overall_score=overall_score,
+        weighted_review_avg=weighted_avg,
+        display_star_avg=display_star_avg,
+        revision_rate_score=aggregate_perf["revision_rate_score"],
+        responsiveness_score=aggregate_perf["responsiveness_score"],
+        communication_sentiment=aggregate_perf["communication_sentiment_score"],
+        total_reviews=total_reviews,
+        category=category,
+        category_rank_pct=category_rank_pct,
+        on_time_score=aggregate_perf["on_time_score"],
+        authenticity_confidence=ai_trust["authenticity_confidence"],
+        consistency_score=ai_trust["consistency_score"],
+    )
+
+    ReviewFunctions.check_and_create_red_flag(freelancer_id, overall_score)
+
+    return overall_score

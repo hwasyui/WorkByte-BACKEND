@@ -737,6 +737,25 @@ async def analyse_role_match(db, freelancer_id: str, job_role_id: str) -> dict:
             "apply" if s >= 65 else ("consider" if s >= 40 else "skip")
         )
 
+        # The capped match_score/recommendation are always internally consistent
+        # with each other (recommendation is derived from the capped score, right
+        # above) - but recommendation_reason/strengths/gaps/skill_tips are the LLM's
+        # own free text, written against its uncapped raw_score, and never revised
+        # after the ceiling is applied. If raw_score was itself "apply"-worthy
+        # (>=65) and the ceiling crushed it all the way to "skip" (<40), the LLM's
+        # prose was very likely written in an encouraging, apply-leaning voice that
+        # now flatly contradicts the capped recommendation shown next to it -
+        # rather than show the user that contradiction, fail the same way a
+        # genuine LLM failure already does (see the "error" key check below).
+        if raw_score >= 65 and s < 40:
+            logger(
+                "RAG_ANALYSER",
+                f"Raw/capped recommendation mismatch | job_role_id={job_role_id} "
+                f"| raw_score={raw_score} | capped_score={s} | coverage_pct={ra['coverage_pct']}%",
+                level="WARNING",
+            )
+            return {"error": "We couldn't generate a reliable analysis for this role. Please try again, or contact support if this keeps happening."}
+
         # Guarantee all fields the frontend expects are always present
         result.setdefault("recommendation_reason", "")
         result.setdefault("strengths", [])

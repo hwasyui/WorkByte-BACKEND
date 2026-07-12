@@ -377,13 +377,13 @@ async def get_freelancer_embedding(freelancer_id: str, current_user: UserInDB = 
         logger("FREELANCER", error_msg, "GET /freelancers/{freelancer_id}/embedding", "ERROR")
         return ResponseSchema.error(error_msg, 500)
 
-_VALID_FREELANCER_ORDER_BY = {"created_at", "updated_at", "full_name", "estimated_rate", "total_jobs", "weighted_review_avg",}
+_VALID_FREELANCER_ORDER_BY = {"created_at", "updated_at", "full_name", "estimated_rate", "total_jobs", "weighted_review_avg", "total_reviews",}
 
 @freelancer_router.get("/browse/all", response_model=List[FreelancerResponse])
 async def browse_all_freelancers(
     order_by: str = Query(
         default="weighted_review_avg",
-        description="Sort field. One of: created_at (default), updated_at, full_name, estimated_rate, total_jobs",
+        description="Sort field. One of: created_at (default), updated_at, full_name, estimated_rate, total_jobs, weighted_review_avg, total_reviews",
     ),
     order_dir: str = Query(default="desc", description="asc or desc", pattern="^(asc|desc)$"),
     page: int = Query(default=1, ge=1),

@@ -15,6 +15,7 @@ from routes.freelancers.freelancer_functions import FreelancerFunctions
 from routes.clients.client_functions import ClientFunctions
 from routes.notifications.notification_functions import NotificationFunctions
 from routes.reviews.review_routes import trigger_review_pipeline_on_completion
+from routes.client_reviews.client_review_routes import trigger_client_review_pipeline_on_completion
 from routes.admin.admin_moderation import scan_harmful_text_with_ml_fallback, ML_SCAN_TIMEOUT_BLOCKING_SECONDS
 
 
@@ -312,6 +313,7 @@ async def approve_latest_submission(
         latest_submission = _resolve_submission_urls(latest_submission)
 
         await trigger_review_pipeline_on_completion(contract_id, background_tasks)
+        await trigger_client_review_pipeline_on_completion(contract_id, background_tasks)
 
         # Notify freelancer that submission was approved
         try:

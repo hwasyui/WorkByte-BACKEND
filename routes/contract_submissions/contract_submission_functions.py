@@ -401,7 +401,9 @@ class ContractSubmissionFunctions:
                     ContractSubmissionFunctions.approve_latest_submission(contract_id)
                     try:
                         from ai_related.review_analysis.review_pipeline import run_post_completion_pipeline
+                        from ai_related.review_analysis.client_review_pipeline import run_client_review_post_completion_pipeline
                         _fire_notification(run_post_completion_pipeline(contract_id))
+                        _fire_notification(run_client_review_post_completion_pipeline(contract_id))
                     except Exception:
                         pass
 

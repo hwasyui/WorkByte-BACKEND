@@ -14,6 +14,7 @@ from functions.minio_client import (
     BUCKET_MESSAGE_ATTACHMENTS,
 )
 from routes.reviews.review_routes import trigger_review_pipeline_on_completion
+from routes.client_reviews.client_review_routes import trigger_client_review_pipeline_on_completion
 from typing import Dict, List, Optional
 import uuid
 from functions.schema_model import CancelContractRequest, ContractCreate, ContractUpdate, ContractResponse, ContractGenerateRequest, ReportPaymentRequest, RaiseDisputeRequest
@@ -648,6 +649,7 @@ async def update_contract(contract_id: str, contract_update: ContractUpdate, bac
                 {"cid": existing_contract["client_id"]},
             )
             await trigger_review_pipeline_on_completion(contract_id, background_tasks)
+            await trigger_client_review_pipeline_on_completion(contract_id, background_tasks)
 
         # Status-change notifications
         new_status = update_data.get("status")

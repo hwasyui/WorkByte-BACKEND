@@ -815,7 +815,9 @@ class ContractFunctions:
                 else:
                     ContractFunctions.update_contract(contract_id, {"status": "completed"})
                 from ai_related.review_analysis.review_pipeline import run_post_completion_pipeline
+                from ai_related.review_analysis.client_review_pipeline import run_client_review_post_completion_pipeline
                 _fire_notification(run_post_completion_pipeline(contract_id))
+                _fire_notification(run_client_review_post_completion_pipeline(contract_id))
             elif outcome == "cancel":
                 ContractFunctions.cancel_contract(contract_id, cancelled_by=admin_user_id, reason=note)
             elif outcome == "revise":

@@ -1928,3 +1928,213 @@ def admin_list_users(
         "page_size":   page_size,
         "total_pages": math.ceil(total / page_size) if page_size > 0 else 0,
     }
+
+
+# ── Review integrity (red flags + flagged/held-back reviews) ────────────────
+
+_RED_FLAG_SORT_COLS = {
+    "triggered_at": "rfa.triggered_at",
+    "severity":     "rfa.severity",
+}
+_FLAGGED_REVIEW_SORT_COLS = {
+    "created_at": "r.created_at",
+    "status":     "r.status",
+}
+
+
+def list_red_flag_alerts(
+    is_resolved: Optional[bool] = None,
+    subject_type: str = "all",  # 'freelancer' | 'client' | 'all'
+    sort_by: str = "triggered_at",
+    sort_dir: str = "desc",
+    page: int = 1,
+    page_size: int = 20,
+) -> List[Dict]:
+    """Admin-wide (not per-subject) red flag alert listing, mirroring list_scam_flags.
+    red_flag_alerts.freelancer_id is really just "subject's user_id" - LEFT JOIN both
+    freelancer and client tables and coalesce, since a row's subject_type determines
+    which one actually matches."""
+    offset    = (page - 1) * page_size
+    sort_col  = _RED_FLAG_SORT_COLS.get(sort_by, "rfa.triggered_at")
+    direction = "ASC" if sort_dir.lower() == "asc" else "DESC"
+    return _rows(get_db().execute_query(
+        f"""
+        SELECT rfa.*,
+               COALESCE(f.full_name, c.full_name) AS subject_name,
+               u.email AS subject_email
+        FROM red_flag_alerts rfa
+        LEFT JOIN freelancer f ON f.user_id = rfa.freelancer_id AND rfa.subject_type = 'freelancer'
+        LEFT JOIN client     c ON c.user_id = rfa.freelancer_id AND rfa.subject_type = 'client'
+        JOIN users u ON u.user_id = rfa.freelancer_id
+        WHERE (:is_resolved IS NULL OR rfa.is_resolved = :is_resolved)
+          AND (:subject_type = 'all' OR rfa.subject_type = :subject_type)
+        ORDER BY {sort_col} {direction}
+        LIMIT :limit OFFSET :offset
+        """,
+        params={"is_resolved": is_resolved, "subject_type": subject_type, "limit": page_size, "offset": offset},
+    ))
+
+
+def resolve_red_flag_alert(alert_id: str, admin_user_id: str) -> Optional[Dict]:
+    updated = _row(get_db().execute_query(
+        """
+        UPDATE red_flag_alerts
+        SET is_resolved = TRUE
+        WHERE id = :aid AND is_resolved = FALSE
+        RETURNING *
+        """,
+        params={"aid": alert_id},
+    ))
+    if updated:
+        logger("ADMIN", f"Red flag {alert_id} resolved by {admin_user_id}", level="INFO")
+    return updated
+
+
+def list_flagged_reviews(
+    status: str = "all",  # 'flagged' | 'suppressed' | 'all'
+    sort_by: str = "created_at",
+    sort_dir: str = "desc",
+    page: int = 1,
+    page_size: int = 20,
+) -> List[Dict]:
+    """Reviews held back from publishing (overall_pass=false), with the AI
+    analysis that caused the hold, for manual admin review."""
+    offset       = (page - 1) * page_size
+    sort_col     = _FLAGGED_REVIEW_SORT_COLS.get(sort_by, "r.created_at")
+    direction    = "ASC" if sort_dir.lower() == "asc" else "DESC"
+    status_filter = "r.status IN ('flagged', 'suppressed')" if status == "all" else "r.status = :status"
+    return _rows(get_db().execute_query(
+        f"""
+        SELECT r.id, r.contract_id, r.freelancer_id, r.reviewer_id, r.status,
+               r.inferred_category, r.created_at,
+               f.full_name AS freelancer_name,
+               wc.overall_comment,
+               ra.sentiment_score, ra.sentiment_label, ra.sentiment_mismatch, ra.mismatch_severity,
+               ra.authenticity_score, ra.is_flagged_fake, ra.is_flagged_coerced, ra.flag_reasons,
+               ra.overall_pass
+        FROM reviews r
+        JOIN freelancer f ON f.user_id = r.freelancer_id
+        LEFT JOIN review_written_content wc ON wc.review_id = r.id
+        LEFT JOIN review_ai_analysis     ra ON ra.review_id = r.id
+        WHERE {status_filter}
+        ORDER BY {sort_col} {direction}
+        LIMIT :limit OFFSET :offset
+        """,
+        params={"status": status, "limit": page_size, "offset": offset},
+    ))
+
+
+def override_publish_review(review_id: str, admin_user_id: str) -> Optional[Dict]:
+    """Manually publish a held-back (flagged/suppressed) review after human
+    review, then recalculate the affected freelancer's trust score the same
+    way the normal pipeline does (see recalculate_and_persist_trust_score)."""
+    updated = _row(get_db().execute_query(
+        """
+        UPDATE reviews
+        SET status = 'published', published_at = NOW()
+        WHERE id = :rid AND status IN ('flagged', 'suppressed')
+        RETURNING *
+        """,
+        params={"rid": review_id},
+    ))
+    if not updated:
+        return None
+
+    logger("ADMIN", f"Review {review_id} override-published by {admin_user_id}", level="INFO")
+
+    freelancer_name = "the freelancer"
+    freelancer_rows = get_db().execute_query(
+        "SELECT full_name FROM freelancer WHERE user_id = :uid", {"uid": updated["freelancer_id"]}
+    )
+    if freelancer_rows and freelancer_rows[0].get("full_name"):
+        freelancer_name = freelancer_rows[0]["full_name"]
+    _fire_notification(NotificationFunctions.notify(
+        recipient_user_id=str(updated["reviewer_id"]),
+        notif_type="review_publish_confirmed",
+        title="Your Review Was Published",
+        body=f"After manual review, your review for {freelancer_name} has been approved and is now live.",
+        data={"contract_id": str(updated["contract_id"]), "review_id": review_id},
+    ))
+
+    from ai_related.review_analysis.review_pipeline import recalculate_and_persist_trust_score
+    recalculate_and_persist_trust_score(
+        freelancer_id=str(updated["freelancer_id"]),
+        category=updated.get("inferred_category"),
+    )
+    return updated
+
+
+_FLAGGED_CLIENT_REVIEW_SORT_COLS = {
+    "created_at": "cr.created_at",
+    "status":     "cr.status",
+}
+
+
+def list_flagged_client_reviews(
+    status: str = "all",  # 'flagged' | 'suppressed' | 'all'
+    sort_by: str = "created_at",
+    sort_dir: str = "desc",
+    page: int = 1,
+    page_size: int = 20,
+) -> List[Dict]:
+    """Client reviews (written by freelancers) held back from publishing -
+    counterpart to list_flagged_reviews for the freelancer-reviews-client system."""
+    offset        = (page - 1) * page_size
+    sort_col      = _FLAGGED_CLIENT_REVIEW_SORT_COLS.get(sort_by, "cr.created_at")
+    direction     = "ASC" if sort_dir.lower() == "asc" else "DESC"
+    status_filter = "cr.status IN ('flagged', 'suppressed')" if status == "all" else "cr.status = :status"
+    return _rows(get_db().execute_query(
+        f"""
+        SELECT cr.id, cr.contract_id, cr.reviewer_id, cr.client_id, cr.status, cr.created_at,
+               c.full_name AS client_name,
+               wc.overall_comment,
+               cra.sentiment_score, cra.sentiment_label, cra.sentiment_mismatch, cra.mismatch_severity,
+               cra.authenticity_score, cra.is_flagged_fake, cra.is_flagged_coerced, cra.flag_reasons,
+               cra.overall_pass
+        FROM client_reviews cr
+        JOIN client c ON c.user_id = cr.client_id
+        LEFT JOIN client_review_written_content wc ON wc.client_review_id = cr.id
+        LEFT JOIN client_review_ai_analysis     cra ON cra.client_review_id = cr.id
+        WHERE {status_filter}
+        ORDER BY {sort_col} {direction}
+        LIMIT :limit OFFSET :offset
+        """,
+        params={"status": status, "limit": page_size, "offset": offset},
+    ))
+
+
+def override_publish_client_review(client_review_id: str, admin_user_id: str) -> Optional[Dict]:
+    """Manually publish a held-back client review after human review, then
+    recalculate the affected client's trust score - counterpart to
+    override_publish_review for the freelancer-reviews-client system."""
+    updated = _row(get_db().execute_query(
+        """
+        UPDATE client_reviews
+        SET status = 'published', published_at = NOW()
+        WHERE id = :rid AND status IN ('flagged', 'suppressed')
+        RETURNING *
+        """,
+        params={"rid": client_review_id},
+    ))
+    if not updated:
+        return None
+
+    logger("ADMIN", f"Client review {client_review_id} override-published by {admin_user_id}", level="INFO")
+
+    client_name = "the client"
+    client_rows = get_db().execute_query(
+        "SELECT full_name FROM client WHERE user_id = :uid", {"uid": updated["client_id"]}
+    )
+    if client_rows and client_rows[0].get("full_name"):
+        client_name = client_rows[0]["full_name"]
+    _fire_notification(NotificationFunctions.notify(
+        recipient_user_id=str(updated["reviewer_id"]),
+        notif_type="review_publish_confirmed",
+        title="Your Review Was Published",
+        body=f"After manual review, your review for {client_name} has been approved and is now live.",
+        data={"contract_id": str(updated["contract_id"]), "client_review_id": client_review_id},
+    ))
+
+    from ai_related.review_analysis.client_review_pipeline import recalculate_and_persist_client_trust_score
+    recalculate_and_persist_client_trust_score(client_id=str(updated["client_id"]))
+    return updated

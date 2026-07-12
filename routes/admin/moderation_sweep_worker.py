@@ -8,9 +8,11 @@ SWEEP_INTERVAL_SECONDS = 3600   # 1 hour: sweeps only act on 30-day-scale deadli
 
 async def moderation_sweep_loop() -> None:
     """
-    Infinite loop that runs the moderation auto-approve/auto-remove/report
+    Infinite loop that runs the scam-flag auto-remove and report auto-action
     sweeps every SWEEP_INTERVAL_SECONDS, regardless of whether an admin is
     logged in. Launched via asyncio.create_task() in main.py lifespan startup.
+    Harmful-text moderation has no time-based sweep of its own anymore - see
+    run_moderation_sweeps()'s own docstring.
 
     These sweeps also still run lazily inside admin dashboard/queue endpoints
     (via run_moderation_sweeps() and the individual sweep calls), so this loop

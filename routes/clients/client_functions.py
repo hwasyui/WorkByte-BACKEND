@@ -27,11 +27,13 @@ class ClientFunctions:
     """Handle all client-related database operations."""
 
     _CLIENT_SORT_FIELDS = {
-        "created_at":          "created_at",
-        "updated_at":          "updated_at",
-        "full_name":           "full_name",
-        "total_jobs_posted":   "total_jobs_posted",
-        "total_jobs_completed":"total_jobs_completed",
+        "created_at":                   "c.created_at",
+        "updated_at":                   "c.updated_at",
+        "full_name":                    "c.full_name",
+        "total_jobs_posted":            "c.total_jobs_posted",
+        "total_jobs_completed":         "c.total_jobs_completed",
+        "weighted_review_avg_received": "cts.weighted_review_avg_received",
+        "total_reviews_received":       "cts.total_reviews_received",
     }
 
     @staticmethod
@@ -45,7 +47,7 @@ class ClientFunctions:
         try:
             db = get_db()
 
-            sort_col = ClientFunctions._CLIENT_SORT_FIELDS.get(order_by, "created_at")
+            sort_col = ClientFunctions._CLIENT_SORT_FIELDS.get(order_by, "c.created_at")
             direction = "DESC" if order_dir.lower() == "desc" else "ASC"
             offset = (page - 1) * page_size
 
@@ -54,10 +56,13 @@ class ClientFunctions:
 
             data_rows = db.execute_query(
                 f"""
-                SELECT client_id, user_id, full_name, bio, website_url, profile_picture_url,
-                       total_jobs_posted, total_jobs_completed, average_rating_given,
-                       created_at, updated_at
-                FROM client
+                SELECT c.client_id, c.user_id, c.full_name, c.bio, c.website_url, c.profile_picture_url,
+                       c.total_jobs_posted, c.total_jobs_completed, c.average_rating_given,
+                       c.created_at, c.updated_at,
+                       cts.weighted_review_avg_received, cts.total_reviews_received
+                FROM client c
+                LEFT JOIN client_trust_score cts
+                    ON cts.client_id = c.user_id
                 ORDER BY {sort_col} {direction} NULLS LAST
                 LIMIT :limit OFFSET :offset
                 """,

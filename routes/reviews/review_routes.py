@@ -18,7 +18,11 @@ from ai_related.review_analysis.review_pipeline import (
     run_post_completion_pipeline,
     run_post_review_pipeline,
 )
-from routes.admin.admin_moderation import scan_harmful_text_with_ml_fallback, ML_SCAN_TIMEOUT_BLOCKING_SECONDS
+from routes.admin.admin_moderation import (
+    scan_harmful_text_with_ml_fallback,
+    insert_harmful_text_queue_entry,
+    ML_SCAN_TIMEOUT_BLOCKING_SECONDS,
+)
 
 review_router = APIRouter(prefix="/reviews", tags=["Reviews"])
 
@@ -32,7 +36,12 @@ _REVIEW_LABEL_NAMES = {
 }
 
 
-async def _reject_review_text_if_harmful(client_answer: str, overall_comment: str) -> Optional[Dict]:
+async def _reject_review_text_if_harmful(
+    review_id: str,
+    reviewer_id: str,
+    client_answer: str,
+    overall_comment: str,
+) -> Optional[Dict]:
     """client_answer and overall_comment both end up on a published review of a specific
     named freelancer - unlike a DM or contract clause between two already-matched parties,
     the freelancer being reviewed has no say in whether this goes live, so this is sync
@@ -52,6 +61,7 @@ async def _reject_review_text_if_harmful(client_answer: str, overall_comment: st
     detected_labels = harm_result.get("detected_labels", [])
     labels = [_REVIEW_LABEL_NAMES.get(l, l) for l in detected_labels]
     logger("REVIEW", f"Blocked review submission, labels={detected_labels}", level="WARNING")
+    insert_harmful_text_queue_entry("review", review_id, reviewer_id, combined, harm_result)
     return {
         "message": f"This review couldn't be submitted. It was flagged for {', '.join(labels) or 'a policy violation'}.",
         "detected_labels": detected_labels,
@@ -94,7 +104,10 @@ async def get_review_for_contract(
 
         review = ReviewFunctions.get_review_by_contract_id(contract_id)
         if not review:
-            return None
+            return ResponseSchema.error(
+                f"Review for contract {contract_id} is not ready yet - it may still be processing.",
+                404,
+            )
 
         detail = ReviewFunctions.get_review_detail(review["id"])
         detail["suggested_skill_tags"] = ReviewFunctions.get_suggested_skill_tags(contract_id)
@@ -163,7 +176,7 @@ async def submit_review(
         if not overall_comment:
             return ResponseSchema.error("overall_comment is required.", 400)
 
-        rejection = await _reject_review_text_if_harmful(client_answer, overall_comment)
+        rejection = await _reject_review_text_if_harmful(review_id, review["reviewer_id"], client_answer, overall_comment)
         if rejection:
             return ResponseSchema.error(rejection["message"], 400, extra={"detected_labels": rejection["detected_labels"]})
 

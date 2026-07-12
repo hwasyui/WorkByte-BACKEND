@@ -54,6 +54,11 @@ ai_related/cv_analysis/cv_analysis_xgb_models/*.png
 ai_related/cv_analysis/cv_analysis_xgb_models/model_pkl/*.npy
 ai_related/cv_analysis/cv_analysis_xgb_models/model_pkl/ats_feature_names.pkl
 
+# review_ml: training dataset and cached feature arrays (not needed at inference
+# time; the model artifacts under model_artifacts/ are what actually get loaded)
+ai_related/review_analysis/review_ml/machine_learning/_feature_cache/
+ai_related/review_analysis/review_ml/machine_learning/fake_reviews_dataset.csv
+
 CAPSTONE_*.md
 
 walkthrough/

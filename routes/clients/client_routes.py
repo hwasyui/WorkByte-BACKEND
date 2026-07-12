@@ -66,14 +66,17 @@ async def _scan_identity_fields_or_reject(short_text: str, long_text: str, field
 
 client_router = APIRouter(prefix="/clients", tags=["Clients"])
 
-_VALID_CLIENT_ORDER_BY = {"created_at", "updated_at", "full_name", "total_jobs_posted", "total_jobs_completed"}
+_VALID_CLIENT_ORDER_BY = {
+    "created_at", "updated_at", "full_name", "total_jobs_posted", "total_jobs_completed",
+    "weighted_review_avg_received", "total_reviews_received",
+}
 
 
 @client_router.get("/browse/all", response_model=List[ClientResponse])
 async def browse_all_clients(
     order_by: str = Query(
-        default="created_at",
-        description="Sort field. One of: created_at (default), updated_at, full_name, total_jobs_posted, total_jobs_completed",
+        default="weighted_review_avg_received",
+        description="Sort field. One of: created_at, updated_at, full_name, total_jobs_posted, total_jobs_completed, weighted_review_avg_received (default), total_reviews_received",
     ),
     order_dir: str = Query(default="desc", description="asc or desc", pattern="^(asc|desc)$"),
     page: int = Query(default=1, ge=1),
