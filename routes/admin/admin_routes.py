@@ -459,7 +459,7 @@ async def override_publish_review_route(
 ):
     """Manually publish a held-back (flagged/suppressed) review after human review."""
     try:
-        updated = override_publish_review(review_id=review_id, admin_user_id=current_user.user_id)
+        updated = await override_publish_review(review_id=review_id, admin_user_id=current_user.user_id)
         if not updated:
             return ResponseSchema.error("Review not found or not currently flagged/suppressed", 404)
         logger("ADMIN", f"Review {review_id} override-published by {current_user.user_id}", "POST /admin/reviews/override-publish", "INFO")
@@ -501,7 +501,7 @@ async def override_publish_client_review_route(
 ):
     """Manually publish a held-back client review after human review."""
     try:
-        updated = override_publish_client_review(client_review_id=client_review_id, admin_user_id=current_user.user_id)
+        updated = await override_publish_client_review(client_review_id=client_review_id, admin_user_id=current_user.user_id)
         if not updated:
             return ResponseSchema.error("Client review not found or not currently flagged/suppressed", 404)
         logger("ADMIN", f"Client review {client_review_id} override-published by {current_user.user_id}", "POST /admin/client-reviews/override-publish", "INFO")

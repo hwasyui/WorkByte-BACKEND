@@ -3,22 +3,21 @@ import sys
 import json
 import random
 from datetime import datetime, timezone
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from functions.db_manager import get_db
 from functions.logger import logger
 from routes.dm.dm_functions import DMFunctions
-from ai_related.review_analysis.review_ai_functions import call_llm, _blend_communication_score
+from ai_related.review_analysis.review_ai_functions import call_llm, MIN_REVIEWS_FOR_SUMMARY
 
 # Client reviews get the same LLM analysis pass as freelancer reviews
 # (analyze_client_review_full below), just with a prompt framed around what's
 # actually observable for a client - requirement clarity and communication
 # from the message thread - rather than the freelancer prompt's on-time
 # delivery/revision-rate framing, which doesn't apply here. Shares call_llm
-# and _blend_communication_score with the freelancer side rather than
-# duplicating the Groq gateway/retry logic.
+# with the freelancer side rather than duplicating the Groq gateway/retry logic.
 
 # No per-category project taxonomy applies to clients the way it does to
 # freelancer project categories, so these rotate directly rather than
@@ -42,13 +41,20 @@ async def analyze_client_review_full(
     client_name: str,
     performance_score_summary: Dict,
     message_thread: str,
-    responsiveness_score: float,
-    communication_star_rating: Optional[float] = None,  # raw 1-5 from client_review_ratings
+    communication_star_rating: Optional[float] = None,  # raw 1-5 from client_review_ratings, shown as context only
 ) -> Dict:
     """Client-side counterpart to analyze_review_full (review_ai_functions.py).
-    Same schema and blending logic, but the prompt is framed around what's
-    observable for a client (requirement clarity, communication, responsiveness,
-    dispute history) instead of freelancer-specific on-time/revision metrics."""
+
+    Sentiment, communication_quality_score/summary, and the blend into
+    communication_sentiment_score were removed: nothing on the client-review
+    side ever persists or reads them - ClientReviewFunctions.save_ai_analysis
+    has no columns for them, and calculate_client_ai_trust_components derives
+    its own "communication_sentiment" straight from the ML sentiment_detector's
+    persisted sentiment_score instead. They were pure computed-and-discarded
+    LLM output. What's left is exactly what's actually consumed downstream:
+    authenticity/coercion/mismatch judgment with real-world context that the
+    review_ml models (trained on off-domain e-commerce review data) can't
+    reliably provide alone."""
     system = (
         "You are a review analysis expert. "
         "Analyze the provided review data and return your own independent assessment as valid JSON only. "
@@ -57,15 +63,11 @@ async def analyze_client_review_full(
     )
 
     schema_description = {
-        "sentiment_score": "float between -1.0 and 1.0, how positive or negative the review text is",
-        "sentiment_label": "one of: 'positive', 'neutral', 'negative'",
-        "sentiment_mismatch": "boolean, true if sentiment_label contradicts the star rating (e.g. negative text with 5 stars)",
         "authenticity_score": "float between 0.0 and 1.0, likelihood the review is genuine and not fabricated",
         "is_flagged_fake": "boolean, true if review appears fabricated or templated",
         "is_flagged_coerced": "boolean, true if review appears pressured or coerced",
         "flag_reasons": "list of strings describing specific red flags, empty list if none",
-        "communication_quality_score": "float between 0.0 and 1.0, quality of this client's communication and requirement clarity judged from the message thread ONLY, not the review text",
-        "communication_summary": "string, 1-2 sentence summary of communication quality based on the message thread",
+        "sentiment_mismatch": "boolean, true if the review text's tone contradicts the star rating (e.g. negative text with 5 stars)",
     }
 
     comm_star_line = (
@@ -82,9 +84,9 @@ async def analyze_client_review_full(
         f"- Responsiveness: {performance_score_summary.get('responsiveness', 'N/A')}\n"
         f"- Dispute fairness (1 - dispute rate): {performance_score_summary.get('dispute_fairness', 'N/A')}\n"
         f"{comm_star_line}"
-        "\nMessage thread from the project (use this to assess communication_quality_score):\n"
+        "\nMessage thread from the project (for context only):\n"
         f"{message_thread[:3000]}\n\n"
-        "Assess the review for sentiment, authenticity, and communication quality. "
+        "Assess the review for authenticity, coercion, and sentiment/rating mismatch. "
         "Base your analysis entirely on the data above, do not invent or assume anything.\n"
         "Return exactly one JSON object matching this schema:\n"
         f"{json.dumps(schema_description, ensure_ascii=False, indent=2)}"
@@ -93,59 +95,22 @@ async def analyze_client_review_full(
     try:
         result = await call_llm(system, user, json_mode=True)
 
-        sentiment_score_raw = float(result.get("sentiment_score", 0.0))
-        ai_quality_score     = max(0.0, min(1.0, float(result.get("communication_quality_score", 0.5))))
-        authenticity_score   = float(result.get("authenticity_score", 1.0))
-        sentiment_mismatch   = bool(result.get("sentiment_mismatch", False))
-
-        client_star_normalized = (
-            max(0.0, min(1.0, (communication_star_rating - 1) / 4.0))
-            if communication_star_rating is not None
-            else None
-        )
-
-        communication_sentiment_score = _blend_communication_score(
-            ai_quality_score=ai_quality_score,
-            client_star_normalized=client_star_normalized,
-            responsiveness_score=responsiveness_score,
-            sentiment_score=sentiment_score_raw,
-        )
-
-        overall_pass = (
-            authenticity_score >= 0.5
-            and not (
-                sentiment_mismatch
-                and avg_star_rating == 5.0
-                and result.get("sentiment_label", "neutral") == "negative"
-            )
-        )
-
         return {
-            "sentiment_score":              sentiment_score_raw,
-            "sentiment_label":              result.get("sentiment_label", "neutral"),
-            "sentiment_mismatch":           sentiment_mismatch,
-            "authenticity_score":           authenticity_score,
-            "is_flagged_fake":              bool(result.get("is_flagged_fake", False)),
-            "is_flagged_coerced":           bool(result.get("is_flagged_coerced", False)),
-            "flag_reasons":                 result.get("flag_reasons", []),
-            "communication_sentiment_score": communication_sentiment_score,
-            "communication_summary":        result.get("communication_summary", ""),
-            "overall_pass":                 overall_pass,
+            "sentiment_mismatch":  bool(result.get("sentiment_mismatch", False)),
+            "authenticity_score":  float(result.get("authenticity_score", 1.0)),
+            "is_flagged_fake":     bool(result.get("is_flagged_fake", False)),
+            "is_flagged_coerced":  bool(result.get("is_flagged_coerced", False)),
+            "flag_reasons":        result.get("flag_reasons", []),
         }
 
     except Exception as e:
         logger("CLIENT_REVIEW_AI", f"Client review analysis failed: {str(e)}", level="ERROR")
         return {
-            "sentiment_score":              0.0,
-            "sentiment_label":              "neutral",
-            "sentiment_mismatch":           False,
-            "authenticity_score":           1.0,
-            "is_flagged_fake":              False,
-            "is_flagged_coerced":           False,
-            "flag_reasons":                 [],
-            "communication_sentiment_score": 0.5,
-            "communication_summary":        "Analysis unavailable.",
-            "overall_pass":                 True,
+            "sentiment_mismatch": False,
+            "authenticity_score": 1.0,
+            "is_flagged_fake":    False,
+            "is_flagged_coerced": False,
+            "flag_reasons":       [],
         }
 
 
@@ -351,3 +316,74 @@ def calculate_client_trust_score(
     score += comm                       * 5
 
     return round(min(100.0, max(0.0, score)), 2)
+
+
+# Profile-level AI review summary (client side) - symmetric counterpart to
+# generate_freelancer_review_summary. Reuses the same MIN_REVIEWS_FOR_SUMMARY/
+# SUMMARY_REGEN_INTERVAL thresholds rather than duplicating the constants.
+
+def _fetch_published_client_review_texts(client_user_id: str) -> List[Dict]:
+    db = get_db()
+    return db.execute_query(
+        """
+        SELECT wc.overall_comment, wc.freelancer_answer
+        FROM client_reviews cr
+        JOIN client_review_written_content wc ON wc.client_review_id = cr.id
+        WHERE cr.client_id = :cid AND cr.status = 'published'
+        ORDER BY cr.published_at DESC
+        """,
+        {"cid": client_user_id},
+    )
+
+
+async def generate_client_review_summary(
+    client_user_id: str,
+    client_name: str,
+) -> Optional[str]:
+    """
+    Synthesizes all of a client's PUBLISHED reviews (written by freelancers
+    they've hired) into a short profile summary for freelancers deciding
+    whether to work with them. Only reads published reviews - harmful text
+    and fake/coerced reviews were already filtered out by the publish gate.
+    Returns None below MIN_REVIEWS_FOR_SUMMARY reviews.
+
+    Unlike the freelancer summary, there are no skill tags to ground this in -
+    the content instead centers on what freelancers can actually observe about
+    a client: requirement clarity, communication, responsiveness, scope
+    stability, and dispute fairness (the same categories client_review_ratings
+    already scores).
+    """
+    try:
+        review_rows = _fetch_published_client_review_texts(client_user_id)
+        if len(review_rows) < MIN_REVIEWS_FOR_SUMMARY:
+            return None
+
+        reviews_block = "\n\n".join(
+            f"- {(row.get('overall_comment') or '').strip()} {(row.get('freelancer_answer') or '').strip()}".strip()
+            for row in review_rows
+        )
+
+        system = (
+            "You are summarizing a client's published reviews (written by freelancers "
+            "who worked for them) for freelancers deciding whether to take a job with "
+            "this client. Base the summary strictly on the review text provided - do "
+            "not invent details that aren't actually stated. Do not write pure marketing "
+            "copy: if a criticism repeats across multiple reviews, include it."
+        )
+        user = (
+            f"Client name: {client_name}\n\n"
+            f"Published freelancer reviews ({len(review_rows)} total):\n{reviews_block[:6000]}\n\n"
+            "Write a 3-4 sentence summary covering: (1) overall impression of working "
+            "with this client, (2) specific recurring strengths (e.g. clear requirements, "
+            "responsive, fair with scope/disputes), (3) an honest recurring critique ONLY "
+            "if at least two reviews raise something similar - otherwise omit it entirely, "
+            "(4) what kind of freelancer or project this client seems best matched with, "
+            "if inferable. Plain prose only, no markdown, no bullet points."
+        )
+
+        summary = await call_llm(system, user, json_mode=False)
+        return summary.strip() if summary else None
+
+    except Exception as e:
+        logger("CLIENT_REVIEW_AI", f"Review summary generation failed for {client_user_id}: {str(e)}", level="ERROR")
+        return None

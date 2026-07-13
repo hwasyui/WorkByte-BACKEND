@@ -16,10 +16,14 @@ from ai_related.review_analysis.review_ai_functions import (
     compute_revision_scores,
     compute_responsiveness_score,
     analyze_review_full,
+    blend_communication_score,
     calculate_trust_score,
     calculate_weighted_review_avg,
     calculate_aggregate_performance,
     calculate_ai_trust_components,
+    generate_freelancer_review_summary,
+    MIN_REVIEWS_FOR_SUMMARY,
+    SUMMARY_REGEN_INTERVAL,
 )
 from ai_related.review_analysis.review_ml.authenticity_detector import predict_authenticity
 from ai_related.review_analysis.review_ml.mismatch_detector import predict_mismatch
@@ -225,7 +229,6 @@ async def run_post_review_pipeline(review_id: str) -> None:
             freelancer_name=freelancer_name,
             performance_score_summary=performance_summary,
             message_thread=message_thread,
-            responsiveness_score=responsiveness_score,
             communication_star_rating=communication_star_rating,
         )
 
@@ -260,15 +263,19 @@ async def run_post_review_pipeline(review_id: str) -> None:
         sentiment_score = ml_sentiment["sentiment_score"]
         sentiment_label = ml_sentiment["sentiment_label"]
 
-        # is_flagged_fake is a veto, not just a contributing signal: authenticity_score
-        # is a blend of the LLM's own judgment and the ML classifier's, so a review the
-        # fake-detector specifically caught (e.g. "extremely short", "generic language")
-        # could still average out above the 0.5 threshold and auto-publish. Since
-        # is_flagged_fake already means at least one model concluded it's likely fake,
-        # it should hold the review back regardless of what the blended score says.
+        is_flagged_coerced = analysis_result["is_flagged_coerced"]
+
+        # is_flagged_fake and is_flagged_coerced are vetoes, not just contributing
+        # signals: authenticity_score is a blend of the LLM's own judgment and the ML
+        # classifier's, so a review either model specifically caught (e.g. "extremely
+        # short", "generic language", "reviewer indicates lack of choice in rating")
+        # could still average out above the 0.5 threshold and auto-publish. Since each
+        # flag already means at least one model concluded something is wrong, either
+        # should hold the review back regardless of what the blended score says.
         overall_pass = (
             authenticity_score >= 0.5
             and not is_flagged_fake
+            and not is_flagged_coerced
             and not (
                 sentiment_mismatch
                 and avg_stars == 5.0
@@ -285,15 +292,27 @@ async def run_post_review_pipeline(review_id: str) -> None:
             mismatch_severity=ml_mismatch["mismatch_severity"],
             authenticity_score=authenticity_score,
             is_flagged_fake=is_flagged_fake,
-            is_flagged_coerced=analysis_result["is_flagged_coerced"],
+            is_flagged_coerced=is_flagged_coerced,
             flag_reasons=flag_reasons,
             overall_pass=overall_pass,
         )
 
-        # Step 6.5: Update communication fields in performance scores
-        # communication_sentiment_score is already the fully blended value from analyze_review_full
-        communication_sentiment_score = analysis_result["communication_sentiment_score"]
-        conflict_score = 1.0 if analysis_result.get("is_flagged_coerced", False) else 0.0
+        # Step 6.5: Update communication fields in performance scores.
+        # Blended here (not inside analyze_review_full) so it uses the ML sentiment
+        # score above as its "sentiment" input, instead of asking the LLM for a second,
+        # separately-computed sentiment guess just for this blend.
+        client_star_normalized = (
+            max(0.0, min(1.0, (communication_star_rating - 1) / 4.0))
+            if communication_star_rating is not None
+            else None
+        )
+        communication_sentiment_score = blend_communication_score(
+            ai_quality_score=analysis_result["communication_quality_score"],
+            client_star_normalized=client_star_normalized,
+            responsiveness_score=responsiveness_score,
+            sentiment_score=sentiment_score,
+        )
+        conflict_score = 1.0 if is_flagged_coerced else 0.0
         communication_summary = analysis_result.get("communication_summary", "")
 
         ReviewFunctions.update_performance_scores(
@@ -326,8 +345,9 @@ async def run_post_review_pipeline(review_id: str) -> None:
         else:
             # suppressed = high-confidence bad review (authenticity very low, multiple
             # signals agree). flagged = didn't pass, but for a softer reason (is_flagged_fake
-            # alone, bias, or the 5-star/negative-sentiment mismatch rule) - still held for
-            # admin review, not written off as almost-certainly fake/abusive.
+            # or is_flagged_coerced alone, bias, or the 5-star/negative-sentiment mismatch
+            # rule) - still held for admin review, not written off as almost-certainly
+            # fake/abusive.
             suppress = authenticity_score < 0.3
             ReviewFunctions.flag_review(review_id, suppress=suppress)
             logger("REVIEW_PIPELINE", f"Review {review_id} not published (pass={overall_pass}, suppressed={suppress})", level="WARNING")
@@ -353,7 +373,7 @@ async def run_post_review_pipeline(review_id: str) -> None:
             return  # Do not recalculate trust score for unpublished reviews
 
         # Step 8-9: Recalculate trust score + red flag check
-        overall_score = recalculate_and_persist_trust_score(freelancer_id, review.get("inferred_category"))
+        overall_score = await recalculate_and_persist_trust_score(freelancer_id, review.get("inferred_category"))
 
         logger("REVIEW_PIPELINE", f"Post-review pipeline done | review={review_id} | trust_score={overall_score}", level="INFO")
 
@@ -361,7 +381,7 @@ async def run_post_review_pipeline(review_id: str) -> None:
         logger("REVIEW_PIPELINE", f"Post-review pipeline failed for review {review_id}: {str(e)}", level="ERROR")
 
 
-def recalculate_and_persist_trust_score(freelancer_id: str, category: Optional[str]) -> float:
+async def recalculate_and_persist_trust_score(freelancer_id: str, category: Optional[str]) -> float:
     """
     Recomputes and upserts a freelancer's trust score from every sub-score
     aggregated across their FULL contract/review history (see
@@ -370,6 +390,9 @@ def recalculate_and_persist_trust_score(freelancer_id: str, category: Optional[s
     (after a new review publishes) and the admin override-publish endpoint
     (after a held-back review is manually approved) so both paths compute
     the trust score the same way instead of duplicating this logic.
+
+    Async because the AI review summary (below) needs an LLM call - it only
+    actually fires every SUMMARY_REGEN_INTERVAL reviews, not on every publish.
     """
     db = get_db()
 
@@ -415,6 +438,22 @@ def recalculate_and_persist_trust_score(freelancer_id: str, category: Optional[s
         else None
     )
 
+    # Regenerate the profile-level AI summary only every SUMMARY_REGEN_INTERVAL
+    # reviews (3, 8, 13...), not on every single publish - it barely changes
+    # between consecutive reviews and each regen costs an LLM call.
+    ai_review_summary = None
+    if (
+        total_reviews >= MIN_REVIEWS_FOR_SUMMARY
+        and (total_reviews - MIN_REVIEWS_FOR_SUMMARY) % SUMMARY_REGEN_INTERVAL == 0
+    ):
+        freelancer_name = "Unknown"
+        name_rows = db.execute_query(
+            "SELECT full_name FROM freelancer WHERE user_id = :uid", {"uid": freelancer_id}
+        )
+        if name_rows:
+            freelancer_name = name_rows[0].get("full_name", "Unknown")
+        ai_review_summary = await generate_freelancer_review_summary(freelancer_id, freelancer_name)
+
     ReviewFunctions.upsert_trust_score(
         freelancer_id=freelancer_id,
         overall_score=overall_score,
@@ -429,6 +468,7 @@ def recalculate_and_persist_trust_score(freelancer_id: str, category: Optional[s
         on_time_score=aggregate_perf["on_time_score"],
         authenticity_confidence=ai_trust["authenticity_confidence"],
         consistency_score=ai_trust["consistency_score"],
+        ai_review_summary=ai_review_summary,
     )
 
     ReviewFunctions.check_and_create_red_flag(freelancer_id, overall_score)

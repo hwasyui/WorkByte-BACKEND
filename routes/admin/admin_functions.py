@@ -2024,7 +2024,7 @@ def list_flagged_reviews(
     ))
 
 
-def override_publish_review(review_id: str, admin_user_id: str) -> Optional[Dict]:
+async def override_publish_review(review_id: str, admin_user_id: str) -> Optional[Dict]:
     """Manually publish a held-back (flagged/suppressed) review after human
     review, then recalculate the affected freelancer's trust score the same
     way the normal pipeline does (see recalculate_and_persist_trust_score)."""
@@ -2057,7 +2057,7 @@ def override_publish_review(review_id: str, admin_user_id: str) -> Optional[Dict
     ))
 
     from ai_related.review_analysis.review_pipeline import recalculate_and_persist_trust_score
-    recalculate_and_persist_trust_score(
+    await recalculate_and_persist_trust_score(
         freelancer_id=str(updated["freelancer_id"]),
         category=updated.get("inferred_category"),
     )
@@ -2103,7 +2103,7 @@ def list_flagged_client_reviews(
     ))
 
 
-def override_publish_client_review(client_review_id: str, admin_user_id: str) -> Optional[Dict]:
+async def override_publish_client_review(client_review_id: str, admin_user_id: str) -> Optional[Dict]:
     """Manually publish a held-back client review after human review, then
     recalculate the affected client's trust score - counterpart to
     override_publish_review for the freelancer-reviews-client system."""
@@ -2136,5 +2136,5 @@ def override_publish_client_review(client_review_id: str, admin_user_id: str) ->
     ))
 
     from ai_related.review_analysis.client_review_pipeline import recalculate_and_persist_client_trust_score
-    recalculate_and_persist_client_trust_score(client_id=str(updated["client_id"]))
+    await recalculate_and_persist_client_trust_score(client_id=str(updated["client_id"]))
     return updated

@@ -16,7 +16,9 @@ from ai_related.review_analysis.client_review_ai_functions import (
     calculate_client_ai_trust_components,
     calculate_client_trust_score,
     analyze_client_review_full,
+    generate_client_review_summary,
 )
+from ai_related.review_analysis.review_ai_functions import MIN_REVIEWS_FOR_SUMMARY, SUMMARY_REGEN_INTERVAL
 from ai_related.review_analysis.review_ml.authenticity_detector import predict_authenticity
 from ai_related.review_analysis.review_ml.mismatch_detector import predict_mismatch
 from ai_related.review_analysis.review_ml.sentiment_detector import predict_sentiment
@@ -144,7 +146,6 @@ async def run_client_review_post_submission_pipeline(client_review_id: str) -> N
             client_name=client_name,
             performance_score_summary=performance_summary,
             message_thread=message_thread,
-            responsiveness_score=responsiveness_score,
             communication_star_rating=communication_star_rating,
         )
 
@@ -176,11 +177,14 @@ async def run_client_review_post_submission_pipeline(client_review_id: str) -> N
         sentiment_score = ml_sentiment["sentiment_score"]
         sentiment_label = ml_sentiment["sentiment_label"]
 
-        # is_flagged_fake is a veto, not just a contributing signal - see the symmetric
-        # note in review_pipeline.py.
+        is_flagged_coerced = analysis_result["is_flagged_coerced"]
+
+        # is_flagged_fake and is_flagged_coerced are vetoes, not just contributing
+        # signals - see the symmetric note in review_pipeline.py.
         overall_pass = (
             authenticity_score >= 0.5
             and not is_flagged_fake
+            and not is_flagged_coerced
             and not (
                 sentiment_mismatch
                 and avg_stars == 5.0
@@ -196,7 +200,7 @@ async def run_client_review_post_submission_pipeline(client_review_id: str) -> N
             mismatch_severity=ml_mismatch["mismatch_severity"],
             authenticity_score=authenticity_score,
             is_flagged_fake=is_flagged_fake,
-            is_flagged_coerced=analysis_result["is_flagged_coerced"],
+            is_flagged_coerced=is_flagged_coerced,
             flag_reasons=flag_reasons,
             overall_pass=overall_pass,
         )
@@ -222,8 +226,9 @@ async def run_client_review_post_submission_pipeline(client_review_id: str) -> N
                 logger("CLIENT_REVIEW_PIPELINE", f"Publish notification failed (non-fatal): {notif_err}", level="WARNING")
         else:
             # suppressed = high-confidence bad review (authenticity very low). flagged =
-            # didn't pass for a softer reason (is_flagged_fake alone or the mismatch rule) -
-            # still held for admin review, not written off as almost-certainly fake.
+            # didn't pass for a softer reason (is_flagged_fake or is_flagged_coerced alone,
+            # or the mismatch rule) - still held for admin review, not written off as
+            # almost-certainly fake.
             suppress = authenticity_score < 0.3
             ClientReviewFunctions.flag_review(client_review_id, suppress=suppress)
             logger("CLIENT_REVIEW_PIPELINE", f"Client review {client_review_id} not published (pass={overall_pass}, suppressed={suppress})", level="WARNING")
@@ -248,7 +253,7 @@ async def run_client_review_post_submission_pipeline(client_review_id: str) -> N
                 logger("CLIENT_REVIEW_PIPELINE", f"Hold-back notification failed (non-fatal): {notif_err}", level="WARNING")
             return
 
-        recalculate_and_persist_client_trust_score(client_id)
+        await recalculate_and_persist_client_trust_score(client_id)
 
         logger("CLIENT_REVIEW_PIPELINE", f"Client-review post-submission pipeline done | review={client_review_id}", level="INFO")
 
@@ -256,7 +261,7 @@ async def run_client_review_post_submission_pipeline(client_review_id: str) -> N
         logger("CLIENT_REVIEW_PIPELINE", f"Post-submission pipeline failed for review {client_review_id}: {str(e)}", level="ERROR")
 
 
-def recalculate_and_persist_client_trust_score(client_id: str) -> float:
+async def recalculate_and_persist_client_trust_score(client_id: str) -> float:
     """
     Recomputes and upserts a client's trust score from every sub-score,
     aggregated live across their full contract/review history (see
@@ -265,6 +270,9 @@ def recalculate_and_persist_client_trust_score(client_id: str) -> float:
     so there's no equivalent to the "single contract dominates" bug that had
     to be fixed on the freelancer side). Shared by the post-submission
     pipeline and the admin override-publish endpoint.
+
+    Async because the AI review summary (below) needs an LLM call - it only
+    actually fires every SUMMARY_REGEN_INTERVAL reviews, not on every publish.
     """
     weighted_avg, total_reviews = calculate_weighted_client_review_avg(client_id)
     responsiveness_score = compute_client_responsiveness_score(client_id)
@@ -280,6 +288,22 @@ def recalculate_and_persist_client_trust_score(client_id: str) -> float:
         communication_sentiment=ai_trust["communication_sentiment"],
     )
 
+    # Regenerate the profile-level AI summary only every SUMMARY_REGEN_INTERVAL
+    # reviews (3, 8, 13...), not on every single publish - same cadence and
+    # reasoning as the freelancer side.
+    ai_review_summary = None
+    if (
+        total_reviews >= MIN_REVIEWS_FOR_SUMMARY
+        and (total_reviews - MIN_REVIEWS_FOR_SUMMARY) % SUMMARY_REGEN_INTERVAL == 0
+    ):
+        client_name = "the client"
+        name_rows = get_db().execute_query(
+            "SELECT full_name FROM client WHERE user_id = :uid", {"uid": client_id}
+        )
+        if name_rows and name_rows[0].get("full_name"):
+            client_name = name_rows[0]["full_name"]
+        ai_review_summary = await generate_client_review_summary(client_id, client_name)
+
     ClientReviewFunctions.upsert_client_trust_score(
         client_id=client_id,
         trust_score=trust_score,
@@ -290,6 +314,7 @@ def recalculate_and_persist_client_trust_score(client_id: str) -> float:
         consistency_score=ai_trust["consistency_score"],
         dispute_fairness_score=dispute_fairness_score,
         total_reviews_received=total_reviews,
+        ai_review_summary=ai_review_summary,
     )
 
     ClientReviewFunctions.check_and_create_red_flag(client_id, trust_score)

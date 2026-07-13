@@ -266,6 +266,7 @@ class ClientReviewFunctions:
         consistency_score: float,
         dispute_fairness_score: float,
         total_reviews_received: int,
+        ai_review_summary: Optional[str] = None,
     ) -> None:
         try:
             db = get_db()
@@ -285,6 +286,11 @@ class ClientReviewFunctions:
                 "dispute_fairness_score": dispute_fairness_score,
                 "total_reviews_received": total_reviews_received,
             }
+            # Only touch this column when a fresh summary was actually generated this run
+            # (see SUMMARY_REGEN_INTERVAL) - otherwise this upsert would null out the
+            # previously cached summary on every review that doesn't regenerate it.
+            if ai_review_summary is not None:
+                data["ai_review_summary"] = ai_review_summary
             if existing:
                 db.update_data(
                     table_name="client_trust_score",

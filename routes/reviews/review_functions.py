@@ -374,6 +374,7 @@ class ReviewFunctions:
         on_time_score: Optional[float] = None,
         authenticity_confidence: Optional[float] = None,
         consistency_score: Optional[float] = None,
+        ai_review_summary: Optional[str] = None,
     ) -> None:
         try:
             db = get_db()
@@ -398,6 +399,12 @@ class ReviewFunctions:
                 "consistency_score":      consistency_score,
                 "last_updated":           datetime.utcnow(),
             }
+            # Only touch these columns when a fresh summary was actually generated this
+            # run (see SUMMARY_REGEN_INTERVAL) - otherwise this upsert would null out
+            # the previously cached summary on every review that doesn't regenerate it.
+            if ai_review_summary is not None:
+                data["ai_review_summary"] = ai_review_summary
+                data["ai_review_summary_updated_at"] = datetime.utcnow()
             if existing:
                 db.update_data(
                     table_name="freelancer_trust_scores",
