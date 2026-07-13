@@ -31,6 +31,7 @@ from routes.contracts.contract_functions import ContractFunctions
 from routes.contracts.contract_generation_functions import ContractGenerationFunctions
 from routes.clients.client_functions import ClientFunctions
 from routes.freelancers.freelancer_functions import FreelancerFunctions
+from routes.proposals.proposal_functions import ProposalFunctions
 from routes.dm.dm_functions import DMFunctions, _contract_accepted_default
 from routes.notifications.notification_functions import NotificationFunctions
 from ai_related.job_engine.embedding_manager import mark_contract_dirty
@@ -210,12 +211,40 @@ async def create_contract(contract: ContractCreate, current_user: UserInDB = Dep
         else:
             return ResponseSchema.error("Only clients can create contracts", 403)
 
+        proposal = ProposalFunctions.get_proposal_by_id(str(contract.proposal_id))
+        if not proposal:
+            return ResponseSchema.error("Proposal not found", 404)
+        if proposal["status"] != "accepted":
+            return ResponseSchema.error(
+                f"Cannot create a contract from a proposal with status '{proposal['status']}' (must be 'accepted')",
+                400,
+            )
+
+        existing_contract = get_db().execute_query(
+            "SELECT contract_id FROM contract WHERE proposal_id = :pid",
+            {"pid": str(contract.proposal_id)},
+        )
+        if existing_contract:
+            return ResponseSchema.error("A contract already exists for this proposal", 409)
+
+        # job_post_id/job_role_id/freelancer_id must match the accepted proposal exactly -
+        # reject rather than silently correct, so a mismatched request never looks like it
+        # succeeded for the freelancer/role the caller actually asked for.
+        if (
+            str(contract.job_post_id) != str(proposal["job_post_id"])
+            or str(contract.freelancer_id) != str(proposal["freelancer_id"])
+            or (proposal.get("job_role_id") and str(contract.job_role_id) != str(proposal["job_role_id"]))
+        ):
+            return ResponseSchema.error(
+                "job_post_id, job_role_id, and freelancer_id must match the accepted proposal", 400
+            )
+
         new_contract = ContractFunctions.create_contract(
             contract_id=contract_id,
             job_post_id=contract.job_post_id,
             job_role_id=contract.job_role_id,
             proposal_id=contract.proposal_id,
-            freelancer_id=contract.freelancer_id,
+            freelancer_id=proposal["freelancer_id"],
             client_id=contract.client_id,
             contract_title=contract.contract_title,
             agreed_budget=contract.agreed_budget,

@@ -4,7 +4,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from fastapi import APIRouter, HTTPException
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
 
 from functions.logger import logger
@@ -27,13 +27,14 @@ class BatchTextInput(BaseModel):
 
 
 @harmful_text_router.post("/detect", response_model=None)
-async def detect_harmful_text(input_data: TextInput, model_type: str = "best", threshold: float = 0.5) -> Dict[str, Any]:
-    """Detect harmful content in a single text. Returns scores for 5 harm labels."""
+async def detect_harmful_text(input_data: TextInput, model_type: str = "best", threshold: Optional[float] = None) -> Dict[str, Any]:
+    """Detect harmful content in a single text. Returns scores for 5 harm labels.
+    Uses the model's own tuned per-label thresholds unless `threshold` overrides all 5 at once."""
     logger("HARMFUL_TEXT", f"Detect request | text_length={len(input_data.text)}", level="DEBUG")
     try:
         if not input_data.text or not input_data.text.strip():
             raise HTTPException(status_code=400, detail="Text input cannot be empty")
-        if not 0.0 <= threshold <= 1.0:
+        if threshold is not None and not 0.0 <= threshold <= 1.0:
             raise HTTPException(status_code=400, detail="Threshold must be between 0.0 and 1.0")
 
         result = predict(input_data.text, model_type=model_type, threshold=threshold)
@@ -48,15 +49,16 @@ async def detect_harmful_text(input_data: TextInput, model_type: str = "best", t
 
 
 @harmful_text_router.post("/detect-batch", response_model=None)
-async def detect_harmful_text_batch(input_data: BatchTextInput, model_type: str = "best", threshold: float = 0.5) -> Dict[str, Any]:
-    """Detect harmful content in multiple texts. Max 100 per batch."""
+async def detect_harmful_text_batch(input_data: BatchTextInput, model_type: str = "best", threshold: Optional[float] = None) -> Dict[str, Any]:
+    """Detect harmful content in multiple texts. Max 100 per batch.
+    Uses the model's own tuned per-label thresholds unless `threshold` overrides all 5 at once."""
     logger("HARMFUL_TEXT", f"Batch detect request | batch_size={len(input_data.texts)}", level="DEBUG")
     try:
         if not input_data.texts:
             raise HTTPException(status_code=400, detail="Texts list cannot be empty")
         if len(input_data.texts) > 100:
             raise HTTPException(status_code=400, detail="Batch size too large (max 100 texts)")
-        if not 0.0 <= threshold <= 1.0:
+        if threshold is not None and not 0.0 <= threshold <= 1.0:
             raise HTTPException(status_code=400, detail="Threshold must be between 0.0 and 1.0")
         if any(not text or not text.strip() for text in input_data.texts):
             raise HTTPException(status_code=400, detail="Texts list cannot contain empty values")

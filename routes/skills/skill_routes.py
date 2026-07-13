@@ -125,7 +125,6 @@ async def create_skill(skill: SkillCreate, current_user: UserInDB = Depends(get_
         new_skill = SkillFunctions.create_skill(
             skill_name=skill.skill_name,
             skill_category=skill.skill_category,
-            description=skill.description
         )
 
         success_msg = f"Created skill: {skill.skill_name} in category {skill.skill_category}"

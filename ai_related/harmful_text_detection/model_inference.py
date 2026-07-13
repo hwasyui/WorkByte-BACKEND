@@ -1,7 +1,9 @@
 import json
 import os
-from typing import Dict, List, Tuple
+import pickle
+from typing import Dict, List, Optional, Tuple
 
+import numpy as np
 import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
@@ -22,6 +24,7 @@ _model = None
 _tokenizer = None
 _device = None
 _model_name = None
+_thresholds: Dict[str, float] = {}
 _preprocessor = TextPreprocessor()
 
 _MODEL_FOLDERS = {
@@ -30,6 +33,14 @@ _MODEL_FOLDERS = {
     "distilbert": "distilbert",
 }
 _DEFAULT_MODEL_TYPE = "bert"
+_DEFAULT_FLAT_THRESHOLD = 0.5  # fallback when config.pkl's tuned thresholds aren't available
+
+# Chunking: matches the training-time window (see harmful_text.md Section 3/9). A single
+# truncation pass silently drops anything past this many tokens; chunking instead scores every
+# overlapping window and max-pools each label's probability, so a harmful phrase deep in a long
+# text is still caught rather than truncated away.
+_CHUNK_MAX_LENGTH = 128
+_CHUNK_STRIDE = 20
 
 
 def _get_device():
@@ -52,6 +63,27 @@ def _model_path_for(model_type: str) -> str:
     """Return the local Hugging Face model directory for a model type."""
     resolved_model = _normalize_model_type(model_type)
     return os.path.join(_MODEL_DIR, _MODEL_FOLDERS[resolved_model])
+
+
+def _load_thresholds(model_path: str) -> Dict[str, float]:
+    """
+    Load this model's per-label tuned thresholds from config.pkl's best_thresholds.
+    Falls back to a flat _DEFAULT_FLAT_THRESHOLD for every label if config.pkl is
+    missing or malformed, so a model folder without it still serves rather than failing.
+    """
+    config_path = os.path.join(model_path, "config.pkl")
+    if not os.path.exists(config_path):
+        return {label: _DEFAULT_FLAT_THRESHOLD for label in LABEL_SCHEMA}
+    try:
+        with open(config_path, "rb") as config_file:
+            config = pickle.load(config_file)
+        best_thresholds = config.get("best_thresholds", {})
+        return {
+            label: float(best_thresholds.get(label, _DEFAULT_FLAT_THRESHOLD))
+            for label in LABEL_SCHEMA
+        }
+    except Exception:
+        return {label: _DEFAULT_FLAT_THRESHOLD for label in LABEL_SCHEMA}
 
 
 def get_available_models() -> List[Dict[str, object]]:
@@ -98,7 +130,7 @@ def load_model(model_type: str = "best") -> Tuple[torch.nn.Module, AutoTokenizer
     Raises:
         FileNotFoundError: If model not found.
     """
-    global _model, _tokenizer, _device, _model_name
+    global _model, _tokenizer, _device, _model_name, _thresholds
 
     resolved_model = _normalize_model_type(model_type)
 
@@ -125,18 +157,20 @@ def load_model(model_type: str = "best") -> Tuple[torch.nn.Module, AutoTokenizer
     ).to(_device)
     _model.eval()
     _model_name = resolved_model
+    _thresholds = _load_thresholds(model_path)
 
     return _model, _tokenizer, _device, resolved_model
 
 
-def predict(text: str, model_type: str = "best", threshold: float = 0.5) -> dict:
+def predict(text: str, model_type: str = "best", threshold: Optional[float] = None) -> dict:
     """
     Predict harmful content labels for text.
 
     Args:
         text: Input text to classify
         model_type: Type of model to use
-        threshold: Confidence threshold for label prediction
+        threshold: Flat override applied to all 5 labels. Leave as None (the default)
+                    to use this model's own tuned per-label thresholds instead.
 
     Returns:
         Dictionary with:
@@ -148,14 +182,20 @@ def predict(text: str, model_type: str = "best", threshold: float = 0.5) -> dict
     return batch_predict([text], model_type=model_type, threshold=threshold)[0]
 
 
-def batch_predict(texts: list, model_type: str = "best", threshold: float = 0.5) -> list:
+def batch_predict(texts: list, model_type: str = "best", threshold: Optional[float] = None) -> list:
     """
     Predict labels for multiple texts.
+
+    Long texts are split into overlapping _CHUNK_MAX_LENGTH-token windows (stride
+    _CHUNK_STRIDE) rather than truncated, and each label's probability is max-pooled
+    across every chunk of a text, so a harmful phrase anywhere in a long passage is
+    still caught.
 
     Args:
         texts: List of input texts
         model_type: Type of model to use
-        threshold: Confidence threshold for label prediction
+        threshold: Flat override applied to all 5 labels. Leave as None (the default)
+                    to use this model's own tuned per-label thresholds instead.
 
     Returns:
         List of prediction dictionaries.
@@ -178,11 +218,16 @@ def batch_predict(texts: list, model_type: str = "best", threshold: float = 0.5)
     infer_texts = [cleaned_texts[index] for index in infer_indices]
     encoding = tokenizer(
         infer_texts,
-        max_length=512,
-        padding=True,
+        max_length=_CHUNK_MAX_LENGTH,
+        stride=_CHUNK_STRIDE,
         truncation=True,
+        padding=True,
+        return_overflowing_tokens=True,
         return_tensors="pt",
     )
+
+    sample_mapping = encoding.pop("overflow_to_sample_mapping")
+    sample_mapping = sample_mapping.tolist() if hasattr(sample_mapping, "tolist") else list(sample_mapping)
 
     model_inputs = {
         key: value.to(device)
@@ -191,13 +236,23 @@ def batch_predict(texts: list, model_type: str = "best", threshold: float = 0.5)
 
     with torch.no_grad():
         outputs = model(**model_inputs)
-        probabilities = torch.sigmoid(outputs.logits).cpu().numpy()
+        chunk_probabilities = torch.sigmoid(outputs.logits).cpu().numpy()
 
-    for result_index, probability_row in zip(infer_indices, probabilities):
+    # Max-pool each label's probability across every chunk belonging to the same text --
+    # if any window looks harmful, the whole text is harmful.
+    pooled: Dict[int, np.ndarray] = {}
+    for chunk_idx, sample_idx in enumerate(sample_mapping):
+        sample_idx = int(sample_idx)
+        if sample_idx not in pooled:
+            pooled[sample_idx] = chunk_probabilities[chunk_idx].copy()
+        else:
+            pooled[sample_idx] = np.maximum(pooled[sample_idx], chunk_probabilities[chunk_idx])
+
+    for local_index, result_index in enumerate(infer_indices):
         results[result_index] = _format_prediction(
             texts[result_index],
             cleaned_texts[result_index],
-            probability_row,
+            pooled[local_index],
             threshold,
             resolved_model,
             model_type,
@@ -223,11 +278,15 @@ def _format_prediction(
     text: str,
     cleaned_text: str,
     probabilities,
-    threshold: float,
+    threshold: Optional[float],
     resolved_model: str,
     requested_model: str,
 ) -> dict:
-    """Convert model probabilities into the API response format."""
+    """
+    Convert model probabilities into the API response format.
+    Uses this model's tuned per-label thresholds (loaded from config.pkl) by default;
+    an explicit `threshold` overrides all 5 labels with one flat number instead.
+    """
     label_scores = {}
     detected_labels = []
 
@@ -236,7 +295,8 @@ def _format_prediction(
         score = float(probability)
         label_scores[label_name] = round(score, 4)
 
-        if score >= threshold:
+        label_threshold = threshold if threshold is not None else _thresholds.get(label_name, _DEFAULT_FLAT_THRESHOLD)
+        if score >= label_threshold:
             detected_labels.append(label_name)
 
     return {

@@ -322,6 +322,8 @@ async def send_message(
             return ResponseSchema.error("Access denied", 403)
         if not payload.message_text.strip():
             return ResponseSchema.error("message_text cannot be empty", 400)
+        if len(payload.message_text) > 2500:
+            return ResponseSchema.error("message_text cannot exceed 2500 characters", 400)
 
         harm_result = scan_harmful_text_with_ml_fallback(payload.message_text)
         if harm_result["is_flagged"]:
@@ -387,6 +389,8 @@ async def send_message_with_attachment(
         text = (message_text or "").strip()
         if not text and (not file or not file.filename):
             return ResponseSchema.error("Provide message_text, a file, or both", 400)
+        if len(text) > 2500:
+            return ResponseSchema.error("message_text cannot exceed 2500 characters", 400)
 
         if text:
             harm_result = scan_harmful_text_with_ml_fallback(text)

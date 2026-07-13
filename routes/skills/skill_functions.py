@@ -30,7 +30,7 @@ class SkillFunctions:
             db = get_db()
             rows = db.fetch_data(
                 table_name="skill",
-                columns=["skill_id", "skill_name", "skill_category", "search_tokens", "created_at"],
+                columns=["skill_id", "skill_name", "skill_category", "created_at"],
                 order_by="skill_name ASC",
                 limit=limit
             )
@@ -70,7 +70,7 @@ class SkillFunctions:
         try:
             db = get_db()
             query = """
-                SELECT skill_id, skill_name, skill_category, search_tokens, created_at
+                SELECT skill_id, skill_name, skill_category, created_at
                 FROM skill
                 WHERE LOWER(skill_name) = LOWER(:name)
                 LIMIT 1
@@ -86,8 +86,7 @@ class SkillFunctions:
             raise
 
     @staticmethod
-    def create_skill(skill_name: str, skill_category: Optional[str] = None,
-                    description: Optional[str] = None) -> Dict:
+    def create_skill(skill_name: str, skill_category: Optional[str] = None) -> Dict:
         """Create a new skill."""
         try:
             db = get_db()
@@ -99,13 +98,11 @@ class SkillFunctions:
                 raise ValueError(f"Skill '{skill_name}' already exists")
 
             skill_id = str(uuid.uuid4())
-            search_tokens = description or ""
 
             skill_data = {
                 "skill_id": skill_id,
                 "skill_name": skill_name,
                 "skill_category": skill_category,
-                "search_tokens": search_tokens
             }
 
             db.insert_data(table_name="skill", data=skill_data)
@@ -163,7 +160,7 @@ class SkillFunctions:
     def search_skills_autocomplete(query: str, limit: int = 10) -> List[Dict]:
         """
         Autocomplete suggestions with prefix matching (case-insensitive).
-        Returns skills where skill_name or search_tokens match the query.
+        Returns skills where skill_name matches the query.
         """
         try:
             if not query or len(query.strip()) == 0:
@@ -173,13 +170,12 @@ class SkillFunctions:
             db = get_db()
             query_lower = query.lower()
 
-            # Prefix match on skill_name OR contains match on skill_name/search_tokens
+            # Prefix match on skill_name OR contains match on skill_name
             sql = """
-                SELECT skill_id, skill_name, skill_category, search_tokens, created_at
+                SELECT skill_id, skill_name, skill_category, created_at
                 FROM skill
                 WHERE LOWER(skill_name) LIKE :prefix
                    OR LOWER(skill_name) ILIKE :contains
-                   OR (search_tokens IS NOT NULL AND LOWER(search_tokens) ILIKE :contains)
                 ORDER BY
                     CASE WHEN LOWER(skill_name) LIKE :prefix THEN 0 ELSE 1 END,
                     skill_name ASC
@@ -229,7 +225,7 @@ class SkillFunctions:
         try:
             db = get_db()
             query = """
-                SELECT skill_id, skill_name, skill_category, search_tokens, created_at
+                SELECT skill_id, skill_name, skill_category, created_at
                 FROM skill
                 WHERE LOWER(skill_name) LIKE :prefix
                 ORDER BY skill_name ASC

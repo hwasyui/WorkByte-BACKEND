@@ -120,7 +120,9 @@ def scan_harmful_text_with_ml_fallback(text: str) -> Dict:
     """
     Primary harmful text scan entry point.
 
-    1. Attempts inference with the trained BERT model (threshold=0.5).
+    1. Attempts inference with the trained BERT model, using its own tuned
+       per-label thresholds (toxicity 0.50, obscene 0.38, threat 0.58, insult 0.28,
+       identity_hate 0.38 -- from config.pkl, not a flat 0.5 for every label).
        Model metrics on Jigsaw+ETHOS test set: F1=0.85, precision=0.79,
        recall=0.93, hamming_loss=0.068.
     2. On any failure (model files missing, CUDA OOM, etc.) logs a WARNING
@@ -132,7 +134,7 @@ def scan_harmful_text_with_ml_fallback(text: str) -> Dict:
     try:
         from ai_related.harmful_text_detection.model_inference import predict
 
-        ml = predict(text, model_type="best", threshold=0.5)
+        ml = predict(text, model_type="best")
 
         # Map ML label names to the DB/keyword naming convention
         normalized_labels = [_ML_LABEL_REMAP.get(lbl, lbl) for lbl in ml["labels"]]

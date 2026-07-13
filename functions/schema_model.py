@@ -352,7 +352,6 @@ class SkillCreate(BaseModel):
     skill_id: Optional[str] = None  # Auto-generated if not provided
     skill_name: str
     skill_category: str  # hard_skill, soft_skill, tool
-    description: Optional[str] = None
 
 class SkillUpdate(BaseModel):
     skill_name: Optional[str] = None
@@ -362,7 +361,6 @@ class SkillResponse(BaseModel):
     skill_id: str
     skill_name: str
     skill_category: Optional[str] = None
-    description: Optional[str] = None
     created_at: Optional[datetime] = None
 
     class Config:
