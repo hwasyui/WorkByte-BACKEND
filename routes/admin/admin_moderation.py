@@ -120,9 +120,9 @@ def scan_harmful_text_with_ml_fallback(text: str) -> Dict:
     """
     Primary harmful text scan entry point.
 
-    1. Attempts inference with the trained RoBERTa model (threshold=0.5).
-       Model metrics on Jigsaw+ETHOS test set: F1=0.71, precision=0.70,
-       recall=0.73, hamming_loss=0.062.
+    1. Attempts inference with the trained BERT model (threshold=0.5).
+       Model metrics on Jigsaw+ETHOS test set: F1=0.85, precision=0.79,
+       recall=0.93, hamming_loss=0.068.
     2. On any failure (model files missing, CUDA OOM, etc.) logs a WARNING
        and transparently falls back to keyword matching.
 

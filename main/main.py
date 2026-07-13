@@ -12,6 +12,7 @@ from functions.db_manager import init_db, close_db
 from functions.minio_client import ensure_buckets
 from functions.response_utils import ResponseSchema
 from ai_related.job_engine.embedding_manager import _should_embed_immediately
+from ai_related.job_engine.embedding_service import shutdown_executor as shutdown_embedding_executor
 from routes.auth_router import auth_router
 from routes.oauth.oauth_routes import oauth_router
 from ai_related.job_engine.job_engine_routes import router as job_engine_router
@@ -79,7 +80,7 @@ async def lifespan(app: FastAPI):
         try:
             from ai_related.harmful_text_detection.model_inference import load_model
             load_model("best")
-            logger("LIFESPAN", "Harmful text model warmed up (roberta)", level="INFO")
+            logger("LIFESPAN", "Harmful text model warmed up (bert)", level="INFO")
         except Exception as e:
             logger("LIFESPAN", f"Harmful text model warm-up failed (non-fatal): {e}", level="WARNING")
 
@@ -111,7 +112,12 @@ async def lifespan(app: FastAPI):
     except asyncio.CancelledError:
         pass
     logger("LIFESPAN", "Embedding sweep worker stopped", level="INFO")
-    
+
+    try:
+        shutdown_embedding_executor()
+    except Exception as e:
+        logger("LIFESPAN", f"Error shutting down embedding executor: {str(e)}", level="ERROR")
+
     try:
         close_db()
         logger("LIFESPAN", "Application shutdown complete - database connections closed", level="INFO")

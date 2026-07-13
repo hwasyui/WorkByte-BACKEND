@@ -21,9 +21,13 @@ from routes.admin.admin_moderation import (
 AUTO_APPROVE_DAYS = 30
 AUTO_REMOVE_DAYS  = 30
 
-# total_score = sum of all 6 label scores (each 0–1, max 6.0)
-CONTENT_AUTO_CLOSE_THRESHOLD_PROFILE = 0.90
-CONTENT_AUTO_CLOSE_THRESHOLD_JOB     = 0.85
+# Matches the BERT model's own "precision" threshold profile (machine_learning/models/
+# threshold_profiles.json / bert/metrics.json): the grid search that tuned per-label cutoffs
+# could not reach the intended PRECISION_FLOOR of 0.95 for any label (HARMFUL_TEXT.md Section 11),
+# so 0.88 is the most conservative, best-evidenced cutoff the model actually produced. Compared
+# against max(label_scores) in _auto_approve_expired(), not a sum across labels, so this is an
+# exact match for "at least one label individually cleared the model's high-precision bar."
+CONTENT_AUTO_CLOSE_THRESHOLD_JOB     = 0.88
 
 REPORT_AUTO_ACTION_THRESHOLD = 10   # min reports to trigger auto-action
 REPORT_AUTO_ACTION_DAYS      = 30   # min age (days) of oldest report
@@ -66,6 +70,7 @@ DEFAULT_BAN_MESSAGE_ADMIN      = (
 _MOD_SORT_COLS = {
     "created_at":   "cmq.created_at",
     "total_score":  "(cmq.toxic_score + cmq.obscene_score + cmq.threat_score + cmq.insult_score + cmq.identity_hate_score)",
+    "max_score":    "GREATEST(cmq.toxic_score, cmq.obscene_score, cmq.threat_score, cmq.insult_score, cmq.identity_hate_score)",
     "content_type": "cmq.content_type",
     "status":       "cmq.status",
 }
@@ -168,53 +173,52 @@ def queue_harmful_text_scan(
 def _auto_approve_expired():
     """
     Process pending moderation items whose 30-day window has closed.
-    High cumulative label score → flag confirmed (status='approved') → auto-close job/ban user.
-    Low score → flag dismissed as false positive (status='rejected').
+    A job post auto-closes when at least one individual label score clears
+    CONTENT_AUTO_CLOSE_THRESHOLD_JOB (status='approved'). Anything else -- a job post whose
+    labels all stayed below that bar, or any non-job_post item (freelancer_profile/
+    client_profile have no real action to take even when approved, see HARMFUL_TEXT.md
+    Section 17) -- is auto-dismissed as a false positive (status='rejected').
     """
     expired = _rows(get_db().execute_query(
         """
-        SELECT *,
-               (toxic_score + obscene_score +
-                threat_score + insult_score + identity_hate_score) AS total_score
+        SELECT *
         FROM harmful_text_queue
         WHERE status = 'pending' AND auto_approve_at <= NOW()
         """,
         params={},
     ))
     for item in expired:
-        total      = float(item.get("total_score") or 0)
+        max_score = max(
+            float(item.get("toxic_score") or 0),
+            float(item.get("obscene_score") or 0),
+            float(item.get("threat_score") or 0),
+            float(item.get("insult_score") or 0),
+            float(item.get("identity_hate_score") or 0),
+        )
         ctype      = item.get("content_type", "")
         content_id = str(item.get("content_id", ""))
-        user_id    = str(item.get("user_id", ""))
         mid        = str(item.get("moderation_id", ""))
 
-        threshold = (
-            CONTENT_AUTO_CLOSE_THRESHOLD_JOB
-            if ctype == "job_post"
-            else CONTENT_AUTO_CLOSE_THRESHOLD_PROFILE
-        )
-
-        if total >= threshold:
+        if ctype == "job_post" and max_score >= CONTENT_AUTO_CLOSE_THRESHOLD_JOB:
             new_status = "approved"  # flag confirmed: harmful content actioned
-            if ctype == "job_post":
-                get_db().execute_query(
-                    """
-                    UPDATE job_post
-                    SET status = 'closed',
-                        closure_reason = :reason,
-                        closure_note   = :note
-                    WHERE job_post_id = :id
-                    """,
-                    params={
-                        "id":     content_id,
-                        "reason": DEFAULT_CLOSURE_REASON_CONTENT,
-                        "note":   DEFAULT_CLOSURE_NOTE_CONTENT,
-                    },
-                )
-            logger("ADMIN", f"Auto-closed {ctype} {content_id}, total_score={total:.2f} >= {threshold}", level="WARNING")
+            get_db().execute_query(
+                """
+                UPDATE job_post
+                SET status = 'closed',
+                    closure_reason = :reason,
+                    closure_note   = :note
+                WHERE job_post_id = :id
+                """,
+                params={
+                    "id":     content_id,
+                    "reason": DEFAULT_CLOSURE_REASON_CONTENT,
+                    "note":   DEFAULT_CLOSURE_NOTE_CONTENT,
+                },
+            )
+            logger("ADMIN", f"Auto-closed {ctype} {content_id}, max_label_score={max_score:.2f} >= {CONTENT_AUTO_CLOSE_THRESHOLD_JOB}", level="WARNING")
         else:
-            new_status = "rejected"  # flag dismissed: false positive
-            logger("ADMIN", f"Auto-dismissed {ctype} {content_id}, total_score={total:.2f} < {threshold}", level="INFO")
+            new_status = "rejected"  # flag dismissed: false positive (or non-job_post, no action to take)
+            logger("ADMIN", f"Auto-dismissed {ctype} {content_id}, max_label_score={max_score:.2f}", level="INFO")
 
         get_db().execute_query(
             """
@@ -277,6 +281,8 @@ def list_moderation_queue(
         SELECT cmq.*,
                (cmq.toxic_score + cmq.obscene_score +
                 cmq.threat_score + cmq.insult_score + cmq.identity_hate_score) AS total_score,
+               GREATEST(cmq.toxic_score, cmq.obscene_score, cmq.threat_score,
+                        cmq.insult_score, cmq.identity_hate_score) AS max_score,
                u.email AS user_email
         FROM harmful_text_queue cmq
         JOIN users u ON u.user_id = cmq.user_id

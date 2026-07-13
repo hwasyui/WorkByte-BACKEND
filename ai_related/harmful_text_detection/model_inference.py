@@ -29,7 +29,7 @@ _MODEL_FOLDERS = {
     "roberta": "roberta",
     "distilbert": "distilbert",
 }
-_DEFAULT_MODEL_TYPE = "roberta"
+_DEFAULT_MODEL_TYPE = "bert"
 
 
 def _get_device():
@@ -90,7 +90,7 @@ def load_model(model_type: str = "best") -> Tuple[torch.nn.Module, AutoTokenizer
 
     Args:
         model_type: Type of model ('bert', 'roberta', 'distilbert', or 'best')
-                    'best' loads RoBERTa
+                    'best' loads BERT
 
     Returns:
         Tuple of (model, tokenizer, device, resolved_model_type)

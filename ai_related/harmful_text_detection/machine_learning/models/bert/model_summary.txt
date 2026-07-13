@@ -1,5 +1,4 @@
-Toxicity Detection Model — bert-base-uncased
-============================================================
+Harmful Text Detection Model: bert-base-uncased
 
 Folder    : bert
 HF ID     : bert-base-uncased
@@ -7,26 +6,26 @@ Num labels: 5
 Labels    : ['toxicity', 'obscene', 'threat', 'insult', 'identity_hate']
 
 Test Metrics (tuned thresholds):
-  f1                  : 0.8201
-  precision           : 0.7802
-  recall              : 0.8655
-  jaccard             : 0.7648
-  hamming_loss        : 0.0597
-  accuracy            : 0.9403
-  subset_accuracy     : 0.7579
+  f1                  : 0.8519
+  precision           : 0.7933
+  recall              : 0.9253
+  jaccard             : 0.7651
+  hamming_loss        : 0.0682
+  accuracy            : 0.9318
+  subset_accuracy     : 0.7402
 
 Per-Label Detail:
-  toxicity            : F1=0.9204  P=0.8976  R=0.9444  t=0.56
-  obscene             : F1=0.8328  P=0.7936  R=0.8760  t=0.5
-  threat              : F1=0.6759  P=0.6186  R=0.7449  t=0.5
-  insult              : F1=0.7684  P=0.7152  R=0.8301  t=0.48
-  identity_hate       : F1=0.9030  P=0.8758  R=0.9319  t=0.5
+  toxicity            : F1=0.9280  P=0.8920  R=0.9671  t=0.5
+  obscene             : F1=0.8224  P=0.7644  R=0.8900  t=0.38
+  threat              : F1=0.8936  P=0.8553  R=0.9356  t=0.58
+  insult              : F1=0.7311  P=0.6163  R=0.8984  t=0.28
+  identity_hate       : F1=0.8844  P=0.8387  R=0.9354  t=0.38
 
 Best Thresholds:
-  toxicity            : 0.560
-  obscene             : 0.500
-  threat              : 0.500
-  insult              : 0.480
-  identity_hate       : 0.500
+  toxicity            : 0.500
+  obscene             : 0.380
+  threat              : 0.580
+  insult              : 0.280
+  identity_hate       : 0.380
 
-Train time: 26.0 min
+Train time: 33.7 min

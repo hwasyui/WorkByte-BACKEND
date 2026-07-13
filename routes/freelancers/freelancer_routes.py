@@ -1,4 +1,3 @@
-import asyncio
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -22,7 +21,6 @@ from routes.cv_upload.cv_upload_functions import (
     _extract_text_from_docx,
     _extract_text_from_image,
 )
-from routes.admin.admin_functions import queue_harmful_text_scan
 
 _DOCX_MIMES = {
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -129,16 +127,6 @@ async def create_freelancer(
         )
         mark_freelancer_dirty(str(new_freelancer["freelancer_id"]))
 
-        _scan_text = " ".join(filter(None, [freelancer.full_name, freelancer.title, freelancer.bio]))
-        if _scan_text.strip():
-            asyncio.create_task(asyncio.to_thread(
-                queue_harmful_text_scan,
-                "freelancer_profile",
-                str(new_freelancer["freelancer_id"]),
-                str(current_user.user_id),
-                _scan_text,
-            ))
-
         logger("FREELANCER", f"Created freelancer {freelancer_id}", "POST /freelancers", "INFO")
         return ResponseSchema.success(new_freelancer, 201)
     except Exception as e:
@@ -232,20 +220,6 @@ async def update_freelancer(
 
         updated_freelancer = FreelancerFunctions.update_freelancer(freelancer_id=freelancer_id, update_data=update_data)
         mark_freelancer_dirty(freelancer_id)
-
-        _scan_text = " ".join(filter(None, [
-            updated_freelancer.get("full_name", ""),
-            updated_freelancer.get("title", ""),
-            updated_freelancer.get("bio", ""),
-        ]))
-        if _scan_text.strip():
-            asyncio.create_task(asyncio.to_thread(
-                queue_harmful_text_scan,
-                "freelancer_profile",
-                str(freelancer_id),
-                str(current_user.user_id),
-                _scan_text,
-            ))
 
         logger("FREELANCER", f"Updated freelancer {freelancer_id}", "PUT /freelancers/{identifier}", "INFO")
         return ResponseSchema.success(updated_freelancer, 200)
