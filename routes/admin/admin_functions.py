@@ -1,3 +1,4 @@
+import asyncio
 import json
 import math
 import os
@@ -17,6 +18,7 @@ from routes.admin.admin_moderation import (
     scan_harmful_text_with_ml_fallback,
     SCAM_AUTO_REMOVE_THRESHOLD,
 )
+from routes.notifications.notification_functions import NotificationFunctions
 
 AUTO_APPROVE_DAYS = 30
 AUTO_REMOVE_DAYS  = 30
@@ -110,6 +112,41 @@ def _row(result) -> Optional[Dict]:
     if not result:
         return None
     return dict(result[0])
+
+
+def _schedule_notification(coro) -> None:
+    """Fire-and-forget a notification coroutine on the running event loop. Falls back
+    gracefully if no loop is available -- same pattern as
+    ai_related/job_engine/embedding_manager.py's _schedule_immediate, needed because
+    admin_close_job/action_moderation_item/_auto_approve_expired are plain sync functions
+    but NotificationFunctions.notify() is a coroutine."""
+    try:
+        loop = asyncio.get_running_loop()
+        loop.create_task(coro)
+    except RuntimeError:
+        logger("ADMIN", "No running event loop, cannot send job-closed notification", level="WARNING")
+        coro.close()
+
+
+def _notify_job_post_closed(job_post_id: str, notif_type: str, title: str, body: str) -> None:
+    """Look up the job post's owning client and fire a closure notification, best-effort."""
+    row = _row(get_db().execute_query(
+        """
+        SELECT c.user_id FROM job_post jp
+        JOIN client c ON c.client_id = jp.client_id
+        WHERE jp.job_post_id = :jid
+        """,
+        params={"jid": job_post_id},
+    ))
+    if not row:
+        return
+    _schedule_notification(NotificationFunctions.notify(
+        recipient_user_id=str(row["user_id"]),
+        notif_type=notif_type,
+        title=title,
+        body=body,
+        data={"job_post_id": job_post_id},
+    ))
 
 
 def queue_harmful_text_scan(
@@ -227,6 +264,12 @@ def _auto_approve_expired():
                 },
             )
             logger("ADMIN", f"Auto-closed {ctype} {content_id}, max_label_score={max_score:.2f} >= {CONTENT_AUTO_CLOSE_THRESHOLD_JOB}", level="WARNING")
+            _notify_job_post_closed(
+                content_id,
+                "job_closed_content_violation",
+                "Job Post Closed",
+                DEFAULT_CLOSURE_NOTE_CONTENT,
+            )
         else:
             new_status = "rejected"  # flag dismissed: false positive (or non-job_post, no action to take)
             logger("ADMIN", f"Auto-dismissed {ctype} {content_id}, max_label_score={max_score:.2f}", level="INFO")
@@ -359,6 +402,12 @@ def action_moderation_item(
                 },
             )
             logger("ADMIN", f"Job post {content_id} closed after moderation rejection", level="INFO")
+            _notify_job_post_closed(
+                content_id,
+                "job_closed_content_violation",
+                "Job Post Closed",
+                closure_note,
+            )
 
     return updated
 
@@ -873,16 +922,56 @@ def force_expire_reports(target_type: str, target_id: str) -> None:
 
 _MAX_APPEALS_PER_TARGET = 2
 
+def _validate_appeal_target(user_id: str, target_type: str, target_id: str) -> None:
+    """
+    Confirm the appealing user actually owns the target and that it's currently in a
+    restricted state -- neither was checked before, so any logged-in user could appeal any
+    job_post_id/user_id, closed or not, theirs or not. Raises HTTPException on any failure.
+    """
+    if target_type == "job_post":
+        row = _row(get_db().execute_query(
+            """
+            SELECT jp.status, c.user_id AS owner_user_id
+            FROM job_post jp
+            JOIN client c ON c.client_id = jp.client_id
+            WHERE jp.job_post_id = :tid
+            """,
+            params={"tid": target_id},
+        ))
+        if not row:
+            raise HTTPException(status_code=404, detail="Job post not found")
+        if str(row["owner_user_id"]) != str(user_id):
+            raise HTTPException(status_code=403, detail="You can only appeal your own job posts")
+        if row["status"] != "closed":
+            raise HTTPException(status_code=400, detail="This job post is not closed, there is nothing to appeal")
+    elif target_type == "user":
+        if str(target_id) != str(user_id):
+            raise HTTPException(status_code=403, detail="You can only appeal your own account restriction")
+        row = _row(get_db().execute_query(
+            "SELECT is_report_banned FROM users WHERE user_id = :uid",
+            params={"uid": user_id},
+        ))
+        if not row:
+            raise HTTPException(status_code=404, detail="User not found")
+        if not row["is_report_banned"]:
+            raise HTTPException(status_code=400, detail="Your account is not currently restricted, there is nothing to appeal")
+
+
 def submit_appeal(user_id: str, target_type: str, target_id: str, message: str) -> Optional[Dict]:
     """
     User submits an appeal against a ban or job-post closure.
 
     Rules:
+      - Target must exist, be owned by the appealing user, and currently be in a
+        restricted state (job post closed / account restricted) -- see
+        _validate_appeal_target().
       - Cannot appeal while a pending appeal already exists for the same target.
       - Cannot appeal if the target was already approved (resolved positively).
       - Maximum of _MAX_APPEALS_PER_TARGET (2) appeals per (user, target).
         The second appeal is the user's one retry after a rejection.
     """
+    _validate_appeal_target(user_id, target_type, target_id)
+
     existing = _rows(get_db().execute_query(
         """
         SELECT status FROM appeals
@@ -1143,7 +1232,7 @@ def resolve_appeal(
             get_db().execute_query(
                 """
                 UPDATE job_post
-                SET status = 'open', closure_reason = NULL, closure_note = NULL
+                SET status = 'active', closure_reason = NULL, closure_note = NULL
                 WHERE job_post_id = :jid
                 """,
                 params={"jid": target_id},
@@ -1334,6 +1423,12 @@ def admin_close_job(
     ))
     if updated:
         logger("ADMIN", f"Job post {job_post_id} force-closed by admin {admin_user_id}", level="WARNING")
+        _notify_job_post_closed(
+            job_post_id,
+            "job_closed_admin",
+            "Job Post Closed",
+            closure_note,
+        )
     return updated
 
 

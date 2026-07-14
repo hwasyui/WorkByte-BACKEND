@@ -19,34 +19,6 @@ _LLM_TIMEOUT = 90.0   # user-triggered, so a longer timeout is fine
 EVIDENCE_CAP = 3
 RELEVANCE_THRESHOLD = 0.3
 
-# FX rates
-_FX_CACHE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "currency_rates.json")
-
-
-def _get_fx_rates() -> dict[str, float]:
-    """Read USD-based FX rates from currency_rates.json. Falls back to USD-only if unavailable."""
-    try:
-        with open(_FX_CACHE_PATH, encoding="utf-8") as fh:
-            data = json.load(fh)
-        rates = {k.upper(): float(v) for k, v in data.get("rates", {}).items()}
-        if rates:
-            logger("RAG_ANALYSER", f"FX rates loaded | {len(rates)} currencies | updated={data.get('updated', '?')}", level="DEBUG")
-            return rates
-    except Exception as e:
-        logger("RAG_ANALYSER", f"FX rate file read failed ({e}); using USD-only fallback", level="WARNING")
-    return {"USD": 1.0}
-
-
-def _to_usd(amount: float, currency: str, fx: dict[str, float]) -> float:
-    """Convert amount from currency to USD using USD-based fx rates."""
-    rate = fx.get(currency.upper(), 1.0)
-    return float(amount) / rate if rate > 0 else float(amount)
-
-
-def _to_idr(amount: float, currency: str, fx: dict[str, float]) -> float:
-    """Convert amount from currency to IDR via USD as the intermediate."""
-    return _to_usd(amount, currency, fx) * fx.get("IDR", 16350.0)
-
 
 def _retrieve_role_context(db, job_role_id: str) -> dict:
     """
@@ -65,9 +37,9 @@ def _retrieve_role_context(db, job_role_id: str) -> dict:
 
     rows = db.execute_query(
         """
-        SELECT jr.role_title, jr.role_description, jr.role_budget, jr.budget_type, jr.budget_currency,
+        SELECT jr.role_title, jr.role_description,
                jp.job_post_id, jp.job_title, jp.job_description, jp.project_type, jp.project_scope,
-               jp.experience_level, jp.estimated_duration, jp.deadline,
+               jp.estimated_duration, jp.deadline,
                COALESCE(
                    array_agg(
                        s.skill_name || ' (' ||
@@ -84,10 +56,10 @@ def _retrieve_role_context(db, job_role_id: str) -> dict:
         LEFT JOIN job_role_skill jrs ON jrs.job_role_id = jr.job_role_id
         LEFT JOIN skill s            ON s.skill_id       = jrs.skill_id
         WHERE jr.job_role_id = :jrid
-        GROUP BY jr.job_role_id, jr.role_title, jr.role_description, jr.role_budget,
-                 jr.budget_type, jr.budget_currency, jp.job_post_id, jp.job_title,
+        GROUP BY jr.job_role_id, jr.role_title, jr.role_description,
+                 jp.job_post_id, jp.job_title,
                  jp.job_description, jp.project_type, jp.project_scope,
-                 jp.experience_level, jp.estimated_duration, jp.deadline
+                 jp.estimated_duration, jp.deadline
         """,
         {"jrid": job_role_id},
     )
@@ -404,7 +376,7 @@ def _build_evidence_list(past_contracts: list[dict], portfolio_items: list[dict]
     return used_contracts, used_portfolio, evidence_path
 
 
-def _build_prompt(role: dict, fc: dict, used_contracts: list[dict], used_portfolio: list[dict], fx_rates: dict[str, float]) -> tuple[str, dict]:
+def _build_prompt(role: dict, fc: dict, used_contracts: list[dict], used_portfolio: list[dict]) -> tuple[str, dict]:
     """
     Build the grounded LLM prompt for ONE role from role, freelancer, and gated
     evidence context.
@@ -436,10 +408,9 @@ def _build_prompt(role: dict, fc: dict, used_contracts: list[dict], used_portfol
     matched_pref = [s for s in preferred if s.lower() in freelancer_skill_map]
     coverage_pct = int(len(matched_req) / len(required) * 100) if required else 100
 
-    # Experience gap (pre-computed)
-    _EXP_MAP_RAG   = {"entry": 1, "intermediate": 2, "expert": 3}
+    # Freelancer's own experience tier (self-contained -- job.experience_level is never
+    # read into this context at all, see job_fit_analysis.md Section 3)
     _EXP_LABEL_RAG = {1: "entry", 2: "intermediate", 3: "expert"}
-    job_exp_num = _EXP_MAP_RAG.get((role.get("experience_level") or "entry").lower(), 1)
     total_jobs  = int(fc.get("total_jobs") or 0)
     work_exp_count = len(fc.get("work_experience") or [])
 
@@ -455,20 +426,6 @@ def _build_prompt(role: dict, fc: dict, used_contracts: list[dict], used_portfol
         fl_exp_num = unverified_exp_num
         exp_source = f"self-reported, unverified - {work_exp_count} work experience entr{'ies' if work_exp_count != 1 else 'y'}"
 
-    exp_delta = fl_exp_num - job_exp_num
-    if exp_delta >= 0:
-        exp_fit_str = (
-            f"✓ Meets requirement ({_EXP_LABEL_RAG[fl_exp_num]} ≥ {_EXP_LABEL_RAG[job_exp_num]}, {exp_source})"
-        )
-    elif exp_delta == -1:
-        exp_fit_str = (
-            f"△ Slightly under ({_EXP_LABEL_RAG[fl_exp_num]}, job requires {_EXP_LABEL_RAG[job_exp_num]}, {exp_source})"
-        )
-    else:
-        exp_fit_str = (
-            f"✗ Under-qualified ({_EXP_LABEL_RAG[fl_exp_num]}, job requires {_EXP_LABEL_RAG[job_exp_num]}, {exp_source})"
-        )
-
     # Build context
     lines = []
 
@@ -481,10 +438,6 @@ def _build_prompt(role: dict, fc: dict, used_contracts: list[dict], used_portfol
     lines.append(f"\nROLE: {role.get('role_title', '')}")
     if role.get("role_description"):
         lines.append(f"Role description: {(role['role_description'] or '')[:200]}")
-    lines.append(
-        f"Budget: {role.get('role_budget', 'N/A')} {role.get('budget_currency', '')} "
-        f"({role.get('budget_type', '')})"
-    )
 
     lines.append("\nFREELANCER PROFILE")
     lines.append(f"Name:         {fc.get('full_name', '')}")
@@ -492,7 +445,6 @@ def _build_prompt(role: dict, fc: dict, used_contracts: list[dict], used_portfol
         lines.append(f"Title:        {fc['title']}")
     lines.append(f"Jobs done:    {fc.get('total_jobs', 0)} completed in-platform")
     lines.append(f"Experience:   {_EXP_LABEL_RAG[fl_exp_num]} ({exp_source})")
-    lines.append(f"Experience fit: {exp_fit_str}")
     if fc.get("estimated_rate"):
         rate_currency = fc.get("rate_currency") or "USD"
         rate_time     = fc.get("rate_time") or "hourly"
@@ -533,15 +485,6 @@ def _build_prompt(role: dict, fc: dict, used_contracts: list[dict], used_portfol
     else:
         lines.append("\nPAST CONTRACTS\nNone relevant on-platform yet.")
 
-    # Rate-to-budget helpers
-    _RATE_TO_MONTHLY: dict[str, float] = {
-        "hourly": 160.0, "daily": 20.0, "weekly": 4.0, "monthly": 1.0, "annually": 1 / 12,
-    }
-    fl_rate          = float(fc.get("estimated_rate") or 0)
-    fl_rate_time     = (fc.get("rate_time") or "hourly").lower()
-    fl_rate_currency = (fc.get("rate_currency") or "USD").upper()
-    fl_monthly_rate  = fl_rate * _RATE_TO_MONTHLY.get(fl_rate_time, 160.0)
-
     lines.append("\nSKILL MATCH (pre-computed, primary evidence for scoring)")
     lines.append(f"Required skill coverage: {len(matched_req)}/{len(required)} = {coverage_pct}%")
     if matched_req:
@@ -556,26 +499,6 @@ def _build_prompt(role: dict, fc: dict, used_contracts: list[dict], used_portfol
         lines.append("No required skills specified")
     if matched_pref:
         lines.append(f"Preferred PRESENT: {', '.join(matched_pref)}")
-
-    # Budget fit: convert both to IDR so cross-currency comparisons are accurate
-    role_budget_raw      = role.get("role_budget")
-    role_budget_currency = role.get("budget_currency") or "USD"
-    if fl_monthly_rate > 0 and role_budget_raw:
-        fl_idr     = _to_idr(fl_monthly_rate, fl_rate_currency, fx_rates)
-        budget_idr = _to_idr(float(role_budget_raw), role_budget_currency, fx_rates)
-        fit        = "✓ Within budget" if fl_idr <= budget_idr * 1.1 else "✗ Exceeds budget"
-        same_ccy   = fl_rate_currency.upper() == role_budget_currency.upper()
-        if same_ccy and fl_rate_currency.upper() == "IDR":
-            lines.append(
-                f"Budget fit:  freelancer ~{fl_monthly_rate:,.0f} IDR/month "
-                f"vs role budget {float(role_budget_raw):,.0f} IDR → {fit}"
-            )
-        else:
-            lines.append(
-                f"Budget fit:  freelancer ~{fl_monthly_rate:.0f} {fl_rate_currency}/month "
-                f"(≈{fl_idr:,.0f} IDR) vs role budget {role_budget_raw} {role_budget_currency} "
-                f"(≈{budget_idr:,.0f} IDR) → {fit}"
-            )
 
     context = "\n".join(lines)
 
@@ -596,8 +519,6 @@ Score this role holistically (0-100) considering:
   3. Directly relevant past contracts (as evidence of experience, not platform credibility)
   4. Portfolio items that demonstrate the role's core skills
   5. Work experience relevance to this role
-  6. Experience level fit (shown above, note if under/over-qualified)
-  7. Budget fit (shown above, note if rate exceeds budget)
 
 Scoring guidance (skill coverage reference): coverage={coverage_pct}% → {band}
 
@@ -789,7 +710,6 @@ async def analyse_role_match(db, freelancer_id: str, job_role_id: str) -> dict:
     role           = _retrieve_role_context(db, job_role_id)
     fc             = _retrieve_freelancer_context(db, freelancer_id, job_role_id=job_role_id)
     past_contracts = _retrieve_past_contracts(db, freelancer_id, job_role_id)
-    fx_rates       = _get_fx_rates()
     retrieval_ms   = (time.perf_counter() - t_retrieval) * 1000
 
     if not role:
@@ -812,7 +732,7 @@ async def analyse_role_match(db, freelancer_id: str, job_role_id: str) -> dict:
     )
 
     t_prompt = time.perf_counter()
-    prompt, skill_info = _build_prompt(role, fc, used_contracts, used_portfolio, fx_rates)
+    prompt, skill_info = _build_prompt(role, fc, used_contracts, used_portfolio)
     prompt_ms = (time.perf_counter() - t_prompt) * 1000
     logger(
         "RAG_ANALYSER",
