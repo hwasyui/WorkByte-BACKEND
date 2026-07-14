@@ -215,7 +215,7 @@ def check_ats_compliance(raw_text: str) -> dict:
     return {"ats_score": score, "ats_flags": flags}
 
 
-_GROQ_TIMEOUT = 90.0  # CV analysis runs two sequential structured calls; default SDK timeout was too tight
+_GROQ_TIMEOUT = 90.0  
 
 
 def _call_groq(system_prompt: str, user_prompt: str, json_mode: bool = False, max_tokens: int = 1500) -> Any:

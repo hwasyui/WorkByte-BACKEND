@@ -93,13 +93,6 @@ def _build_pair_features(emb_a: np.ndarray, emb_b: np.ndarray) -> np.ndarray:
 
 
 async def analyze_cv_with_rf(cv_text: str, profile_text: str) -> Dict[str, Any]:
-    """
-    Random Forest scoring for profile match, ATS compliance, and section
-    quality. Replaces the old cv_analysis_xgb_models flow. Mirrors the
-    predict_match / predict_ats / predict_sections reference implementation
-    in cv_analysis_xgb_models/xgboost_cv_analysis_final.ipynb, with
-    RandomForest estimators swapped in for XGBoost.
-    """
     models = _load_models()
 
     emb_cv = np.array(await get_embedding(cv_text))
@@ -109,7 +102,6 @@ async def analyze_cv_with_rf(cv_text: str, profile_text: str) -> Dict[str, Any]:
     explicit = _extract_explicit_features(cv_text, profile_text)
     raw_pair = _build_pair_features(emb_cv, emb_profile)
 
-    # Profile match
     match_feat = np.hstack(
         [models["pca_match"].transform(raw_pair.reshape(1, -1))[0], explicit]
     ).reshape(1, -1)
@@ -118,7 +110,6 @@ async def analyze_cv_with_rf(cv_text: str, profile_text: str) -> Dict[str, Any]:
     if match_proba.max() < _MATCH_CONFIDENCE_THRESHOLD:
         match_pred = 0
 
-    # Section scoring (experience / skills / education / overall)
     section_feat = np.hstack(
         [models["pca_section"].transform(raw_pair.reshape(1, -1))[0], explicit]
     ).reshape(1, -1)
@@ -128,7 +119,6 @@ async def analyze_cv_with_rf(cv_text: str, profile_text: str) -> Dict[str, Any]:
         for col, p in zip(models["section_target_cols"], section_preds)
     }
 
-    # ATS compliance
     ats_feats = _extract_ats_features(cv_text)
     ats_x = np.array([[ats_feats[name] for name in models["ats_feature_names"]]])
     ats_proba = models["ats_model"].predict_proba(ats_x)[0]
