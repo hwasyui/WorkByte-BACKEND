@@ -38,7 +38,6 @@ from routes.admin.admin_functions import (
     list_report_targets,
     list_reports,
     list_scam_flags,
-    queue_harmful_text_scan,
     queue_scam_scan,
     resolve_appeal,
     submit_appeal,
@@ -51,13 +50,6 @@ appeals_router = APIRouter(prefix="/appeals", tags=["Appeals"])
 
 class AdminActionBody(BaseModel):
     admin_note: Optional[str] = None
-
-
-class ContentScanBody(BaseModel):
-    content_type: str   # 'job_post' | 'freelancer_profile' | 'client_profile'
-    content_id:   str
-    user_id:      str
-    text:         str
 
 
 class ScamScanBody(BaseModel):
@@ -181,29 +173,6 @@ async def reject_moderation(
     except Exception as e:
         logger("ADMIN", f"Reject moderation error: {e}", "POST /admin/moderation/reject", "ERROR")
         return ResponseSchema.error(f"Failed to reject item: {e}", 500)
-
-
-@admin_router.post("/moderation/scan")
-async def trigger_content_scan(
-    body: ContentScanBody,
-    current_user: UserInDB = Depends(get_admin_user),
-):
-    """Manually trigger a harmful text detection scan (admin utility)."""
-    try:
-        if body.content_type not in ("job_post", "freelancer_profile", "client_profile"):
-            return ResponseSchema.error("content_type must be job_post, freelancer_profile, or client_profile", 400)
-        result = queue_harmful_text_scan(
-            content_type=body.content_type,
-            content_id=body.content_id,
-            user_id=body.user_id,
-            text=body.text,
-        )
-        if result is None:
-            return ResponseSchema.success({"flagged": False, "message": "Content passed moderation"}, 200)
-        return ResponseSchema.success({"flagged": True, "moderation_record": result}, 200)
-    except Exception as e:
-        logger("ADMIN", f"Content scan error: {e}", "POST /admin/moderation/scan", "ERROR")
-        return ResponseSchema.error(f"Content scan failed: {e}", 500)
 
 
 @admin_router.post("/moderation/force-expire")
