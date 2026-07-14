@@ -408,8 +408,21 @@ async def update_job_post(job_post_id: str, job_post_update: JobPostUpdate, curr
         
         update_data = job_post_update.model_dump(exclude_unset=True)
         updated_job_post = JobPostFunctions.update_job_post(job_post_id, update_data)
-        
+
         mark_job_dirty(job_post_id)
+
+        # Re-scan on edit: an edit that touches the scanned fields must go through the
+        # same background scan as creation, otherwise a clean post can be published and
+        # then edited into harmful content that is never scanned. Safe to fire on every
+        # such edit -- queue_harmful_text_scan's dedup guard (ON CONFLICT ... WHERE
+        # status='pending' DO NOTHING) means a post that already has a pending scan
+        # doesn't pile up duplicate queue rows.
+        if "job_title" in update_data or "job_description" in update_data:
+            _title     = updated_job_post.get("job_title") or ""
+            _desc      = updated_job_post.get("job_description") or ""
+            _scan_text = f"{_title} {_desc}"
+            asyncio.create_task(asyncio.to_thread(queue_harmful_text_scan, "job_post", job_post_id, current_user.user_id, _scan_text))
+
         success_msg = f"Updated job post {job_post_id}"
         logger("JOB_POST", success_msg, "PUT /job-posts/{job_post_id}", "INFO")
         return ResponseSchema.success(updated_job_post, 200)

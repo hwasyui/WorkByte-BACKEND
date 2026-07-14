@@ -31,6 +31,21 @@ def _normalize(text: str) -> str:
     return re.sub(r"\s+", " ", text.lower().strip())
 
 
+# Keywords that are deliberately truncated stems (match longer word forms too).
+# Everything else must match on a whole-word boundary, otherwise "dumb" hits
+# "dumbbell" and "cunt" hits "Scunthorpe".
+_PREFIX_KEYWORDS = set(_kw_data.get("prefix_keywords", []))
+
+
+def _keyword_hits(keywords: List[str], normalized_text: str) -> List[str]:
+    hits = []
+    for kw in keywords:
+        pattern = rf"\b{re.escape(kw)}" if kw in _PREFIX_KEYWORDS else rf"\b{re.escape(kw)}\b"
+        if re.search(pattern, normalized_text):
+            hits.append(kw)
+    return hits
+
+
 def scan_harmful_text(text: str) -> Dict:
     """
     Deterministic keyword scan across 5 harm labels.
@@ -46,7 +61,7 @@ def scan_harmful_text(text: str) -> Dict:
     detected: List[str] = []
 
     for label, keywords in _LABEL_KEYWORDS.items():
-        hits = sum(1 for kw in keywords if kw in normalized)
+        hits = len(_keyword_hits(keywords, normalized))
         score = round(min(hits * 0.35, 1.0), 4)
         scores[label] = score
         if hits > 0:
