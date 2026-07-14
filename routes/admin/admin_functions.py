@@ -121,7 +121,10 @@ def queue_harmful_text_scan(
     """
     Run harmful text scan and insert a pending moderation record if any label is triggered.
     content_type: 'job_post' | 'freelancer_profile' | 'client_profile'
-    Returns the inserted row dict, or None if content is clean.
+    A content item that already has a pending row is left alone (ON CONFLICT DO NOTHING against
+    idx_htq_content_pending_unique) rather than queued again -- rescanning the same content
+    (e.g. repeated manual scans) must not pile up duplicate queue rows.
+    Returns the inserted row dict, or None if content is clean or already queued.
     """
     result = scan_harmful_text_with_ml_fallback(text)
     if not result["is_flagged"]:
@@ -143,6 +146,7 @@ def queue_harmful_text_scan(
                 :threat_score, :insult_score, :identity_hate_score,
                 CAST(:detected_labels AS JSONB), :flagged_text, :auto_approve_at
             )
+            ON CONFLICT (content_type, content_id) WHERE status = 'pending' DO NOTHING
             RETURNING *
             """,
             params={
@@ -159,11 +163,18 @@ def queue_harmful_text_scan(
                 "auto_approve_at":      auto_approve_at,
             },
         ))
-        logger(
-            "ADMIN",
-            f"Content flagged via {scan_method} scan: {content_type} {content_id} labels={result['detected_labels']}",
-            level="INFO",
-        )
+        if row is None:
+            logger(
+                "ADMIN",
+                f"Content already has a pending scan, skipped: {content_type} {content_id}",
+                level="INFO",
+            )
+        else:
+            logger(
+                "ADMIN",
+                f"Content flagged via {scan_method} scan: {content_type} {content_id} labels={result['detected_labels']}",
+                level="INFO",
+            )
         return row
     except Exception as e:
         logger("ADMIN", f"Failed to queue content scan: {e}", level="ERROR")
