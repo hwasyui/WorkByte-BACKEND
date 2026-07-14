@@ -71,7 +71,7 @@ DEFAULT_BAN_MESSAGE_ADMIN      = (
 def _closure_note_with_labels(detected_labels) -> str:
     """Closure note that names the categories the classifier actually triggered, so the
     owner knows what to fix instead of getting an unexplained removal. Uses the same raw
-    label strings (toxic/obscene/threat/insult/identity_hate) as the DM and proposal harmful-
+    label strings (toxicity/obscene/threat/insult/identity_hate) as the DM and proposal harmful-
     content block messages, rather than a separate display mapping, so the wording matches
     across every surface that reports a moderation label."""
     labels = detected_labels or []

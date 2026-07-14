@@ -21,11 +21,6 @@ _SCAM_KEYWORDS: List[str] = _kw_data["scam_keywords"]
 SCAM_FLAG_THRESHOLD: float = 0.10       # ≥ 1 keyword match → admin review queue
 SCAM_AUTO_REMOVE_THRESHOLD: float = 0.85  # ≥ 5 matches + 30 days → auto-remove
 
-# ML label names → DB/keyword naming convention
-_ML_LABEL_REMAP = {
-    "toxicity": "toxic",
-}
-
 
 def _normalize(text: str) -> str:
     return re.sub(r"\s+", " ", text.lower().strip())
@@ -68,7 +63,7 @@ def scan_harmful_text(text: str) -> Dict:
             detected.append(label)
 
     return {
-        "toxic_score":          scores["toxic"],
+        "toxic_score":          scores["toxicity"],
         "obscene_score":        scores["obscene"],
         "threat_score":         scores["threat"],
         "insult_score":         scores["insult"],
@@ -151,16 +146,13 @@ def scan_harmful_text_with_ml_fallback(text: str) -> Dict:
 
         ml = predict(text, model_type="best")
 
-        # Map ML label names to the DB/keyword naming convention
-        normalized_labels = [_ML_LABEL_REMAP.get(lbl, lbl) for lbl in ml["labels"]]
-
         return {
             "toxic_score":          round(ml["scores"].get("toxicity", 0.0), 4),
             "obscene_score":        round(ml["scores"].get("obscene", 0.0), 4),
             "threat_score":         round(ml["scores"].get("threat", 0.0), 4),
             "insult_score":         round(ml["scores"].get("insult", 0.0), 4),
             "identity_hate_score":  round(ml["scores"].get("identity_hate", 0.0), 4),
-            "detected_labels":      normalized_labels,
+            "detected_labels":      ml["labels"],
             "is_flagged":           ml["is_harmful"],
             "scan_method":          "ml",
         }
