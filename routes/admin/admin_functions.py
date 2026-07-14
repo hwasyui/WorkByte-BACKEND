@@ -68,6 +68,25 @@ DEFAULT_BAN_MESSAGE_ADMIN      = (
     "Submit an appeal if you believe this was a mistake."
 )
 
+def _closure_note_with_labels(detected_labels) -> str:
+    """Closure note that names the categories the classifier actually triggered, so the
+    owner knows what to fix instead of getting an unexplained removal. Uses the same raw
+    label strings (toxic/obscene/threat/insult/identity_hate) as the DM and proposal harmful-
+    content block messages, rather than a separate display mapping, so the wording matches
+    across every surface that reports a moderation label."""
+    labels = detected_labels or []
+    if isinstance(labels, str):
+        try:
+            labels = json.loads(labels)
+        except Exception:
+            labels = []
+    if not labels:
+        return DEFAULT_CLOSURE_NOTE_CONTENT
+    return (
+        f"This job post was removed because its content was flagged for "
+        f"{', '.join(str(l) for l in labels)}. Submit an appeal if you believe this was a mistake."
+    )
+
 # Sort-column whitelists (safe f-string interpolation; values are hardcoded)
 _MOD_SORT_COLS = {
     "created_at":   "cmq.created_at",
@@ -269,6 +288,7 @@ def _auto_approve_expired():
             continue  # another run already handled it
 
         if new_status == "approved":  # flag confirmed: harmful content actioned
+            note = _closure_note_with_labels(item.get("detected_labels"))
             get_db().execute_query(
                 """
                 UPDATE job_post
@@ -280,7 +300,7 @@ def _auto_approve_expired():
                 params={
                     "id":     content_id,
                     "reason": DEFAULT_CLOSURE_REASON_CONTENT,
-                    "note":   DEFAULT_CLOSURE_NOTE_CONTENT,
+                    "note":   note,
                 },
             )
             logger("ADMIN", f"Auto-closed {ctype} {content_id}, max_label_score={max_score:.2f} >= {CONTENT_AUTO_CLOSE_THRESHOLD_JOB}", level="WARNING")
@@ -288,7 +308,7 @@ def _auto_approve_expired():
                 content_id,
                 "job_closed_content_violation",
                 "Job Post Closed",
-                DEFAULT_CLOSURE_NOTE_CONTENT,
+                note,
             )
         else:  # flag dismissed: false positive (or non-job_post, no action to take)
             logger("ADMIN", f"Auto-dismissed {ctype} {content_id}, max_label_score={max_score:.2f}", level="INFO")
@@ -421,7 +441,7 @@ def action_moderation_item(
         content_type = updated.get("content_type", "")
         content_id   = str(updated.get("content_id", ""))
         if content_type == "job_post":
-            closure_note = admin_note or DEFAULT_CLOSURE_NOTE_CONTENT
+            closure_note = admin_note or _closure_note_with_labels(updated.get("detected_labels"))
             get_db().execute_query(
                 """
                 UPDATE job_post

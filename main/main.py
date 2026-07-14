@@ -104,9 +104,18 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             logger("LIFESPAN", f"Scam detector warm-up failed (non-fatal): {e}", level="WARNING")
 
+    def _warmup_cv_analysis():
+        try:
+            from ai_related.cv_analysis.cv_analysis_rf import _load_models
+            _load_models()
+            logger("LIFESPAN", "CV analysis models warmed up (Random Forest)", level="INFO")
+        except Exception as e:
+            logger("LIFESPAN", f"CV analysis model warm-up failed (non-fatal): {e}", level="WARNING")
+
     asyncio.create_task(asyncio.to_thread(_warmup_harmful_text))
     asyncio.create_task(asyncio.to_thread(_warmup_embedding))
     asyncio.create_task(asyncio.to_thread(_warmup_scam_detector))
+    asyncio.create_task(asyncio.to_thread(_warmup_cv_analysis))
 
     yield
 
