@@ -100,29 +100,26 @@ async def admin_dashboard(current_user: UserInDB = Depends(get_admin_user)):
 @admin_router.get("/moderation")
 async def list_moderation(
     status:       str = Query(default="pending",     description="pending | approved | rejected | all"),
-    content_type: str = Query(default="all",         description="job_post | freelancer_profile | client_profile | all"),
     sort_by:      str = Query(default="created_at",  description="created_at | total_score | max_score | content_type | status"),
     sort_dir:     str = Query(default="desc",        description="asc | desc"),
     page:         int = Query(default=1, ge=1),
     page_size:    int = Query(default=20, ge=1, le=100),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """List harmful text detection queue items. Supports filtering by status and content_type, and sorting."""
+    """List harmful text detection queue items. Supports filtering by status and sorting."""
     try:
         if status not in ("pending", "approved", "rejected", "all"):
             return ResponseSchema.error("status must be pending, approved, rejected, or all", 400)
-        if content_type not in ("job_post", "freelancer_profile", "client_profile", "all"):
-            return ResponseSchema.error("content_type must be job_post, freelancer_profile, client_profile, or all", 400)
         if sort_by not in ("created_at", "total_score", "max_score", "content_type", "status"):
             return ResponseSchema.error("sort_by must be created_at, total_score, max_score, content_type, or status", 400)
         if sort_dir not in ("asc", "desc"):
             return ResponseSchema.error("sort_dir must be asc or desc", 400)
         items = list_moderation_queue(
-            status=status, content_type=content_type,
+            status=status,
             sort_by=sort_by, sort_dir=sort_dir,
             page=page, page_size=page_size,
         )
-        logger("ADMIN", f"Moderation queue fetched: status={status} content_type={content_type} sort={sort_by} {sort_dir}", "GET /admin/moderation", "INFO")
+        logger("ADMIN", f"Moderation queue fetched: status={status} sort={sort_by} {sort_dir}", "GET /admin/moderation", "INFO")
         return ResponseSchema.success(items, 200)
     except Exception as e:
         logger("ADMIN", f"Moderation list error: {e}", "GET /admin/moderation", "ERROR")

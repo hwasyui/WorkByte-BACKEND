@@ -375,7 +375,6 @@ def force_expire_scam_flags(flag_ids: List[str]) -> None:
 
 def list_moderation_queue(
     status: str = "pending",
-    content_type: str = "all",
     sort_by: str = "created_at",
     sort_dir: str = "desc",
     page: int = 1,
@@ -396,13 +395,11 @@ def list_moderation_queue(
         FROM harmful_text_queue cmq
         JOIN users u ON u.user_id = cmq.user_id
         WHERE (:status = 'all' OR cmq.status = :status)
-          AND (:content_type = 'all' OR cmq.content_type = :content_type)
         ORDER BY {sort_col} {direction}
         LIMIT :limit OFFSET :offset
         """,
         params={
             "status":       status,
-            "content_type": content_type,
             "limit":        page_size,
             "offset":       offset,
         },
