@@ -247,8 +247,28 @@ def _auto_approve_expired():
         content_id = str(item.get("content_id", ""))
         mid        = str(item.get("moderation_id", ""))
 
-        if ctype == "job_post" and max_score >= CONTENT_AUTO_CLOSE_THRESHOLD_JOB:
-            new_status = "approved"  # flag confirmed: harmful content actioned
+        new_status = (
+            "approved"
+            if ctype == "job_post" and max_score >= CONTENT_AUTO_CLOSE_THRESHOLD_JOB
+            else "rejected"
+        )
+
+        # Claim the row first: only the run that actually flips it out of 'pending' acts on
+        # the content. Stops the background sweep loop and an admin opening the queue from
+        # double-closing and double-notifying the same job.
+        claimed = _rows(get_db().execute_query(
+            """
+            UPDATE harmful_text_queue
+            SET status = :status, actioned_at = NOW()
+            WHERE moderation_id = :mid AND status = 'pending'
+            RETURNING moderation_id
+            """,
+            params={"status": new_status, "mid": mid},
+        ))
+        if not claimed:
+            continue  # another run already handled it
+
+        if new_status == "approved":  # flag confirmed: harmful content actioned
             get_db().execute_query(
                 """
                 UPDATE job_post
@@ -270,18 +290,33 @@ def _auto_approve_expired():
                 "Job Post Closed",
                 DEFAULT_CLOSURE_NOTE_CONTENT,
             )
-        else:
-            new_status = "rejected"  # flag dismissed: false positive (or non-job_post, no action to take)
+        else:  # flag dismissed: false positive (or non-job_post, no action to take)
             logger("ADMIN", f"Auto-dismissed {ctype} {content_id}, max_label_score={max_score:.2f}", level="INFO")
 
-        get_db().execute_query(
-            """
-            UPDATE harmful_text_queue
-            SET status = :status, actioned_at = NOW()
-            WHERE moderation_id = :mid
-            """,
-            params={"status": new_status, "mid": mid},
-        )
+
+MODERATION_SWEEP_INTERVAL_SECONDS = int(os.getenv("MODERATION_SWEEP_INTERVAL_SECONDS", "3600"))
+
+
+async def moderation_sweep_loop() -> None:
+    """Periodically action moderation rows whose 30-day window has closed, so the deadline
+    is honoured on its own timeline instead of only when an admin happens to open the queue.
+    Launched via asyncio.create_task() in main.py's lifespan.
+
+    Calls _auto_approve_expired() directly rather than via asyncio.to_thread: that function's
+    _notify_job_post_closed() schedules its notification with
+    asyncio.get_running_loop().create_task(...), which only finds a loop on the thread that's
+    actually running one. A worker thread spawned by asyncio.to_thread has none, so
+    notifications would silently never fire when the background loop (rather than an admin's
+    request) is what closes the job. Running it inline keeps it on this loop's own thread,
+    matching how the same function already runs synchronously inside admin route handlers
+    (list_moderation_queue, get_admin_dashboard_stats) without complaint."""
+    logger("ADMIN", f"Moderation sweep loop started | interval={MODERATION_SWEEP_INTERVAL_SECONDS}s", level="INFO")
+    while True:
+        await asyncio.sleep(MODERATION_SWEEP_INTERVAL_SECONDS)
+        try:
+            _auto_approve_expired()
+        except Exception as e:
+            logger("ADMIN", f"Moderation sweep loop unhandled error: {e}", level="ERROR")
 
 
 def force_expire_moderation(moderation_ids: List[str]) -> None:

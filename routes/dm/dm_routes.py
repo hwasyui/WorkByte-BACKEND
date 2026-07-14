@@ -123,6 +123,25 @@ async def start_thread(
         )
 
     try:
+        # Opening message goes through the same scan as any other DM: it is persisted as
+        # first_message and broadcast immediately, so it must be checked before either.
+        if payload.message_text and payload.message_text.strip():
+            if len(payload.message_text) > 2500:
+                return ResponseSchema.error("message_text cannot exceed 2500 characters", 400)
+            harm_result = scan_harmful_text_with_ml_fallback(payload.message_text)
+            if harm_result["is_flagged"]:
+                labels = harm_result.get("detected_labels", [])
+                logger(
+                    "DM",
+                    f"Blocked harmful opening message from {current_user.user_id} | labels={labels}",
+                    "POST /dm/threads",
+                    "WARNING",
+                )
+                return ResponseSchema.error(
+                    f"Your message was not sent. It was detected as harmful ({', '.join(labels)}).",
+                    400,
+                )
+
         result = DMFunctions.create_thread(
             initiator_id=str(current_user.user_id),
             participant_id=str(payload.participant_id),

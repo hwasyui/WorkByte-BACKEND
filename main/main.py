@@ -45,6 +45,7 @@ from routes.dashboard.dashboard_routes import dashboard_router
 from ai_related.cv_analysis.cv_analysis_routes import cv_analysis_router
 from ai_related.harmful_text_detection.harmful_text_routes import harmful_text_router
 from routes.admin.admin_routes import admin_router, reports_router, appeals_router
+from routes.admin.admin_functions import moderation_sweep_loop
 from routes.notifications.notification_routes import notification_router
 from routes.share.share_routes import share_router
 
@@ -75,6 +76,9 @@ async def lifespan(app: FastAPI):
 
     sweep_task = asyncio.create_task(embedding_sweep_loop())
     logger("LIFESPAN", "Embedding sweep worker started (handles dirty records and manual /embed/ calls regardless of mode)", level="INFO")
+
+    moderation_task = asyncio.create_task(moderation_sweep_loop())
+    logger("LIFESPAN", "Moderation sweep worker started (honours the 30-day auto-approve deadline on its own timeline)", level="INFO")
 
     def _warmup_harmful_text():
         try:
@@ -112,6 +116,13 @@ async def lifespan(app: FastAPI):
     except asyncio.CancelledError:
         pass
     logger("LIFESPAN", "Embedding sweep worker stopped", level="INFO")
+
+    moderation_task.cancel()
+    try:
+        await moderation_task
+    except asyncio.CancelledError:
+        pass
+    logger("LIFESPAN", "Moderation sweep worker stopped", level="INFO")
 
     try:
         shutdown_embedding_executor()
