@@ -376,24 +376,18 @@ def _build_evidence_list(past_contracts: list[dict], portfolio_items: list[dict]
     return used_contracts, used_portfolio, evidence_path
 
 
-def _build_prompt(role: dict, fc: dict, used_contracts: list[dict], used_portfolio: list[dict]) -> tuple[str, dict]:
+def _build_prompt(role: dict, fc: dict, used_contracts: list[dict], used_portfolio: list[dict]) -> str:
     """
     Build the grounded LLM prompt for ONE role from role, freelancer, and gated
     evidence context.
 
-    Pre-computes skill matching so the LLM receives explicit evidence
-    (matched/missing skills, coverage %) rather than having to infer it.
-
-    Returns:
-        (prompt_string, skill_info); skill_info carries matched_req/missing_req/
-        coverage_pct back to analyse_role_match() so it can stitch pre-computed
-        fields into the result and apply the coverage ceiling without relying on
-        the LLM to copy them verbatim.
+    No server-side skill matching: the freelancer's skills and the role's
+    required/preferred skills are both shown to the LLM, which judges coverage
+    (including related tools and adjacent skills) itself.
     """
-    freelancer_skill_map = {
-        s["skill_name"].lower(): s for s in fc.get("skills", [])
-    }
-
+    # Server does no skill matching. The LLM gets the freelancer's skills and the role's
+    # required/preferred skills and judges coverage itself, so related tools and adjacent
+    # skills count too. We only split role skills into required vs preferred for display.
     skills_list = role.get("skills") or []
     required, preferred = [], []
     for skill_str in skills_list:
@@ -402,11 +396,6 @@ def _build_prompt(role: dict, fc: dict, used_contracts: list[dict], used_portfol
             required.append(name)
         else:
             preferred.append(name)
-
-    matched_req  = [s for s in required  if s.lower() in freelancer_skill_map]
-    missing_req  = [s for s in required  if s.lower() not in freelancer_skill_map]
-    matched_pref = [s for s in preferred if s.lower() in freelancer_skill_map]
-    coverage_pct = int(len(matched_req) / len(required) * 100) if required else 100
 
     # Freelancer's own experience tier (self-contained -- job.experience_level is never
     # read into this context at all, see job_fit_analysis.md Section 3)
@@ -485,47 +474,32 @@ def _build_prompt(role: dict, fc: dict, used_contracts: list[dict], used_portfol
     else:
         lines.append("\nPAST CONTRACTS\nNone relevant on-platform yet.")
 
-    lines.append("\nSKILL MATCH (pre-computed, primary evidence for scoring)")
-    lines.append(f"Required skill coverage: {len(matched_req)}/{len(required)} = {coverage_pct}%")
-    if matched_req:
-        matched_with_level = []
-        for s in matched_req:
-            lvl = freelancer_skill_map.get(s.lower(), {}).get("proficiency_level", "")
-            matched_with_level.append(f"{s}[{lvl}]" if lvl else s)
-        lines.append(f"Required PRESENT: {', '.join(matched_with_level)} ✓")
-    if missing_req:
-        lines.append(f"Required ABSENT:  {', '.join(missing_req)} ✗")
-    if not required:
-        lines.append("No required skills specified")
-    if matched_pref:
-        lines.append(f"Preferred PRESENT: {', '.join(matched_pref)}")
+    lines.append("\nROLE REQUIREMENTS (judge coverage against the freelancer's skills above)")
+    if required:
+        lines.append(f"Required skills: {', '.join(required)}")
+    else:
+        lines.append("Required skills: none specified")
+    if preferred:
+        lines.append(f"Preferred skills: {', '.join(preferred)}")
 
     context = "\n".join(lines)
-
-    band = (
-        "score 10-35, recommendation skip"     if coverage_pct <= 33 else
-        "score 36-59, recommendation consider" if coverage_pct <= 60 else
-        "score 60-74, recommendation apply"    if coverage_pct <= 80 else
-        "score 75-100, recommendation apply"
-    )
 
     prompt = f"""You are an AI job matching assistant. Analyse the freelancer's fit for this ONE role.
 
 {context}
 
 Score this role holistically (0-100) considering:
-  1. Required skill coverage (shown above, primary factor)
-  2. Proficiency levels of matched skills
+  1. How well your skills cover the role's required and preferred skills — count closely related
+     tools and adjacent skills as coverage, not only exact-name matches
+  2. Proficiency levels of the skills that match
   3. Directly relevant past contracts (as evidence of experience, not platform credibility)
   4. Portfolio items that demonstrate the role's core skills
   5. Work experience relevance to this role
 
-Scoring guidance (skill coverage reference): coverage={coverage_pct}% → {band}
-
-Use coverage as the primary anchor but adjust based on evidence of relevant experience from past
-contracts and portfolio. A freelancer with 50% required skills but directly relevant past work
-can score higher than one with 50% skills and no demonstrated experience in the domain.
-Never give 0 unless the freelancer has absolutely nothing relevant to the role.
+Judge skill coverage yourself from the freelancer's skills and the role requirements shown above.
+A freelancer missing an exact required skill but holding a closely related one, or with directly
+relevant past work, can still score well. Never give 0 unless the freelancer has absolutely nothing
+relevant to the role.
 
 VOICE: Write every text field in SECOND PERSON, speaking directly to the freelancer.
 Use "you", "your", "you have", "you are missing" - never "the freelancer", "they", or "their".
@@ -536,8 +510,8 @@ Respond ONLY with valid JSON (no markdown, no explanation before or after):
   "match_score": <integer 0-100, holistic score for this role>,
   "recommendation": "<apply/consider/skip>",
   "recommendation_reason": "<2-3 sentences in second person, cite skill coverage, relevant past contracts or portfolio items by name, and your experience level. Be specific and detailed.>",
-  "matching_skills": {json.dumps(matched_req)},
-  "missing_required_skills": {json.dumps(missing_req)},
+  "matching_skills": ["<role required/preferred skills you judge the freelancer has, by the exact skill name shown above; include a required skill if a closely related tool covers it>"],
+  "missing_required_skills": ["<required skills the freelancer lacks and has no closely related equivalent for, by exact name>"],
   "strengths": ["<3-5 detailed items in second person, specific to this role. For each, explain WHY it matters and reference concrete evidence (e.g. specific past contract name, portfolio project name, your proficiency level, your work experience). Do not write generic statements.>"],
   "gaps": ["<2-4 items in second person about MISSING SKILLS or EXPERIENCE only, do NOT mention metrics, ratings, or success rates. For each: (a) what skill/experience you are missing, (b) why it matters for this role, (c) how significant it is. Write [] if there are truly no skill/experience gaps.>"],
   "skill_tips": ["<2-3 specific, actionable tips addressed directly to you. Name exact technologies, certifications, or project types to pursue to close each gap. Be concrete, not generic.>"]
@@ -545,16 +519,13 @@ Respond ONLY with valid JSON (no markdown, no explanation before or after):
 
 Rules:
 - recommendation: "apply" if score ≥65, "consider" if 40-64, "skip" if <40
-- matching_skills / missing_required_skills: already filled above, do NOT change
+- matching_skills / missing_required_skills: you decide these from the freelancer's skills and the
+  role requirements above; use the exact role skill names, and treat a required skill as matching
+  when a closely related tool covers it
 
 Return ONLY the JSON."""
 
-    skill_info = {
-        "matched_req":  matched_req,
-        "missing_req":  missing_req,
-        "coverage_pct": coverage_pct,
-    }
-    return prompt, skill_info
+    return prompt
 
 
 def _parse_llm_json(raw: str, source: str) -> dict:
@@ -732,7 +703,7 @@ async def analyse_role_match(db, freelancer_id: str, job_role_id: str) -> dict:
     )
 
     t_prompt = time.perf_counter()
-    prompt, skill_info = _build_prompt(role, fc, used_contracts, used_portfolio)
+    prompt = _build_prompt(role, fc, used_contracts, used_portfolio)
     prompt_ms = (time.perf_counter() - t_prompt) * 1000
     logger(
         "RAG_ANALYSER",
@@ -743,20 +714,14 @@ async def analyse_role_match(db, freelancer_id: str, job_role_id: str) -> dict:
     result = await _call_llm(prompt)
 
     if "error" not in result:
-        # Always use server-computed skill lists; LLM value is discarded
-        result["matching_skills"]         = skill_info["matched_req"]
-        result["missing_required_skills"] = skill_info["missing_req"]
-
-        # Ceiling: coverage_pct + 30, so 0% → max 30, 35% → max 65, 70%+ → 100.
-        # The +30 offset means 35% required skill coverage is the minimum to ever
-        # reach "apply" (35+30=65). The LLM cannot exceed this regardless of how
-        # strong the portfolio or past contracts are, keeping skill coverage as the
-        # primary gate while still giving qualitative evidence 30 points of influence.
-        ceiling   = min(100, skill_info["coverage_pct"] + 30)
+        # No score ceiling and no server-side skill lists: the pipeline is
+        # retrieval -> LLM generation -> return. The model judges coverage and fills
+        # matching_skills / missing_required_skills itself; its holistic score stands,
+        # clamped to 0-100.
         raw_score = int(result.get("match_score") or 0)
-        result["match_score"] = min(ceiling, raw_score)
+        result["match_score"] = max(0, min(100, raw_score))
 
-        # Recommendation always derived from the (capped) score
+        # Recommendation derived from the score
         s = result["match_score"]
         result["recommendation"] = (
             "apply" if s >= 65 else ("consider" if s >= 40 else "skip")
@@ -764,6 +729,8 @@ async def analyse_role_match(db, freelancer_id: str, job_role_id: str) -> dict:
 
         # Guarantee all fields the frontend expects are always present
         result.setdefault("recommendation_reason", "")
+        result.setdefault("matching_skills", [])
+        result.setdefault("missing_required_skills", [])
         result.setdefault("strengths", [])
         result.setdefault("gaps", [])
         result.setdefault("skill_tips", [])
