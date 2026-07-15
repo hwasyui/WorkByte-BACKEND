@@ -394,24 +394,6 @@ def _build_prompt(role: dict, fc: dict, used_contracts: list[dict], used_portfol
         else:
             preferred.append(name)
 
-    # Freelancer's own experience tier (self-contained -- job.experience_level is never
-    # read into this context at all, see job_fit_analysis.md Section 3)
-    _EXP_LABEL_RAG = {1: "entry", 2: "intermediate", 3: "expert"}
-    total_jobs  = int(fc.get("total_jobs") or 0)
-    work_exp_count = len(fc.get("work_experience") or [])
-
-    # Verified tier: driven entirely by in-platform completed contracts
-    verified_exp_num = 3 if total_jobs >= 10 else (2 if total_jobs >= 3 else 1)
-    # Unverified floor: self-reported work experience can lift to intermediate only
-    unverified_exp_num = min(2, 1 + (1 if work_exp_count >= 1 else 0))
-
-    if verified_exp_num >= unverified_exp_num:
-        fl_exp_num = verified_exp_num
-        exp_source = f"verified - {total_jobs} completed contract{'s' if total_jobs != 1 else ''}"
-    else:
-        fl_exp_num = unverified_exp_num
-        exp_source = f"self-reported, unverified - {work_exp_count} work experience entr{'ies' if work_exp_count != 1 else 'y'}"
-
     # Build context
     lines = []
 
@@ -430,7 +412,6 @@ def _build_prompt(role: dict, fc: dict, used_contracts: list[dict], used_portfol
     if fc.get("title"):
         lines.append(f"Title:        {fc['title']}")
     lines.append(f"Jobs done:    {fc.get('total_jobs', 0)} completed in-platform")
-    lines.append(f"Experience:   {_EXP_LABEL_RAG[fl_exp_num]} ({exp_source})")
     if fc.get("estimated_rate"):
         rate_currency = fc.get("rate_currency") or "USD"
         rate_time     = fc.get("rate_time") or "hourly"
