@@ -405,7 +405,7 @@ def _build_prompt(role: dict, fc: dict, used_contracts: list[dict], used_portfol
 
     lines.append(f"\nROLE: {role.get('role_title', '')}")
     if role.get("role_description"):
-        lines.append(f"Role description: {(role['role_description'] or '')[:200]}")
+        lines.append(f"Role description: {(role['role_description'] or '')[:500]}")
 
     lines.append("\nFREELANCER PROFILE")
     lines.append(f"Name:         {fc.get('full_name', '')}")
