@@ -385,9 +385,6 @@ def _build_prompt(role: dict, fc: dict, used_contracts: list[dict], used_portfol
     required/preferred skills are both shown to the LLM, which judges coverage
     (including related tools and adjacent skills) itself.
     """
-    # Server does no skill matching. The LLM gets the freelancer's skills and the role's
-    # required/preferred skills and judges coverage itself, so related tools and adjacent
-    # skills count too. We only split role skills into required vs preferred for display.
     skills_list = role.get("skills") or []
     required, preferred = [], []
     for skill_str in skills_list:
@@ -714,20 +711,12 @@ async def analyse_role_match(db, freelancer_id: str, job_role_id: str) -> dict:
     result = await _call_llm(prompt)
 
     if "error" not in result:
-        # No score ceiling and no server-side skill lists: the pipeline is
-        # retrieval -> LLM generation -> return. The model judges coverage and fills
-        # matching_skills / missing_required_skills itself; its holistic score stands,
-        # clamped to 0-100.
-        raw_score = int(result.get("match_score") or 0)
-        result["match_score"] = max(0, min(100, raw_score))
-
-        # Recommendation derived from the score
-        s = result["match_score"]
-        result["recommendation"] = (
-            "apply" if s >= 65 else ("consider" if s >= 40 else "skip")
-        )
+        # No server-side scoring: match_score and recommendation are whatever the LLM
+        # returned in its JSON, untouched.
 
         # Guarantee all fields the frontend expects are always present
+        result.setdefault("match_score", 0)
+        result.setdefault("recommendation", "skip")
         result.setdefault("recommendation_reason", "")
         result.setdefault("matching_skills", [])
         result.setdefault("missing_required_skills", [])
