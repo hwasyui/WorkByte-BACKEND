@@ -2,7 +2,7 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from fastapi import APIRouter, Depends, Query, status, UploadFile, File
+from fastapi import HTTPException, APIRouter, Depends, Query, status, UploadFile, File
 from typing import List, Optional, Dict
 import uuid
 from functions.schema_model import ClientCreate, ClientUpdate, ClientResponse
@@ -17,15 +17,17 @@ from mimetypes import guess_type as guess_mime
 
 client_router = APIRouter(prefix="/clients", tags=["Clients"])
 
-_VALID_CLIENT_ORDER_BY = {"created_at", "updated_at", "full_name", "total_jobs_posted", "total_jobs_completed"}
-
+_VALID_CLIENT_ORDER_BY = {
+    "created_at", "updated_at", "full_name", "total_jobs_posted", "total_jobs_completed",
+    "weighted_review_avg_received", "total_reviews_received",
+}
 
 @client_router.get("/browse/all", response_model=List[ClientResponse])
 async def browse_all_clients(
     order_by: str = Query(
-        default="created_at",
-        description="Sort field. One of: created_at (default), updated_at, full_name, total_jobs_posted, total_jobs_completed",
-    ),
+        default="weighted_review_avg_received",
+        description="Sort field. One of: created_at, updated_at, full_name, total_jobs_posted, total_jobs_completed, weighted_review_avg_received (default), total_reviews_received",
+        ),
     order_dir: str = Query(default="desc", description="asc or desc", pattern="^(asc|desc)$"),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
@@ -192,6 +194,8 @@ async def update_client(
         success_msg = f"Updated client {client_id} with fields: {', '.join(update_data.keys())}"
         logger("CLIENT", success_msg, "PUT /clients/{identifier}", "INFO")
         return ResponseSchema.success(updated_client, 200)
+    except HTTPException:
+        raise
     except Exception as e:
         error_msg = f"Failed to update client {identifier}: {str(e)}"
         logger("CLIENT", error_msg, "PUT /clients/{identifier}", "ERROR")
@@ -214,6 +218,8 @@ async def delete_client(identifier: str, current_user: UserInDB = Depends(get_cl
         success_msg = f"Client {client_id} deleted successfully"
         logger("CLIENT", success_msg, "DELETE /clients/{identifier}", "INFO")
         return ResponseSchema.success(success_msg, 200)
+    except HTTPException:
+        raise
     except Exception as e:
         error_msg = f"Failed to delete client {identifier}: {str(e)}"
         logger("CLIENT", error_msg, "DELETE /clients/{identifier}", "ERROR")
@@ -255,6 +261,8 @@ async def upload_client_profile_picture_endpoint(
         )
         logger("CLIENT", f"Profile picture updated for client {client_id}", f"POST /clients/{client_id}/profile-picture", "INFO")
         return ResponseSchema.success(updated_client, 200)
+    except HTTPException:
+        raise
     except Exception as e:
         error_msg = f"Failed to upload profile picture for client {client_id}: {str(e)}"
         logger("CLIENT", error_msg, f"POST /clients/{client_id}/profile-picture", "ERROR")
@@ -293,6 +301,8 @@ async def delete_client_profile_picture(
         )
         logger("CLIENT", f"Profile picture deleted for client {client_id}", f"DELETE /clients/{client_id}/profile-picture", "INFO")
         return ResponseSchema.success({"message": "Profile picture deleted successfully", "client": updated}, 200)
+    except HTTPException:
+        raise
     except Exception as e:
         error_msg = f"Failed to delete profile picture for client {client_id}: {str(e)}"
         logger("CLIENT", error_msg, f"DELETE /clients/{client_id}/profile-picture", "ERROR")

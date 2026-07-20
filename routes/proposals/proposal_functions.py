@@ -244,6 +244,66 @@ class ProposalFunctions:
             raise
 
     @staticmethod
+    def auto_reject_pending_proposals_for_filled_role(job_role_id: str, exclude_proposal_id: str) -> List[Dict]:
+        """
+        Auto-rejects every other still-pending proposal for a role once its last
+        open position gets taken (by exclude_proposal_id's contract), so those
+        freelancers see 'rejected' instead of being left hanging on a role that's
+        already fully staffed. Returns each rejected proposal's freelancer user_id
+        and the role title for the caller to notify.
+
+        Two queries, not one WITH...UPDATE...RETURNING - Database.execute_query
+        only commits when the query text starts with INSERT/UPDATE/DELETE, and a
+        query starting with WITH would silently never commit the update.
+        """
+        try:
+            db = get_db()
+            rejected_rows = db.execute_query(
+                """
+                UPDATE proposal
+                SET status = 'rejected'
+                WHERE job_role_id = :jrid
+                  AND status = 'pending'
+                  AND proposal_id != :exclude_pid
+                RETURNING proposal_id, freelancer_id
+                """,
+                {"jrid": job_role_id, "exclude_pid": exclude_proposal_id},
+            )
+            if not rejected_rows:
+                return []
+
+            role_rows = db.execute_query(
+                "SELECT role_title FROM job_role WHERE job_role_id = :jrid",
+                {"jrid": job_role_id},
+            )
+            role_title = role_rows[0]["role_title"] if role_rows else "a role"
+
+            result = []
+            for row in rejected_rows:
+                freelancer_rows = db.fetch_data(
+                    table_name="freelancer",
+                    conditions=[("freelancer_id", "=", str(row["freelancer_id"]))],
+                    limit=1,
+                )
+                if freelancer_rows:
+                    result.append({
+                        "proposal_id": str(row["proposal_id"]),
+                        "freelancer_user_id": str(freelancer_rows[0]["user_id"]),
+                        "role_title": role_title,
+                    })
+
+            logger(
+                "PROPOSAL_FUNCTIONS",
+                f"Auto-rejected {len(result)} pending proposal(s) for filled role {job_role_id}",
+                level="INFO",
+            )
+            return result
+
+        except Exception as e:
+            logger("PROPOSAL_FUNCTIONS", f"Error auto-rejecting proposals for role {job_role_id}: {str(e)}", level="ERROR")
+            raise
+
+    @staticmethod
     def delete_proposal(proposal_id: str) -> bool:
         """Delete a proposal and sync proposal_count on the job post."""
         try:

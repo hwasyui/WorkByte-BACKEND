@@ -3,6 +3,12 @@ import logging.handlers
 import traceback
 import os
 
+# Services in this set get routed to their own rotating file instead of
+# app.log. They tend to run on a timer and re-log the same handful of
+# entities every cycle, which would otherwise dominate app.log's rotation
+# budget and push out unrelated history.
+_ISOLATED_SERVICES = {"SWEEP_WORKER"}
+
 class Logger:
     def __init__(self, log_dir=None):
         if log_dir is None:
@@ -11,40 +17,71 @@ class Logger:
 
         os.makedirs(log_dir, exist_ok=True)
 
+        formatter = logging.Formatter("%(asctime)s | %(levelname)s | %(service)s | %(route)s | %(message)s")
+
         self.logger = logging.getLogger("app_logger")
 
         if not self.logger.handlers:
-            self.logger.setLevel(logging.DEBUG)
+            self.logger.setLevel(logging.INFO)
 
-            formatter =  logging.Formatter("%(asctime)s | %(levelname)s | %(service)s | %(route)s | %(message)s")
-            
             console_handler = logging.StreamHandler()
             console_handler.setFormatter(formatter)
+            console_handler.setLevel(logging.DEBUG)
 
+            # Logger itself is set to INFO above, so DEBUG records (per-row
+            # success lines, "no dirty rows" checks) never reach either
+            # handler - drop to DEBUG on self.logger above to see them again.
             file_handler = logging.handlers.RotatingFileHandler(os.path.join(log_dir, "app.log"), maxBytes=1024*1024, backupCount=10)
-
             file_handler.setFormatter(formatter)
-            
+            file_handler.setLevel(logging.INFO)
+
             self.logger.addHandler(console_handler)
             self.logger.addHandler(file_handler)
-    
-    def log(self, service, message="", route="", level="INFO"):
+
+        # Dedicated logger for isolated services (currently just SWEEP_WORKER).
+        # propagate=False keeps its records out of app_logger's handlers
+        # entirely, so it never doubles up in app.log.
+        self.isolated_logger = logging.getLogger("app_logger.isolated")
+
+        if not self.isolated_logger.handlers:
+            self.isolated_logger.setLevel(logging.INFO)
+            self.isolated_logger.propagate = False
+
+            isolated_console_handler = logging.StreamHandler()
+            isolated_console_handler.setFormatter(formatter)
+            self.isolated_logger.addHandler(isolated_console_handler)
+
+            isolated_file_handler = logging.handlers.RotatingFileHandler(
+                os.path.join(log_dir, "sweep.log"), maxBytes=1024 * 1024, backupCount=5
+            )
+            isolated_file_handler.setFormatter(formatter)
+            self.isolated_logger.addHandler(isolated_file_handler)
+
+    def log(self, service, message="", route="", level="INFO", exc_info=None):
         extra = {"service": service or "", "route": route or ""}
 
         level = level.upper()
+        target = self.isolated_logger if service in _ISOLATED_SERVICES else self.logger
 
         if level == "ERROR":
-            self.logger.error(message, exc_info=True, extra=extra)
+            target.error(message, exc_info=True if exc_info is None else exc_info, extra=extra)
         elif level == "WARNING":
-            self.logger.warning(message, extra=extra)
+            target.warning(message, extra=extra)
         elif level == "DEBUG":
-            self.logger.debug(message, extra=extra)
+            target.debug(message, extra=extra)
         elif level == "CRITICAL":
-            self.logger.critical(message, exc_info=True, extra=extra)
+            target.critical(message, exc_info=True if exc_info is None else exc_info, extra=extra)
         else:
-            self.logger.info(message, extra=extra)
+            target.info(message, extra=extra)
 
 logger_instance = Logger()
 
-def logger(service, message="", route="", level="INFO"):
-    logger_instance.log(service, message, route, level)    
+def logger(service, message="", route="", level="INFO", exc_info=None):
+    """
+    exc_info: only meaningful for ERROR/CRITICAL. Defaults to True (dump the
+    current exception's traceback), matching prior behavior. Pass
+    exc_info=False when re-logging an exception that a lower layer already
+    dumped a full traceback for, so the same stack trace isn't repeated at
+    every level of the call chain.
+    """
+    logger_instance.log(service, message, route, level, exc_info=exc_info)

@@ -2,7 +2,7 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from fastapi import APIRouter, Depends, Form, Query, Request, UploadFile, File
+from fastapi import HTTPException, APIRouter, Depends, Form, Query, Request, UploadFile, File
 from typing import List, Optional, Dict
 import uuid
 from functions.schema_model import FreelancerCreate, FreelancerUpdate, FreelancerResponse, FreelancerProfileComplete
@@ -223,6 +223,8 @@ async def update_freelancer(
 
         logger("FREELANCER", f"Updated freelancer {freelancer_id}", "PUT /freelancers/{identifier}", "INFO")
         return ResponseSchema.success(updated_freelancer, 200)
+    except HTTPException:
+        raise
     except Exception as e:
         error_msg = f"Failed to update freelancer {identifier}: {str(e)}"
         logger("FREELANCER", error_msg, "PUT /freelancers/{identifier}", "ERROR")
@@ -240,6 +242,8 @@ async def delete_freelancer(identifier: str, current_user: UserInDB = Depends(ge
         FreelancerFunctions.delete_freelancer(freelancer_id, delete_embedding=True)
         logger("FREELANCER", f"Freelancer {freelancer_id} deleted", "DELETE /freelancers/{identifier}", "INFO")
         return ResponseSchema.success(f"Freelancer {freelancer_id} deleted successfully", 200)
+    except HTTPException:
+        raise
     except Exception as e:
         error_msg = f"Failed to delete freelancer {identifier}: {str(e)}"
         logger("FREELANCER", error_msg, "DELETE /freelancers/{identifier}", "ERROR")
@@ -293,14 +297,14 @@ async def get_freelancer_embedding(freelancer_id: str, current_user: UserInDB = 
         logger("FREELANCER", error_msg, "GET /freelancers/{freelancer_id}/embedding", "ERROR")
         return ResponseSchema.error(error_msg, 500)
 
-_VALID_FREELANCER_ORDER_BY = {"created_at", "updated_at", "full_name", "estimated_rate", "total_jobs", "weighted_review_avg",}
+_VALID_FREELANCER_ORDER_BY = {"created_at", "updated_at", "full_name", "estimated_rate", "total_jobs", "weighted_review_avg", "total_reviews",}
 
 @freelancer_router.get("/browse/all", response_model=List[FreelancerResponse])
 async def browse_all_freelancers(
     order_by: str = Query(
         default="weighted_review_avg",
-        description="Sort field. One of: created_at (default), updated_at, full_name, estimated_rate, total_jobs",
-    ),
+        description="Sort field. One of: created_at (default), updated_at, full_name, estimated_rate, total_jobs, weighted_review_avg, total_reviews",
+        ),
     order_dir: str = Query(default="desc", description="asc or desc", pattern="^(asc|desc)$"),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
@@ -370,6 +374,8 @@ async def upload_freelancer_profile_picture_endpoint(
         )
         logger("FREELANCER", f"Profile picture updated for freelancer {freelancer_id}", f"POST /freelancers/{freelancer_id}/profile-picture", "INFO")
         return ResponseSchema.success(updated, 200)
+    except HTTPException:
+        raise
     except Exception as e:
         error_msg = f"Failed to upload profile picture for freelancer {freelancer_id}: {str(e)}"
         logger("FREELANCER", error_msg, f"POST /freelancers/{freelancer_id}/profile-picture", "ERROR")
@@ -408,6 +414,8 @@ async def delete_freelancer_profile_picture(
         )
         logger("FREELANCER", f"Profile picture deleted for freelancer {freelancer_id}", f"DELETE /freelancers/{freelancer_id}/profile-picture", "INFO")
         return ResponseSchema.success({"message": "Profile picture deleted successfully", "freelancer": updated}, 200)
+    except HTTPException:
+        raise
     except Exception as e:
         error_msg = f"Failed to delete profile picture for freelancer {freelancer_id}: {str(e)}"
         logger("FREELANCER", error_msg, f"DELETE /freelancers/{freelancer_id}/profile-picture", "ERROR")

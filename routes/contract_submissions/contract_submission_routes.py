@@ -9,18 +9,21 @@ from functions.schema_model import RevisionRequest, UserInDB
 from functions.authentication import get_current_user
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
-from functions.minio_client import upload_contract_submission_file, guess_mime, resolve_file_url, BUCKET_CONTRACT_SUBMISSIONS
+from functions.minio_client import upload_contract_submission_file, guess_mime, resolve_file_url, BUCKET_CONTRACT_SUBMISSIONS, MAX_UPLOAD_FILE_SIZE_BYTES
 from routes.contract_submissions.contract_submission_functions import ContractSubmissionFunctions
 from routes.freelancers.freelancer_functions import FreelancerFunctions
 from routes.clients.client_functions import ClientFunctions
 from routes.notifications.notification_functions import NotificationFunctions
 from routes.reviews.review_routes import trigger_review_pipeline_on_completion
+from routes.client_reviews.client_review_routes import trigger_client_review_pipeline_on_completion
 
 
 contract_submission_router = APIRouter(
     prefix="/contract-submissions",
     tags=["Contract Submissions"],
 )
+
+MAX_REVISION_REQUESTS = 3  # per contract, across its whole lifetime
 
 
 def _resolve_submission_urls(submission: dict) -> dict:
@@ -30,7 +33,7 @@ def _resolve_submission_urls(submission: dict) -> dict:
     return submission
 
 ALLOWED_EXTENSIONS = {"pdf", "doc", "docx", "png", "jpg", "jpeg", "zip"}
-MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB per file
+MAX_FILE_SIZE_BYTES = MAX_UPLOAD_FILE_SIZE_BYTES
 
 
 def _get_extension(filename: str) -> str:
@@ -82,7 +85,7 @@ async def create_contract_submission(
 
             file_bytes = await file.read()
             if len(file_bytes) > MAX_FILE_SIZE_BYTES:
-                return ResponseSchema.error(f"File too large: {file_name}. Max size is 10 MB", 400)
+                return ResponseSchema.error(f"File too large: {file_name}. Max size is 100 MB", 400)
 
             validated_files.append({
                 "file_name": file_name,
@@ -191,6 +194,13 @@ async def request_revision_for_latest_submission(
         if client["client_id"] != contract["client_id"]:
             return ResponseSchema.error("Unauthorized to request revision for this contract", 403)
 
+        revision_rounds = ContractSubmissionFunctions.count_revision_rounds(contract_id)
+        if revision_rounds >= MAX_REVISION_REQUESTS:
+            return ResponseSchema.error(
+                f"Maximum number of revision requests ({MAX_REVISION_REQUESTS}) reached for this contract",
+                400,
+            )
+
         latest_submission = ContractSubmissionFunctions.request_revision_for_latest_submission(
             contract_id=contract_id,
             note=payload.note,
@@ -242,6 +252,19 @@ async def approve_latest_submission(
         if client["client_id"] != contract["client_id"]:
             return ResponseSchema.error("Unauthorized to approve this contract", 403)
 
+        if contract["status"] != "under_review":
+            return ResponseSchema.error(
+                f"Cannot approve a submission when contract status is '{contract['status']}'", 400
+            )
+
+        latest_submission_check = ContractSubmissionFunctions.get_latest_submission_by_contract_id(contract_id)
+        if not latest_submission_check:
+            return ResponseSchema.error("No submission found for this contract", 404)
+        if latest_submission_check["status"] != "submitted":
+            return ResponseSchema.error(
+                f"Cannot approve a submission that is already '{latest_submission_check['status']}'", 400
+            )
+
         latest_submission = ContractSubmissionFunctions.approve_latest_submission(
             contract_id=contract_id
         )
@@ -250,6 +273,7 @@ async def approve_latest_submission(
         latest_submission = _resolve_submission_urls(latest_submission)
 
         await trigger_review_pipeline_on_completion(contract_id, background_tasks)
+        await trigger_client_review_pipeline_on_completion(contract_id, background_tasks)
 
         # Notify freelancer that submission was approved
         try:

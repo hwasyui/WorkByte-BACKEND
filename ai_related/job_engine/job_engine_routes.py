@@ -132,9 +132,11 @@ async def get_usage(
         return ResponseSchema.error(str(e), 500)
 
 
+# dev only — background worker (embedding_sweep_loop) already runs this on a timer;
+# this is just a manual "run it now" trigger for testing.
 @router.post("/sweep")
 async def trigger_sweep(current_user: UserInDB = Depends(get_current_user)):
-    """Manually trigger the dirty-embedding sweep (re-embeds all dirty records now)."""
+    """Force a dirty-embedding sweep now instead of waiting for the loop."""
     try:
         result = await run_sweep_once()
         logger("JOB_ENGINE", "Manual sweep complete", level="INFO")

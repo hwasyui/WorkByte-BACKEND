@@ -2,7 +2,7 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from fastapi import APIRouter, BackgroundTasks, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from functions.schema_model import UserInDB
 from functions.authentication import get_current_user
 from functions.access_control import (
@@ -57,13 +57,19 @@ async def get_review_for_contract(
 
         review = ReviewFunctions.get_review_by_contract_id(contract_id)
         if not review:
-            return None
+            return ResponseSchema.error(
+                f"Review for contract {contract_id} is not ready yet - it may still be processing.",
+                404,
+            )
 
         detail = ReviewFunctions.get_review_detail(review["id"])
         detail["suggested_skill_tags"] = ReviewFunctions.get_suggested_skill_tags(contract_id)
 
         logger("REVIEW", f"Fetched review form for contract {contract_id}", "GET /reviews/contract/{contract_id}", "INFO")
         return ResponseSchema.success(detail, 200)
+    except HTTPException as e:
+        logger("REVIEW", f"HTTP {e.status_code}: {e.detail}", "GET /reviews/contract/{contract_id}", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("REVIEW", f"Error: {str(e)}", "GET /reviews/contract/{contract_id}", "ERROR")
         return ResponseSchema.error(str(e), 500)

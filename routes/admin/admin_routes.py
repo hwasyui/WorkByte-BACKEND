@@ -33,13 +33,19 @@ from routes.admin.admin_functions import (
     get_user_appeals,
     get_report,
     list_appeals,
+    list_flagged_client_reviews,
+    list_flagged_reviews,
     list_moderation_queue,
+    list_red_flag_alerts,
     list_report_auto_actions,
     list_report_targets,
     list_reports,
     list_scam_flags,
+    override_publish_client_review,
+    override_publish_review,
     queue_scam_scan,
     resolve_appeal,
+    resolve_red_flag_alert,
     submit_appeal,
 )
 
@@ -102,11 +108,16 @@ async def list_moderation(
     status:       str = Query(default="pending",     description="pending | approved | rejected | all"),
     sort_by:      str = Query(default="created_at",  description="created_at | total_score | max_score | content_type | status"),
     sort_dir:     str = Query(default="desc",        description="asc | desc"),
+    min_severity: Optional[float] = Query(default=None, ge=0, le=1,
+                                           description="only return items where max(all 5 label scores) >= this value - "
+                                                        "use this instead of judging severity off a single label's score, "
+                                                        "since one label (e.g. threat) can be suppressed when another "
+                                                        "(e.g. insult) dominates the same text"),
     page:         int = Query(default=1, ge=1),
     page_size:    int = Query(default=20, ge=1, le=100),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """List harmful text detection queue items. Supports filtering by status and sorting."""
+    """List harmful text detection queue items. Supports filtering by status/severity and sorting."""
     try:
         if status not in ("pending", "approved", "rejected", "all"):
             return ResponseSchema.error("status must be pending, approved, rejected, or all", 400)
@@ -117,9 +128,10 @@ async def list_moderation(
         items = list_moderation_queue(
             status=status,
             sort_by=sort_by, sort_dir=sort_dir,
+            min_severity=min_severity,
             page=page, page_size=page_size,
         )
-        logger("ADMIN", f"Moderation queue fetched: status={status} sort={sort_by} {sort_dir}", "GET /admin/moderation", "INFO")
+        logger("ADMIN", f"Moderation queue fetched: status={status} sort={sort_by} {sort_dir} min_severity={min_severity}", "GET /admin/moderation", "INFO")
         return ResponseSchema.success(items, 200)
     except Exception as e:
         logger("ADMIN", f"Moderation list error: {e}", "GET /admin/moderation", "ERROR")
@@ -881,3 +893,130 @@ async def submit_report(
     except Exception as e:
         logger("REPORT", f"Submit report error: {e}", "POST /reports", "ERROR")
         return ResponseSchema.error(f"Failed to submit report: {e}", 500)
+
+@admin_router.get("/reviews/red-flags")
+async def list_review_red_flags(
+    is_resolved:  Optional[bool] = Query(default=None, description="filter by resolution status; omit for both"),
+    subject_type: str = Query(default="all", description="freelancer | client | all"),
+    sort_by:      str = Query(default="triggered_at", description="triggered_at | severity"),
+    sort_dir:     str = Query(default="desc",         description="asc | desc"),
+    page:         int = Query(default=1, ge=1),
+    page_size:    int = Query(default=20, ge=1, le=100),
+    current_user: UserInDB = Depends(get_admin_user),
+):
+    """Admin-wide red flag alert listing (trust score drops), across freelancers and/or clients."""
+    try:
+        if subject_type not in ("freelancer", "client", "all"):
+            return ResponseSchema.error("subject_type must be freelancer, client, or all", 400)
+        if sort_by not in ("triggered_at", "severity"):
+            return ResponseSchema.error("sort_by must be triggered_at or severity", 400)
+        if sort_dir not in ("asc", "desc"):
+            return ResponseSchema.error("sort_dir must be asc or desc", 400)
+        flags = list_red_flag_alerts(is_resolved=is_resolved, subject_type=subject_type, sort_by=sort_by, sort_dir=sort_dir, page=page, page_size=page_size)
+        logger("ADMIN", f"Review red flags fetched: is_resolved={is_resolved} subject_type={subject_type} sort={sort_by} {sort_dir}", "GET /admin/reviews/red-flags", "INFO")
+        return ResponseSchema.success(flags, 200)
+    except Exception as e:
+        logger("ADMIN", f"Review red flags list error: {e}", "GET /admin/reviews/red-flags", "ERROR")
+        return ResponseSchema.error(f"Failed to fetch red flags: {e}", 500)
+
+
+@admin_router.post("/reviews/red-flags/{alert_id}/resolve")
+async def resolve_review_red_flag(
+    alert_id: str,
+    current_user: UserInDB = Depends(get_admin_user),
+):
+    """Mark a red flag alert as resolved."""
+    try:
+        updated = resolve_red_flag_alert(alert_id=alert_id, admin_user_id=current_user.user_id)
+        if not updated:
+            return ResponseSchema.error("Alert not found or already resolved", 404)
+        logger("ADMIN", f"Red flag {alert_id} resolved by {current_user.user_id}", "POST /admin/reviews/red-flags/resolve", "INFO")
+        return ResponseSchema.success(updated, 200)
+    except Exception as e:
+        logger("ADMIN", f"Resolve red flag error: {e}", "POST /admin/reviews/red-flags/resolve", "ERROR")
+        return ResponseSchema.error(f"Failed to resolve red flag: {e}", 500)
+
+
+@admin_router.get("/reviews/flagged")
+async def list_review_flagged(
+    status:    str = Query(default="all",        description="flagged | suppressed | all"),
+    sort_by:   str = Query(default="created_at", description="created_at | status"),
+    sort_dir:  str = Query(default="desc",       description="asc | desc"),
+    page:      int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    current_user: UserInDB = Depends(get_admin_user),
+):
+    """List reviews held back from publishing (overall_pass=false), with the AI analysis that caused the hold."""
+    try:
+        if status not in ("flagged", "suppressed", "all"):
+            return ResponseSchema.error("status must be flagged, suppressed, or all", 400)
+        if sort_by not in ("created_at", "status"):
+            return ResponseSchema.error("sort_by must be created_at or status", 400)
+        if sort_dir not in ("asc", "desc"):
+            return ResponseSchema.error("sort_dir must be asc or desc", 400)
+        reviews = list_flagged_reviews(status=status, sort_by=sort_by, sort_dir=sort_dir, page=page, page_size=page_size)
+        logger("ADMIN", f"Flagged reviews fetched: status={status} sort={sort_by} {sort_dir}", "GET /admin/reviews/flagged", "INFO")
+        return ResponseSchema.success(reviews, 200)
+    except Exception as e:
+        logger("ADMIN", f"Flagged reviews list error: {e}", "GET /admin/reviews/flagged", "ERROR")
+        return ResponseSchema.error(f"Failed to fetch flagged reviews: {e}", 500)
+
+
+@admin_router.post("/reviews/{review_id}/override-publish")
+async def override_publish_review_route(
+    review_id: str,
+    current_user: UserInDB = Depends(get_admin_user),
+):
+    """Manually publish a held-back (flagged/suppressed) review after human review."""
+    try:
+        updated = await override_publish_review(review_id=review_id, admin_user_id=current_user.user_id)
+        if not updated:
+            return ResponseSchema.error("Review not found or not currently flagged/suppressed", 404)
+        logger("ADMIN", f"Review {review_id} override-published by {current_user.user_id}", "POST /admin/reviews/override-publish", "INFO")
+        return ResponseSchema.success(updated, 200)
+    except Exception as e:
+        logger("ADMIN", f"Override publish review error: {e}", "POST /admin/reviews/override-publish", "ERROR")
+        return ResponseSchema.error(f"Failed to override-publish review: {e}", 500)
+
+
+@admin_router.get("/client-reviews/flagged")
+async def list_client_review_flagged(
+    status:    str = Query(default="all",        description="flagged | suppressed | all"),
+    sort_by:   str = Query(default="created_at", description="created_at | status"),
+    sort_dir:  str = Query(default="desc",       description="asc | desc"),
+    page:      int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    current_user: UserInDB = Depends(get_admin_user),
+):
+    """List client reviews (written by freelancers) held back from publishing."""
+    try:
+        if status not in ("flagged", "suppressed", "all"):
+            return ResponseSchema.error("status must be flagged, suppressed, or all", 400)
+        if sort_by not in ("created_at", "status"):
+            return ResponseSchema.error("sort_by must be created_at or status", 400)
+        if sort_dir not in ("asc", "desc"):
+            return ResponseSchema.error("sort_dir must be asc or desc", 400)
+        reviews = list_flagged_client_reviews(status=status, sort_by=sort_by, sort_dir=sort_dir, page=page, page_size=page_size)
+        logger("ADMIN", f"Flagged client reviews fetched: status={status} sort={sort_by} {sort_dir}", "GET /admin/client-reviews/flagged", "INFO")
+        return ResponseSchema.success(reviews, 200)
+    except Exception as e:
+        logger("ADMIN", f"Flagged client reviews list error: {e}", "GET /admin/client-reviews/flagged", "ERROR")
+        return ResponseSchema.error(f"Failed to fetch flagged client reviews: {e}", 500)
+
+
+@admin_router.post("/client-reviews/{client_review_id}/override-publish")
+async def override_publish_client_review_route(
+    client_review_id: str,
+    current_user: UserInDB = Depends(get_admin_user),
+):
+    """Manually publish a held-back client review after human review."""
+    try:
+        updated = await override_publish_client_review(client_review_id=client_review_id, admin_user_id=current_user.user_id)
+        if not updated:
+            return ResponseSchema.error("Client review not found or not currently flagged/suppressed", 404)
+        logger("ADMIN", f"Client review {client_review_id} override-published by {current_user.user_id}", "POST /admin/client-reviews/override-publish", "INFO")
+        return ResponseSchema.success(updated, 200)
+    except Exception as e:
+        logger("ADMIN", f"Override publish client review error: {e}", "POST /admin/client-reviews/override-publish", "ERROR")
+        return ResponseSchema.error(f"Failed to override-publish client review: {e}", 500)
+

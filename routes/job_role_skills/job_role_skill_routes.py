@@ -2,7 +2,7 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from fastapi import APIRouter, Depends, status
+from fastapi import HTTPException, APIRouter, Depends, status
 from typing import List, Optional, Dict
 import uuid
 from functions.schema_model import JobRoleSkillCreate, JobRoleSkillUpdate, JobRoleSkillResponse
@@ -48,6 +48,8 @@ async def get_job_role_skill(job_role_skill_id: str, current_user: UserInDB = De
         success_msg = f"Retrieved job role skill {job_role_skill_id}"
         logger("JOB_ROLE_SKILL", success_msg, "GET /job-role-skills/{job_role_skill_id}", "INFO")
         return ResponseSchema.success(job_role_skill, 200)
+    except HTTPException:
+        raise
     except Exception as e:
         error_msg = f"Failed to fetch job role skill {job_role_skill_id}: {str(e)}"
         logger("JOB_ROLE_SKILL", error_msg, "GET /job-role-skills/{job_role_skill_id}", "ERROR")
@@ -91,6 +93,8 @@ async def create_job_role_skill(job_role_skill: JobRoleSkillCreate, current_user
         error_msg = f"Validation error: {str(e)}"
         logger("JOB_ROLE_SKILL", error_msg, "POST /job-role-skills", "WARNING")
         return ResponseSchema.error(error_msg, 400)
+    except HTTPException:
+        raise
     except Exception as e:
         error_msg = f"Failed to create job role skill: {str(e)}"
         logger("JOB_ROLE_SKILL", error_msg, "POST /job-role-skills", "ERROR")
@@ -117,6 +121,8 @@ async def update_job_role_skill(job_role_skill_id: str, job_role_skill_update: J
         success_msg = f"Updated job role skill {job_role_skill_id}"
         logger("JOB_ROLE_SKILL", success_msg, "PUT /job-role-skills/{job_role_skill_id}", "INFO")
         return ResponseSchema.success(updated_job_role_skill, 200)
+    except HTTPException:
+        raise
     except Exception as e:
         error_msg = f"Failed to update job role skill {job_role_skill_id}: {str(e)}"
         logger("JOB_ROLE_SKILL", error_msg, "PUT /job-role-skills/{job_role_skill_id}", "ERROR")
@@ -142,6 +148,8 @@ async def delete_job_role_skill(job_role_skill_id: str, current_user: UserInDB =
         success_msg = f"Deleted job role skill {job_role_skill_id}"
         logger("JOB_ROLE_SKILL", success_msg, "DELETE /job-role-skills/{job_role_skill_id}", "INFO")
         return ResponseSchema.success("Deleted successfully", 200)
+    except HTTPException:
+        raise
     except Exception as e:
         error_msg = f"Failed to delete job role skill {job_role_skill_id}: {str(e)}"
         logger("JOB_ROLE_SKILL", error_msg, "DELETE /job-role-skills/{job_role_skill_id}", "ERROR")

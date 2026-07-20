@@ -18,10 +18,10 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 GROQ_CHAT_URL = "https://api.groq.com/openai/v1/chat/completions"
 GROQ_MODELS_URL = "https://api.groq.com/openai/v1/models"
 
-DEFAULT_MODEL = "llama-3.3-70b-versatile"
+DEFAULT_MODEL = "openai/gpt-oss-120b"
 MODEL_FALLBACKS = [
-    "llama-3.3-70b-versatile",  # primary: best quality available on Groq free tier
-    "llama-3.1-8b-instant",     # fallback: separate rate-limit bucket, fast
+    "openai/gpt-oss-120b",       # primary - matches ai_related/job_engine/rag_analyser.py's chain
+    "llama-3.3-70b-versatile"   # fallback 1: separate rate-limit bucket
 ]
 
 LLM_CONCURRENCY_LIMIT = 2
@@ -295,7 +295,7 @@ def compute_responsiveness_score(contract_id: str, freelancer_user_id: str) -> f
         return 0.8
 
 
-def _blend_communication_score(
+def blend_communication_score(
     ai_quality_score: float,
     client_star_normalized: Optional[float],
     responsiveness_score: float,
@@ -341,9 +341,19 @@ async def analyze_review_full(
     freelancer_name: str,
     performance_score_summary: Dict,
     message_thread: str,
-    responsiveness_score: float,
-    communication_star_rating: Optional[float] = None,  # raw 1–5 from review_ratings
+    communication_star_rating: Optional[float] = None,  # raw 1–5 from review_ratings, shown as context only
 ) -> Dict:
+    """
+    Sentiment is intentionally NOT requested here: the trained sentiment_detector
+    model (review_ml/) is the sole source of truth for sentiment_score/label
+    (see review_pipeline.py), so asking the LLM to also guess it was dead weight
+    - computed every call, never read. This call now covers only what the ML
+    models can't: authenticity/coercion/mismatch judgment with real-world
+    context, and communication quality read from the actual message thread
+    (no ML model here ever looks at the thread). The communication-quality
+    blend into a single score happens in review_pipeline.py instead of here,
+    since it needs the ML sentiment score, which isn't computed yet at this point.
+    """
     system = (
         "You are a review analysis expert. "
         "Analyze the provided review data and return your own independent assessment as valid JSON only. "
@@ -352,18 +362,11 @@ async def analyze_review_full(
     )
 
     schema_description = {
-        "sentiment_score": "float between -1.0 and 1.0, how positive or negative the review text is",
-        "sentiment_label": "one of: 'positive', 'neutral', 'negative'",
-        "sentiment_mismatch": "boolean, true if sentiment_label contradicts the star rating (e.g. negative text with 5 stars)",
         "authenticity_score": "float between 0.0 and 1.0, likelihood the review is genuine and not fabricated",
         "is_flagged_fake": "boolean, true if review appears fabricated or templated",
         "is_flagged_coerced": "boolean, true if review appears pressured or coerced",
         "flag_reasons": "list of strings describing specific red flags, empty list if none",
-        "bias_score": "float between 0.0 and 1.0, degree of detected bias in the review",
-        "bias_flags": {
-            "rating_vs_performance_inconsistency": "boolean, true if star rating sharply contradicts objective performance metrics",
-            "name_bias": "boolean, true if freelancer name appears to influence the review tone",
-        },
+        "sentiment_mismatch": "boolean, true if the review text's tone contradicts the star rating (e.g. negative text with 5 stars)",
         "communication_quality_score": "float between 0.0 and 1.0, quality of freelancer communication judged from the message thread ONLY, not the review text",
         "communication_summary": "string, 1-2 sentence summary of communication quality based on the message thread",
     }
@@ -385,7 +388,7 @@ async def analyze_review_full(
         f"{comm_star_line}"
         "\nMessage thread from the project (use this to assess communication_quality_score):\n"
         f"{message_thread[:3000]}\n\n"
-        "Assess the review for sentiment, authenticity, bias, and communication quality. "
+        "Assess the review for authenticity, coercion, sentiment/rating mismatch, and communication quality. "
         "Base your analysis entirely on the data above, do not invent or assume anything.\n"
         "Return exactly one JSON object matching this schema:\n"
         f"{json.dumps(schema_description, ensure_ascii=False, indent=2)}"
@@ -394,86 +397,79 @@ async def analyze_review_full(
     try:
         result = await call_llm(system, user, json_mode=True)
 
-        sentiment_score_raw  = float(result.get("sentiment_score", 0.0))
-        ai_quality_score     = max(0.0, min(1.0, float(result.get("communication_quality_score", 0.5))))
-        authenticity_score   = float(result.get("authenticity_score", 1.0))
-        bias_score           = float(result.get("bias_score", 0.0))
-        sentiment_mismatch   = bool(result.get("sentiment_mismatch", False))
-
-        # Normalize client star rating 1–5 → 0–1
-        client_star_normalized = (
-            max(0.0, min(1.0, (communication_star_rating - 1) / 4.0))
-            if communication_star_rating is not None
-            else None
-        )
-
-        communication_sentiment_score = _blend_communication_score(
-            ai_quality_score=ai_quality_score,
-            client_star_normalized=client_star_normalized,
-            responsiveness_score=responsiveness_score,
-            sentiment_score=sentiment_score_raw,
-        )
-
-        overall_pass = (
-            authenticity_score >= 0.5
-            and bias_score <= 0.6
-            and not (
-                sentiment_mismatch
-                and avg_star_rating == 5.0
-                and result.get("sentiment_label", "neutral") == "negative"
-            )
-        )
-
         return {
-            "sentiment_score":              sentiment_score_raw,
-            "sentiment_label":              result.get("sentiment_label", "neutral"),
-            "sentiment_mismatch":           sentiment_mismatch,
-            "authenticity_score":           authenticity_score,
-            "is_flagged_fake":              bool(result.get("is_flagged_fake", False)),
-            "is_flagged_coerced":           bool(result.get("is_flagged_coerced", False)),
-            "flag_reasons":                 result.get("flag_reasons", []),
-            "bias_score":                   bias_score,
-            "bias_flags":                   result.get("bias_flags", {}),
-            "communication_sentiment_score": communication_sentiment_score,
-            "communication_summary":        result.get("communication_summary", ""),
-            "overall_pass":                 overall_pass,
+            "sentiment_mismatch":          bool(result.get("sentiment_mismatch", False)),
+            "authenticity_score":          float(result.get("authenticity_score", 1.0)),
+            "is_flagged_fake":             bool(result.get("is_flagged_fake", False)),
+            "is_flagged_coerced":          bool(result.get("is_flagged_coerced", False)),
+            "flag_reasons":                result.get("flag_reasons", []),
+            "communication_quality_score": max(0.0, min(1.0, float(result.get("communication_quality_score", 0.5)))),
+            "communication_summary":       result.get("communication_summary", ""),
         }
 
     except Exception as e:
         logger("REVIEW_AI", f"Review analysis failed: {str(e)}", level="ERROR")
         return {
-            "sentiment_score":              0.0,
-            "sentiment_label":              "neutral",
-            "sentiment_mismatch":           False,
-            "authenticity_score":           1.0,
-            "is_flagged_fake":              False,
-            "is_flagged_coerced":           False,
-            "flag_reasons":                 [],
-            "bias_score":                   0.0,
-            "bias_flags":                   {},
-            "communication_sentiment_score": 0.5,
-            "communication_summary":        "Analysis unavailable.",
-            "overall_pass":                 True,
+            "sentiment_mismatch":          False,
+            "authenticity_score":          1.0,
+            "is_flagged_fake":             False,
+            "is_flagged_coerced":          False,
+            "flag_reasons":                [],
+            "communication_quality_score": 0.5,
+            "communication_summary":       "Analysis unavailable.",
         }
 
 
 def calculate_trust_score(
     weighted_review_avg: float,
+    on_time_score: float,
     revision_rate_score: float,
     responsiveness_score: float,
     communication_sentiment: Optional[float],
-    conflict_score: Optional[float],
+    authenticity_confidence: float,
+    consistency_score: float,
+    coerced_ratio: float,
 ) -> float:
+    """
+    Trust score, rebalanced so every sub-score is a genuine, named, weighted
+    input - not a hand-wavy formula and not an invisible pass/fail gate.
+
+    Weights (of 100):
+      30%  weighted_review_avg     - recency-weighted client star ratings
+      15%  on_time_score           - on-time delivery rate (previously computed,
+                                      never used anywhere in this formula)
+      15%  revision_rate_score     - revision frequency (fewer = better)
+      10%  responsiveness_score    - reply speed from message threads
+      10%  communication_sentiment - blended communication quality score
+      10%  authenticity_confidence - Model 1 (review_ml/authenticity_detector):
+                                      avg(1 - fake_probability) across this
+                                      freelancer's published reviews
+      10%  consistency_score       - Model 2 (review_ml/mismatch_detector):
+                                      inverse of avg mismatch_severity across
+                                      their reviews
+
+    All of on_time_score/revision_rate_score/responsiveness_score/
+    communication_sentiment/authenticity_confidence/consistency_score must
+    already be aggregated across the freelancer's FULL contract/review
+    history by the caller (see calculate_aggregate_performance and
+    calculate_ai_trust_components) - passing a single contract's scores here
+    would silently let one recent job dominate a lifetime reputation number.
+
+    coerced_ratio (fraction of a freelancer's reviews flagged as coerced) is
+    a proportional penalty of up to 15 points, replacing the old flat -5
+    "if any coercion flag exists" rule that scored one bad flag the same as ten.
+    """
     communication_sentiment = float(communication_sentiment) if communication_sentiment is not None else 0.5
-    conflict_score = float(conflict_score) if conflict_score is not None else 0.0
 
-    score  = (weighted_review_avg / 5.0) * 50   # 50%: recency-weighted client star ratings
-    score += revision_rate_score         * 20   # 20%: revision frequency (fewer = better)
-    score += responsiveness_score        * 20   # 20%: reply speed from message thread
-    score += communication_sentiment     * 10   # 10%: blended communication quality score
+    score  = (weighted_review_avg / 5.0) * 30
+    score += on_time_score               * 15
+    score += revision_rate_score         * 15
+    score += responsiveness_score        * 10
+    score += communication_sentiment     * 10
+    score += authenticity_confidence     * 10
+    score += consistency_score           * 10
 
-    if conflict_score > 0.7:
-        score -= 5  # penalty for coercion-flagged reviews
+    score -= min(15.0, coerced_ratio * 30)
 
     return round(min(100.0, max(0.0, score)), 2)
 
@@ -483,9 +479,10 @@ def calculate_weighted_review_avg(freelancer_user_id: str) -> Tuple[float, int]:
         db = get_db()
         rows = db.execute_query(
             """
-            SELECT rr.score, r.published_at
+            SELECT rr.score, r.published_at, ra.authenticity_score
             FROM review_ratings rr
             JOIN reviews r ON r.id = rr.review_id
+            LEFT JOIN review_ai_analysis ra ON ra.review_id = r.id
             WHERE r.freelancer_id = :fid AND r.status = 'published'
             """,
             {"fid": freelancer_user_id},
@@ -504,7 +501,14 @@ def calculate_weighted_review_avg(freelancer_user_id: str) -> Tuple[float, int]:
                 published_at = published_at.replace(tzinfo=timezone.utc)
 
             months_ago = max(0, (now - published_at).days / 30)
-            weight = 1 / (1 + months_ago)
+            recency_weight = 1 / (1 + months_ago)
+
+            # Confidence-weight by authenticity so a borderline-but-published
+            # review counts less than a clearly-genuine one, instead of
+            # authenticity only ever acting as a binary publish/suppress gate.
+            authenticity_weight = float(row["authenticity_score"]) if row["authenticity_score"] is not None else 1.0
+            weight = recency_weight * authenticity_weight
+
             weighted_sum += float(row["score"]) * weight
             weight_total += weight
 
@@ -525,3 +529,185 @@ def calculate_weighted_review_avg(freelancer_user_id: str) -> Tuple[float, int]:
     except Exception as e:
         logger("REVIEW_AI", f"Error computing weighted avg: {str(e)}", level="ERROR")
         return 0.0, 0
+
+
+def calculate_aggregate_performance(freelancer_user_id: str) -> Dict:
+    """
+    Averages on_time/revision/responsiveness/communication scores across
+    ALL of a freelancer's completed contracts. Fixes the previous bug where
+    calculate_trust_score was fed scores from only the single contract tied
+    to whichever review had just been submitted, letting one recent job
+    swing half the trust score independent of a long track record.
+
+    Joined to reviews.status = 'published' only: communication_sentiment_score
+    and conflict_score are derived by the AI analysis from that same review's
+    text (Step 6.5, saved regardless of publish outcome), so a review the
+    pipeline suppressed/flagged as likely fake or coerced would otherwise
+    still feed its unreviewed communication/conflict signal into this
+    freelancer's aggregate the next time the trust score recalculates - a
+    silent effect on a review nobody can actually see. on_time_score/
+    revision_rate_score/responsiveness_score are objective contract facts
+    computed before the review even exists, but they ride the same join since
+    they're on the same row.
+    """
+    defaults = {
+        "on_time_score": 0.8,
+        "revision_rate_score": 1.0,
+        "responsiveness_score": 0.8,
+        "communication_sentiment_score": 0.5,
+        "coerced_ratio": 0.0,
+    }
+    try:
+        db = get_db()
+        rows = db.execute_query(
+            """
+            SELECT fps.on_time_score, fps.revision_rate_score, fps.responsiveness_score,
+                   fps.communication_sentiment_score, fps.conflict_score
+            FROM freelancer_performance_scores fps
+            JOIN reviews r ON r.contract_id = fps.contract_id
+            WHERE fps.freelancer_id = :fid AND r.status = 'published'
+            """,
+            {"fid": freelancer_user_id},
+        )
+        if not rows:
+            return defaults
+
+        def avg(key: str, default: float) -> float:
+            values = [float(r[key]) for r in rows if r[key] is not None]
+            return round(sum(values) / len(values), 3) if values else default
+
+        coerced_count = sum(1 for r in rows if float(r["conflict_score"] or 0.0) > 0.7)
+
+        return {
+            "on_time_score": avg("on_time_score", defaults["on_time_score"]),
+            "revision_rate_score": avg("revision_rate_score", defaults["revision_rate_score"]),
+            "responsiveness_score": avg("responsiveness_score", defaults["responsiveness_score"]),
+            "communication_sentiment_score": avg("communication_sentiment_score", defaults["communication_sentiment_score"]),
+            "coerced_ratio": round(coerced_count / len(rows), 3),
+        }
+    except Exception as e:
+        logger("REVIEW_AI", f"Error computing aggregate performance: {str(e)}", level="ERROR")
+        return defaults
+
+
+def calculate_ai_trust_components(freelancer_user_id: str) -> Dict:
+    """
+    Averages this freelancer's own review_ml model outputs (authenticity,
+    mismatch severity) across all their published reviews, for use as named
+    trust-score inputs rather than a one-time publish/suppress gate.
+    """
+    try:
+        db = get_db()
+        rows = db.execute_query(
+            """
+            SELECT ra.authenticity_score, ra.mismatch_severity
+            FROM review_ai_analysis ra
+            JOIN reviews r ON r.id = ra.review_id
+            WHERE r.freelancer_id = :fid AND r.status = 'published'
+            """,
+            {"fid": freelancer_user_id},
+        )
+        if not rows:
+            return {"authenticity_confidence": 1.0, "consistency_score": 1.0}
+
+        auth_scores = [float(r["authenticity_score"]) for r in rows if r["authenticity_score"] is not None]
+        authenticity_confidence = round(sum(auth_scores) / len(auth_scores), 3) if auth_scores else 1.0
+
+        severities = [float(r["mismatch_severity"]) for r in rows if r["mismatch_severity"] is not None]
+        avg_severity = (sum(severities) / len(severities)) if severities else 0.0
+        # Max possible severity is 4.0 (a 1-star vs 5-star gap) -> normalize to 0-1 and invert.
+        consistency_score = round(max(0.0, 1.0 - (avg_severity / 4.0)), 3)
+
+        return {
+            "authenticity_confidence": authenticity_confidence,
+            "consistency_score": consistency_score,
+        }
+    except Exception as e:
+        logger("REVIEW_AI", f"Error computing AI trust components: {str(e)}", level="ERROR")
+        return {"authenticity_confidence": 1.0, "consistency_score": 1.0}
+
+
+# Profile-level AI review summary
+
+MIN_REVIEWS_FOR_SUMMARY = 3
+SUMMARY_REGEN_INTERVAL = 5  # regenerate at 3, 8, 13, 18... published reviews
+
+
+def _fetch_published_review_texts(freelancer_user_id: str) -> List[Dict]:
+    db = get_db()
+    return db.execute_query(
+        """
+        SELECT wc.overall_comment, wc.client_answer
+        FROM reviews r
+        JOIN review_written_content wc ON wc.review_id = r.id
+        WHERE r.freelancer_id = :fid AND r.status = 'published'
+        ORDER BY r.published_at DESC
+        """,
+        {"fid": freelancer_user_id},
+    )
+
+
+def _fetch_top_skill_tags(freelancer_user_id: str, limit: int = 8) -> List[str]:
+    db = get_db()
+    rows = db.execute_query(
+        """
+        SELECT st.skill_tag, COUNT(*) as cnt
+        FROM review_skill_tags st
+        JOIN reviews r ON r.id = st.review_id
+        WHERE r.freelancer_id = :fid AND r.status = 'published'
+        GROUP BY st.skill_tag
+        ORDER BY cnt DESC
+        LIMIT :limit
+        """,
+        {"fid": freelancer_user_id, "limit": limit},
+    )
+    return [row["skill_tag"] for row in rows]
+
+
+async def generate_freelancer_review_summary(
+    freelancer_user_id: str,
+    freelancer_name: str,
+) -> Optional[str]:
+    """
+    Synthesizes all of a freelancer's PUBLISHED reviews into a short profile
+    summary. Only reads published reviews on purpose - harmful text and
+    fake/coerced reviews were already filtered out by the publish gate before
+    this ever runs, so this inherits that safety guarantee instead of
+    re-checking it. Returns None below MIN_REVIEWS_FOR_SUMMARY (summarizing
+    1-2 reviews is redundant with just reading them).
+    """
+    try:
+        review_rows = _fetch_published_review_texts(freelancer_user_id)
+        if len(review_rows) < MIN_REVIEWS_FOR_SUMMARY:
+            return None
+
+        skill_tags = _fetch_top_skill_tags(freelancer_user_id)
+
+        reviews_block = "\n\n".join(
+            f"- {(row.get('overall_comment') or '').strip()} {(row.get('client_answer') or '').strip()}".strip()
+            for row in review_rows
+        )
+
+        system = (
+            "You are summarizing a freelancer's published client reviews for their public profile. "
+            "Base the summary strictly on the review text provided - do not invent skills, "
+            "achievements, or feedback that isn't actually stated. Do not write pure marketing "
+            "copy: if a criticism repeats across multiple reviews, include it."
+        )
+        user = (
+            f"Freelancer name: {freelancer_name}\n"
+            f"Frequently confirmed skills across these reviews: {', '.join(skill_tags) or 'none recorded'}\n\n"
+            f"Published client reviews ({len(review_rows)} total):\n{reviews_block[:6000]}\n\n"
+            "Write a 3-4 sentence summary covering: (1) overall impression, (2) specific "
+            "recurring strengths, (3) an honest recurring critique ONLY if at least two "
+            "reviews raise something similar - otherwise omit it entirely, (4) what kind of "
+            "project this freelancer seems best suited for, if inferable from the reviews. "
+            "Plain prose only, no markdown, no bullet points."
+        )
+
+        summary = await call_llm(system, user, json_mode=False)
+        return summary.strip() if summary else None
+
+    except Exception as e:
+        logger("REVIEW_AI", f"Review summary generation failed for {freelancer_user_id}: {str(e)}", level="ERROR")
+        return None

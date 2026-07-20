@@ -3,7 +3,7 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import HTTPException, APIRouter, Depends, Query, status
 from typing import List, Optional, Dict
 import uuid
 from functions.schema_model import (
@@ -377,7 +377,11 @@ async def create_job_post(job_post: JobPostCreate, current_user: UserInDB = Depe
         _title    = job_post.job_title
         _desc     = job_post.job_description
         _scan_text = f"{_title} {_desc}"
-        asyncio.create_task(asyncio.to_thread(queue_harmful_text_scan, "job_post", _jp_id, _usr_id, _scan_text))
+        # harmful-text moderation only matters for visible (active) posts — a draft isn't
+        # public, so don't queue it for admin review until it's actually activated (the
+        # update path re-scans on draft -> active).
+        if job_post.status == "active":
+            asyncio.create_task(asyncio.to_thread(queue_harmful_text_scan, "job_post", _jp_id, _usr_id, _scan_text))
         asyncio.create_task(asyncio.to_thread(
             queue_scam_scan, _jp_id, _cl_id, _scan_text, _title, _desc,
         ))
@@ -411,13 +415,15 @@ async def update_job_post(job_post_id: str, job_post_update: JobPostUpdate, curr
 
         mark_job_dirty(job_post_id)
 
-        # Re-scan on edit: an edit that touches the scanned fields must go through the
-        # same background scan as creation, otherwise a clean post can be published and
-        # then edited into harmful content that is never scanned. Safe to fire on every
-        # such edit -- queue_harmful_text_scan's dedup guard (ON CONFLICT ... WHERE
-        # status='pending' DO NOTHING) means a post that already has a pending scan
-        # doesn't pile up duplicate queue rows.
-        if "job_title" in update_data or "job_description" in update_data:
+        # Re-scan an active post when its scanned content changes, or when a post first
+        # becomes active (draft/closed -> active) so it's moderated on the way in. Skip
+        # drafts/closed posts — not visible, nothing to moderate yet. Without this an edit
+        # could turn a clean post harmful and never get re-scanned. dedup guard on
+        # queue_harmful_text_scan (ON CONFLICT ... status='pending') stops duplicate rows.
+        _new_status      = updated_job_post.get("status")
+        _became_active   = existing_job_post.get("status") != "active" and _new_status == "active"
+        _content_changed = "job_title" in update_data or "job_description" in update_data
+        if _new_status == "active" and (_content_changed or _became_active):
             _title     = updated_job_post.get("job_title") or ""
             _desc      = updated_job_post.get("job_description") or ""
             _scan_text = f"{_title} {_desc}"
@@ -426,6 +432,8 @@ async def update_job_post(job_post_id: str, job_post_update: JobPostUpdate, curr
         success_msg = f"Updated job post {job_post_id}"
         logger("JOB_POST", success_msg, "PUT /job-posts/{job_post_id}", "INFO")
         return ResponseSchema.success(updated_job_post, 200)
+    except HTTPException:
+        raise
     except Exception as e:
         error_msg = f"Failed to update job post {job_post_id}: {str(e)}"
         logger("JOB_POST", error_msg, "PUT /job-posts/{job_post_id}", "ERROR")
@@ -448,6 +456,8 @@ async def delete_job_post(job_post_id: str, current_user: UserInDB = Depends(get
         success_msg = f"Deleted job post {job_post_id}"
         logger("JOB_POST", success_msg, "DELETE /job-posts/{job_post_id}", "INFO")
         return ResponseSchema.success("Deleted successfully", 200)
+    except HTTPException:
+        raise
     except Exception as e:
         error_msg = f"Failed to delete job post {job_post_id}: {str(e)}"
         logger("JOB_POST", error_msg, "DELETE /job-posts/{job_post_id}", "ERROR")

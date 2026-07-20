@@ -2,7 +2,7 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from fastapi import APIRouter, Depends, status
+from fastapi import HTTPException, APIRouter, Depends, status
 from typing import List, Optional, Dict
 import uuid
 from functions.schema_model import WorkExperienceCreate, WorkExperienceUpdate, WorkExperienceResponse
@@ -89,6 +89,8 @@ async def create_work_experience(work_experience: WorkExperienceCreate, current_
         error_msg = f"Validation error: {str(e)}"
         logger("WORK_EXPERIENCE", error_msg, "POST /work-experiences", "WARNING")
         return ResponseSchema.error(error_msg, 400)
+    except HTTPException:
+        raise
     except Exception as e:
         error_msg = f"Failed to create work experience: {str(e)}"
         logger("WORK_EXPERIENCE", error_msg, "POST /work-experiences", "ERROR")
@@ -113,6 +115,8 @@ async def update_work_experience(work_experience_id: str, work_experience_update
         success_msg = f"Updated work experience {work_experience_id}"
         logger("WORK_EXPERIENCE", success_msg, "PUT /work-experiences/{work_experience_id}", "INFO")
         return ResponseSchema.success(updated_experience, 200)
+    except HTTPException:
+        raise
     except Exception as e:
         error_msg = f"Failed to update work experience {work_experience_id}: {str(e)}"
         logger("WORK_EXPERIENCE", error_msg, "PUT /work-experiences/{work_experience_id}", "ERROR")
@@ -136,6 +140,8 @@ async def delete_work_experience(work_experience_id: str, current_user: UserInDB
         success_msg = f"Deleted work experience {work_experience_id}"
         logger("WORK_EXPERIENCE", success_msg, "DELETE /work-experiences/{work_experience_id}", "INFO")
         return ResponseSchema.success("Deleted successfully", 200)
+    except HTTPException:
+        raise
     except Exception as e:
         error_msg = f"Failed to delete work experience {work_experience_id}: {str(e)}"
         logger("WORK_EXPERIENCE", error_msg, "DELETE /work-experiences/{work_experience_id}", "ERROR")

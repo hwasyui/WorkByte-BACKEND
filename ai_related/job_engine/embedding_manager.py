@@ -111,7 +111,7 @@ def mark_freelancer_dirty(freelancer_id: str) -> None:
         else:
             logger("EMBEDDING_MANAGER", f"Marked dirty | freelancer_id={freelancer_id}", level="DEBUG")
     except Exception as e:
-        logger("EMBEDDING_MANAGER", f"Could not mark freelancer dirty | freelancer_id={freelancer_id} | error={e}", level="ERROR")
+        logger("EMBEDDING_MANAGER", f"Could not mark freelancer dirty | freelancer_id={freelancer_id} | error={e}", level="ERROR", exc_info=False)
 
 
 def _upsert_role_dirty_row(db, job_role_id: str, job_post_id: str) -> None:
@@ -158,7 +158,7 @@ def mark_job_dirty(job_post_id: str) -> None:
 
         logger("EMBEDDING_MANAGER", f"Marked dirty | job_post_id={job_post_id} | roles={len(role_rows)}", level="DEBUG")
     except Exception as e:
-        logger("EMBEDDING_MANAGER", f"Could not mark job dirty | job_post_id={job_post_id} | error={e}", level="ERROR")
+        logger("EMBEDDING_MANAGER", f"Could not mark job dirty | job_post_id={job_post_id} | error={e}", level="ERROR", exc_info=False)
 
 
 def mark_job_dirty_by_role(job_role_id: str) -> None:
@@ -185,7 +185,7 @@ def mark_job_dirty_by_role(job_role_id: str) -> None:
         else:
             logger("EMBEDDING_MANAGER", f"Marked dirty | job_role_id={job_role_id}", level="DEBUG")
     except Exception as e:
-        logger("EMBEDDING_MANAGER", f"Could not mark role dirty | job_role_id={job_role_id} | error={e}", level="ERROR")
+        logger("EMBEDDING_MANAGER", f"Could not mark role dirty | job_role_id={job_role_id} | error={e}", level="ERROR", exc_info=False)
 
 
 def mark_contract_dirty(contract_id: str) -> None:
@@ -225,7 +225,7 @@ def mark_contract_dirty(contract_id: str) -> None:
         else:
             logger("EMBEDDING_MANAGER", f"Marked dirty | contract_id={contract_id}", level="DEBUG")
     except Exception as e:
-        logger("EMBEDDING_MANAGER", f"Could not mark contract dirty | contract_id={contract_id} | error={e}", level="ERROR")
+        logger("EMBEDDING_MANAGER", f"Could not mark contract dirty | contract_id={contract_id} | error={e}", level="ERROR", exc_info=False)
 
 
 def _vector_to_pg(vector: list[float]) -> str:
@@ -287,10 +287,10 @@ async def upsert_freelancer_embedding(freelancer_id: str) -> dict:
                    f"Freelancer deleted before embedding task ran, skipping | freelancer_id={freelancer_id}",
                    level="DEBUG")
             return {"status": "skipped", "reason": "entity_deleted"}
-        logger("EMBEDDING_MANAGER", f"Error upserting freelancer embedding | freelancer_id={freelancer_id} | error={e}", level="ERROR")
+        logger("EMBEDDING_MANAGER", f"Error upserting freelancer embedding | freelancer_id={freelancer_id} | error={e}", level="ERROR", exc_info=False)
         raise
     except Exception as e:
-        logger("EMBEDDING_MANAGER", f"Error upserting freelancer embedding | freelancer_id={freelancer_id} | error={e}", level="ERROR")
+        logger("EMBEDDING_MANAGER", f"Error upserting freelancer embedding | freelancer_id={freelancer_id} | error={e}", level="ERROR", exc_info=False)
         raise
 
 
@@ -305,9 +305,8 @@ async def upsert_job_role_embedding(job_role_id: str) -> dict:
 
         db = get_db()
         role_rows = db.execute_query(
-            """SELECT jr.job_post_id, jp.experience_level, jr.role_budget
+            """SELECT jr.job_post_id
                FROM job_role jr
-               JOIN job_post jp ON jp.job_post_id = jr.job_post_id
                WHERE jr.job_role_id = :jrid""",
             {"jrid": job_role_id},
         )
@@ -316,8 +315,6 @@ async def upsert_job_role_embedding(job_role_id: str) -> dict:
             return {"status": "skipped", "reason": "role_not_found"}
         role_meta = dict(role_rows[0])
         job_post_id      = str(role_meta["job_post_id"])
-        meta_exp_level   = role_meta.get("experience_level")
-        meta_role_budget = role_meta.get("role_budget")
 
         logger("EMBEDDING_MANAGER", f"Requesting embedding vector | job_role_id={job_role_id} | source_chars={len(source_text)}", level="DEBUG")
         vector = await get_embedding(source_text)
@@ -337,14 +334,9 @@ async def upsert_job_role_embedding(job_role_id: str) -> dict:
                        source_text           = :txt,
                        embedding_metadata    = CAST(:meta AS jsonb),
                        embedding_dirty       = FALSE,
-                       meta_experience_level = :exp_level,
-                       meta_role_budget      = :budget,
                        updated_at            = NOW()
                    WHERE job_role_id = :jrid""",
-                {
-                    "vec": vector_pg, "txt": source_text, "meta": metadata, "jrid": job_role_id,
-                    "exp_level": meta_exp_level, "budget": meta_role_budget,
-                },
+                {"vec": vector_pg, "txt": source_text, "meta": metadata, "jrid": job_role_id},
             )
             logger("EMBEDDING_MANAGER", f"Job role embedding UPDATED | job_role_id={job_role_id} | dim={len(vector)}", level="INFO")
             return {"status": "updated", "job_role_id": job_role_id, "job_post_id": job_post_id, "dim": len(vector)}
@@ -353,14 +345,11 @@ async def upsert_job_role_embedding(job_role_id: str) -> dict:
             db.execute_query(
                 """INSERT INTO job_role_embedding
                      (embedding_id, job_role_id, job_post_id, embedding_vector,
-                      source_text, embedding_metadata, embedding_dirty,
-                      meta_experience_level, meta_role_budget)
-                   VALUES (:eid, :jrid, :jpid, CAST(:vec AS vector), :txt, CAST(:meta AS jsonb), FALSE,
-                           :exp_level, :budget)""",
+                      source_text, embedding_metadata, embedding_dirty)
+                   VALUES (:eid, :jrid, :jpid, CAST(:vec AS vector), :txt, CAST(:meta AS jsonb), FALSE)""",
                 {
                     "eid": embedding_id, "jrid": job_role_id, "jpid": job_post_id,
                     "vec": vector_pg, "txt": source_text, "meta": metadata,
-                    "exp_level": meta_exp_level, "budget": meta_role_budget,
                 },
             )
             logger("EMBEDDING_MANAGER", f"Job role embedding CREATED | job_role_id={job_role_id} | dim={len(vector)}", level="INFO")
@@ -372,10 +361,10 @@ async def upsert_job_role_embedding(job_role_id: str) -> dict:
                    f"Job role deleted before embedding task ran, skipping | job_role_id={job_role_id}",
                    level="DEBUG")
             return {"status": "skipped", "reason": "entity_deleted"}
-        logger("EMBEDDING_MANAGER", f"Error upserting job role embedding | job_role_id={job_role_id} | error={e}", level="ERROR")
+        logger("EMBEDDING_MANAGER", f"Error upserting job role embedding | job_role_id={job_role_id} | error={e}", level="ERROR", exc_info=False)
         raise
     except Exception as e:
-        logger("EMBEDDING_MANAGER", f"Error upserting job role embedding | job_role_id={job_role_id} | error={e}", level="ERROR")
+        logger("EMBEDDING_MANAGER", f"Error upserting job role embedding | job_role_id={job_role_id} | error={e}", level="ERROR", exc_info=False)
         raise
 
 
@@ -448,7 +437,7 @@ async def upsert_contract_embedding(contract_id: str) -> dict:
             return {"status": "created", "contract_id": contract_id, "dim": len(vector)}
 
     except Exception as e:
-        logger("EMBEDDING_MANAGER", f"Error upserting contract embedding | contract_id={contract_id} | error={e}", level="ERROR")
+        logger("EMBEDDING_MANAGER", f"Error upserting contract embedding | contract_id={contract_id} | error={e}", level="ERROR", exc_info=False)
         raise
 
 
@@ -519,7 +508,7 @@ def mark_portfolio_dirty(portfolio_id: str) -> None:
         else:
             logger("EMBEDDING_MANAGER", f"Marked dirty | portfolio_id={portfolio_id}", level="DEBUG")
     except Exception as e:
-        logger("EMBEDDING_MANAGER", f"Could not mark portfolio dirty | portfolio_id={portfolio_id} | error={e}", level="ERROR")
+        logger("EMBEDDING_MANAGER", f"Could not mark portfolio dirty | portfolio_id={portfolio_id} | error={e}", level="ERROR", exc_info=False)
 
 
 async def upsert_portfolio_embedding(portfolio_id: str) -> dict:
@@ -594,7 +583,7 @@ async def upsert_portfolio_embedding(portfolio_id: str) -> dict:
             return {"status": "created", "portfolio_id": portfolio_id, "dim": len(vector)}
 
     except Exception as e:
-        logger("EMBEDDING_MANAGER", f"Error upserting portfolio embedding | portfolio_id={portfolio_id} | error={e}", level="ERROR")
+        logger("EMBEDDING_MANAGER", f"Error upserting portfolio embedding | portfolio_id={portfolio_id} | error={e}", level="ERROR", exc_info=False)
         raise
 
 

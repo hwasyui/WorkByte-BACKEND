@@ -2,7 +2,7 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from fastapi import APIRouter, Depends, status
+from fastapi import HTTPException, APIRouter, Depends, status
 from typing import List, Optional, Dict
 import uuid
 from functions.schema_model import EducationCreate, EducationUpdate, EducationResponse
@@ -90,6 +90,8 @@ async def create_education(education: EducationCreate, current_user: UserInDB = 
         error_msg = f"Validation error: {str(e)}"
         logger("EDUCATION", error_msg, "POST /educations", "WARNING")
         return ResponseSchema.error(error_msg, 400)
+    except HTTPException:
+        raise
     except Exception as e:
         error_msg = f"Failed to create education: {str(e)}"
         logger("EDUCATION", error_msg, "POST /educations", "ERROR")
@@ -114,6 +116,8 @@ async def update_education(education_id: str, education_update: EducationUpdate,
         success_msg = f"Updated education {education_id}"
         logger("EDUCATION", success_msg, "PUT /educations/{education_id}", "INFO")
         return ResponseSchema.success(updated_education, 200)
+    except HTTPException:
+        raise
     except Exception as e:
         error_msg = f"Failed to update education {education_id}: {str(e)}"
         logger("EDUCATION", error_msg, "PUT /educations/{education_id}", "ERROR")
@@ -137,6 +141,8 @@ async def delete_education(education_id: str, current_user: UserInDB = Depends(g
         success_msg = f"Deleted education {education_id}"
         logger("EDUCATION", success_msg, "DELETE /educations/{education_id}", "INFO")
         return ResponseSchema.success("Deleted successfully", 200)
+    except HTTPException:
+        raise
     except Exception as e:
         error_msg = f"Failed to delete education {education_id}: {str(e)}"
         logger("EDUCATION", error_msg, "DELETE /educations/{education_id}", "ERROR")

@@ -2,7 +2,7 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from typing import List, Optional
 import uuid
 from functions.schema_model import ProposalCreate, ProposalUpdate, ProposalResponse
@@ -11,6 +11,7 @@ from functions.authentication import get_current_user
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from functions.db_manager import get_db
+from functions.access_control import assert_client_owns
 from routes.proposals.proposal_functions import ProposalFunctions
 from routes.freelancers.freelancer_functions import FreelancerFunctions
 from routes.clients.client_functions import ClientFunctions
@@ -60,9 +61,19 @@ async def get_proposals_by_job_post(
 ):
     """Client views all proposals for their job post, includes freelancer info."""
     try:
+        job_row = get_db().execute_query(
+            "SELECT client_id FROM job_post WHERE job_post_id = :jpid",
+            {"jpid": job_post_id},
+        )
+        if not job_row:
+            return ResponseSchema.error(f"Job post {job_post_id} not found", 404)
+        assert_client_owns(current_user, str(job_row[0]["client_id"]))
+
         proposals = ProposalFunctions.get_proposals_by_job_post_id_enriched(job_post_id)
         logger("PROPOSAL", f"Retrieved {len(proposals)} proposals for job post {job_post_id}", "GET /proposals/job-post/{job_post_id}", "INFO")
         return ResponseSchema.success(proposals, 200)
+    except HTTPException:
+        raise
     except Exception as e:
         logger("PROPOSAL", f"Failed to fetch proposals: {str(e)}", "GET /proposals/job-post/{job_post_id}", "ERROR")
         return ResponseSchema.error(f"Failed to fetch proposals: {str(e)}", 500)
@@ -307,6 +318,10 @@ async def delete_proposal(
         existing = ProposalFunctions.get_proposal_by_id(proposal_id)
         if not existing:
             return ResponseSchema.error(f"Proposal {proposal_id} not found", 404)
+
+        freelancer = FreelancerFunctions.get_freelancer_by_user_id(current_user.user_id)
+        if not freelancer or freelancer["freelancer_id"] != existing["freelancer_id"]:
+            return ResponseSchema.error("You can only delete your own proposals", 403)
 
         ProposalFunctions.delete_proposal(proposal_id)
         logger("PROPOSAL", f"Proposal {proposal_id} deleted", "DELETE /proposals/{proposal_id}", "INFO")

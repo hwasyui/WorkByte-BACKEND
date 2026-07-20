@@ -30,6 +30,8 @@ BUCKET_USER_ASSETS          = "user-assets"
 BUCKET_CONTRACT_SUBMISSIONS = "contract-submissions"
 BUCKET_MESSAGE_ATTACHMENTS  = "message-attachments"
 
+MAX_UPLOAD_FILE_SIZE_BYTES = 100 * 1024 * 1024  # 100 MB
+
 BUCKET_MAP = {
     "job-files":            BUCKET_JOB_FILES,
     "proposal-files":       BUCKET_PROPOSAL_FILES,

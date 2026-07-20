@@ -1,4 +1,5 @@
 import asyncio
+import time
 from functions.db_manager import get_db
 from functions.logger import logger
 from ai_related.job_engine.embedding_manager import (
@@ -11,141 +12,95 @@ from ai_related.job_engine.embedding_manager import (
 SWEEP_INTERVAL_SECONDS = 300   # 5 minutes
 BATCH_SIZE = 100               # max records processed per sweep cycle
 
+# A row that keeps failing (e.g. a schema mismatch) gets retried with
+# exponential backoff instead of every single cycle forever, and only its
+# first failure gets a full ERROR/traceback - later attempts while backed
+# off are skipped without logging, so one broken row can't spam the log
+# indefinitely.
+BACKOFF_BASE_SECONDS = SWEEP_INTERVAL_SECONDS
+BACKOFF_MAX_SECONDS = 3600
 
-async def _sweep_freelancers() -> int:
+# entity_name -> {row_id: {"failures": int, "retry_after": float}}
+# In-memory only: resets on process restart, which is fine since a restart
+# is a reasonable point to give a previously-quarantined row a fresh try.
+_failure_state: dict[str, dict[str, dict]] = {}
+
+
+def _should_skip(entity_name: str, row_id: str) -> bool:
+    state = _failure_state.get(entity_name, {}).get(row_id)
+    return state is not None and time.monotonic() < state["retry_after"]
+
+
+def _record_failure(entity_name: str, row_id: str) -> int:
+    table = _failure_state.setdefault(entity_name, {})
+    state = table.setdefault(row_id, {"failures": 0, "retry_after": 0.0})
+    state["failures"] += 1
+    backoff = min(BACKOFF_BASE_SECONDS * (2 ** (state["failures"] - 1)), BACKOFF_MAX_SECONDS)
+    state["retry_after"] = time.monotonic() + backoff
+    return state["failures"]
+
+
+def _clear_failure(entity_name: str, row_id: str) -> None:
+    _failure_state.get(entity_name, {}).pop(row_id, None)
+
+
+async def _sweep_entity(entity_name: str, table: str, id_column: str, upsert_fn) -> dict:
     """
-    Re-embed all dirty freelancer embedding rows in one batch.
+    Re-embed all dirty rows for one embedding table.
 
-    Returns:
-        Number of freelancer embeddings successfully refreshed in this cycle.
+    Rows currently in a failure backoff window are skipped (and not
+    re-logged) so a persistently broken row doesn't get retried, and
+    re-logged, every single cycle forever.
     """
     db = get_db()
     rows = db.execute_query(
-        """SELECT freelancer_id FROM freelancer_embedding
+        f"""SELECT {id_column} FROM {table}
            WHERE embedding_dirty = TRUE
            LIMIT :batch""",
         {"batch": BATCH_SIZE},
     )
     if not rows:
-        logger("SWEEP_WORKER", "No dirty freelancer embeddings to process", level="DEBUG")
-        return 0
+        logger("SWEEP_WORKER", f"No dirty {entity_name} embeddings to process", level="DEBUG")
+        return {"refreshed": 0, "failed": 0, "skipped_backoff": 0}
 
-    logger("SWEEP_WORKER", f"Found {len(rows)} dirty freelancer embedding(s) to refresh", level="INFO")
-    count = 0
+    logger("SWEEP_WORKER", f"Found {len(rows)} dirty {entity_name} embedding(s) to refresh", level="INFO")
+
+    refreshed = 0
+    failed = 0
+    skipped = 0
+    first_error = None
+
     for row in rows:
-        fid = str(row["freelancer_id"])
+        row_id = str(row[id_column])
+
+        if _should_skip(entity_name, row_id):
+            skipped += 1
+            continue
+
         try:
-            result = await upsert_freelancer_embedding(fid)
-            logger("SWEEP_WORKER", f"Refreshed freelancer embedding | freelancer_id={fid} | status={result.get('status')}", level="DEBUG")
-            count += 1
+            result = await upsert_fn(row_id)
+            logger("SWEEP_WORKER", f"Refreshed {entity_name} embedding | id={row_id} | status={result.get('status')}", level="DEBUG")
+            _clear_failure(entity_name, row_id)
+            refreshed += 1
         except Exception as e:
-            logger("SWEEP_WORKER", f"Failed to re-embed freelancer | freelancer_id={fid} | error={e}", level="ERROR")
+            failures = _record_failure(entity_name, row_id)
+            first_error = first_error or str(e)
+            if failures == 1:
+                logger("SWEEP_WORKER", f"Failed to re-embed {entity_name} | id={row_id} | error={e}", level="ERROR")
+            else:
+                logger(
+                    "SWEEP_WORKER",
+                    f"{entity_name} {row_id} still failing (attempt {failures}), backing off | last_error={e}",
+                    level="WARNING",
+                )
+            failed += 1
 
-    logger("SWEEP_WORKER", f"Freelancer sweep complete | refreshed={count}/{len(rows)}", level="INFO")
-    return count
+    summary = f"{entity_name.capitalize()} sweep complete | refreshed={refreshed}/{len(rows)} failed={failed} skipped_backoff={skipped}"
+    if first_error:
+        summary += f" | first_error={first_error}"
+    logger("SWEEP_WORKER", summary, level="INFO")
 
-
-async def _sweep_jobs() -> int:
-    """
-    Re-embed all dirty job role embedding rows in one batch.
-
-    Returns:
-        Number of job role embeddings successfully refreshed in this cycle.
-    """
-    db = get_db()
-    rows = db.execute_query(
-        """SELECT job_role_id FROM job_role_embedding
-           WHERE embedding_dirty = TRUE
-           LIMIT :batch""",
-        {"batch": BATCH_SIZE},
-    )
-    if not rows:
-        logger("SWEEP_WORKER", "No dirty job role embeddings to process", level="DEBUG")
-        return 0
-
-    logger("SWEEP_WORKER", f"Found {len(rows)} dirty job role embedding(s) to refresh", level="INFO")
-    count = 0
-    for row in rows:
-        jrid = str(row["job_role_id"])
-        try:
-            result = await upsert_job_role_embedding(jrid)
-            logger("SWEEP_WORKER", f"Refreshed job role embedding | job_role_id={jrid} | status={result.get('status')}", level="DEBUG")
-            count += 1
-        except Exception as e:
-            logger("SWEEP_WORKER", f"Failed to re-embed job role | job_role_id={jrid} | error={e}", level="ERROR")
-
-    logger("SWEEP_WORKER", f"Job role sweep complete | refreshed={count}/{len(rows)}", level="INFO")
-    return count
-
-
-async def _sweep_contracts() -> int:
-    """
-    Re-embed all dirty contract embedding rows in one batch.
-
-    Returns:
-        Number of contract embeddings successfully refreshed in this cycle.
-    """
-    db = get_db()
-    rows = db.execute_query(
-        """SELECT contract_id FROM contract_embedding
-           WHERE embedding_dirty = TRUE
-           LIMIT :batch""",
-        {"batch": BATCH_SIZE},
-    )
-    if not rows:
-        logger("SWEEP_WORKER", "No dirty contract embeddings to process", level="DEBUG")
-        return 0
-
-    logger("SWEEP_WORKER", f"Found {len(rows)} dirty contract embedding(s) to refresh", level="INFO")
-    count = 0
-    for row in rows:
-        cid = str(row["contract_id"])
-        try:
-            result = await upsert_contract_embedding(cid)
-            logger("SWEEP_WORKER", f"Refreshed contract embedding | contract_id={cid} | status={result.get('status')}", level="DEBUG")
-            count += 1
-        except Exception as e:
-            logger("SWEEP_WORKER", f"Failed to re-embed contract | contract_id={cid} | error={e}", level="ERROR")
-
-    logger("SWEEP_WORKER", f"Contract sweep complete | refreshed={count}/{len(rows)}", level="INFO")
-    return count
-
-
-async def _sweep_portfolios() -> int:
-    """
-    Re-embed all dirty manual-portfolio embedding rows in one batch.
-
-    Auto-generated portfolio rows are not represented in portfolio_embedding,
-    so this only touches user-curated showcase items. Their semantic content
-    that mirrors completed work lives in contract_embedding instead.
-
-    Returns:
-        Number of portfolio embeddings successfully refreshed in this cycle.
-    """
-    db = get_db()
-    rows = db.execute_query(
-        """SELECT portfolio_id FROM portfolio_embedding
-           WHERE embedding_dirty = TRUE
-           LIMIT :batch""",
-        {"batch": BATCH_SIZE},
-    )
-    if not rows:
-        logger("SWEEP_WORKER", "No dirty portfolio embeddings to process", level="DEBUG")
-        return 0
-
-    logger("SWEEP_WORKER", f"Found {len(rows)} dirty portfolio embedding(s) to refresh", level="INFO")
-    count = 0
-    for row in rows:
-        pid = str(row["portfolio_id"])
-        try:
-            result = await upsert_portfolio_embedding(pid)
-            logger("SWEEP_WORKER", f"Refreshed portfolio embedding | portfolio_id={pid} | status={result.get('status')}", level="DEBUG")
-            count += 1
-        except Exception as e:
-            logger("SWEEP_WORKER", f"Failed to re-embed portfolio | portfolio_id={pid} | error={e}", level="ERROR")
-
-    logger("SWEEP_WORKER", f"Portfolio sweep complete | refreshed={count}/{len(rows)}", level="INFO")
-    return count
+    return {"refreshed": refreshed, "failed": failed, "skipped_backoff": skipped}
 
 
 async def run_sweep_once() -> dict:
@@ -155,26 +110,32 @@ async def run_sweep_once() -> dict:
 
     Returns:
         Dict with freelancers_refreshed, jobs_refreshed, contracts_refreshed,
-        portfolios_refreshed, and total counts.
+        portfolios_refreshed, total, and total_failed.
     """
     logger("SWEEP_WORKER", "Sweep cycle started", level="INFO")
-    f_count = await _sweep_freelancers()
-    j_count = await _sweep_jobs()
-    c_count = await _sweep_contracts()
-    p_count = await _sweep_portfolios()
-    total = f_count + j_count + c_count + p_count
+
+    freelancers = await _sweep_entity("freelancer", "freelancer_embedding", "freelancer_id", upsert_freelancer_embedding)
+    jobs        = await _sweep_entity("job role",   "job_role_embedding",   "job_role_id",   upsert_job_role_embedding)
+    contracts   = await _sweep_entity("contract",   "contract_embedding",   "contract_id",   upsert_contract_embedding)
+    portfolios  = await _sweep_entity("portfolio",  "portfolio_embedding",  "portfolio_id",  upsert_portfolio_embedding)
+
+    total = freelancers["refreshed"] + jobs["refreshed"] + contracts["refreshed"] + portfolios["refreshed"]
+    total_failed = freelancers["failed"] + jobs["failed"] + contracts["failed"] + portfolios["failed"]
+
     logger(
         "SWEEP_WORKER",
-        f"Sweep cycle done | freelancers={f_count} jobs={j_count} contracts={c_count} "
-        f"portfolios={p_count} total={total}",
+        f"Sweep cycle done | freelancers={freelancers['refreshed']} jobs={jobs['refreshed']} "
+        f"contracts={contracts['refreshed']} portfolios={portfolios['refreshed']} "
+        f"total={total} total_failed={total_failed}",
         level="INFO",
     )
     return {
-        "freelancers_refreshed": f_count,
-        "jobs_refreshed":        j_count,
-        "contracts_refreshed":   c_count,
-        "portfolios_refreshed":  p_count,
+        "freelancers_refreshed": freelancers["refreshed"],
+        "jobs_refreshed":        jobs["refreshed"],
+        "contracts_refreshed":   contracts["refreshed"],
+        "portfolios_refreshed":  portfolios["refreshed"],
         "total":                 total,
+        "total_failed":          total_failed,
     }
 
 

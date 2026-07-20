@@ -1,10 +1,12 @@
 import asyncio
 import os
+import re
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 import json
-from fastapi import APIRouter, Body, Depends, Response, BackgroundTasks
+from fastapi import APIRouter, Body, Depends, Response, BackgroundTasks, HTTPException
+from sqlalchemy.exc import IntegrityError
 from functions.minio_client import (
     download_file,
     upload_thread_attachment,
@@ -12,7 +14,8 @@ from functions.minio_client import (
     BUCKET_MESSAGE_ATTACHMENTS,
 )
 from routes.reviews.review_routes import trigger_review_pipeline_on_completion
-from typing import List, Optional
+from routes.client_reviews.client_review_routes import trigger_client_review_pipeline_on_completion
+from typing import Dict, List, Optional
 import uuid
 from functions.schema_model import CancelContractRequest, ContractCreate, ContractUpdate, ContractResponse, ContractGenerateRequest
 from functions.schema_model import UserInDB
@@ -35,6 +38,52 @@ from routes.proposals.proposal_functions import ProposalFunctions
 from routes.dm.dm_functions import DMFunctions, _contract_accepted_default
 from routes.notifications.notification_functions import NotificationFunctions
 from ai_related.job_engine.embedding_manager import mark_contract_dirty
+from routes.admin.admin_moderation import scan_harmful_text
+
+_CONTRACT_LABEL_NAMES = {
+    "toxic": "toxicity",
+    "toxicity": "toxicity",
+    "obscene": "obscenity",
+    "threat": "threats",
+    "insult": "insults",
+    "identity_hate": "identity-based hate speech",
+}
+
+
+def _reject_contract_short_text_if_harmful(*fields: Optional[str]) -> Optional[Dict]:
+    """contract_title/role_title carry no context (1-4 words) - keyword only, same
+    rule as every other short field in the system. Synchronous since scan_harmful_text
+    never awaits anything."""
+    combined = " ".join(f for f in fields if f)
+    if not combined.strip():
+        return None
+    harm_result = scan_harmful_text(combined)
+    if not harm_result["is_flagged"]:
+        return None
+    detected_labels = harm_result.get("detected_labels", [])
+    labels = [_CONTRACT_LABEL_NAMES.get(l, l) for l in detected_labels]
+    logger("CONTRACT", f"Blocked contract save, labels={detected_labels}", level="WARNING")
+    return {
+        "message": f"This contract couldn't be saved. It was flagged for {', '.join(labels) or 'a policy violation'}.",
+        "detected_labels": detected_labels,
+    }
+
+
+# agreed_duration is not free prose - the frontend builds it from a free-typed number
+# TextField (keyboardType is a cosmetic hint only, not enforced) combined with a unit
+# dropdown locked to days/weeks/months (see generate_contract_screen.dart's own
+# _hydrateDuration, which parses this exact shape back on load). A value matching this
+# shape can't contain harmful text by construction, so this is a format check, not a
+# harmful-text scan - simpler and correct where the old keyword scan was overkill.
+_DURATION_FORMAT_RE = re.compile(r"^\d+\s+(day|days|week|weeks|month|months)$", re.IGNORECASE)
+
+
+def _reject_contract_duration_if_invalid(agreed_duration: Optional[str]) -> Optional[Dict]:
+    if not agreed_duration or not agreed_duration.strip():
+        return None
+    if _DURATION_FORMAT_RE.match(agreed_duration.strip()):
+        return None
+    return {"message": "agreed_duration must look like '<number> days|weeks|months' (e.g. '3 months')."}
 
 
 _DEFAULT_CONTRACT_NOTIFICATION = (
@@ -54,6 +103,15 @@ def _render_notification(template: str, subs: dict) -> str:
     template = template.replace("{pdf_url}", "").strip()
 
     return template
+
+# Fields that feed contract_generation_functions.py's PDF render (see
+# build_generation_context / render_contract_pdf) - editing any of these after a PDF has
+# already been generated makes contract_pdf_url stale, so update_contract() below clears
+# it to force a regenerate before the next download.
+_PDF_RELEVANT_FIELDS = {
+    "contract_title", "role_title", "agreed_budget", "budget_currency",
+    "payment_structure", "agreed_duration", "start_date", "end_date",
+}
 
 contract_router = APIRouter(prefix="/contracts", tags=["Contracts"])
 
@@ -76,6 +134,9 @@ async def get_all_contracts(limit: Optional[int] = None, current_user: UserInDB 
             contracts += ContractFunctions.get_contracts_by_freelancer_id(freelancer["freelancer_id"])
         logger("CONTRACT", f"Retrieved {len(contracts)} contracts for user {current_user.user_id}", "GET /contracts", "INFO")
         return ResponseSchema.success(contracts, 200)
+    except HTTPException as e:
+        logger("CONTRACT", f"HTTP {e.status_code}: {e.detail}", "GET /contracts", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("CONTRACT", f"Failed to fetch contracts: {str(e)}", "GET /contracts", "ERROR")
         return ResponseSchema.error(f"Failed to fetch contracts: {str(e)}", 500)
@@ -92,6 +153,9 @@ async def get_contracts_by_freelancer(freelancer_id: str, current_user: UserInDB
         contracts = ContractFunctions.get_contracts_by_freelancer_id(freelancer_id)
         logger("CONTRACT", f"Retrieved {len(contracts)} contracts for freelancer {freelancer_id}", "GET /contracts/freelancer/{freelancer_id}", "INFO")
         return ResponseSchema.success(contracts, 200)
+    except HTTPException as e:
+        logger("CONTRACT", f"HTTP {e.status_code}: {e.detail}", "GET /contracts/freelancer/{freelancer_id}", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("CONTRACT", f"Failed to fetch contracts for freelancer {freelancer_id}: {str(e)}", "GET /contracts/freelancer/{freelancer_id}", "ERROR")
         return ResponseSchema.error(f"Failed to fetch contracts for freelancer {freelancer_id}: {str(e)}", 500)
@@ -105,6 +169,9 @@ async def get_contracts_by_client(client_id: str, current_user: UserInDB = Depen
         contracts = ContractFunctions.get_contracts_by_client_id(client_id)
         logger("CONTRACT", f"Retrieved {len(contracts)} contracts for client {client_id}", "GET /contracts/client/{client_id}", "INFO")
         return ResponseSchema.success(contracts, 200)
+    except HTTPException as e:
+        logger("CONTRACT", f"HTTP {e.status_code}: {e.detail}", "GET /contracts/client/{client_id}", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("CONTRACT", f"Failed to fetch contracts for client {client_id}: {str(e)}", "GET /contracts/client/{client_id}", "ERROR")
         return ResponseSchema.error(f"Failed to fetch contracts for client {client_id}: {str(e)}", 500)
@@ -125,6 +192,9 @@ async def get_contract_generation_data(contract_id: str, current_user: UserInDB 
 
         logger("CONTRACT", f"Retrieved generation data for contract {contract_id}", "GET /contracts/{contract_id}/generation-data", "INFO")
         return ResponseSchema.success(context, 200)
+    except HTTPException as e:
+        logger("CONTRACT", f"HTTP {e.status_code}: {e.detail}", "GET /contracts/{contract_id}/generation-data", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("CONTRACT", f"Failed to fetch generation data for contract {contract_id}: {str(e)}", "GET /contracts/{contract_id}/generation-data", "ERROR")
         return ResponseSchema.error(f"Failed to fetch generation data for contract {contract_id}: {str(e)}", 500)
@@ -146,6 +216,9 @@ async def get_contract_pdf_url(contract_id: str, current_user: UserInDB = Depend
         signed_url = ContractGenerationFunctions.get_signed_contract_url(pdf_path)
         logger("CONTRACT", f"Created signed PDF URL for contract {contract_id}", "GET /contracts/{contract_id}/pdf-url", "INFO")
         return ResponseSchema.success({"pdf_url": signed_url}, 200)
+    except HTTPException as e:
+        logger("CONTRACT", f"HTTP {e.status_code}: {e.detail}", "GET /contracts/{contract_id}/pdf-url", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("CONTRACT", f"Failed to create PDF URL for contract {contract_id}: {str(e)}", "GET /contracts/{contract_id}/pdf-url", "ERROR")
         return ResponseSchema.error(f"Failed to create PDF URL for contract {contract_id}: {str(e)}", 500)
@@ -171,6 +244,9 @@ async def download_contract_pdf(contract_id: str, current_user: UserInDB = Depen
             media_type="application/pdf",
             headers={"Content-Disposition": f"attachment; filename=contract_{contract_id}.pdf"},
         )
+    except HTTPException as e:
+        logger("CONTRACT", f"HTTP {e.status_code}: {e.detail}", "GET /contracts/{contract_id}/pdf-download", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("CONTRACT", f"Failed to download PDF for contract {contract_id}: {str(e)}", "GET /contracts/{contract_id}/pdf-download", "ERROR")
         return ResponseSchema.error(f"Failed to download PDF for contract {contract_id}: {str(e)}", 500)
@@ -189,6 +265,9 @@ async def get_contract(contract_id: str, current_user: UserInDB = Depends(get_cu
         assert_current_user_is_contract_party(current_user, contract)
         logger("CONTRACT", f"Retrieved contract {contract_id}", "GET /contracts/{contract_id}", "INFO")
         return ResponseSchema.success(contract, 200)
+    except HTTPException as e:
+        logger("CONTRACT", f"HTTP {e.status_code}: {e.detail}", "GET /contracts/{contract_id}", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("CONTRACT", f"Failed to fetch contract {contract_id}: {str(e)}", "GET /contracts/{contract_id}", "ERROR")
         return ResponseSchema.error(f"Failed to fetch contract {contract_id}: {str(e)}", 500)
@@ -211,54 +290,65 @@ async def create_contract(contract: ContractCreate, current_user: UserInDB = Dep
         else:
             return ResponseSchema.error("Only clients can create contracts", 403)
 
+        # A contract may only be finalized from a proposal the client has already
+        # accepted (via PATCH /proposals/{id}/status) - without this, a contract
+        # could be created from a still-pending or rejected proposal since this
+        # endpoint never used to look at it at all. Harmful proposals are already
+        # blocked at submission time (see proposal_routes.py's harm scan), so
+        # nothing further to check here.
         proposal = ProposalFunctions.get_proposal_by_id(str(contract.proposal_id))
         if not proposal:
-            return ResponseSchema.error("Proposal not found", 404)
+            return ResponseSchema.error(f"Proposal {contract.proposal_id} not found", 404)
         if proposal["status"] != "accepted":
             return ResponseSchema.error(
-                f"Cannot create a contract from a proposal with status '{proposal['status']}' (must be 'accepted')",
-                400,
+                f"Cannot create a contract from a proposal that hasn't been accepted (current status: {proposal['status']})", 400
             )
-
-        existing_contract = get_db().execute_query(
-            "SELECT contract_id FROM contract WHERE proposal_id = :pid",
-            {"pid": str(contract.proposal_id)},
-        )
+        existing_contract = ContractFunctions.get_contract_by_proposal_id(str(contract.proposal_id))
         if existing_contract:
-            return ResponseSchema.error("A contract already exists for this proposal", 409)
-
-        # job_post_id/job_role_id/freelancer_id must match the accepted proposal exactly -
-        # reject rather than silently correct, so a mismatched request never looks like it
-        # succeeded for the freelancer/role the caller actually asked for.
-        if (
-            str(contract.job_post_id) != str(proposal["job_post_id"])
-            or str(contract.freelancer_id) != str(proposal["freelancer_id"])
-            or (proposal.get("job_role_id") and str(contract.job_role_id) != str(proposal["job_role_id"]))
-        ):
             return ResponseSchema.error(
-                "job_post_id, job_role_id, and freelancer_id must match the accepted proposal", 400
+                f"A contract already exists for this proposal (contract_id: {existing_contract['contract_id']})", 409
             )
+        if str(proposal["freelancer_id"]) != str(contract.freelancer_id):
+            return ResponseSchema.error("Contract freelancer does not match the proposal's freelancer", 400)
+        if str(proposal["job_post_id"]) != str(contract.job_post_id):
+            return ResponseSchema.error("Contract job post does not match the proposal's job post", 400)
+        if proposal.get("job_role_id") and str(proposal["job_role_id"]) != str(contract.job_role_id):
+            return ResponseSchema.error("Contract job role does not match the proposal's job role", 400)
 
-        new_contract = ContractFunctions.create_contract(
-            contract_id=contract_id,
-            job_post_id=contract.job_post_id,
-            job_role_id=contract.job_role_id,
-            proposal_id=contract.proposal_id,
-            freelancer_id=proposal["freelancer_id"],
-            client_id=contract.client_id,
-            contract_title=contract.contract_title,
-            agreed_budget=contract.agreed_budget,
-            payment_structure=contract.payment_structure,
-            start_date=contract.start_date,
-            role_title=contract.role_title,
-            budget_currency=contract.budget_currency,
-            agreed_duration=contract.agreed_duration,
-            status=contract.status,
-            end_date=contract.end_date,
-            actual_completion_date=contract.actual_completion_date,
-            total_hours_worked=contract.total_hours_worked,
-            total_paid=contract.total_paid,
-        )
+        rejection = _reject_contract_short_text_if_harmful(contract.contract_title, contract.role_title)
+        if rejection:
+            return ResponseSchema.error(rejection["message"], 400, extra={"detected_labels": rejection["detected_labels"]})
+        duration_error = _reject_contract_duration_if_invalid(contract.agreed_duration)
+        if duration_error:
+            return ResponseSchema.error(duration_error["message"], 400)
+
+        try:
+            new_contract = ContractFunctions.create_contract(
+                contract_id=contract_id,
+                job_post_id=contract.job_post_id,
+                job_role_id=contract.job_role_id,
+                proposal_id=contract.proposal_id,
+                freelancer_id=contract.freelancer_id,
+                client_id=contract.client_id,
+                contract_title=contract.contract_title,
+                agreed_budget=contract.agreed_budget,
+                payment_structure=contract.payment_structure,
+                start_date=contract.start_date,
+                role_title=contract.role_title,
+                budget_currency=contract.budget_currency,
+                agreed_duration=contract.agreed_duration,
+                status=contract.status,
+                end_date=contract.end_date,
+                actual_completion_date=contract.actual_completion_date,
+                total_hours_worked=contract.total_hours_worked,
+                total_paid=contract.total_paid,
+            )
+        except IntegrityError:
+            # Race loser: another request already created a contract for this
+            # proposal between the existing_contract check above and this insert -
+            # the DB-level UNIQUE(proposal_id) constraint is what actually caught it.
+            logger("CONTRACT", f"Duplicate contract insert blocked by UNIQUE(proposal_id) for proposal {contract.proposal_id}", "POST /contracts", "WARNING")
+            return ResponseSchema.error("A contract already exists for this proposal", 409)
 
         logger("CONTRACT", f"Created contract {contract_id}", "POST /contracts", "INFO")
 
@@ -301,6 +391,9 @@ async def create_contract(contract: ContractCreate, current_user: UserInDB = Dep
     except ValueError as e:
         logger("CONTRACT", f"Validation error: {str(e)}", "POST /contracts", "WARNING")
         return ResponseSchema.error(f"Validation error: {str(e)}", 400)
+    except HTTPException as e:
+        logger("CONTRACT", f"HTTP {e.status_code}: {e.detail}", "POST /contracts", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("CONTRACT", f"Failed to create contract: {str(e)}", "POST /contracts", "ERROR")
         return ResponseSchema.error(f"Failed to create contract: {str(e)}", 500)
@@ -320,6 +413,21 @@ async def generate_contract_pdf(contract_id: str, generation_data: ContractGener
         if generation_data.dispute_resolution not in {"negotiation", "mediation", "arbitration"}:
             return ResponseSchema.error("Invalid dispute_resolution value", 400)
 
+        # These end up baked into the generated PDF and persisted in contract_terms - a
+        # flagged clause here would ship inside an actual legal-document artifact shared
+        # with the other party, unlike the best-effort DM notification below, so this one
+        # rejects the whole request rather than degrading gracefully.
+        # governing_law is short free text (e.g. "California, USA") - keyword-only, same rule
+        # as contract_title/role_title; added 2026-07-11, missed by the original fix.
+        rejection = _reject_contract_short_text_if_harmful(generation_data.governing_law)
+        if rejection:
+            return ResponseSchema.error(rejection["message"], 400, extra={"detected_labels": rejection["detected_labels"]})
+        # agreed_duration is re-editable at generate time (same TextField+dropdown the
+        # create/update endpoints validate) but this endpoint never checked it at all
+        # until now - found while replacing the harmful-text scan with format validation.
+        duration_error = _reject_contract_duration_if_invalid(generation_data.agreed_duration)
+        if duration_error:
+            return ResponseSchema.error(duration_error["message"], 400)
         ContractGenerationFunctions.save_generation_data(
             contract_id=contract_id,
             update_data={
@@ -427,6 +535,9 @@ async def generate_contract_pdf(contract_id: str, generation_data: ContractGener
     except ValueError as e:
         logger("CONTRACT", f"Validation error: {str(e)}", "POST /contracts/{contract_id}/generate", "WARNING")
         return ResponseSchema.error(f"Validation error: {str(e)}", 400)
+    except HTTPException as e:
+        logger("CONTRACT", f"HTTP {e.status_code}: {e.detail}", "POST /contracts/{contract_id}/generate", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("CONTRACT", f"Failed to generate contract PDF for {contract_id}: {str(e)}", "POST /contracts/{contract_id}/generate", "ERROR")
         return ResponseSchema.error(f"Failed to generate contract PDF for {contract_id}: {str(e)}", 500)
@@ -442,7 +553,45 @@ async def update_contract(contract_id: str, contract_update: ContractUpdate, bac
         assert_current_user_is_contract_party(current_user, existing_contract)
 
         update_data = contract_update.model_dump(exclude_unset=True)
+
+        # This generic endpoint must never be the place a status transition actually
+        # happens - both parties pass assert_current_user_is_contract_party above, so
+        # without this guard either side could force-complete or reopen any contract.
+        # The frontend does redundantly PUT the status it just set via the dedicated
+        # submission/approve endpoints (same value, harmless no-op) - only reject an
+        # attempt to change it to something DIFFERENT from the current value here.
+        new_status = update_data.get("status")
+        if new_status and new_status != existing_contract.get("status"):
+            return ResponseSchema.error(
+                "Contract status can only change through the dedicated submission, "
+                "approve, revision, or cancel endpoints - not through this generic update",
+                400,
+            )
+
+        if "contract_title" in update_data or "role_title" in update_data:
+            _contract_title = update_data.get("contract_title", existing_contract.get("contract_title", ""))
+            _role_title = update_data.get("role_title", existing_contract.get("role_title", ""))
+            rejection = _reject_contract_short_text_if_harmful(_contract_title, _role_title)
+            if rejection:
+                return ResponseSchema.error(rejection["message"], 400, extra={"detected_labels": rejection["detected_labels"]})
+
+        if "agreed_duration" in update_data:
+            duration_error = _reject_contract_duration_if_invalid(update_data.get("agreed_duration"))
+            if duration_error:
+                return ResponseSchema.error(duration_error["message"], 400)
+
         updated_contract = ContractFunctions.update_contract(contract_id, update_data)
+
+        if existing_contract.get("contract_pdf_url") and _PDF_RELEVANT_FIELDS.intersection(update_data.keys()):
+            get_db().execute_query(
+                """UPDATE contract
+                   SET contract_pdf_url = NULL, contract_pdf_generated_at = NULL
+                   WHERE contract_id = :cid""",
+                {"cid": contract_id},
+            )
+            updated_contract["contract_pdf_url"] = None
+            updated_contract["contract_pdf_generated_at"] = None
+            logger("CONTRACT", f"Contract {contract_id} PDF invalidated after edit to {sorted(_PDF_RELEVANT_FIELDS.intersection(update_data.keys()))}", "PUT /contracts/{contract_id}", "INFO")
 
         if update_data.get("status") == "completed" and existing_contract.get("status") != "completed":
             mark_contract_dirty(contract_id)
@@ -456,6 +605,7 @@ async def update_contract(contract_id: str, contract_update: ContractUpdate, bac
                 {"cid": existing_contract["client_id"]},
             )
             await trigger_review_pipeline_on_completion(contract_id, background_tasks)
+            await trigger_client_review_pipeline_on_completion(contract_id, background_tasks)
 
         # Status-change notifications
         new_status = update_data.get("status")
@@ -502,6 +652,9 @@ async def update_contract(contract_id: str, contract_update: ContractUpdate, bac
 
         logger("CONTRACT", f"Updated contract {contract_id}", "PUT /contracts/{contract_id}", "INFO")
         return ResponseSchema.success(updated_contract, 200)
+    except HTTPException as e:
+        logger("CONTRACT", f"HTTP {e.status_code}: {e.detail}", "PUT /contracts/{contract_id}", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("CONTRACT", f"Failed to update contract {contract_id}: {str(e)}", "PUT /contracts/{contract_id}", "ERROR")
         return ResponseSchema.error(f"Failed to update contract {contract_id}: {str(e)}", 500)
@@ -561,6 +714,9 @@ async def cancel_contract(
         logger("CONTRACT", f"Contract {contract_id} cancelled by user {current_user.user_id}", "PUT /contracts/{contract_id}/cancel", "INFO")
         return ResponseSchema.success(cancelled_contract, 200)
 
+    except HTTPException as e:
+        logger("CONTRACT", f"HTTP {e.status_code}: {e.detail}", "PUT /contracts/{contract_id}/cancel", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("CONTRACT", f"Failed to cancel contract {contract_id}: {str(e)}", "PUT /contracts/{contract_id}/cancel", "ERROR")
         return ResponseSchema.error(f"Failed to cancel contract {contract_id}: {str(e)}", 500)
@@ -582,6 +738,9 @@ async def delete_contract(contract_id: str, current_user: UserInDB = Depends(get
 
         logger("CONTRACT", f"Deleted contract {contract_id}", "DELETE /contracts/{contract_id}", "INFO")
         return ResponseSchema.success("Deleted successfully", 200)
+    except HTTPException as e:
+        logger("CONTRACT", f"HTTP {e.status_code}: {e.detail}", "DELETE /contracts/{contract_id}", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("CONTRACT", f"Failed to delete contract {contract_id}: {str(e)}", "DELETE /contracts/{contract_id}", "ERROR")
         return ResponseSchema.error(f"Failed to delete contract {contract_id}: {str(e)}", 500)

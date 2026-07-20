@@ -2,7 +2,7 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from fastapi import APIRouter, Depends, status
+from fastapi import HTTPException, APIRouter, Depends, status
 from typing import List, Optional, Dict
 import uuid
 from functions.schema_model import SavedJobCreate, SavedJobResponse
@@ -44,6 +44,8 @@ async def get_saved_job(saved_job_id: str, current_user: UserInDB = Depends(get_
         success_msg = f"Retrieved saved job {saved_job_id}"
         logger("SAVED_JOB", success_msg, "GET /saved-jobs/{saved_job_id}", "INFO")
         return ResponseSchema.success(saved_job, 200)
+    except HTTPException:
+        raise
     except Exception as e:
         error_msg = f"Failed to fetch saved job {saved_job_id}: {str(e)}"
         logger("SAVED_JOB", error_msg, "GET /saved-jobs/{saved_job_id}", "ERROR")
@@ -59,6 +61,8 @@ async def get_saved_jobs_by_freelancer(freelancer_id: str, current_user: UserInD
         success_msg = f"Retrieved {len(saved_jobs)} saved jobs for freelancer {freelancer_id}"
         logger("SAVED_JOB", success_msg, "GET /saved-jobs/freelancer/{freelancer_id}", "INFO")
         return ResponseSchema.success(saved_jobs, 200)
+    except HTTPException:
+        raise
     except Exception as e:
         error_msg = f"Failed to fetch saved jobs for freelancer {freelancer_id}: {str(e)}"
         logger("SAVED_JOB", error_msg, "GET /saved-jobs/freelancer/{freelancer_id}", "ERROR")
@@ -83,6 +87,8 @@ async def create_saved_job(saved_job: SavedJobCreate, current_user: UserInDB = D
         error_msg = f"Validation error: {str(e)}"
         logger("SAVED_JOB", error_msg, "POST /saved-jobs", "WARNING")
         return ResponseSchema.error(error_msg, 400)
+    except HTTPException:
+        raise
     except Exception as e:
         error_msg = f"Failed to create saved job: {str(e)}"
         logger("SAVED_JOB", error_msg, "POST /saved-jobs", "ERROR")
@@ -105,6 +111,8 @@ async def delete_saved_job(saved_job_id: str, current_user: UserInDB = Depends(g
         success_msg = f"Deleted saved job {saved_job_id}"
         logger("SAVED_JOB", success_msg, "DELETE /saved-jobs/{saved_job_id}", "INFO")
         return ResponseSchema.success(None, 200)
+    except HTTPException:
+        raise
     except Exception as e:
         error_msg = f"Failed to delete saved job {saved_job_id}: {str(e)}"
         logger("SAVED_JOB", error_msg, "DELETE /saved-jobs/{saved_job_id}", "ERROR")

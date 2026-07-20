@@ -78,10 +78,26 @@ class ReviewFunctions:
                     conditions=[("review_id", "=", review["id"])],
                     limit=1,
                 )
+                tags_rows = db.fetch_data(
+                    table_name="review_skill_tags",
+                    conditions=[("review_id", "=", review["id"])],
+                )
+                analysis_rows = db.fetch_data(
+                    table_name="review_ai_analysis",
+                    conditions=[("review_id", "=", review["id"])],
+                    limit=1,
+                )
 
                 review["ratings"] = [convert_uuids_to_str(dict(r)) for r in ratings_rows]
                 review["written_content"] = (
                     convert_uuids_to_str(dict(written_rows[0])) if written_rows else None
+                )
+                review["skill_tags"] = [convert_uuids_to_str(dict(t)) for t in tags_rows]
+                # Sentiment/authenticity so the public reviews list can show a per-review
+                # sentiment badge and trust signal - previously only get_review_detail
+                # (a single review) carried this, so freelancer-wide listings never did.
+                review["ai_analysis"] = (
+                    convert_uuids_to_str(dict(analysis_rows[0])) if analysis_rows else None
                 )
                 reviews.append(review)
 
@@ -286,9 +302,8 @@ class ReviewFunctions:
         is_flagged_fake: bool,
         is_flagged_coerced: bool,
         flag_reasons: List[str],
-        bias_score: float,
-        bias_flags: Dict,
         overall_pass: bool,
+        mismatch_severity: Optional[float] = None,
     ) -> None:
         try:
             db = get_db()
@@ -300,12 +315,11 @@ class ReviewFunctions:
                     "sentiment_score": sentiment_score,
                     "sentiment_label": sentiment_label,
                     "sentiment_mismatch": sentiment_mismatch,
+                    "mismatch_severity": mismatch_severity,
                     "authenticity_score": authenticity_score,
                     "is_flagged_fake": is_flagged_fake,
                     "is_flagged_coerced": is_flagged_coerced,
                     "flag_reasons": flag_reasons,
-                    "bias_score": bias_score,
-                    "bias_flags": bias_flags,
                     "overall_pass": overall_pass,
                 },
             )
@@ -357,6 +371,10 @@ class ReviewFunctions:
         total_reviews: int,
         category: Optional[str],
         category_rank_pct: Optional[float],
+        on_time_score: Optional[float] = None,
+        authenticity_confidence: Optional[float] = None,
+        consistency_score: Optional[float] = None,
+        ai_review_summary: Optional[str] = None,
     ) -> None:
         try:
             db = get_db()
@@ -376,8 +394,17 @@ class ReviewFunctions:
                 "total_reviews":          total_reviews,
                 "category":               category,
                 "category_rank_pct":      category_rank_pct,
+                "on_time_score":          on_time_score,
+                "authenticity_confidence": authenticity_confidence,
+                "consistency_score":      consistency_score,
                 "last_updated":           datetime.utcnow(),
             }
+            # Only touch these columns when a fresh summary was actually generated this
+            # run (see SUMMARY_REGEN_INTERVAL) - otherwise this upsert would null out
+            # the previously cached summary on every review that doesn't regenerate it.
+            if ai_review_summary is not None:
+                data["ai_review_summary"] = ai_review_summary
+                data["ai_review_summary_updated_at"] = datetime.utcnow()
             if existing:
                 db.update_data(
                     table_name="freelancer_trust_scores",
@@ -434,6 +461,7 @@ class ReviewFunctions:
                 data={
                     "id": str(uuid.uuid4()),
                     "freelancer_id": freelancer_id,
+                    "subject_type": "freelancer",
                     "alert_type": "score_drop",
                     "severity": severity,
                     "message": message,
@@ -489,7 +517,11 @@ class ReviewFunctions:
             db = get_db()
             rows = db.fetch_data(
                 "red_flag_alerts",
-                conditions=[("freelancer_id", "=", freelancer_user_id), ("is_resolved", "=", False)],
+                conditions=[
+                    ("freelancer_id", "=", freelancer_user_id),
+                    ("subject_type", "=", "freelancer"),
+                    ("is_resolved", "=", False),
+                ],
                 order_by="triggered_at DESC",
             )
             return [convert_uuids_to_str(dict(r)) for r in rows]

@@ -168,6 +168,7 @@ class FreelancerFunctions:
     "estimated_rate":       "f.estimated_rate",
     "total_jobs":           "f.total_jobs",
     "weighted_review_avg":  "fts.weighted_review_avg",  # ← new
+    "total_reviews":        "fts.total_reviews",
 }
 
     @staticmethod
@@ -191,10 +192,10 @@ class FreelancerFunctions:
                 SELECT f.freelancer_id, f.user_id, f.full_name, f.bio, f.cv_file_url,
                     f.profile_picture_url, f.estimated_rate, f.rate_time, f.rate_currency,
                     f.total_jobs, f.created_at, f.updated_at,
-                    fts.weighted_review_avg
+                    fts.weighted_review_avg, fts.total_reviews
                 FROM freelancer f
                 LEFT JOIN freelancer_trust_scores fts
-                    ON fts.freelancer_id = f.freelancer_id
+                    ON fts.freelancer_id = f.user_id
                 ORDER BY {sort_col} {direction} NULLS LAST
                 LIMIT :limit OFFSET :offset
                 """,
@@ -226,10 +227,10 @@ class FreelancerFunctions:
                 SELECT f.freelancer_id, f.user_id, f.full_name, f.bio, f.cv_file_url,
                     f.profile_picture_url, f.estimated_rate, f.rate_time, f.rate_currency,
                     f.total_jobs, f.created_at, f.updated_at,
-                    fts.weighted_review_avg
+                    fts.weighted_review_avg, fts.total_reviews
                 FROM freelancer f
                 LEFT JOIN freelancer_trust_scores fts
-                    ON fts.freelancer_id = f.freelancer_id
+                    ON fts.freelancer_id = f.user_id
                 ORDER BY fts.weighted_review_avg DESC NULLS LAST
                 {limit_clause}
                 OFFSET :offset

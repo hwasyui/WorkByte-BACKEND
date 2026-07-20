@@ -3,18 +3,26 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
 
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
+from functions.authentication import get_current_user
+from functions.schema_model import UserInDB
 from ai_related.harmful_text_detection.model_inference import (
     batch_predict,
     get_available_models as get_model_registry,
     predict,
 )
 
+# dev only routes.
+# The app never calls these over HTTP — proposal/DM/job-post/review flows scan
+# server-side via scan_harmful_text_with_ml_fallback(). Kept for manual testing
+# and inspecting the model. detect/detect-batch run real inference so they're
+# auth-gated (don't leave an unauthenticated ML endpoint open); labels/models
+# are static metadata, left open.
 harmful_text_router = APIRouter(prefix="/harmful-text", tags=["Harmful Text Detection"])
 
 
@@ -26,10 +34,15 @@ class BatchTextInput(BaseModel):
     texts: List[str]
 
 
+# dev only
 @harmful_text_router.post("/detect", response_model=None)
-async def detect_harmful_text(input_data: TextInput, model_type: str = "best", threshold: Optional[float] = None) -> Dict[str, Any]:
-    """Detect harmful content in a single text. Returns scores for 5 harm labels.
-    Uses the model's own tuned per-label thresholds unless `threshold` overrides all 5 at once."""
+async def detect_harmful_text(
+    input_data: TextInput,
+    model_type: str = "best",
+    threshold: Optional[float] = None,
+    current_user: UserInDB = Depends(get_current_user),
+) -> Dict[str, Any]:
+    """One text, scores for all 5 labels. threshold overrides all labels at once; else per-label tuned thresholds."""
     logger("HARMFUL_TEXT", f"Detect request | text_length={len(input_data.text)}", level="DEBUG")
     try:
         if not input_data.text or not input_data.text.strip():
@@ -48,10 +61,15 @@ async def detect_harmful_text(input_data: TextInput, model_type: str = "best", t
         raise HTTPException(status_code=500, detail=f"Harmful text detection failed: {str(e)}")
 
 
+# dev only
 @harmful_text_router.post("/detect-batch", response_model=None)
-async def detect_harmful_text_batch(input_data: BatchTextInput, model_type: str = "best", threshold: Optional[float] = None) -> Dict[str, Any]:
-    """Detect harmful content in multiple texts. Max 100 per batch.
-    Uses the model's own tuned per-label thresholds unless `threshold` overrides all 5 at once."""
+async def detect_harmful_text_batch(
+    input_data: BatchTextInput,
+    model_type: str = "best",
+    threshold: Optional[float] = None,
+    current_user: UserInDB = Depends(get_current_user),
+) -> Dict[str, Any]:
+    """Same as /detect but a list, capped at 100 (each one is a forward pass — cap keeps a single call bounded)."""
     logger("HARMFUL_TEXT", f"Batch detect request | batch_size={len(input_data.texts)}", level="DEBUG")
     try:
         if not input_data.texts:
@@ -82,9 +100,10 @@ async def detect_harmful_text_batch(input_data: BatchTextInput, model_type: str 
         raise HTTPException(status_code=500, detail=f"Harmful text batch detection failed: {str(e)}")
 
 
+# dev only
 @harmful_text_router.get("/labels", response_model=None)
 async def get_labels() -> Dict[str, Any]:
-    """Return the 5 harm labels the model detects."""
+    """The 5 labels + what each covers."""
     labels_info = {
         "0": {"name": "toxicity",      "description": "General toxic/rude language (includes profanity)"},
         "1": {"name": "obscene",       "description": "Obscene/profane language"},
@@ -95,9 +114,10 @@ async def get_labels() -> Dict[str, Any]:
     return ResponseSchema.success(labels_info)
 
 
+# dev only
 @harmful_text_router.get("/models", response_model=None)
 async def get_available_models() -> Dict[str, Any]:
-    """Return information about available trained harmful text detection models."""
+    """Which trained model folders are present (only bert ships by default)."""
     available_models = [m for m in get_model_registry() if m["available"]]
     if not available_models:
         return ResponseSchema.success({
