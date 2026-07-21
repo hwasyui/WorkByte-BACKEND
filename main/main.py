@@ -32,6 +32,7 @@ from routes.job_files.job_file_routes import job_file_router
 from routes.proposals.proposal_routes import proposal_router
 from routes.proposal_files.proposal_file_routes import proposal_file_router
 from routes.contracts.contract_routes import contract_router
+from routes.portfolio.portfolio_routes import portfolio_router
 from routes.saved_jobs.saved_job_routes import saved_job_router
 from routes.dm.dm_routes import dm_router
 from routes.upload.upload_route import upload_router, files_router
@@ -180,6 +181,7 @@ app.include_router(job_file_router)
 app.include_router(proposal_router)
 app.include_router(proposal_file_router)
 app.include_router(contract_router)
+app.include_router(portfolio_router)
 app.include_router(saved_job_router)
 app.include_router(client_review_router)
 app.include_router(dm_router)
