@@ -313,21 +313,31 @@ class ClientUpdate(BaseModel):
         return v
 
     @classmethod
-    def as_form(
+    async def as_form(
         cls,
         full_name: Optional[str] = Form(None),
         bio: Optional[str] = Form(None),
         website_url: Optional[str] = Form(None),
         profile_picture: Optional[UploadFile] = File(None),
         contract_message_template: Optional[str] = Form(None),
+        request: Request = None,
     ) -> "ClientUpdate":
-        return cls(
-            full_name=full_name,
-            bio=bio,
-            website_url=website_url,
-            profile_picture=profile_picture,
-            contract_message_template=contract_message_template,
-        )
+        form_data = await request.form()
+        form_fields = set(form_data.keys())
+
+        data = {}
+        if "full_name" in form_fields:
+            data["full_name"] = full_name
+        if "bio" in form_fields:
+            data["bio"] = bio
+        if "website_url" in form_fields:
+            data["website_url"] = website_url
+        if "profile_picture" in form_fields:
+            data["profile_picture"] = profile_picture
+        if "contract_message_template" in form_fields:
+            data["contract_message_template"] = contract_message_template
+
+        return cls(**data)
 
 class ClientResponse(BaseModel):
     client_id: str

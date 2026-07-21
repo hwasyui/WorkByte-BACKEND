@@ -203,9 +203,13 @@ class ClientFunctions:
         """Update client information."""
         try:
             db = get_db()
-            # Remove None values
-            update_data = {k: v for k, v in update_data.items() if v is not None}
-            
+            # Remove None values, except for fields that are explicitly nullable
+            NULLABLE_FIELDS = {"profile_picture_url", "bio", "website_url", "contract_message_template"}
+            update_data = {
+                k: v for k, v in update_data.items()
+                if v is not None or k in NULLABLE_FIELDS
+            }
+
             if not update_data:
                 logger("CLIENT_FUNCTIONS", "No data to update", level="WARNING")
                 return ClientFunctions.get_client_by_id(client_id)

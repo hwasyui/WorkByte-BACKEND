@@ -449,8 +449,17 @@ def _build_prompt(role: dict, fc: dict, used_contracts: list[dict], used_portfol
             lines.append(f"  - {c['job_title']} | {rating_str}")
             if review:
                 lines.append(f"    Review: \"{review}\"")
+    elif used_portfolio:
+        # unverified portfolio shown above, but nothing verified on-platform
+        lines.append("\nPAST CONTRACTS\nNone on-platform yet — only the unverified portfolio above is available as evidence.")
     else:
-        lines.append("\nPAST CONTRACTS\nNone relevant on-platform yet.")
+        # no evidence at all, verified or unverified
+        lines.append(
+            "\nPAST PROJECT EVIDENCE\n"
+            "None available — this freelancer has no verified past contracts and no "
+            "unverified portfolio projects. Judge fit from skills and work experience "
+            "only; do not invent, assume, or reference any past projects."
+        )
 
     lines.append("\nROLE REQUIREMENTS (judge coverage against the freelancer's skills above)")
     if required:
