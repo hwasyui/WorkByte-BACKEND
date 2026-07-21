@@ -16,6 +16,7 @@ from routes.skills.skill_functions import SkillFunctions
 from routes.freelancer_skills.freelancer_skill_functions import FreelancerSkillFunctions
 from routes.work_experience.work_experience_functions import WorkExperienceFunctions
 from routes.education.education_functions import EducationFunctions
+from ai_related.job_engine.embedding_manager import mark_freelancer_dirty
 from ai_related.cv_analysis.cv_analysis import (
     build_freelancer_profile_text,
     get_profile_skill_names,
@@ -303,6 +304,9 @@ async def apply_cv_profile(
                     grade=edu.grade if edu.grade and str(edu.grade).strip() else None,
                 )
                 applied_education += 1
+
+        if applied_bio or applied_skills or applied_work_experience or applied_education:
+            mark_freelancer_dirty(freelancer_id)
 
         logger(
             "CV_UPLOAD",

@@ -53,3 +53,5 @@ walkthrough/*.png
 walkthrough/*.jpg
 
 docker-compose.yml
+
+audit-findings.md

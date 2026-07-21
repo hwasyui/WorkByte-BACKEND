@@ -68,6 +68,38 @@ DEFAULT_BAN_MESSAGE_ADMIN      = (
     "Submit an appeal if you believe this was a mistake."
 )
 
+def _is_engaged_sql(job_post_id_expr: str) -> str:
+    """Single source of truth for whether a job is 'engaged': TRUE when the given job_post_id
+    has a filled position on any role, or a live (active/pending) contract. An accepted proposal
+    is deliberately NOT engagement - only a real contract (which fills the slot) counts.
+
+    Used two ways off this one definition:
+      - the auto-close guard (_ACTIVE_NO_ENGAGEMENT) skips engaged jobs, and
+      - the admin moderation/report lists expose it as `is_engaged` so the UI can warn
+        before a human admin manually closes one.
+    Static SQL, no user input - safe to inline. job_post_id_expr is the caller's column
+    (e.g. 'job_post.job_post_id', 'cmq.content_id', 'ur.job_post_id'), all UUID."""
+    # 'ongoing' = the non-terminal contract_status values (enum is active/completed/
+    # cancelled/disputed/revision_requested/under_review). completed/cancelled are done;
+    # everything else is live work in progress. NB: positions_filled stays > 0 after a
+    # contract completes (only cancel/delete frees the slot), so a job with delivered work
+    # is still caught by the first EXISTS - the contract clause adds the in-flight states.
+    return (
+        f"(EXISTS (SELECT 1 FROM job_role jr "
+        f"WHERE jr.job_post_id = {job_post_id_expr} AND jr.positions_filled > 0) "
+        f"OR EXISTS (SELECT 1 FROM contract c "
+        f"WHERE c.job_post_id = {job_post_id_expr} "
+        f"AND c.status IN ('active', 'revision_requested', 'under_review', 'disputed')))"
+    )
+
+
+# Auto-close guard clause dropped into each closing UPDATE on the job_post table: an automated
+# close (harmful or report) skips any job _is_engaged_sql() flags, so a job with a freelancer
+# already engaged is never closed out from under a live project - only a human admin can, with a
+# confirmation in the UI. NOT (A OR B) == (NOT A AND NOT B), same effect as two separate NOT EXISTS.
+_ACTIVE_NO_ENGAGEMENT = f"\n      AND NOT {_is_engaged_sql('job_post.job_post_id')}"
+
+
 def _closure_note_with_labels(detected_labels) -> str:
     """Closure note that names the categories the classifier actually triggered, so the
     owner knows what to fix instead of getting an unexplained removal. Uses the same raw
@@ -272,6 +304,31 @@ def _auto_approve_expired():
             else "rejected"
         )
 
+        # If this would auto-close a job that has a freelancer engaged (filled position /
+        # live contract), the guard below can't close it -- only a human admin can. Leave the
+        # row 'pending' (don't claim it) so it stays in the queue with its is_engaged flag for
+        # manual review, instead of being silently marked approved while the job stays open.
+        # Covers 'active' and 'filled' jobs (both can carry live work); a draft/closed job in a
+        # deliberate terminal state falls through and resolves as before. Mirrors how
+        # _process_report_auto_actions leaves an engaged reported job for manual handling.
+        if new_status == "approved":
+            engaged = _row(get_db().execute_query(
+                f"""
+                SELECT 1 AS x
+                FROM job_post
+                WHERE job_post_id = :id AND status IN ('active', 'filled')
+                  AND {_is_engaged_sql('job_post.job_post_id')}
+                """,
+                params={"id": content_id},
+            ))
+            if engaged:
+                logger(
+                    "ADMIN",
+                    f"Harmful flag on {ctype} {content_id} left pending: job has ongoing engagement, needs manual admin action",
+                    level="INFO",
+                )
+                continue  # leave status = 'pending'
+
         # Claim the row first: only the run that actually flips it out of 'pending' acts on
         # the content. Stops the background sweep loop and an admin opening the queue from
         # double-closing and double-notifying the same job.
@@ -293,12 +350,12 @@ def _auto_approve_expired():
             # was set deliberately elsewhere). RETURNING tells us if a row actually closed so
             # the "job closed" notify/log only fires when it really did.
             closed = _rows(get_db().execute_query(
-                """
+                f"""
                 UPDATE job_post
                 SET status = 'closed',
                     closure_reason = :reason,
                     closure_note   = :note
-                WHERE job_post_id = :id AND status = 'active'
+                WHERE job_post_id = :id AND status = 'active'{_ACTIVE_NO_ENGAGEMENT}
                 RETURNING job_post_id
                 """,
                 params={
@@ -316,13 +373,11 @@ def _auto_approve_expired():
                     note,
                 )
             else:
-                logger("ADMIN", f"Flag confirmed but {ctype} {content_id} not active (skipped close)", level="INFO")
+                logger("ADMIN", f"Flag confirmed but {ctype} {content_id} not active or has ongoing engagement (skipped close)", level="INFO")
         else:  # flag dismissed: false positive (or non-job_post, no action to take)
             logger("ADMIN", f"Auto-dismissed {ctype} {content_id}, max_label_score={max_score:.2f}", level="INFO")
 
-
 MODERATION_SWEEP_INTERVAL_SECONDS = int(os.getenv("MODERATION_SWEEP_INTERVAL_SECONDS", "3600"))
-
 
 async def moderation_sweep_loop() -> None:
     """Periodically action moderation rows whose 30-day window has closed, so the deadline
@@ -406,7 +461,11 @@ def list_moderation_queue(
                 cmq.threat_score + cmq.insult_score + cmq.identity_hate_score) AS total_score,
                GREATEST(cmq.toxic_score, cmq.obscene_score, cmq.threat_score,
                         cmq.insult_score, cmq.identity_hate_score) AS max_score,
-               u.email AS user_email
+               u.email AS user_email,
+               CASE WHEN cmq.content_type = 'job_post'
+                    THEN {_is_engaged_sql('cmq.content_id')}
+                    ELSE FALSE
+               END AS is_engaged
         FROM harmful_text_queue cmq
         JOIN users u ON u.user_id = cmq.user_id
         WHERE (:status = 'all' OR cmq.status = :status)
@@ -463,12 +522,12 @@ def action_moderation_item(
             # active jobs only, same as the auto path — a confirmed flag on a draft/filled/
             # already-closed job leaves its status alone; notify only on a real close.
             closed = _rows(get_db().execute_query(
-                """
+                f"""
                 UPDATE job_post
                 SET status = 'closed',
                     closure_reason = :reason,
                     closure_note   = :note
-                WHERE job_post_id = :id AND status = 'active'
+                WHERE job_post_id = :id AND status = 'active'{_ACTIVE_NO_ENGAGEMENT}
                 RETURNING job_post_id
                 """,
                 params={
@@ -486,7 +545,7 @@ def action_moderation_item(
                     closure_note,
                 )
             else:
-                logger("ADMIN", f"Job post {content_id} flag confirmed but not active (skipped close)", level="INFO")
+                logger("ADMIN", f"Job post {content_id} flag confirmed but not active or has ongoing engagement (skipped close)", level="INFO")
 
     return updated
 
@@ -830,13 +889,13 @@ def _process_report_auto_actions():
             },
         )
         get_db().execute_query(
-            """
+            f"""
             UPDATE job_post
             SET status = 'closed',
                 closure_reason = :reason,
                 closure_note   = :note
             WHERE client_id = (SELECT client_id FROM client WHERE user_id = :uid)
-              AND status = 'active'
+              AND status = 'active'{_ACTIVE_NO_ENGAGEMENT}
             """,
             params={
                 "uid":    tid,
@@ -878,20 +937,27 @@ def _process_report_auto_actions():
         ))
         if existing:
             continue
-        get_db().execute_query(
-            """
+        closed = _rows(get_db().execute_query(
+            f"""
             UPDATE job_post
             SET status = 'closed',
                 closure_reason = :reason,
                 closure_note   = :note
-            WHERE job_post_id = :jid
+            WHERE job_post_id = :jid AND status = 'active'{_ACTIVE_NO_ENGAGEMENT}
+            RETURNING job_post_id
             """,
             params={
                 "jid":    tid,
                 "reason": DEFAULT_CLOSURE_REASON_REPORTS,
                 "note":   DEFAULT_CLOSURE_NOTE_REPORTS,
             },
-        )
+        ))
+        if not closed:
+            # Not active, or has a filled position / ongoing contract - leave it alone and
+            # don't record an auto-action, so it's re-evaluated on a later sweep once the
+            # engagement clears rather than being permanently marked handled.
+            logger("ADMIN", f"Job post {tid} hit report threshold but not active or has ongoing engagement (skipped close)", level="INFO")
+            continue
         get_db().execute_query(
             """
             INSERT INTO report_auto_actions (target_type, target_id, report_count)
@@ -948,6 +1014,10 @@ def list_report_targets(
             MAX(ur.created_at)  AS latest_report,
             u.email             AS target_email,
             jp.job_title        AS target_job_title,
+            CASE WHEN ur.job_post_id IS NOT NULL
+                 THEN {_is_engaged_sql('ur.job_post_id')}
+                 ELSE FALSE
+            END                 AS is_engaged,
             (COUNT(*) >= :auto_threshold
              AND MIN(ur.created_at) <= NOW() - (:auto_days * INTERVAL '1 day')
             )                   AS threshold_met

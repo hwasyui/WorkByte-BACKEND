@@ -222,7 +222,7 @@ def _call_groq(system_prompt: str, user_prompt: str, json_mode: bool = False, ma
     """Call GROQ LLM and return the response."""
     client = Groq(timeout=_GROQ_TIMEOUT)
     kwargs: Dict[str, Any] = {
-        "model": "openai/gpt-oss-20b",
+        "model": "llama-3.3-70b-versatile",
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
@@ -248,10 +248,6 @@ async def analyze_cv_with_llm(
     missing_skills: List[str],
     ats_result: Dict[str, Any],
 ) -> Dict[str, Any]:
-    """
-    Full structured CV analysis via GROQ.
-    All content (assessment, per-section analysis, recommendations) comes from the LLM.
-    """
     coverage_str = f"{skill_coverage:.0%}" if skill_coverage is not None else "N/A"
     matched_str = ", ".join(matched_skills[:10]) if matched_skills else "none"
     missing_str = ", ".join(missing_skills[:10]) if missing_skills else "none"
@@ -333,99 +329,100 @@ async def analyze_cv_with_llm(
 
 
 async def parse_cv_for_profile(cv_text: str) -> Dict[str, Any]:
-    """
-    Hybrid CV parser: RoBERTa NER extracts bio/name/contact, GROQ extracts
-    structured fields (skills, work_experience, education, languages).
-    """
-    # Step 1: RoBERTa for bio and contact entities
-    suggested_bio = ""
+    # RoBERTa is the primary extractor; GROQ only fills fields it misses.
+    roberta_result: Dict[str, Any] = {}
     try:
         from routes.cv_upload.cv_parser_roberta import parse_cv_with_roberta
         roberta_result = parse_cv_with_roberta(cv_text)
-        suggested_bio = roberta_result.get("suggested_bio", "")
         logger(
             "CV_ANALYSIS",
-            f"RoBERTa extracted bio={'yes' if suggested_bio else 'no'} "
+            f"RoBERTa extracted bio={'yes' if roberta_result.get('suggested_bio') else 'no'} "
             f"| roberta_skills={len(roberta_result.get('skills', []))} "
-            f"| roberta_exp={len(roberta_result.get('work_experience', []))}",
+            f"| roberta_exp={len(roberta_result.get('work_experience', []))} "
+            f"| roberta_edu={len(roberta_result.get('education', []))}",
             level="INFO",
         )
     except Exception as e:
         logger("CV_ANALYSIS", f"RoBERTa extraction failed: {e}", level="WARNING")
 
-    # Step 2: GROQ for structured fields
-    schema_example = {
-        "skills": ["Python", "FastAPI", "React", "PostgreSQL"],
-        "languages": [
-            {"name": "English", "proficiency": "fluent"},
-            {"name": "Indonesian", "proficiency": "native"}
-        ],
-        "work_experience": [
-            {
-                "job_title": "Software Engineer",
-                "company_name": "Tech Corp",
-                "location": "Jakarta, Indonesia",
-                "start_date": "2020-01",
-                "end_date": "2022-06",
-                "is_current": False,
-                "description": "Role responsibilities and achievements..."
-            }
-        ],
-        "education": [
-            {
-                "institution_name": "University Name",
-                "degree": "Bachelor",
-                "field_of_study": "Computer Science",
-                "start_date": "2016",
-                "end_date": "2020",
-                "is_current": False,
-                "grade": ""
-            }
-        ]
-    }
+    roberta_bio = roberta_result.get("suggested_bio", "")
+    roberta_skills = roberta_result.get("skills", [])
+    roberta_langs = roberta_result.get("languages", [])
+    roberta_exp = roberta_result.get("work_experience", [])
+    roberta_edu = roberta_result.get("education", [])
 
-    system = (
-        "You are an expert at parsing CVs into structured data. "
-        "Extract the requested fields and return valid JSON only. "
-        "Do not include markdown fences, explanations, or any text outside the JSON."
-    )
-
-    user = (
-        f"=== CV TEXT ===\n{cv_text[:5000]}\n\n"
-        "Extract the following fields from this CV and return exactly one JSON object:\n"
-        f"{json.dumps(schema_example, ensure_ascii=False)}\n\n"
-        "Rules:\n"
-        "- skills: all technical and relevant soft skills mentioned\n"
-        "- languages proficiency must be one of: basic, conversational, fluent, native\n"
-        "- dates: use YYYY-MM format when month is known, YYYY when only year is known\n"
-        "- is_current: true only if the role or education is ongoing\n"
-        "- Do not invent information not present in the CV\n"
-        "- Use empty string or empty list when a field cannot be found\n"
-        "- Return only the JSON object, nothing else"
-    )
-
+    # Skip GROQ entirely when RoBERTa already covered skills, experience and education.
     groq_result: Dict[str, Any] = {}
-    try:
-        groq_result = _call_groq(system, user, json_mode=True, max_tokens=3000)
-        logger(
-            "CV_ANALYSIS",
-            f"GROQ extracted skills={len(groq_result.get('skills', []))} "
-            f"| exp={len(groq_result.get('work_experience', []))} "
-            f"| edu={len(groq_result.get('education', []))}",
-            level="INFO",
+    if not (roberta_skills and roberta_exp and roberta_edu):
+        schema_example = {
+            "skills": ["Python", "FastAPI", "React", "PostgreSQL"],
+            "languages": [
+                {"name": "English", "proficiency": "fluent"},
+                {"name": "Indonesian", "proficiency": "native"}
+            ],
+            "work_experience": [
+                {
+                    "job_title": "Software Engineer",
+                    "company_name": "Tech Corp",
+                    "location": "Jakarta, Indonesia",
+                    "start_date": "2020-01",
+                    "end_date": "2022-06",
+                    "is_current": False,
+                    "description": "Role responsibilities and achievements..."
+                }
+            ],
+            "education": [
+                {
+                    "institution_name": "University Name",
+                    "degree": "Bachelor",
+                    "field_of_study": "Computer Science",
+                    "start_date": "2016",
+                    "end_date": "2020",
+                    "is_current": False,
+                    "grade": ""
+                }
+            ]
+        }
+
+        system = (
+            "You are an expert at parsing CVs into structured data. "
+            "Extract the requested fields and return valid JSON only. "
+            "Do not include markdown fences, explanations, or any text outside the JSON."
         )
-    except Exception as e:
-        logger("CV_ANALYSIS", f"GROQ structured extraction failed: {e}", level="ERROR")
 
-    # Merge: bio from RoBERTa (fallback to GROQ if empty), rest from GROQ
-    bio = suggested_bio or groq_result.get("suggested_bio", "")
+        user = (
+            f"=== CV TEXT ===\n{cv_text[:5000]}\n\n"
+            "Extract the following fields from this CV and return exactly one JSON object:\n"
+            f"{json.dumps(schema_example, ensure_ascii=False)}\n\n"
+            "Rules:\n"
+            "- skills: all technical and relevant soft skills mentioned\n"
+            "- languages proficiency must be one of: basic, conversational, fluent, native\n"
+            "- dates: use YYYY-MM format when month is known, YYYY when only year is known\n"
+            "- is_current: true only if the role or education is ongoing\n"
+            "- Do not invent information not present in the CV\n"
+            "- Use empty string or empty list when a field cannot be found\n"
+            "- Return only the JSON object, nothing else"
+        )
 
+        try:
+            groq_result = _call_groq(system, user, json_mode=True, max_tokens=3000)
+            logger(
+                "CV_ANALYSIS",
+                f"GROQ filled skills={len(groq_result.get('skills', []))} "
+                f"| exp={len(groq_result.get('work_experience', []))} "
+                f"| edu={len(groq_result.get('education', []))}",
+                level="INFO",
+            )
+        except Exception as e:
+            logger("CV_ANALYSIS", f"GROQ structured extraction failed: {e}", level="ERROR")
+
+    # Prefer RoBERTa per field, fall back to GROQ only where RoBERTa came back empty.
     return {
-        "suggested_bio": bio,
-        "skills": groq_result.get("skills", []),
-        "languages": groq_result.get("languages", []),
-        "work_experience": groq_result.get("work_experience", []),
-        "education": groq_result.get("education", []),
+        "suggested_bio": roberta_bio or groq_result.get("suggested_bio", ""),
+        "skills": roberta_skills or groq_result.get("skills", []),
+        "languages": roberta_langs or groq_result.get("languages", []),
+        "work_experience": roberta_exp or groq_result.get("work_experience", []),
+        "education": roberta_edu or groq_result.get("education", []),
     }
 
 

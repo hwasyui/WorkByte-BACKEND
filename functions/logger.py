@@ -20,7 +20,7 @@ class Logger:
         formatter = logging.Formatter("%(asctime)s | %(levelname)s | %(service)s | %(route)s | %(message)s")
 
         self.logger = logging.getLogger("app_logger")
-
+  
         if not self.logger.handlers:
             self.logger.setLevel(logging.INFO)
 
