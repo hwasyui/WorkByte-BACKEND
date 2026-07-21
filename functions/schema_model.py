@@ -941,48 +941,8 @@ class RatingResponse(BaseModel):
         from_attributes = True
 
 
-# Performance ratings
-class PerformanceRatingCreate(BaseModel):
-    performance_rating_id: Optional[str] = None
-    freelancer_id: str
-    overall_performance_score: Optional[float] = None
-    confidence_score: Optional[float] = None
-    total_ratings_received: Optional[int] = 0
-    average_communication: Optional[float] = None
-    average_result_quality: Optional[float] = None
-    average_professionalism: Optional[float] = None
-    average_scope_compliance: Optional[float] = None
-    average_timeline_compliance: Optional[float] = None
-    success_rate: Optional[float] = None
-
-class PerformanceRatingUpdate(BaseModel):
-    overall_performance_score: Optional[float] = None
-    confidence_score: Optional[float] = None
-    total_ratings_received: Optional[int] = None
-    average_communication: Optional[float] = None
-    average_result_quality: Optional[float] = None
-    average_professionalism: Optional[float] = None
-    average_scope_compliance: Optional[float] = None
-    average_timeline_compliance: Optional[float] = None
-    success_rate: Optional[float] = None
-
-class PerformanceRatingResponse(BaseModel):
-    performance_rating_id: str
-    freelancer_id: str
-    overall_performance_score: Optional[float] = None
-    confidence_score: Optional[float] = None
-    total_ratings_received: Optional[int] = 0
-    average_communication: Optional[float] = None
-    average_result_quality: Optional[float] = None
-    average_professionalism: Optional[float] = None
-    average_scope_compliance: Optional[float] = None
-    average_timeline_compliance: Optional[float] = None
-    success_rate: Optional[float] = None
-    last_calculated_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
+# Performance ratings removed: the standalone performance_rating table was dropped and its
+# aggregate role is now served by the auto-computed freelancer_trust_scores table.
 
 
 # Client reviews (freelancer reviews client - symmetric counterpart to reviews above)

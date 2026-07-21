@@ -457,22 +457,41 @@ def get_comprehensive_freelancer_profile(freelancer_id: str) -> Optional[Dict]:
         )
         portfolio = [dict(row) for row in portfolio_rows] if portfolio_rows else []
 
-        ratings_query = """
-            SELECT r.rating_id, r.contract_id, r.client_id, r.freelancer_id,
-                   r.communication_score, r.result_quality_score, r.professionalism_score,
-                   r.timeline_compliance_score, r.overall_rating, r.review_text, r.created_at
-            FROM rating r
-            WHERE r.freelancer_id = :freelancer_id
-            ORDER BY r.created_at DESC
-        """
-        ratings_rows = db.execute_query(ratings_query, {"freelancer_id": freelancer_id})
-        ratings = [dict(row) for row in ratings_rows] if ratings_rows else []
+        # Ratings now come from the review system (reviews + review_ratings + written
+        # content) and the aggregate freelancer_trust_scores. Both are keyed by
+        # users.user_id, not freelancer.freelancer_id, so resolve via the freelancer row.
+        reviewer_user_id = freelancer.get("user_id")
+        from routes.reviews.review_functions import ReviewFunctions
 
-        total_ratings = len(ratings)
-        average_rating = (
-            sum(r['overall_rating'] for r in ratings if r['overall_rating']) / total_ratings
-            if ratings else None
+        reviews = (
+            ReviewFunctions.get_reviews_by_freelancer_id(str(reviewer_user_id))
+            if reviewer_user_id else []
         )
+
+        trust_rows = db.fetch_data(
+            table_name="freelancer_trust_scores",
+            conditions=[("freelancer_id", "=", reviewer_user_id)],
+            limit=1,
+        ) if reviewer_user_id else []
+        trust_score = dict(trust_rows[0]) if trust_rows else None
+
+        # total_ratings / average_rating are kept for the admin profile view. Prefer the
+        # precomputed trust-score aggregate, then fall back to the published reviews.
+        if trust_score:
+            total_ratings = trust_score.get("total_reviews") or len(reviews)
+            average_rating = trust_score.get("display_star_avg")
+        else:
+            total_ratings = len(reviews)
+            average_rating = None
+
+        if average_rating is None and reviews:
+            all_scores = [
+                float(rt["score"])
+                for rv in reviews
+                for rt in rv.get("ratings", [])
+                if rt.get("score") is not None
+            ]
+            average_rating = sum(all_scores) / len(all_scores) if all_scores else None
 
         return {
             "freelancer": freelancer,
@@ -480,7 +499,8 @@ def get_comprehensive_freelancer_profile(freelancer_id: str) -> Optional[Dict]:
             "education": education,
             "work_experience": work_experience,
             "portfolio": portfolio,
-            "ratings": ratings,
+            "reviews": reviews,
+            "trust_score": trust_score,
             "total_ratings": total_ratings,
             "average_rating": average_rating
         }
