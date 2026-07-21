@@ -519,15 +519,14 @@ def action_moderation_item(
         content_id   = str(updated.get("content_id", ""))
         if content_type == "job_post":
             closure_note = admin_note or _closure_note_with_labels(updated.get("detected_labels"))
-            # active jobs only, same as the auto path — a confirmed flag on a draft/filled/
-            # already-closed job leaves its status alone; notify only on a real close.
             closed = _rows(get_db().execute_query(
-                f"""
+                """
                 UPDATE job_post
                 SET status = 'closed',
                     closure_reason = :reason,
-                    closure_note   = :note
-                WHERE job_post_id = :id AND status = 'active'{_ACTIVE_NO_ENGAGEMENT}
+                    closure_note   = :note,
+                    closed_at      = NOW()
+                WHERE job_post_id = :id AND status <> 'closed'
                 RETURNING job_post_id
                 """,
                 params={
@@ -1450,7 +1449,11 @@ def list_reports(
         SELECT ur.*,
                reporter.email          AS reporter_email,
                reported.email          AS reported_email,
-               jp.job_title            AS job_post_title
+               jp.job_title            AS job_post_title,
+               CASE WHEN ur.job_post_id IS NOT NULL
+                    THEN {_is_engaged_sql('ur.job_post_id')}
+                    ELSE FALSE
+               END                      AS is_engaged
         FROM user_reports ur
         JOIN users reporter ON reporter.user_id = ur.reporter_id
         LEFT JOIN users    reported ON reported.user_id  = ur.reported_user_id
@@ -1472,11 +1475,15 @@ def list_reports(
 def get_report(report_id: str) -> Optional[Dict]:
     """Fetch a single report by ID with reporter and reported entity details."""
     return _row(get_db().execute_query(
-        """
+        f"""
         SELECT ur.*,
                reporter.email          AS reporter_email,
                reported.email          AS reported_email,
-               jp.job_title            AS job_post_title
+               jp.job_title            AS job_post_title,
+               CASE WHEN ur.job_post_id IS NOT NULL
+                    THEN {_is_engaged_sql('ur.job_post_id')}
+                    ELSE FALSE
+               END                      AS is_engaged
         FROM user_reports ur
         JOIN users reporter ON reporter.user_id = ur.reporter_id
         LEFT JOIN users    reported ON reported.user_id  = ur.reported_user_id
@@ -1530,7 +1537,7 @@ def action_report(
     admin_note: Optional[str] = None,
 ) -> Optional[Dict]:
     new_status = "accepted" if action == "accept" else "dismissed"
-    return _row(get_db().execute_query(
+    updated = _row(get_db().execute_query(
         """
         UPDATE user_reports
         SET status = :status, admin_user_id = :admin_id,
@@ -1545,6 +1552,38 @@ def action_report(
             "rid":      report_id,
         },
     ))
+
+    # Accepting a report that targets a job post closes that job. This is a manual admin
+    # decision, so it closes even an engaged job (full power, like admin_close_job) -- the FE
+    # warns via the report's is_engaged flag and confirms first. Reports that target a user are
+    # left as just 'accepted' here; the report-threshold sweep is what bans users. Skips a job
+    # already closed so an existing closure reason isn't stomped and the client isn't re-notified.
+    if updated and new_status == "accepted" and updated.get("job_post_id"):
+        job_post_id  = str(updated["job_post_id"])
+        closure_note = admin_note or DEFAULT_CLOSURE_NOTE_REPORTS
+        closed = _row(get_db().execute_query(
+            """
+            UPDATE job_post
+            SET status         = 'closed',
+                closure_reason = :reason,
+                closure_note   = :note,
+                closed_at      = NOW()
+            WHERE job_post_id = :jid AND status <> 'closed'
+            RETURNING job_post_id
+            """,
+            params={
+                "jid":    job_post_id,
+                "reason": DEFAULT_CLOSURE_REASON_REPORTS,
+                "note":   closure_note,
+            },
+        ))
+        if closed:
+            logger("ADMIN", f"Job post {job_post_id} closed after report {report_id} accepted by admin {admin_user_id}", level="WARNING")
+            _notify_job_post_closed(job_post_id, "job_closed_reports", "Job Post Closed", closure_note)
+        else:
+            logger("ADMIN", f"Report {report_id} accepted; job {job_post_id} was already closed (skipped re-close)", level="INFO")
+
+    return updated
 
 
 def admin_close_job(

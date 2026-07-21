@@ -22,7 +22,7 @@ _VALID_CLIENT_ORDER_BY = {
     "weighted_review_avg_received", "total_reviews_received",
 }
 
-@client_router.get("/browse/all", response_model=List[ClientResponse])
+@client_router.get("/browse/all", response_model=None)
 async def browse_all_clients(
     order_by: str = Query(
         default="weighted_review_avg_received",
@@ -53,7 +53,7 @@ async def browse_all_clients(
         return ResponseSchema.error(error_msg, 500)
 
 
-@client_router.get("", response_model=List[ClientResponse])
+@client_router.get("", response_model=None)
 async def get_all_clients(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
     """Fetch current client profile - Authenticated users only - JSON response."""
     try:
@@ -67,7 +67,7 @@ async def get_all_clients(limit: Optional[int] = None, current_user: UserInDB = 
         return ResponseSchema.error(error_msg, 500)
 
 
-@client_router.get("/search", response_model=Dict)
+@client_router.get("/search", response_model=None)
 async def search_clients(
     name: str = Query(..., description="Client name to search for"),
     current_user: UserInDB = Depends(get_current_user),
@@ -83,7 +83,7 @@ async def search_clients(
         return ResponseSchema.error(error_msg, 500)
 
 
-@client_router.get("/{identifier}", response_model=ClientResponse)
+@client_router.get("/{identifier}", response_model=None)
 async def get_client(identifier: str, current_user: UserInDB = Depends(get_current_user)):
     """Fetch a single client by ID (supports both client_id and user_id) - Authenticated users only - JSON response."""
     try:
@@ -100,7 +100,7 @@ async def get_client(identifier: str, current_user: UserInDB = Depends(get_curre
         logger("CLIENT", error_msg, "GET /clients/{identifier}", "ERROR")
         return ResponseSchema.error(error_msg, 500)
 
-@client_router.post("", response_model=ClientResponse, status_code=201)
+@client_router.post("", response_model=None, status_code=201)
 async def create_client(
     client: ClientCreate = Depends(),
     current_user: UserInDB = Depends(get_client_user),
@@ -152,7 +152,7 @@ async def create_client(
         return ResponseSchema.error(error_msg, 500)
 
 
-@client_router.put("/{identifier}", response_model=ClientResponse)
+@client_router.put("/{identifier}", response_model=None)
 async def update_client(
     identifier: str,
     client_update: ClientUpdate = Depends(ClientUpdate.as_form),
@@ -226,7 +226,7 @@ async def delete_client(identifier: str, current_user: UserInDB = Depends(get_cl
         return ResponseSchema.error(error_msg, 500)
 
 
-@client_router.post("/{client_id}/profile-picture", response_model=ClientResponse)
+@client_router.post("/{client_id}/profile-picture", response_model=None)
 async def upload_client_profile_picture_endpoint(
     client_id: str,
     file: UploadFile = File(...),

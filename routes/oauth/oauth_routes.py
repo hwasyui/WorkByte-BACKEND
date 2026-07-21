@@ -2,7 +2,7 @@ import os
 import sys
 
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import RedirectResponse
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from functions.logger import logger
@@ -34,15 +34,16 @@ def _success_response(token_data: dict):
             f"&is_new_user={'true' if token_data.get('is_new_user') else 'false'}"
         )
         return RedirectResponse(url, status_code=302)
-    return JSONResponse(ResponseSchema.success(token_data, 200))
+    # ResponseSchema.success already returns a JSONResponse -- return it directly (wrapping it
+    # in JSONResponse() again double-encodes and 500s on the dev/no-FRONTEND_URL path).
+    return ResponseSchema.success(token_data, 200)
 
 
 def _error_response(message: str, status_code: int = 400):
     if FRONTEND_URL:
         url = f"{FRONTEND_URL.rstrip('/')}/auth/oauth/callback?error={message}"
         return RedirectResponse(url, status_code=302)
-    return JSONResponse(ResponseSchema.error(message, status_code), status_code=status_code)
-
+    return ResponseSchema.error(message, status_code)
 
 @oauth_router.get("/google")
 async def google_login():

@@ -70,7 +70,7 @@ async def freelancer_update_form(
 freelancer_router = APIRouter(prefix="/freelancers", tags=["Freelancers"])
 
 
-@freelancer_router.get("", response_model=List[FreelancerResponse])
+@freelancer_router.get("", response_model=None)
 async def get_all_freelancers(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
     try:
         freelancer = get_freelancer_profile_for_user(current_user)
@@ -82,7 +82,7 @@ async def get_all_freelancers(limit: Optional[int] = None, current_user: UserInD
         return ResponseSchema.error(error_msg, 500)
 
 
-@freelancer_router.post("", response_model=FreelancerResponse, status_code=201)
+@freelancer_router.post("", response_model=None, status_code=201)
 async def create_freelancer(
     freelancer: FreelancerCreate = Depends(),
     current_user: UserInDB = Depends(get_freelancer_user),
@@ -184,7 +184,7 @@ async def parse_cv_for_autofill(
         return ResponseSchema.error(error_msg, 500)
 
 
-@freelancer_router.put("/{identifier}", response_model=FreelancerResponse)
+@freelancer_router.put("/{identifier}", response_model=None)
 async def update_freelancer(
     identifier: str,
     freelancer_update: FreelancerUpdate = Depends(FreelancerUpdate.as_form),
@@ -250,7 +250,7 @@ async def delete_freelancer(identifier: str, current_user: UserInDB = Depends(ge
         return ResponseSchema.error(error_msg, 500)
 
 
-@freelancer_router.get("/search", response_model=Dict)
+@freelancer_router.get("/search", response_model=None)
 async def search_freelancers(
     name: str = Query(..., description="Freelancer name to search for"),
     current_user: UserInDB = Depends(get_current_user),
@@ -265,7 +265,7 @@ async def search_freelancers(
         return ResponseSchema.error(error_msg, 500)
 
 
-@freelancer_router.get("/{freelancer_id}/skills", response_model=Dict)
+@freelancer_router.get("/{freelancer_id}/skills", response_model=None)
 async def get_freelancer_skills(freelancer_id: str, current_user: UserInDB = Depends(get_current_user)):
     try:
         skills = FreelancerFunctions.get_freelancer_skills_with_names(freelancer_id)
@@ -277,7 +277,7 @@ async def get_freelancer_skills(freelancer_id: str, current_user: UserInDB = Dep
         return ResponseSchema.error(error_msg, 500)
 
 
-@freelancer_router.get("/{freelancer_id}/embedding", response_model=Dict)
+@freelancer_router.get("/{freelancer_id}/embedding", response_model=None)
 async def get_freelancer_embedding(freelancer_id: str, current_user: UserInDB = Depends(get_current_user)):
     try:
         embedding = FreelancerFunctions.get_freelancer_embedding(freelancer_id)
@@ -299,7 +299,7 @@ async def get_freelancer_embedding(freelancer_id: str, current_user: UserInDB = 
 
 _VALID_FREELANCER_ORDER_BY = {"created_at", "updated_at", "full_name", "estimated_rate", "total_jobs", "weighted_review_avg", "total_reviews",}
 
-@freelancer_router.get("/browse/all", response_model=List[FreelancerResponse])
+@freelancer_router.get("/browse/all", response_model=None)
 async def browse_all_freelancers(
     order_by: str = Query(
         default="weighted_review_avg",
@@ -329,7 +329,7 @@ async def browse_all_freelancers(
         logger("FREELANCER", error_msg, "GET /freelancers/browse/all", "ERROR")
         return ResponseSchema.error(error_msg, 500)
 
-@freelancer_router.get("/{freelancer_id}/profile", response_model=FreelancerProfileComplete)
+@freelancer_router.get("/{freelancer_id}/profile", response_model=None)
 async def get_comprehensive_freelancer_profile_endpoint(freelancer_id: str, current_user: UserInDB = Depends(get_current_user)):
     try:
         profile = get_comprehensive_freelancer_profile(freelancer_id)
@@ -343,7 +343,7 @@ async def get_comprehensive_freelancer_profile_endpoint(freelancer_id: str, curr
         return ResponseSchema.error(error_msg, 500)
 
 
-@freelancer_router.post("/{freelancer_id}/profile-picture", response_model=FreelancerResponse)
+@freelancer_router.post("/{freelancer_id}/profile-picture", response_model=None)
 async def upload_freelancer_profile_picture_endpoint(
     freelancer_id: str,
     file: UploadFile = File(...),
@@ -423,7 +423,7 @@ async def delete_freelancer_profile_picture(
 
 
 # Wildcard last, must come after all /{freelancer_id}/xxx routes
-@freelancer_router.get("/{identifier}", response_model=FreelancerResponse)
+@freelancer_router.get("/{identifier}", response_model=None)
 async def get_freelancer(identifier: str, current_user: UserInDB = Depends(get_current_user)):
     try:
         freelancer = FreelancerFunctions.get_freelancer_by_id_or_user_id(identifier)

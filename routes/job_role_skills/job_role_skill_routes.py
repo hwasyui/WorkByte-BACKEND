@@ -19,7 +19,7 @@ from ai_related.job_engine.embedding_manager import mark_job_dirty_by_role
 job_role_skill_router = APIRouter(prefix="/job-role-skills", tags=["Job Role Skills"])
 
 
-@job_role_skill_router.get("", response_model=List[JobRoleSkillResponse])
+@job_role_skill_router.get("", response_model=None)
 async def get_all_job_role_skills(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
     """Fetch all job role skills - Authenticated users only - JSON response."""
     try:
@@ -33,7 +33,7 @@ async def get_all_job_role_skills(limit: Optional[int] = None, current_user: Use
         return ResponseSchema.error(error_msg, 500)
 
 
-@job_role_skill_router.get("/{job_role_skill_id}", response_model=JobRoleSkillResponse)
+@job_role_skill_router.get("/{job_role_skill_id}", response_model=None)
 async def get_job_role_skill(job_role_skill_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Fetch a single job role skill by ID - Authenticated users only - JSON response."""
     try:
@@ -56,7 +56,7 @@ async def get_job_role_skill(job_role_skill_id: str, current_user: UserInDB = De
         return ResponseSchema.error(error_msg, 500)
 
 
-@job_role_skill_router.get("/job-role/{job_role_id}", response_model=List[JobRoleSkillResponse])
+@job_role_skill_router.get("/job-role/{job_role_id}", response_model=None)
 async def get_job_role_skills_by_job_role(job_role_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Fetch all skills for a specific job role - Authenticated users only - JSON response."""
     try:
@@ -69,7 +69,7 @@ async def get_job_role_skills_by_job_role(job_role_id: str, current_user: UserIn
         logger("JOB_ROLE_SKILL", error_msg, "GET /job-role-skills/job-role/{job_role_id}", "ERROR")
         return ResponseSchema.error(error_msg, 500)
 
-@job_role_skill_router.post("", response_model=JobRoleSkillResponse, status_code=201)
+@job_role_skill_router.post("", response_model=None, status_code=201)
 async def create_job_role_skill(job_role_skill: JobRoleSkillCreate, current_user: UserInDB = Depends(get_current_user)):
     """Create a new job role skill - Authenticated users only - JSON body accepted."""
     try:
@@ -101,7 +101,7 @@ async def create_job_role_skill(job_role_skill: JobRoleSkillCreate, current_user
         return ResponseSchema.error(error_msg, 500)
 
 
-@job_role_skill_router.put("/{job_role_skill_id}", response_model=JobRoleSkillResponse)
+@job_role_skill_router.put("/{job_role_skill_id}", response_model=None)
 async def update_job_role_skill(job_role_skill_id: str, job_role_skill_update: JobRoleSkillUpdate, current_user: UserInDB = Depends(get_current_user)):
     """Update job role skill information - Authenticated users only."""
     try:

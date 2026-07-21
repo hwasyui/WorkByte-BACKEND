@@ -17,7 +17,7 @@ from ai_related.job_engine.embedding_manager import mark_freelancer_dirty
 education_router = APIRouter(prefix="/educations", tags=["Educations"])
 
 
-@education_router.get("", response_model=List[EducationResponse])
+@education_router.get("", response_model=None)
 async def get_all_educations(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
     """Fetch all educations - Authenticated users only - JSON response."""
     try:
@@ -32,7 +32,7 @@ async def get_all_educations(limit: Optional[int] = None, current_user: UserInDB
         return ResponseSchema.error(error_msg, 500)
 
 
-@education_router.get("/{education_id}", response_model=EducationResponse)
+@education_router.get("/{education_id}", response_model=None)
 async def get_education(education_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Fetch a single education by ID - Authenticated users only - JSON response."""
     try:
@@ -50,7 +50,7 @@ async def get_education(education_id: str, current_user: UserInDB = Depends(get_
         return ResponseSchema.error(error_msg, 500)
 
 
-@education_router.get("/freelancer/{freelancer_id}", response_model=List[EducationResponse])
+@education_router.get("/freelancer/{freelancer_id}", response_model=None)
 async def get_educations_by_freelancer(freelancer_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Fetch all educations for a specific freelancer - Authenticated users only - JSON response."""
     try:
@@ -64,7 +64,7 @@ async def get_educations_by_freelancer(freelancer_id: str, current_user: UserInD
         return ResponseSchema.error(error_msg, 500)
 
 
-@education_router.post("", response_model=EducationResponse, status_code=201)
+@education_router.post("", response_model=None, status_code=201)
 async def create_education(education: EducationCreate, current_user: UserInDB = Depends(get_current_user)):
     """Create a new education - Authenticated users only - JSON body accepted."""
     try:
@@ -98,7 +98,7 @@ async def create_education(education: EducationCreate, current_user: UserInDB = 
         return ResponseSchema.error(error_msg, 500)
 
 
-@education_router.put("/{education_id}", response_model=EducationResponse)
+@education_router.put("/{education_id}", response_model=None)
 async def update_education(education_id: str, education_update: EducationUpdate, current_user: UserInDB = Depends(get_current_user)):
     """Update education information - Authenticated users only."""
     try:

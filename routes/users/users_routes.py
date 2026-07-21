@@ -16,7 +16,7 @@ from routes.users.users_functions import UserFunctions
 users_router = APIRouter(prefix="/users", tags=["Users"])
 
 
-@users_router.get("", response_model=List[UserResponseDetail])
+@users_router.get("", response_model=None)
 async def get_all_users(limit: Optional[int] = None, offset: int = 0, current_user: UserInDB = Depends(get_current_user)):
     """Fetch current user only - Authenticated users only - JSON response."""
     try:
@@ -30,7 +30,7 @@ async def get_all_users(limit: Optional[int] = None, offset: int = 0, current_us
         return ResponseSchema.error(error_msg, 500)
 
 
-@users_router.get("/search", response_model=Dict)
+@users_router.get("/search", response_model=None)
 async def search_users(
     name: str = Query(..., untu="User email or name to search for"),
     current_user: UserInDB = Depends(get_current_user),
@@ -46,7 +46,7 @@ async def search_users(
         return ResponseSchema.error(error_msg, 500)
 
 
-@users_router.get("/{user_id}", response_model=UserResponseDetail)
+@users_router.get("/{user_id}", response_model=None)
 async def get_user(user_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Fetch a single user by ID - Authenticated users only - JSON response."""
     try:
@@ -67,7 +67,7 @@ async def get_user(user_id: str, current_user: UserInDB = Depends(get_current_us
         return ResponseSchema.error(error_msg, 500)
 
 
-@users_router.post("", response_model=UserResponseDetail, status_code=201)
+@users_router.post("", response_model=None, status_code=201)
 async def create_user(user: UserCreate, current_user: UserInDB = Depends(get_current_user)):
     """Create a new user - Authenticated users only - JSON body accepted."""
     try:
@@ -95,7 +95,7 @@ async def create_user(user: UserCreate, current_user: UserInDB = Depends(get_cur
         return ResponseSchema.error(error_msg, 500)
 
 
-@users_router.put("/{user_id}", response_model=UserResponseDetail)
+@users_router.put("/{user_id}", response_model=None)
 async def update_user(user_id: str, user_update: UserUpdate, current_user: UserInDB = Depends(get_current_user)):
     """Update user information - Authenticated users only."""
     try:

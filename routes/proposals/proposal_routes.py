@@ -22,7 +22,7 @@ from routes.admin.admin_moderation import scan_harmful_text_with_ml_fallback
 proposal_router = APIRouter(prefix="/proposals", tags=["Proposals"])
 
 
-@proposal_router.get("", response_model=List[ProposalResponse])
+@proposal_router.get("", response_model=None)
 async def get_all_proposals(
     limit: Optional[int] = None,
     current_user: UserInDB = Depends(get_current_user),
@@ -36,7 +36,7 @@ async def get_all_proposals(
         return ResponseSchema.error(f"Failed to fetch proposals: {str(e)}", 500)
 
 
-@proposal_router.get("/me", response_model=List[ProposalResponse])
+@proposal_router.get("/me", response_model=None)
 async def get_my_proposals(current_user: UserInDB = Depends(get_current_user)):
     """Freelancer views their own proposals."""
     try:
@@ -79,7 +79,7 @@ async def get_proposals_by_job_post(
         return ResponseSchema.error(f"Failed to fetch proposals: {str(e)}", 500)
 
 
-@proposal_router.get("/freelancer/{freelancer_id}", response_model=List[ProposalResponse])
+@proposal_router.get("/freelancer/{freelancer_id}", response_model=None)
 async def get_proposals_by_freelancer(
     freelancer_id: str,
     current_user: UserInDB = Depends(get_current_user),
@@ -93,7 +93,7 @@ async def get_proposals_by_freelancer(
         return ResponseSchema.error(f"Failed to fetch proposals: {str(e)}", 500)
 
 
-@proposal_router.get("/{proposal_id}", response_model=ProposalResponse)
+@proposal_router.get("/{proposal_id}", response_model=None)
 async def get_proposal(
     proposal_id: str,
     current_user: UserInDB = Depends(get_current_user),
@@ -109,7 +109,7 @@ async def get_proposal(
         return ResponseSchema.error(f"Failed to fetch proposal: {str(e)}", 500)
 
 
-@proposal_router.post("", response_model=ProposalResponse, status_code=201)
+@proposal_router.post("", response_model=None, status_code=201)
 async def create_proposal(
     proposal: ProposalCreate,
     current_user: UserInDB = Depends(get_current_user),
@@ -281,7 +281,7 @@ async def update_proposal_status(
         return ResponseSchema.error(f"Failed to update status: {str(e)}", 500)
 
 
-@proposal_router.put("/{proposal_id}", response_model=ProposalResponse)
+@proposal_router.put("/{proposal_id}", response_model=None)
 async def update_proposal(
     proposal_id: str,
     proposal_update: ProposalUpdate,

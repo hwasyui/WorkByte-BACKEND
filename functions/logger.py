@@ -2,6 +2,7 @@ import logging
 import logging.handlers
 import traceback
 import os
+import sys
 
 # Services in this set get routed to their own rotating file instead of
 # app.log. They tend to run on a timer and re-log the same handful of
@@ -63,14 +64,20 @@ class Logger:
         level = level.upper()
         target = self.isolated_logger if service in _ISOLATED_SERVICES else self.logger
 
+        # When exc_info isn't given, only attach a traceback if we're actually inside active
+        # exception handling. Avoids the spurious "NoneType: None" that logging appends when an
+        # ERROR/CRITICAL line is emitted outside an except block (validation/not-found cases).
+        if exc_info is None:
+            exc_info = sys.exc_info()[0] is not None
+
         if level == "ERROR":
-            target.error(message, exc_info=True if exc_info is None else exc_info, extra=extra)
+            target.error(message, exc_info=exc_info, extra=extra)
         elif level == "WARNING":
             target.warning(message, extra=extra)
         elif level == "DEBUG":
             target.debug(message, extra=extra)
         elif level == "CRITICAL":
-            target.critical(message, exc_info=True if exc_info is None else exc_info, extra=extra)
+            target.critical(message, exc_info=exc_info, extra=extra)
         else:
             target.info(message, extra=extra)
 
@@ -78,10 +85,10 @@ logger_instance = Logger()
 
 def logger(service, message="", route="", level="INFO", exc_info=None):
     """
-    exc_info: only meaningful for ERROR/CRITICAL. Defaults to True (dump the
-    current exception's traceback), matching prior behavior. Pass
-    exc_info=False when re-logging an exception that a lower layer already
-    dumped a full traceback for, so the same stack trace isn't repeated at
-    every level of the call chain.
+    exc_info: only meaningful for ERROR/CRITICAL. Defaults to None, which
+    auto-attaches a traceback only when called during active exception handling
+    (inside an except block); an ERROR logged elsewhere gets no bogus traceback.
+    Pass exc_info=False to force-suppress (e.g. re-logging an exception a lower
+    layer already dumped), or exc_info=True to force a traceback.
     """
     logger_instance.log(service, message, route, level, exc_info=exc_info)

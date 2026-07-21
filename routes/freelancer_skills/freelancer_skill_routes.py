@@ -17,7 +17,7 @@ from ai_related.job_engine.embedding_manager import mark_freelancer_dirty
 freelancer_skill_router = APIRouter(prefix="/freelancer-skills", tags=["Freelancer Skills"])
 
 
-@freelancer_skill_router.get("", response_model=List[FreelancerSkillResponse])
+@freelancer_skill_router.get("", response_model=None)
 async def get_all_freelancer_skills(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
     """Fetch all freelancer skills - Authenticated users only - JSON response."""
     try:
@@ -32,7 +32,7 @@ async def get_all_freelancer_skills(limit: Optional[int] = None, current_user: U
         return ResponseSchema.error(error_msg, 500)
 
 
-@freelancer_skill_router.get("/{freelancer_skill_id}", response_model=FreelancerSkillResponse)
+@freelancer_skill_router.get("/{freelancer_skill_id}", response_model=None)
 async def get_freelancer_skill(freelancer_skill_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Fetch a single freelancer skill by ID - Authenticated users only - JSON response."""
     try:
@@ -50,7 +50,7 @@ async def get_freelancer_skill(freelancer_skill_id: str, current_user: UserInDB 
         return ResponseSchema.error(error_msg, 500)
 
 
-@freelancer_skill_router.get("/freelancer/{freelancer_id}", response_model=List[FreelancerSkillResponse])
+@freelancer_skill_router.get("/freelancer/{freelancer_id}", response_model=None)
 async def get_freelancer_skills_by_freelancer(freelancer_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Fetch all skills for a specific freelancer - Authenticated users only - JSON response."""
     try:
@@ -64,7 +64,7 @@ async def get_freelancer_skills_by_freelancer(freelancer_id: str, current_user: 
         return ResponseSchema.error(error_msg, 500)
 
 
-@freelancer_skill_router.post("", response_model=FreelancerSkillResponse, status_code=201)
+@freelancer_skill_router.post("", response_model=None, status_code=201)
 async def create_freelancer_skill(freelancer_skill: FreelancerSkillCreate, current_user: UserInDB = Depends(get_current_user)):
     """Create a new freelancer skill - Authenticated users only - JSON body accepted."""
     try:
@@ -93,7 +93,7 @@ async def create_freelancer_skill(freelancer_skill: FreelancerSkillCreate, curre
         return ResponseSchema.error(error_msg, 500)
 
 
-@freelancer_skill_router.put("/{freelancer_skill_id}", response_model=FreelancerSkillResponse)
+@freelancer_skill_router.put("/{freelancer_skill_id}", response_model=None)
 async def update_freelancer_skill(freelancer_skill_id: str, freelancer_skill_update: FreelancerSkillUpdate, current_user: UserInDB = Depends(get_current_user)):
     """Update freelancer skill information - Authenticated users only."""
     try:

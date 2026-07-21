@@ -16,7 +16,7 @@ from routes.saved_jobs.saved_job_functions import SavedJobFunctions
 saved_job_router = APIRouter(prefix="/saved-jobs", tags=["Saved Jobs"])
 
 
-@saved_job_router.get("", response_model=List[SavedJobResponse])
+@saved_job_router.get("", response_model=None)
 async def get_all_saved_jobs(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
     """Fetch all saved jobs - Authenticated users only - JSON response."""
     try:
@@ -31,7 +31,7 @@ async def get_all_saved_jobs(limit: Optional[int] = None, current_user: UserInDB
         return ResponseSchema.error(error_msg, 500)
 
 
-@saved_job_router.get("/{saved_job_id}", response_model=SavedJobResponse)
+@saved_job_router.get("/{saved_job_id}", response_model=None)
 async def get_saved_job(saved_job_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Fetch a single saved job by ID - Authenticated users only - JSON response."""
     try:
@@ -52,7 +52,7 @@ async def get_saved_job(saved_job_id: str, current_user: UserInDB = Depends(get_
         return ResponseSchema.error(error_msg, 500)
 
 
-@saved_job_router.get("/freelancer/{freelancer_id}", response_model=List[SavedJobResponse])
+@saved_job_router.get("/freelancer/{freelancer_id}", response_model=None)
 async def get_saved_jobs_by_freelancer(freelancer_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Fetch all saved jobs for a specific freelancer - Authenticated users only - JSON response."""
     try:
@@ -69,7 +69,7 @@ async def get_saved_jobs_by_freelancer(freelancer_id: str, current_user: UserInD
         return ResponseSchema.error(error_msg, 500)
 
 
-@saved_job_router.post("", response_model=SavedJobResponse, status_code=201)
+@saved_job_router.post("", response_model=None, status_code=201)
 async def create_saved_job(saved_job: SavedJobCreate, current_user: UserInDB = Depends(get_current_user)):
     """Create a new saved job - Authenticated users only - JSON body accepted."""
     try:

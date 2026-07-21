@@ -119,7 +119,7 @@ contract_router = APIRouter(prefix="/contracts", tags=["Contracts"])
 # GET /contracts
 
 
-@contract_router.get("", response_model=List[ContractResponse])
+@contract_router.get("", response_model=None)
 async def get_all_contracts(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
     """Return all contracts visible to the current user."""
     try:
@@ -145,7 +145,7 @@ async def get_all_contracts(limit: Optional[int] = None, current_user: UserInDB 
 # Specific sub-paths BEFORE /{contract_id} so they are not shadowed
 
 
-@contract_router.get("/freelancer/{freelancer_id}", response_model=List[ContractResponse])
+@contract_router.get("/freelancer/{freelancer_id}", response_model=None)
 async def get_contracts_by_freelancer(freelancer_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Return all contracts for a given freelancer."""
     try:
@@ -161,7 +161,7 @@ async def get_contracts_by_freelancer(freelancer_id: str, current_user: UserInDB
         return ResponseSchema.error(f"Failed to fetch contracts for freelancer {freelancer_id}: {str(e)}", 500)
 
 
-@contract_router.get("/client/{client_id}", response_model=List[ContractResponse])
+@contract_router.get("/client/{client_id}", response_model=None)
 async def get_contracts_by_client(client_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Return all contracts for a given client."""
     try:
@@ -255,7 +255,7 @@ async def download_contract_pdf(contract_id: str, current_user: UserInDB = Depen
 # Generic /{contract_id} GET, must come AFTER all literal sub-paths
 
 
-@contract_router.get("/{contract_id}", response_model=ContractResponse)
+@contract_router.get("/{contract_id}", response_model=None)
 async def get_contract(contract_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Return a single contract by ID."""
     try:
@@ -276,7 +276,7 @@ async def get_contract(contract_id: str, current_user: UserInDB = Depends(get_cu
 # Mutations
 
 
-@contract_router.post("", response_model=ContractResponse, status_code=201)
+@contract_router.post("", response_model=None, status_code=201)
 async def create_contract(contract: ContractCreate, current_user: UserInDB = Depends(get_current_user)):
     """Create a new contract."""
     try:
@@ -399,7 +399,7 @@ async def create_contract(contract: ContractCreate, current_user: UserInDB = Dep
         return ResponseSchema.error(f"Failed to create contract: {str(e)}", 500)
 
 
-@contract_router.post("/{contract_id}/generate", response_model=ContractResponse)
+@contract_router.post("/{contract_id}/generate", response_model=None)
 async def generate_contract_pdf(contract_id: str, generation_data: ContractGenerateRequest, current_user: UserInDB = Depends(get_current_user)):
     """Generate a contract PDF and persist the contract terms and storage path."""
     try:
@@ -543,7 +543,7 @@ async def generate_contract_pdf(contract_id: str, generation_data: ContractGener
         return ResponseSchema.error(f"Failed to generate contract PDF for {contract_id}: {str(e)}", 500)
 
 
-@contract_router.put("/{contract_id}", response_model=ContractResponse)
+@contract_router.put("/{contract_id}", response_model=None)
 async def update_contract(contract_id: str, contract_update: ContractUpdate, background_tasks: BackgroundTasks, current_user: UserInDB = Depends(get_current_user)):
     """Update an existing contract."""
     try:

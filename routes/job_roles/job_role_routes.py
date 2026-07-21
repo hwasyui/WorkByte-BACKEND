@@ -18,7 +18,7 @@ from ai_related.job_engine.embedding_manager import mark_job_dirty, mark_job_dir
 job_role_router = APIRouter(prefix="/job-roles", tags=["Job Roles"])
 
 
-@job_role_router.get("", response_model=List[JobRoleResponse])
+@job_role_router.get("", response_model=None)
 async def get_all_job_roles(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
     """Fetch all job roles - Authenticated users only - JSON response."""
     try:
@@ -33,7 +33,7 @@ async def get_all_job_roles(limit: Optional[int] = None, current_user: UserInDB 
         return ResponseSchema.error(error_msg, 500)
 
 
-@job_role_router.get("/{job_role_id}", response_model=JobRoleResponse)
+@job_role_router.get("/{job_role_id}", response_model=None)
 async def get_job_role(job_role_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Fetch a single job role by ID - Authenticated users only - JSON response."""
     try:
@@ -55,7 +55,7 @@ async def get_job_role(job_role_id: str, current_user: UserInDB = Depends(get_cu
         return ResponseSchema.error(error_msg, 500)
 
 
-@job_role_router.get("/job-post/{job_post_id}", response_model=List[JobRoleResponse])
+@job_role_router.get("/job-post/{job_post_id}", response_model=None)
 async def get_job_roles_by_job_post(job_post_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Fetch all job roles for a specific job post - Authenticated users only - JSON response."""
     try:
@@ -69,7 +69,7 @@ async def get_job_roles_by_job_post(job_post_id: str, current_user: UserInDB = D
         return ResponseSchema.error(error_msg, 500)
 
 
-@job_role_router.post("", response_model=JobRoleResponse, status_code=201)
+@job_role_router.post("", response_model=None, status_code=201)
 async def create_job_role(job_role: JobRoleCreate, current_user: UserInDB = Depends(get_current_user)):
     """Create a new job role - Authenticated users only - JSON body accepted."""
     try:
@@ -105,7 +105,7 @@ async def create_job_role(job_role: JobRoleCreate, current_user: UserInDB = Depe
         return ResponseSchema.error(error_msg, 500)
 
 
-@job_role_router.put("/{job_role_id}", response_model=JobRoleResponse)
+@job_role_router.put("/{job_role_id}", response_model=None)
 async def update_job_role(job_role_id: str, job_role_update: JobRoleUpdate, current_user: UserInDB = Depends(get_current_user)):
     """Update job role information - Authenticated users only."""
     try:

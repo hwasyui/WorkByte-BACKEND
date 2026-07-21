@@ -36,7 +36,7 @@ _VALID_EXPERIENCE_LEVELS = {"entry", "intermediate", "expert"}
 _VALID_BUDGET_TYPES      = {"fixed", "negotiable"}
 
 
-@job_post_router.post("/calculate-project-scope", response_model=JobPostScopeCalculationResponse)
+@job_post_router.post("/calculate-project-scope", response_model=None)
 async def calculate_project_scope(
     payload: JobPostScopeCalculationRequest,
     current_user: UserInDB = Depends(get_current_user),
@@ -61,7 +61,7 @@ async def calculate_project_scope(
         return ResponseSchema.error(error_msg, 500)
 
 
-@job_post_router.get("", response_model=List[JobPostResponse])
+@job_post_router.get("", response_model=None)
 async def get_all_job_posts(
     status: str = Query(default="active", description="active (default), closed, filled, draft, all"),
     order_by: str = Query(default="created_at", description="created_at (default), posted_at, deadline, job_title, proposal_count, view_count"),
@@ -277,7 +277,7 @@ async def get_relevant_jobs(
         logger("JOB_POST", f"Failed to fetch relevant jobs: {str(e)}", "GET /job-posts/relevant", "ERROR")
         return ResponseSchema.error(f"Failed to fetch relevant jobs: {str(e)}", 500)
 
-@job_post_router.get("/search", response_model=List[JobPostResponse])
+@job_post_router.get("/search", response_model=None)
 async def search_job_posts(
     name: str = Query(..., description="Keyword to search in job title or description"),
     limit: int = Query(default=20, ge=1, le=100),
@@ -293,7 +293,7 @@ async def search_job_posts(
         logger("JOB_POST", error_msg, "GET /job-posts/search", "ERROR")
         return ResponseSchema.error(error_msg, 500)
 
-@job_post_router.get("/client/{client_id}", response_model=List[JobPostResponse])
+@job_post_router.get("/client/{client_id}", response_model=None)
 async def get_job_posts_by_client(client_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Fetch all job posts for a specific client - Authenticated users only - JSON response."""
     try:
@@ -307,7 +307,7 @@ async def get_job_posts_by_client(client_id: str, current_user: UserInDB = Depen
         return ResponseSchema.error(error_msg, 500)
 
 
-@job_post_router.get("/{job_post_id}", response_model=JobPostResponse)
+@job_post_router.get("/{job_post_id}", response_model=None)
 async def get_job_post(job_post_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Fetch a single job post by ID - Authenticated users only - JSON response."""
     try:
@@ -326,7 +326,7 @@ async def get_job_post(job_post_id: str, current_user: UserInDB = Depends(get_cu
         return ResponseSchema.error(error_msg, 500)
 
 
-@job_post_router.post("", response_model=JobPostResponse, status_code=201)
+@job_post_router.post("", response_model=None, status_code=201)
 async def create_job_post(job_post: JobPostCreate, current_user: UserInDB = Depends(get_current_user)):
     """Create a new job post - Authenticated users only - JSON body accepted."""
     try:
@@ -399,7 +399,7 @@ async def create_job_post(job_post: JobPostCreate, current_user: UserInDB = Depe
         return ResponseSchema.error(error_msg, 500)
 
 
-@job_post_router.put("/{job_post_id}", response_model=JobPostResponse)
+@job_post_router.put("/{job_post_id}", response_model=None)
 async def update_job_post(job_post_id: str, job_post_update: JobPostUpdate, current_user: UserInDB = Depends(get_current_user)):
     """Update job post information - Authenticated users only."""
     try:

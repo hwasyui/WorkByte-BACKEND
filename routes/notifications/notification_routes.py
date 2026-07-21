@@ -14,7 +14,7 @@ from routes.notifications.notification_functions import NotificationFunctions
 notification_router = APIRouter(prefix="/notifications", tags=["Notifications"])
 
 
-@notification_router.get("", response_model=List[NotificationResponse])
+@notification_router.get("", response_model=None)
 async def get_notifications(
     limit: Optional[int] = 20,
     offset: int = 0,

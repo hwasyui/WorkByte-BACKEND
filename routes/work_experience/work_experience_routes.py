@@ -17,7 +17,7 @@ from ai_related.job_engine.embedding_manager import mark_freelancer_dirty
 work_experience_router = APIRouter(prefix="/work-experiences", tags=["Work Experiences"])
 
 
-@work_experience_router.get("", response_model=List[WorkExperienceResponse])
+@work_experience_router.get("", response_model=None)
 async def get_all_work_experiences(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
     """Fetch all work experiences - Authenticated users only - JSON response."""
     try:
@@ -32,7 +32,7 @@ async def get_all_work_experiences(limit: Optional[int] = None, current_user: Us
         return ResponseSchema.error(error_msg, 500)
 
 
-@work_experience_router.get("/{work_experience_id}", response_model=WorkExperienceResponse)
+@work_experience_router.get("/{work_experience_id}", response_model=None)
 async def get_work_experience(work_experience_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Fetch a single work experience by ID - Authenticated users only - JSON response."""
     try:
@@ -50,7 +50,7 @@ async def get_work_experience(work_experience_id: str, current_user: UserInDB = 
         return ResponseSchema.error(error_msg, 500)
 
 
-@work_experience_router.get("/freelancer/{freelancer_id}", response_model=List[WorkExperienceResponse])
+@work_experience_router.get("/freelancer/{freelancer_id}", response_model=None)
 async def get_work_experiences_by_freelancer(freelancer_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Fetch all work experiences for a specific freelancer - Authenticated users only - JSON response."""
     try:
@@ -64,7 +64,7 @@ async def get_work_experiences_by_freelancer(freelancer_id: str, current_user: U
         return ResponseSchema.error(error_msg, 500)
 
 
-@work_experience_router.post("", response_model=WorkExperienceResponse, status_code=201)
+@work_experience_router.post("", response_model=None, status_code=201)
 async def create_work_experience(work_experience: WorkExperienceCreate, current_user: UserInDB = Depends(get_current_user)):
     """Create a new work experience - Authenticated users only - JSON body accepted."""
     try:
@@ -97,7 +97,7 @@ async def create_work_experience(work_experience: WorkExperienceCreate, current_
         return ResponseSchema.error(error_msg, 500)
 
 
-@work_experience_router.put("/{work_experience_id}", response_model=WorkExperienceResponse)
+@work_experience_router.put("/{work_experience_id}", response_model=None)
 async def update_work_experience(work_experience_id: str, work_experience_update: WorkExperienceUpdate, current_user: UserInDB = Depends(get_current_user)):
     """Update work experience information - Authenticated users only."""
     try:

@@ -46,7 +46,7 @@ from functions.schema_model import (
 auth_router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
-@auth_router.post("/register", response_model=dict)
+@auth_router.post("/register", response_model=None)
 async def register(user: UserRegister):
     """Register a new user (freelancer or client)."""
     try:
@@ -69,7 +69,7 @@ async def register(user: UserRegister):
         return ResponseSchema.error(error_msg, 500)
 
 
-@auth_router.post("/verify-email", response_model=dict)
+@auth_router.post("/verify-email", response_model=None)
 async def verify_email(request: EmailVerificationRequest):
     """Verify a newly registered user's email address with an OTP."""
     try:
@@ -85,7 +85,7 @@ async def verify_email(request: EmailVerificationRequest):
         return ResponseSchema.error(error_msg, 500)
 
 
-@auth_router.post("/resend-verification", response_model=dict)
+@auth_router.post("/resend-verification", response_model=None)
 async def resend_verification(request: ResendVerificationRequest):
     """Send a fresh email verification OTP."""
     try:
@@ -101,7 +101,7 @@ async def resend_verification(request: ResendVerificationRequest):
         return ResponseSchema.error(error_msg, 500)
 
 
-@auth_router.post("/login", response_model=dict)
+@auth_router.post("/login", response_model=None)
 async def login(credentials: UserLogin):
     """Validate credentials and return JWT access token directly."""
     try:
@@ -134,7 +134,7 @@ async def login(credentials: UserLogin):
         return ResponseSchema.error(error_msg, 500)
 
 
-@auth_router.get("/me", response_model=UserResponse)
+@auth_router.get("/me", response_model=None)
 async def get_me(current_user: UserInDB = Depends(get_current_user)):
     """Get current authenticated user info including active profile IDs."""
     try:
@@ -157,7 +157,7 @@ async def get_me(current_user: UserInDB = Depends(get_current_user)):
         logger("AUTH", error_msg, "GET /auth/me", "ERROR")
         return ResponseSchema.error(error_msg, 500)
 
-@auth_router.post("/forgot-password", response_model=dict)
+@auth_router.post("/forgot-password", response_model=None)
 async def forgot_password(request: ForgotPasswordRequest):
     """Request a password reset OTP sent to the given email."""
     try:
@@ -173,7 +173,7 @@ async def forgot_password(request: ForgotPasswordRequest):
         return ResponseSchema.error(error_msg, 500)
 
 
-@auth_router.post("/reset-password", response_model=dict)
+@auth_router.post("/reset-password", response_model=None)
 async def reset_password_route(request: ResetPasswordRequest):
     """Verify the OTP and set a new password."""
     try:
@@ -189,7 +189,7 @@ async def reset_password_route(request: ResetPasswordRequest):
         return ResponseSchema.error(error_msg, 500)
 
 
-@auth_router.post("/add-role", response_model=dict)
+@auth_router.post("/add-role", response_model=None)
 async def add_second_role(
     payload: AddRoleRequest,
     current_user: UserInDB = Depends(get_current_user),
@@ -208,7 +208,7 @@ async def add_second_role(
         return ResponseSchema.error(error_msg, 500)
 
 
-@auth_router.post("/refresh", response_model=dict)
+@auth_router.post("/refresh", response_model=None)
 async def refresh_token_endpoint(payload: RefreshRequest):
     """Exchange a valid refresh token for a new access token and rotated refresh token.
 
@@ -237,7 +237,7 @@ async def refresh_token_endpoint(payload: RefreshRequest):
         return ResponseSchema.error(error_msg, 500)
 
 
-@auth_router.post("/change-password", response_model=dict)
+@auth_router.post("/change-password", response_model=None)
 async def change_password_endpoint(
     payload: ChangePasswordRequest,
     current_user: UserInDB = Depends(get_current_user),
@@ -260,7 +260,7 @@ async def change_password_endpoint(
         return ResponseSchema.error(error_msg, 500)
 
 
-@auth_router.post("/set-password", response_model=dict)
+@auth_router.post("/set-password", response_model=None)
 async def set_password_endpoint(
     payload: SetPasswordRequest,
     current_user: UserInDB = Depends(get_current_user),
@@ -279,7 +279,7 @@ async def set_password_endpoint(
         return ResponseSchema.error(error_msg, 500)
 
 
-@auth_router.post("/logout", response_model=dict)
+@auth_router.post("/logout", response_model=None)
 async def logout(payload: RefreshRequest):
     """Revoke the given refresh token so it can no longer be used to obtain new access tokens.
 

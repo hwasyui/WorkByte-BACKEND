@@ -23,7 +23,7 @@ def _resolve(pf: dict) -> dict:
     return pf
 
 
-@proposal_file_router.get("", response_model=List[ProposalFileResponse])
+@proposal_file_router.get("", response_model=None)
 async def get_all_proposal_files(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
     """Fetch all proposal files - Authenticated users only - JSON response."""
     try:
@@ -37,7 +37,7 @@ async def get_all_proposal_files(limit: Optional[int] = None, current_user: User
         return ResponseSchema.error(error_msg, 500)
 
 
-@proposal_file_router.get("/{proposal_file_id}", response_model=ProposalFileResponse)
+@proposal_file_router.get("/{proposal_file_id}", response_model=None)
 async def get_proposal_file(proposal_file_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Fetch a single proposal file by ID - Authenticated users only - JSON response."""
     try:
@@ -55,7 +55,7 @@ async def get_proposal_file(proposal_file_id: str, current_user: UserInDB = Depe
         return ResponseSchema.error(error_msg, 500)
 
 
-@proposal_file_router.get("/proposal/{proposal_id}", response_model=List[ProposalFileResponse])
+@proposal_file_router.get("/proposal/{proposal_id}", response_model=None)
 async def get_proposal_files_by_proposal(proposal_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Fetch all files for a specific proposal - Authenticated users only - JSON response."""
     try:
@@ -69,7 +69,7 @@ async def get_proposal_files_by_proposal(proposal_id: str, current_user: UserInD
         return ResponseSchema.error(error_msg, 500)
 
 
-@proposal_file_router.post("", response_model=List[ProposalFileResponse], status_code=201)
+@proposal_file_router.post("", response_model=None, status_code=201)
 async def create_proposal_file(
     proposal_id: str = Form(...),
     files: List[UploadFile] = File(...),
@@ -130,7 +130,7 @@ async def create_proposal_file(
         return ResponseSchema.error(error_msg, 500)
 
 
-@proposal_file_router.put("/{proposal_file_id}", response_model=ProposalFileResponse)
+@proposal_file_router.put("/{proposal_file_id}", response_model=None)
 async def update_proposal_file(proposal_file_id: str, proposal_file_update: ProposalFileUpdate, current_user: UserInDB = Depends(get_current_user)):
     """Update proposal file information - Authenticated users only."""
     try:

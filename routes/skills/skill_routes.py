@@ -15,7 +15,7 @@ from routes.skills.skill_functions import SkillFunctions
 skill_router = APIRouter(prefix="/skills", tags=["Skills"])
 
 
-@skill_router.get("", response_model=List[SkillResponse])
+@skill_router.get("", response_model=None)
 async def get_all_skills(
     limit: Optional[int] = None,
     current_user: UserInDB = Depends(get_current_user)
@@ -32,7 +32,7 @@ async def get_all_skills(
         return ResponseSchema.error(error_msg, 500)
 
 
-@skill_router.get("/search", response_model=Dict)
+@skill_router.get("/search", response_model=None)
 async def search_skills(
     q: str = Query(..., description="Skill name to search for"),
     limit: int = Query(10, ge=1, le=50, description="Max results"),
@@ -49,7 +49,7 @@ async def search_skills(
         return ResponseSchema.error(error_msg, 500)
 
 
-@skill_router.get("/alphabet/{letter}", response_model=Dict)
+@skill_router.get("/alphabet/{letter}", response_model=None)
 async def get_skills_by_alphabet(
     letter: str,
     limit: Optional[int] = None,
@@ -66,7 +66,7 @@ async def get_skills_by_alphabet(
         return ResponseSchema.error(error_msg, 500)
 
 
-@skill_router.get("/category/{category}", response_model=List[SkillResponse])
+@skill_router.get("/category/{category}", response_model=None)
 async def get_skills_by_category(
     category: str,
     limit: Optional[int] = None,
@@ -84,7 +84,7 @@ async def get_skills_by_category(
         return ResponseSchema.error(error_msg, 500)
 
 
-@skill_router.get("/autocomplete", response_model=Dict)
+@skill_router.get("/autocomplete", response_model=None)
 async def autocomplete_skills(
     q: str = Query(..., description="Skill name to autocomplete"),
     limit: int = Query(10, ge=1, le=50),
@@ -100,7 +100,7 @@ async def autocomplete_skills(
         return ResponseSchema.error(error_msg, 500)
 
 
-@skill_router.get("/{skill_id}", response_model=SkillResponse)
+@skill_router.get("/{skill_id}", response_model=None)
 async def get_skill(skill_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Fetch a single skill by ID."""
     try:
@@ -118,7 +118,7 @@ async def get_skill(skill_id: str, current_user: UserInDB = Depends(get_current_
         return ResponseSchema.error(error_msg, 500)
 
 
-@skill_router.post("", response_model=SkillResponse, status_code=201)
+@skill_router.post("", response_model=None, status_code=201)
 async def create_skill(skill: SkillCreate, current_user: UserInDB = Depends(get_current_user)):
     """Create a new skill."""
     try:
@@ -140,7 +140,7 @@ async def create_skill(skill: SkillCreate, current_user: UserInDB = Depends(get_
         return ResponseSchema.error(error_msg, 500)
 
 
-@skill_router.put("/{skill_id}", response_model=SkillResponse)
+@skill_router.put("/{skill_id}", response_model=None)
 async def update_skill(skill_id: str, skill_update: SkillUpdate, current_user: UserInDB = Depends(get_current_user)):
     """Update skill information."""
     try:

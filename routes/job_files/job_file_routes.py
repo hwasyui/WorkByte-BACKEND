@@ -17,7 +17,7 @@ from mimetypes import guess_type as guess_mime
 job_file_router = APIRouter(prefix="/job-files", tags=["Job Files"])
 
 
-@job_file_router.get("", response_model=List[JobFileResponse])
+@job_file_router.get("", response_model=None)
 async def get_all_job_files(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
     """Fetch all job files - Authenticated users only - JSON response."""
     try:
@@ -31,7 +31,7 @@ async def get_all_job_files(limit: Optional[int] = None, current_user: UserInDB 
         return ResponseSchema.error(error_msg, 500)
 
 
-@job_file_router.get("/{job_file_id}", response_model=JobFileResponse)
+@job_file_router.get("/{job_file_id}", response_model=None)
 async def get_job_file(job_file_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Fetch a single job file by ID - Authenticated users only - JSON response."""
     try:
@@ -49,7 +49,7 @@ async def get_job_file(job_file_id: str, current_user: UserInDB = Depends(get_cu
         return ResponseSchema.error(error_msg, 500)
 
 
-@job_file_router.get("/job-post/{job_post_id}", response_model=List[JobFileResponse])
+@job_file_router.get("/job-post/{job_post_id}", response_model=None)
 async def get_job_files_by_job_post(job_post_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Fetch all files for a specific job post - Authenticated users only - JSON response."""
     try:
@@ -63,7 +63,7 @@ async def get_job_files_by_job_post(job_post_id: str, current_user: UserInDB = D
         return ResponseSchema.error(error_msg, 500)
 
 
-@job_file_router.post("", response_model=List[JobFileResponse], status_code=201)
+@job_file_router.post("", response_model=None, status_code=201)
 async def create_job_file(
     job_post_id: str = Form(...),
     files: List[UploadFile] = File(...),
@@ -124,7 +124,7 @@ async def create_job_file(
         return ResponseSchema.error(error_msg, 500)
 
 
-@job_file_router.put("/{job_file_id}", response_model=JobFileResponse)
+@job_file_router.put("/{job_file_id}", response_model=None)
 async def update_job_file(job_file_id: str, job_file_update: JobFileUpdate, current_user: UserInDB = Depends(get_current_user)):
     """Update job file information - Authenticated users only."""
     try:

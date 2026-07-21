@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
@@ -221,6 +222,19 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     
     logger("VALIDATION_ERROR", f"Validation error with {len(errors)} field(s)", level="WARNING")
     return ResponseSchema.validation_error(error_details, status_code=422)
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    """Normalize every HTTPException (incl. dependency-raised 401/403 from the auth guards)
+    into the standard ResponseSchema shape {"status":"error","details":...}, so the API never
+    leaks FastAPI's default {"detail":...} body. Routes that already return ResponseSchema.error
+    never reach here; this only catches the ones that raise. Original status code and any headers
+    (e.g. WWW-Authenticate on 401) are preserved."""
+    response = ResponseSchema.error(exc.detail, exc.status_code)
+    if exc.headers:
+        response.headers.update(exc.headers)
+    return response
 
 
 if __name__ == "__main__":
