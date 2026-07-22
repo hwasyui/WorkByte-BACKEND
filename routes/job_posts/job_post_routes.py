@@ -23,7 +23,7 @@ from functions.response_utils import ResponseSchema
 from functions.db_manager import get_db
 from routes.job_posts.job_post_functions import JobPostFunctions, convert_uuids_to_str
 from ai_related.job_engine.embedding_manager import mark_job_dirty
-from routes.admin.admin_functions import queue_harmful_text_scan, queue_scam_scan
+from routes.admin.admin_functions import queue_harmful_text_scan, queue_scam_scan, SYSTEM_CLOSURE_REASONS
 
 job_post_router = APIRouter(prefix="/job-posts", tags=["Job Posts"])
 
@@ -415,7 +415,44 @@ async def update_job_post(job_post_id: str, job_post_update: JobPostUpdate, curr
         assert_client_owns(current_user, existing_job_post["client_id"])
         
         update_data = job_post_update.model_dump(exclude_unset=True)
+
+        # A post closed by moderation / reports / scam / admin comes back only through an
+        # appeal or an admin reopen. Without this guard the client could just PUT
+        # status:'active' and relist it: the re-scan below is save-then-review, so the post
+        # is live while it waits, and nothing stops them repeating it. A close the client
+        # did themselves leaves closure_reason NULL and stays freely reopenable.
+        _reopening = (
+            update_data.get("status") == "active"
+            and existing_job_post.get("status") == "closed"
+        )
+        if _reopening and existing_job_post.get("closure_reason") in SYSTEM_CLOSURE_REASONS:
+            logger(
+                "JOB_POST",
+                f"Client {current_user.user_id} tried to reopen moderation-closed job {job_post_id} "
+                f"(closure_reason={existing_job_post.get('closure_reason')})",
+                "PUT /job-posts/{job_post_id}",
+                "WARNING",
+            )
+            raise HTTPException(
+                status_code=403,
+                detail="This job post was closed by moderation. Submit an appeal to have it restored.",
+            )
+
         updated_job_post = JobPostFunctions.update_job_post(job_post_id, update_data)
+
+        # Reopening their own closure: drop the closure bookkeeping so an active post
+        # doesn't keep carrying a stale closed_at. Done here rather than in update_data -
+        # update_job_post strips None values, so NULLs can't ride along with the payload.
+        if _reopening:
+            get_db().execute_query(
+                """
+                UPDATE job_post
+                SET closure_reason = NULL, closure_note = NULL, closed_at = NULL
+                WHERE job_post_id = :jid
+                """,
+                params={"jid": job_post_id},
+            )
+            updated_job_post = JobPostFunctions.get_job_post_by_id(job_post_id)
 
         mark_job_dirty(job_post_id)
 

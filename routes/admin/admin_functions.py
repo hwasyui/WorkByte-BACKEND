@@ -62,6 +62,16 @@ DEFAULT_CLOSURE_NOTE_ADMIN     = (
     "This job post was closed by an administrator. "
     "Submit an appeal if you believe this was a mistake."
 )
+# Closure reasons owned by the system (moderation, reports, scam, admin). A post closed
+# for one of these can only come back via appeal or an admin reopen - the client can't
+# flip it to 'active' themselves. A client's own close leaves closure_reason NULL.
+SYSTEM_CLOSURE_REASONS = frozenset({
+    DEFAULT_CLOSURE_REASON_CONTENT,
+    DEFAULT_CLOSURE_REASON_SCAM,
+    DEFAULT_CLOSURE_REASON_REPORTS,
+    DEFAULT_CLOSURE_REASON_ADMIN,
+})
+
 DEFAULT_BAN_REASON_ADMIN       = "admin_override"
 DEFAULT_BAN_MESSAGE_ADMIN      = (
     "Your account has been restricted by an administrator. "
@@ -390,7 +400,8 @@ def _auto_approve_expired():
                 UPDATE job_post
                 SET status = 'closed',
                     closure_reason = :reason,
-                    closure_note   = :note
+                    closure_note   = :note,
+                    closed_at      = NOW()
                 WHERE job_post_id = :id AND status = 'active'{_ACTIVE_NO_ENGAGEMENT}
                 RETURNING job_post_id
                 """,
@@ -928,7 +939,8 @@ def _process_report_auto_actions():
             UPDATE job_post
             SET status = 'closed',
                 closure_reason = :reason,
-                closure_note   = :note
+                closure_note   = :note,
+                closed_at      = NOW()
             WHERE client_id = (SELECT client_id FROM client WHERE user_id = :uid)
               AND status = 'active'{_ACTIVE_NO_ENGAGEMENT}
             """,
@@ -977,7 +989,8 @@ def _process_report_auto_actions():
             UPDATE job_post
             SET status = 'closed',
                 closure_reason = :reason,
-                closure_note   = :note
+                closure_note   = :note,
+                closed_at      = NOW()
             WHERE job_post_id = :jid AND status = 'active'{_ACTIVE_NO_ENGAGEMENT}
             RETURNING job_post_id
             """,
@@ -1413,15 +1426,31 @@ def resolve_appeal(
         target_type = updated.get("target_type")
         target_id   = str(updated.get("target_id"))
         if target_type == "job_post":
-            get_db().execute_query(
+            # Same shape as admin_reopen_job: guard on 'closed' so an approved appeal
+            # can't flip a draft/filled post, and clear closed_at so the admin browse
+            # filters (closed_from/closed_to) don't keep matching a reopened post.
+            restored = _row(get_db().execute_query(
                 """
                 UPDATE job_post
-                SET status = 'active', closure_reason = NULL, closure_note = NULL
+                SET status         = :new_status,
+                    closure_reason = NULL,
+                    closure_note   = NULL,
+                    closed_at      = NULL
                 WHERE job_post_id = :jid
+                  AND status = 'closed'
+                RETURNING job_post_id
                 """,
-                params={"jid": target_id},
-            )
-            logger("ADMIN", f"Job post {target_id} restored via appeal {appeal_id}", level="INFO")
+                params={"jid": target_id, "new_status": _restore_status_for(target_id)},
+            ))
+            if restored:
+                logger("ADMIN", f"Job post {target_id} restored via appeal {appeal_id}", level="INFO")
+            else:
+                logger(
+                    "ADMIN",
+                    f"Appeal {appeal_id} approved but job post {target_id} was not 'closed' - "
+                    "nothing restored",
+                    level="WARNING",
+                )
         elif target_type == "user":
             get_db().execute_query(
                 """
@@ -1656,6 +1685,30 @@ def admin_close_job(
     return updated
 
 
+def _restore_status_for(job_post_id: str) -> str:
+    """
+    Status a closed job should go back to when reopened. A job whose roles are all
+    fully staffed returns to 'filled', not 'active' - reopening to 'active' would
+    advertise slots that don't exist. Same predicate contract_functions uses to set
+    'filled' in the first place, so the two can't drift.
+
+    A job with no roles at all reopens to 'active': NOT EXISTS over an empty set is
+    true, so "all filled" alone would wrongly call it filled. Hence the has_roles leg.
+    """
+    row = _row(get_db().execute_query(
+        """
+        SELECT
+            EXISTS (SELECT 1 FROM job_role WHERE job_post_id = :jpid) AS has_roles,
+            NOT EXISTS (
+                SELECT 1 FROM job_role
+                WHERE job_post_id = :jpid AND positions_filled < positions_available
+            ) AS all_filled
+        """,
+        params={"jpid": job_post_id},
+    ))
+    return "filled" if row and row.get("has_roles") and row.get("all_filled") else "active"
+
+
 def admin_reopen_job(
     job_post_id: str,
     admin_user_id: str,
@@ -1664,7 +1717,7 @@ def admin_reopen_job(
     updated = _row(get_db().execute_query(
         """
         UPDATE job_post
-        SET status         = 'active',
+        SET status         = :new_status,
             closure_reason = NULL,
             closure_note   = NULL,
             closed_at      = NULL
@@ -1672,7 +1725,7 @@ def admin_reopen_job(
           AND status = 'closed'
         RETURNING *
         """,
-        params={"jid": job_post_id},
+        params={"jid": job_post_id, "new_status": _restore_status_for(job_post_id)},
     ))
     if updated:
         logger("ADMIN", f"Job post {job_post_id} reopened by admin {admin_user_id}", level="INFO")
@@ -1708,7 +1761,8 @@ def admin_close_account(
             UPDATE job_post
             SET status = 'closed',
                 closure_reason = :reason,
-                closure_note   = :note
+                closure_note   = :note,
+                closed_at      = NOW()
             WHERE client_id = (SELECT client_id FROM client WHERE user_id = :uid)
               AND status = 'active'
             """,
