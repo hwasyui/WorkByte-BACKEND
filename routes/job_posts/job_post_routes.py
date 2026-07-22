@@ -294,10 +294,14 @@ async def search_job_posts(
         return ResponseSchema.error(error_msg, 500)
 
 @job_post_router.get("/client/{client_id}", response_model=None)
-async def get_job_posts_by_client(client_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Fetch all job posts for a specific client - Authenticated users only - JSON response."""
+async def get_job_posts_by_client(
+    client_id: str,
+    include_drafts: bool = Query(default=False, description="Owner-only: include draft posts (default False, drafts hidden)"),
+    current_user: UserInDB = Depends(get_current_user),
+):
+    """Fetch a client's job posts - Authenticated users only - JSON response. Drafts hidden by default."""
     try:
-        job_posts = JobPostFunctions.get_job_posts_by_client_id(client_id)
+        job_posts = JobPostFunctions.get_job_posts_by_client_id(client_id, include_drafts=include_drafts)
         success_msg = f"Retrieved {len(job_posts)} job posts for client {client_id}"
         logger("JOB_POST", success_msg, "GET /job-posts/client/{client_id}", "INFO")
         return ResponseSchema.success(job_posts, 200)

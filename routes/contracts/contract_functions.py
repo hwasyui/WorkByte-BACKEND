@@ -113,6 +113,40 @@ class ContractFunctions:
             raise
 
     @staticmethod
+    def attach_job_closure(contracts: List[Dict]) -> List[Dict]:
+        """Enrich contract rows with their parent job post's title and closure state, so a
+        contract still running under a job an admin took down can be flagged in the UI.
+        Mutates and returns the given rows; missing/deleted job posts leave the fields None."""
+        if not contracts:
+            return contracts
+        job_ids = list({str(c["job_post_id"]) for c in contracts if c.get("job_post_id")})
+        if not job_ids:
+            return contracts
+        try:
+            placeholders = ", ".join(f":jid_{i}" for i in range(len(job_ids)))
+            params = {f"jid_{i}": jid for i, jid in enumerate(job_ids)}
+            rows = get_db().execute_query(
+                f"""
+                SELECT job_post_id, job_title, status, closure_reason, closure_note, closed_at
+                FROM job_post
+                WHERE job_post_id IN ({placeholders})
+                """,
+                params,
+            )
+            by_id = {str(row["job_post_id"]): row for row in rows or []}
+        except Exception as e:
+            logger("CONTRACT_FUNCTIONS", f"Failed to attach job closure state (non-fatal): {e}", level="WARNING")
+            by_id = {}
+        for contract in contracts:
+            job = by_id.get(str(contract.get("job_post_id")))
+            contract["job_title"]          = job["job_title"] if job else None
+            contract["job_status"]         = job["status"] if job else None
+            contract["job_closure_reason"] = job["closure_reason"] if job else None
+            contract["job_closure_note"]   = job["closure_note"] if job else None
+            contract["job_closed_at"]      = job["closed_at"] if job else None
+        return contracts
+
+    @staticmethod
     def get_contract_by_id(contract_id: str) -> Optional[Dict]:
         """Fetch a contract by ID."""
         try:
@@ -197,7 +231,7 @@ class ContractFunctions:
                 order_by="created_at DESC",
             )
             logger("CONTRACT_FUNCTIONS", f"Fetched {len(rows)} contracts for freelancer {freelancer_id}", level="INFO")
-            return [convert_uuids_to_str(dict(row)) for row in rows]
+            return ContractFunctions.attach_job_closure([convert_uuids_to_str(dict(row)) for row in rows])
         except Exception as e:
             logger("CONTRACT_FUNCTIONS", f"Error fetching contracts: {str(e)}", level="ERROR")
             raise
@@ -213,7 +247,7 @@ class ContractFunctions:
                 order_by="created_at DESC",
             )
             logger("CONTRACT_FUNCTIONS", f"Fetched {len(rows)} contracts for client {client_id}", level="INFO")
-            return [convert_uuids_to_str(dict(row)) for row in rows]
+            return ContractFunctions.attach_job_closure([convert_uuids_to_str(dict(row)) for row in rows])
         except Exception as e:
             logger("CONTRACT_FUNCTIONS", f"Error fetching contracts: {str(e)}", level="ERROR")
             raise

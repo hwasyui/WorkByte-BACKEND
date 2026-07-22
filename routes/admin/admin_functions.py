@@ -68,6 +68,10 @@ DEFAULT_BAN_MESSAGE_ADMIN      = (
     "Submit an appeal if you believe this was a mistake."
 )
 
+LIVE_CONTRACT_STATUSES     = ("active", "revision_requested", "under_review", "disputed")
+_LIVE_CONTRACT_STATUS_SQL  = ", ".join(f"'{s}'" for s in LIVE_CONTRACT_STATUSES)
+
+
 def _is_engaged_sql(job_post_id_expr: str) -> str:
     """Single source of truth for whether a job is 'engaged': TRUE when the given job_post_id
     has a filled position on any role, or a live (active/pending) contract. An accepted proposal
@@ -89,7 +93,7 @@ def _is_engaged_sql(job_post_id_expr: str) -> str:
         f"WHERE jr.job_post_id = {job_post_id_expr} AND jr.positions_filled > 0) "
         f"OR EXISTS (SELECT 1 FROM contract c "
         f"WHERE c.job_post_id = {job_post_id_expr} "
-        f"AND c.status IN ('active', 'revision_requested', 'under_review', 'disputed')))"
+        f"AND c.status IN ({_LIVE_CONTRACT_STATUS_SQL})))"
     )
 
 
@@ -179,8 +183,40 @@ def _schedule_notification(coro) -> None:
         coro.close()
 
 
+def _notify_engaged_freelancers(job_post_id: str) -> None:
+    """Notify freelancers holding a live contract under a job post that just closed. Their
+    contracts are left running - cancelling here would reject the proposal, free the role slot
+    and blast 'Position Open Again' to past applicants of a job that was just taken down."""
+    rows = _rows(get_db().execute_query(
+        f"""
+        SELECT c.contract_id, c.contract_title, f.user_id, jp.job_title
+        FROM contract c
+        JOIN freelancer f ON f.freelancer_id = c.freelancer_id
+        JOIN job_post   jp ON jp.job_post_id = c.job_post_id
+        WHERE c.job_post_id = :jid
+          AND c.status IN ({_LIVE_CONTRACT_STATUS_SQL})
+        """,
+        params={"jid": job_post_id},
+    ))
+    for row in rows:
+        _schedule_notification(NotificationFunctions.notify(
+            recipient_user_id=str(row["user_id"]),
+            notif_type="job_closed_admin_contract",
+            title="Job Closed by Admin",
+            body=(
+                f"The job post \"{row['job_title']}\" was closed by an administrator. "
+                f"Your contract \"{row['contract_title']}\" is still active - check with the "
+                f"client before continuing work."
+            ),
+            data={"job_post_id": job_post_id, "contract_id": str(row["contract_id"])},
+        ))
+
+
 def _notify_job_post_closed(job_post_id: str, notif_type: str, title: str, body: str) -> None:
-    """Look up the job post's owning client and fire a closure notification, best-effort."""
+    """Look up the job post's owning client and fire a closure notification, best-effort.
+    Engaged freelancers get their own type and wording - the client copy is about appealing
+    a takedown they own, which does not apply to them."""
+    _notify_engaged_freelancers(job_post_id)
     row = _row(get_db().execute_query(
         """
         SELECT c.user_id FROM job_post jp

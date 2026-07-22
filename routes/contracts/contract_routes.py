@@ -263,6 +263,7 @@ async def get_contract(contract_id: str, current_user: UserInDB = Depends(get_cu
         if not contract:
             return ResponseSchema.error(f"Contract {contract_id} not found", 404)
         assert_current_user_is_contract_party(current_user, contract)
+        ContractFunctions.attach_job_closure([contract])
         logger("CONTRACT", f"Retrieved contract {contract_id}", "GET /contracts/{contract_id}", "INFO")
         return ResponseSchema.success(contract, 200)
     except HTTPException as e:

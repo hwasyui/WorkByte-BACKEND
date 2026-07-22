@@ -740,12 +740,18 @@ class JobPostFunctions:
             raise
 
     @staticmethod
-    def get_job_posts_by_client_id(client_id: str) -> List[Dict]:
-        """Fetch all job posts for a client with role_count, client_name, and live proposal_count."""
+    def get_job_posts_by_client_id(client_id: str, include_drafts: bool = False) -> List[Dict]:
+        """Fetch a client's job posts with role_count, client_name, and live proposal_count.
+
+        Drafts are excluded by default - the client profile "posted jobs" tab should
+        only show published posts, and this endpoint is readable by anyone viewing the
+        profile. Pass include_drafts=True for an owner-only drafts management view.
+        """
         try:
             db = get_db()
-            query = _JOB_POST_SELECT + """
-                WHERE jp.client_id = :client_id
+            draft_filter = "" if include_drafts else " AND jp.status <> 'draft'"
+            query = _JOB_POST_SELECT + f"""
+                WHERE jp.client_id = :client_id{draft_filter}
                 GROUP BY jp.job_post_id, c.full_name, c.profile_picture_url
                 ORDER BY jp.created_at DESC
             """
@@ -780,6 +786,33 @@ class JobPostFunctions:
             raise
 
     # Write operations
+
+    @staticmethod
+    def _adjust_client_jobs_posted(db, client_id: str, delta: int) -> None:
+        """Keep client.total_jobs_posted in sync as job posts cross the draft boundary.
+
+        The counter tracks only *published* (non-draft) job posts, so it must be
+        maintained on exactly three events: a post is created as non-draft (+1),
+        a draft is published (+1), a non-draft post is unpublished-to-draft (-1),
+        or a non-draft post is deleted (-1). Clamped at 0 to survive any historical
+        drift rather than going negative.
+        """
+        if not delta:
+            return
+        client_rows = db.fetch_data(
+            table_name="client",
+            conditions=[("client_id", "=", client_id)],
+            limit=1,
+        )
+        if not client_rows:
+            return
+        current_count = client_rows[0].get("total_jobs_posted") or 0
+        new_count = max(0, current_count + delta)
+        db.update_data(
+            table_name="client",
+            data={"total_jobs_posted": new_count},
+            conditions=[("client_id", "=", client_id)],
+        )
 
     @staticmethod
     def create_job_post(client_id: str, job_title: str, job_description: str,
@@ -841,19 +874,10 @@ class JobPostFunctions:
             db.insert_data(table_name="job_post", data=job_post_data)
 
 
-            # Increment the client's total jobs posted count
-            client_rows = db.fetch_data(
-                table_name="client",
-                conditions=[("client_id", "=", client_id)],
-                limit=1
-            )
-            if client_rows:
-                current_count = client_rows[0].get("total_jobs_posted") or 0
-                db.update_data(
-                    table_name="client",
-                    data={"total_jobs_posted": current_count + 1},
-                    conditions=[("client_id", "=", client_id)]
-                )
+            # Only count published (non-draft) posts toward total_jobs_posted.
+            # A draft that is later published gets counted in update_job_post.
+            if status != "draft":
+                JobPostFunctions._adjust_client_jobs_posted(db, client_id, +1)
 
 
             logger("JOB_POST_FUNCTIONS", f"Job post {job_post_id} created", level="INFO")
@@ -898,8 +922,27 @@ class JobPostFunctions:
                     level="INFO",
                 )
 
+            # If this update crosses the draft boundary, keep the client's
+            # total_jobs_posted counter in sync (draft->published => +1,
+            # published->draft => -1). Read the old status *before* updating.
+            draft_delta = 0
+            transition_client_id = None
+            if "status" in update_data:
+                before = JobPostFunctions.get_job_post_by_id(job_post_id)
+                if before:
+                    was_draft = before["status"] == "draft"
+                    now_draft = update_data["status"] == "draft"
+                    if was_draft and not now_draft:
+                        draft_delta = +1
+                    elif not was_draft and now_draft:
+                        draft_delta = -1
+                    transition_client_id = before["client_id"]
+
             conditions = [("job_post_id", "=", job_post_id)]
             db.update_data(table_name="job_post", data=update_data, conditions=conditions)
+
+            if draft_delta and transition_client_id:
+                JobPostFunctions._adjust_client_jobs_posted(db, transition_client_id, draft_delta)
 
 
             logger("JOB_POST_FUNCTIONS", f"Job post {job_post_id} updated", level="INFO")
@@ -916,8 +959,16 @@ class JobPostFunctions:
         """Delete a job post."""
         try:
             db = get_db()
+
+            # Read status/client before deleting so we can decrement the client's
+            # total_jobs_posted counter when a published (non-draft) post is removed.
+            existing = JobPostFunctions.get_job_post_by_id(job_post_id)
+
             conditions = [("job_post_id", "=", job_post_id)]
             db.delete_data(table_name="job_post", conditions=conditions)
+
+            if existing and existing["status"] != "draft":
+                JobPostFunctions._adjust_client_jobs_posted(db, existing["client_id"], -1)
 
 
             logger("JOB_POST_FUNCTIONS", f"Job post {job_post_id} deleted", level="INFO")
