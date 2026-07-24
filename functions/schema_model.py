@@ -121,6 +121,23 @@ class UserResponse(BaseModel):
     ban_message: Optional[str] = None
     report_banned_at: Optional[datetime] = None
     
+class GuidelineAckRequest(BaseModel):
+    section: str  # 'general' | 'freelancer' | 'client'
+
+    @field_validator('section')
+    @classmethod
+    def validate_section(cls, v):
+        if v not in ["general", "freelancer", "client"]:
+            raise ValueError("section must be 'general', 'freelancer', or 'client'")
+        return v
+
+
+class GuidelineAckStatusResponse(BaseModel):
+    general: bool = False
+    freelancer: bool = False
+    client: bool = False
+
+
 class FreelancerProfileCreate(BaseModel):
     full_name: str
     bio: Optional[str] = None

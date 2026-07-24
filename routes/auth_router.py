@@ -1,5 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from datetime import timedelta
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from datetime import datetime, timedelta
+from collections import deque
+import threading
 import sys, os
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -44,6 +46,80 @@ from functions.schema_model import (
 )
 
 auth_router = APIRouter(prefix="/auth", tags=["Authentication"])
+
+
+# --- login throttling -------------------------------------------------------
+# /auth/login had no brute-force protection: passwords could be guessed forever.
+# The OTP flow already caps attempts and answers 429, so this mirrors that rather
+# than introducing a rate-limit dependency.
+#
+# Deliberately in-process: a single uvicorn worker serves this app, and the window
+# is short. It resets on restart and would not be shared across workers - if the
+# deployment ever scales out, move this into the DB (or Redis) alongside the
+# email_verification_otps.attempts pattern.
+LOGIN_MAX_ATTEMPTS  = 8       # failures allowed inside the window
+LOGIN_WINDOW_SECONDS = 300    # 5 minutes
+LOGIN_LOCKOUT_SECONDS = 300   # how long a tripped key stays blocked
+
+_login_failures: dict[str, deque] = {}
+_login_lock = threading.Lock()
+
+
+def _client_ip(request: Request) -> str:
+    """The peer address we can actually trust.
+
+    nginx forwards with `proxy_add_x_forwarded_for`, which *appends* the real peer to
+    whatever the caller already sent, producing "<client-supplied>, <real ip>". Uvicorn
+    resolves request.client from the LEFTMOST entry, which is attacker-controlled - so
+    keying the throttle off request.client.host lets anyone reset their own counter just
+    by rotating a fake header. The rightmost entry is the one nginx appended itself.
+
+    Falls back to request.client for direct (non-proxied) access, e.g. local runs.
+    """
+    xff = request.headers.get("x-forwarded-for")
+    if xff:
+        parts = [p.strip() for p in xff.split(",") if p.strip()]
+        if parts:
+            return parts[-1]
+    return request.client.host if request.client else "unknown"
+
+
+def _login_key(email: str, request: Request) -> str:
+    """Track per email+IP so one attacker can't lock out a real user by guessing
+    at their address from elsewhere."""
+    return f"{(email or '').strip().lower()}|{_client_ip(request)}"
+
+
+def _login_retry_after(key: str) -> int:
+    """Seconds the caller must wait, or 0 when they're free to try."""
+    now = datetime.utcnow().timestamp()
+    with _login_lock:
+        hits = _login_failures.get(key)
+        if not hits:
+            return 0
+        while hits and now - hits[0] > LOGIN_WINDOW_SECONDS:
+            hits.popleft()
+        if len(hits) < LOGIN_MAX_ATTEMPTS:
+            return 0
+        return max(1, int(LOGIN_LOCKOUT_SECONDS - (now - hits[-1])))
+
+
+def _record_login_failure(key: str) -> None:
+    now = datetime.utcnow().timestamp()
+    with _login_lock:
+        hits = _login_failures.setdefault(key, deque())
+        while hits and now - hits[0] > LOGIN_WINDOW_SECONDS:
+            hits.popleft()
+        hits.append(now)
+        # keep the map from growing without bound on a long-running process
+        if len(_login_failures) > 10000:
+            for k in [k for k, v in _login_failures.items() if not v or now - v[-1] > LOGIN_WINDOW_SECONDS]:
+                _login_failures.pop(k, None)
+
+
+def _clear_login_failures(key: str) -> None:
+    with _login_lock:
+        _login_failures.pop(key, None)
 
 
 @auth_router.post("/register", response_model=None)
@@ -102,13 +178,24 @@ async def resend_verification(request: ResendVerificationRequest):
 
 
 @auth_router.post("/login", response_model=None)
-async def login(credentials: UserLogin):
+async def login(credentials: UserLogin, request: Request):
     """Validate credentials and return JWT access token directly."""
+    throttle_key = _login_key(credentials.email, request)
     try:
+        retry_after = _login_retry_after(throttle_key)
+        if retry_after:
+            logger("AUTH", f"Login throttled for {credentials.email}: too many failed attempts",
+                   "POST /auth/login", "WARNING")
+            return ResponseSchema.error(
+                f"Too many failed login attempts. Try again in {retry_after} seconds.", 429)
+
         user = authenticate_user(credentials.email, credentials.password)
         if not user:
+            _record_login_failure(throttle_key)
             logger("AUTH", f"Login failed for {credentials.email}: invalid credentials", "POST /auth/login", "WARNING")
             return ResponseSchema.error("Invalid email or password", 401)
+
+        _clear_login_failures(throttle_key)
 
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token(
@@ -283,7 +370,8 @@ async def set_password_endpoint(
 async def logout(payload: RefreshRequest):
     """Revoke the given refresh token so it can no longer be used to obtain new access tokens.
 
-    The current access token remains valid until it naturally expires (max 30 min).
+    The current access token remains valid until it naturally expires
+    (ACCESS_TOKEN_EXPIRE_MINUTES, 30 by default).
     """
     try:
         revoke_refresh_token(payload.refresh_token)

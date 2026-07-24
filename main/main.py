@@ -12,6 +12,7 @@ from functions.logger import logger
 from functions.db_manager import init_db, close_db
 from functions.minio_client import ensure_buckets
 from functions.response_utils import ResponseSchema
+from functions.authentication import is_development_env
 from ai_related.job_engine.embedding_manager import _should_embed_immediately
 from ai_related.job_engine.embedding_service import shutdown_executor as shutdown_embedding_executor
 from routes.auth_router import auth_router
@@ -19,6 +20,7 @@ from routes.oauth.oauth_routes import oauth_router
 from ai_related.job_engine.job_engine_routes import router as job_engine_router
 from ai_related.job_engine.sweep_worker import embedding_sweep_loop
 from routes.users.users_routes import users_router
+from routes.guidelines.guidelines_routes import guidelines_router
 from routes.freelancers.freelancer_routes import freelancer_router
 from routes.clients.client_routes import client_router
 from routes.skills.skill_routes import skill_router
@@ -144,11 +146,19 @@ async def lifespan(app: FastAPI):
         logger("LIFESPAN", f"Error during shutdown: {str(e)}", level="ERROR")
 
 
+# Swagger/ReDoc/openapi.json publish every route and parameter we have, dev-only ones
+# included. Fine locally, but the deployment sits behind a public reverse proxy, so in
+# anything other than a development env they're switched off.
+_DEV = is_development_env()
+
 app = FastAPI(
-    title="CAPSTONE - BACKEND API", 
-    description="API for CAPSTONE project", 
+    title="CAPSTONE - BACKEND API",
+    description="API for CAPSTONE project",
     version="1.0",
-    lifespan=lifespan
+    lifespan=lifespan,
+    docs_url="/docs"          if _DEV else None,
+    redoc_url="/redoc"        if _DEV else None,
+    openapi_url="/openapi.json" if _DEV else None,
 )
 
 app.add_middleware(
@@ -168,6 +178,7 @@ app.include_router(auth_router)
 app.include_router(oauth_router)
 
 app.include_router(users_router)
+app.include_router(guidelines_router)
 app.include_router(freelancer_router)
 app.include_router(client_router)
 app.include_router(skill_router)

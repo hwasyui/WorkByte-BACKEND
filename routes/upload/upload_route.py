@@ -66,6 +66,7 @@ async def upload_file_endpoint(
         return ResponseSchema.error(f"Upload failed: {str(e)}", 500)
 
 
+# dev/admin only - not called by the Flutter app
 @files_router.get("/{bucket}/{path:path}")
 async def proxy_private_file(
     bucket: str,

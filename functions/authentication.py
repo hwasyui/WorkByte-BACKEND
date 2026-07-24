@@ -24,7 +24,11 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:
     raise ValueError("SECRET_KEY environment variable is not set")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 10080
+# Was 10080 (7 days), which contradicted logout's own docstring ("valid until it
+# naturally expires (max 30 min)") and meant logging out didn't actually end a session
+# for a week. Env-tunable like REFRESH_TOKEN_EXPIRE_DAYS so it can be raised without a
+# code change if the 401-on-expiry retry path turns out to be too rough on clients.
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "30"))
 OTP_EXPIRE_MINUTES = int(os.getenv("EMAIL_OTP_EXPIRE_MINUTES", "10"))
 MAX_OTP_ATTEMPTS = int(os.getenv("EMAIL_OTP_MAX_ATTEMPTS", "5"))

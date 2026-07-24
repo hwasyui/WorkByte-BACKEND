@@ -14,6 +14,7 @@ reportlab
 minio
 numpy
 joblib
+nltk
 httpx
 groq
 sentence-transformers

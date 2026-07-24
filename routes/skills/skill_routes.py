@@ -7,7 +7,7 @@ from typing import List, Optional, Dict
 import uuid
 from functions.schema_model import SkillCreate, SkillUpdate, SkillResponse
 from functions.schema_model import UserInDB
-from functions.authentication import get_current_user
+from functions.authentication import get_current_user, get_admin_user
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.skills.skill_functions import SkillFunctions
@@ -49,6 +49,7 @@ async def search_skills(
         return ResponseSchema.error(error_msg, 500)
 
 
+# dev/admin only - not called by the Flutter app
 @skill_router.get("/alphabet/{letter}", response_model=None)
 async def get_skills_by_alphabet(
     letter: str,
@@ -84,6 +85,7 @@ async def get_skills_by_category(
         return ResponseSchema.error(error_msg, 500)
 
 
+# dev/admin only - not called by the Flutter app
 @skill_router.get("/autocomplete", response_model=None)
 async def autocomplete_skills(
     q: str = Query(..., description="Skill name to autocomplete"),
@@ -100,6 +102,7 @@ async def autocomplete_skills(
         return ResponseSchema.error(error_msg, 500)
 
 
+# dev/admin only - not called by the Flutter app
 @skill_router.get("/{skill_id}", response_model=None)
 async def get_skill(skill_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Fetch a single skill by ID."""
@@ -140,9 +143,12 @@ async def create_skill(skill: SkillCreate, current_user: UserInDB = Depends(get_
         return ResponseSchema.error(error_msg, 500)
 
 
+# dev/admin only - the app never calls this. Admin-gated because the skill catalogue is
+# shared: renaming an entry rewrites it for every freelancer already tagged with it.
+# Adding a skill (POST) stays open to any signed-in user - that's normal profile building.
 @skill_router.put("/{skill_id}", response_model=None)
-async def update_skill(skill_id: str, skill_update: SkillUpdate, current_user: UserInDB = Depends(get_current_user)):
-    """Update skill information."""
+async def update_skill(skill_id: str, skill_update: SkillUpdate, current_user: UserInDB = Depends(get_admin_user)):
+    """Update skill information - admin only."""
     try:
         existing = SkillFunctions.get_skill_by_id(skill_id)
         if not existing:
@@ -166,9 +172,11 @@ async def update_skill(skill_id: str, skill_update: SkillUpdate, current_user: U
         return ResponseSchema.error(error_msg, 500)
 
 
+# dev/admin only - the app never calls this. Deleting a catalogue entry strips it from
+# every freelancer that references it, so it stays admin-gated.
 @skill_router.delete("/{skill_id}", status_code=200)
-async def delete_skill(skill_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Delete a skill."""
+async def delete_skill(skill_id: str, current_user: UserInDB = Depends(get_admin_user)):
+    """Delete a skill - admin only."""
     try:
         existing = SkillFunctions.get_skill_by_id(skill_id)
         if not existing:

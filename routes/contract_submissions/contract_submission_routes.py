@@ -11,6 +11,7 @@ from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from functions.minio_client import upload_contract_submission_file, guess_mime, resolve_file_url, BUCKET_CONTRACT_SUBMISSIONS, MAX_UPLOAD_FILE_SIZE_BYTES
 from routes.contract_submissions.contract_submission_functions import ContractSubmissionFunctions
+from routes.contracts.contract_generation_functions import ContractGenerationFunctions
 from routes.freelancers.freelancer_functions import FreelancerFunctions
 from routes.clients.client_functions import ClientFunctions
 from routes.notifications.notification_functions import NotificationFunctions
@@ -194,10 +195,30 @@ async def request_revision_for_latest_submission(
         if client["client_id"] != contract["client_id"]:
             return ResponseSchema.error("Unauthorized to request revision for this contract", 403)
 
-        revision_rounds = ContractSubmissionFunctions.count_revision_rounds(contract_id)
-        if revision_rounds >= MAX_REVISION_REQUESTS:
+        # Was missing entirely - approve_latest_submission below requires
+        # status == "under_review" before it will act, but this endpoint had
+        # no equivalent guard: it would grab whatever the latest submission
+        # was and force both it and the contract to "revision_requested"
+        # regardless of current state, e.g. re-opening an already-completed
+        # or cancelled contract.
+        if contract["status"] != "under_review":
             return ResponseSchema.error(
-                f"Maximum number of revision requests ({MAX_REVISION_REQUESTS}) reached for this contract",
+                f"Cannot request revision when contract status is '{contract['status']}'", 400
+            )
+
+        # The contract's own agreed revision_rounds (set at generation time,
+        # printed on the PDF) previously had no effect at all - every
+        # contract silently used the same hardcoded MAX_REVISION_REQUESTS
+        # regardless of what was actually agreed. Fall back to that default
+        # only when the contract has no PDF-generated terms yet.
+        contract_terms = ContractGenerationFunctions.get_contract_terms(contract_id) or {}
+        configured_cap = contract_terms.get("revision_rounds")
+        effective_cap = configured_cap if configured_cap is not None else MAX_REVISION_REQUESTS
+
+        revision_rounds = ContractSubmissionFunctions.count_revision_rounds(contract_id)
+        if revision_rounds >= effective_cap:
+            return ResponseSchema.error(
+                f"Maximum number of revision requests ({effective_cap}) reached for this contract",
                 400,
             )
 

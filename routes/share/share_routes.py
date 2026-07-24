@@ -147,6 +147,7 @@ def _html(title: str, subtitle: str, deep_link: str, badge: str = "WorkByte") ->
     )
 
 
+# public web surface - opened by browsers / Android, not the Flutter app
 @share_router.get("/share/job/{job_post_id}", response_class=HTMLResponse)
 async def share_job_post(job_post_id: str):
     """Open the job post in the app; fall back to the app store page."""
@@ -167,6 +168,7 @@ async def share_job_post(job_post_id: str):
     return HTMLResponse(_html(title, subtitle, deep_link, badge="Job Post"))
 
 
+# public web surface - opened by browsers / Android, not the Flutter app
 @share_router.get("/share/profile/{user_id}", response_class=HTMLResponse)
 async def share_user_profile(user_id: str):
     """Open a freelancer or client profile in the app; fall back to the app store page."""
@@ -206,6 +208,7 @@ _ASSET_LINKS = [
 ]
 
 
+# public web surface - opened by browsers / Android, not the Flutter app
 @share_router.get("/.well-known/assetlinks.json")
 async def asset_links():
     """Android App Links verification file."""

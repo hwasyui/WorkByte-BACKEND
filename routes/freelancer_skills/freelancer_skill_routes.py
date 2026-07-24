@@ -50,6 +50,7 @@ async def get_freelancer_skill(freelancer_skill_id: str, current_user: UserInDB 
         return ResponseSchema.error(error_msg, 500)
 
 
+# dev/admin only - not called by the Flutter app
 @freelancer_skill_router.get("/freelancer/{freelancer_id}", response_model=None)
 async def get_freelancer_skills_by_freelancer(freelancer_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Fetch all skills for a specific freelancer - Authenticated users only - JSON response."""
@@ -144,6 +145,7 @@ async def delete_freelancer_skill(freelancer_skill_id: str, current_user: UserIn
         return ResponseSchema.error(error_msg, 500)
 
 
+# dev/admin only - not called by the Flutter app
 @freelancer_skill_router.delete("/freelancer/{freelancer_id}/skill/{skill_id}", status_code=200)
 async def delete_freelancer_skill_by_ids(freelancer_id: str, skill_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Delete a freelancer skill by freelancer_id and skill_id - Authenticated users only."""

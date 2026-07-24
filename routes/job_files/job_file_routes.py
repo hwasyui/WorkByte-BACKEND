@@ -2,11 +2,12 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from typing import List, Optional, Dict
 from functions.schema_model import JobFileCreate, JobFileUpdate, JobFileResponse
 from functions.schema_model import UserInDB
 from functions.authentication import get_current_user
+from functions.access_control import assert_client_owns
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.job_files.job_file_functions import JobFileFunctions
@@ -15,6 +16,15 @@ from functions.minio_client import upload_job_file
 from mimetypes import guess_type as guess_mime
 
 job_file_router = APIRouter(prefix="/job-files", tags=["Job Files"])
+
+
+def _assert_owns_job_file(current_user, job_file):
+    """A job file inherits its owner from the job post it hangs off."""
+    job_post = JobPostFunctions.get_job_post_by_id(str(job_file["job_post_id"]))
+    if not job_post:
+        return ResponseSchema.error(f"Job post for file {job_file['job_file_id']} not found", 404)
+    assert_client_owns(current_user, job_post["client_id"])
+    return None
 
 
 @job_file_router.get("", response_model=None)
@@ -74,6 +84,9 @@ async def create_job_file(
         existing_job_post = JobPostFunctions.get_job_post_by_id(job_post_id)
         if not existing_job_post:
             return ResponseSchema.error(f"Job post {job_post_id} not found", 404)
+        # Files belong to whoever owns the job post; without this any logged-in user
+        # could attach files to someone else's listing.
+        assert_client_owns(current_user, existing_job_post["client_id"])
 
         if not files:
             return ResponseSchema.error("At least one file must be uploaded", 400)
@@ -114,6 +127,8 @@ async def create_job_file(
         success_msg = f"Created {len(created_files)} job file(s) for job post {job_post_id}"
         logger("JOB_FILE", success_msg, "POST /job-files", "INFO")
         return ResponseSchema.success(created_files, 201)
+    except HTTPException:
+        raise  # let the 403 from assert_client_owns through instead of masking it as 500
     except ValueError as e:
         error_msg = f"Validation error: {str(e)}"
         logger("JOB_FILE", error_msg, "POST /job-files", "WARNING")
@@ -133,13 +148,19 @@ async def update_job_file(job_file_id: str, job_file_update: JobFileUpdate, curr
             error_msg = f"Job file {job_file_id} not found"
             logger("JOB_FILE", error_msg, "PUT /job-files/{job_file_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
-        
+
+        missing = _assert_owns_job_file(current_user, existing_job_file)
+        if missing:
+            return missing
+
         update_data = job_file_update.model_dump(exclude_unset=True)
         updated_job_file = JobFileFunctions.update_job_file(job_file_id, update_data)
         
         success_msg = f"Updated job file {job_file_id}"
         logger("JOB_FILE", success_msg, "PUT /job-files/{job_file_id}", "INFO")
         return ResponseSchema.success(updated_job_file, 200)
+    except HTTPException:
+        raise
     except Exception as e:
         error_msg = f"Failed to update job file {job_file_id}: {str(e)}"
         logger("JOB_FILE", error_msg, "PUT /job-files/{job_file_id}", "ERROR")
@@ -155,12 +176,18 @@ async def delete_job_file(job_file_id: str, current_user: UserInDB = Depends(get
             error_msg = f"Job file {job_file_id} not found"
             logger("JOB_FILE", error_msg, "DELETE /job-files/{job_file_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
-        
+
+        missing = _assert_owns_job_file(current_user, existing_job_file)
+        if missing:
+            return missing
+
         JobFileFunctions.delete_job_file(job_file_id)
         
         success_msg = f"Deleted job file {job_file_id}"
         logger("JOB_FILE", success_msg, "DELETE /job-files/{job_file_id}", "INFO")
         return ResponseSchema.success("Deleted successfully", 200)
+    except HTTPException:
+        raise
     except Exception as e:
         error_msg = f"Failed to delete job file {job_file_id}: {str(e)}"
         logger("JOB_FILE", error_msg, "DELETE /job-files/{job_file_id}", "ERROR")

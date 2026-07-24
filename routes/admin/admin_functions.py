@@ -16,7 +16,6 @@ from routes.admin.admin_moderation import (
     scan_for_scam,
     scan_for_scam_with_ml_fallback,
     scan_harmful_text_with_ml_fallback,
-    SCAM_AUTO_REMOVE_THRESHOLD,
 )
 from routes.notifications.notification_functions import NotificationFunctions
 
@@ -34,7 +33,9 @@ CONTENT_AUTO_CLOSE_THRESHOLD_JOB     = 0.88
 REPORT_AUTO_ACTION_THRESHOLD = 10   # min reports to trigger auto-action
 REPORT_AUTO_ACTION_DAYS      = 30   # min age (days) of oldest report
 
-SCAM_SOFT_FLAG_THRESHOLD = 0.25  # suspicious but not auto-closed; goes to admin queue for manual review
+# Scam cutoffs are no longer constants here - they ship with the trained model bundle
+# (thresholds.json) so retraining can move them without a code change. The keyword fallback
+# keeps its own, on its own scale, in admin_moderation.py.
 
 # Default closure / ban messages (admin can override via admin_note / ban_message)
 DEFAULT_CLOSURE_REASON_CONTENT = "content_violation"
@@ -466,7 +467,6 @@ def force_expire_moderation(moderation_ids: List[str]) -> None:
 
 
 def force_expire_scam_flags(flag_ids: List[str]) -> None:
-    """Backdate auto_remove_at for specific flags then immediately run the sweep (testing utility)."""
     if not flag_ids:
         return
     placeholders = ", ".join(f":id_{i}" for i in range(len(flag_ids)))
@@ -596,6 +596,36 @@ def action_moderation_item(
     return updated
 
 
+def _notify_scam_closure(job_post_id: str) -> None:
+    row = _row(get_db().execute_query(
+        """
+        SELECT c.user_id FROM job_post jp
+        JOIN client c ON c.client_id = jp.client_id
+        WHERE jp.job_post_id = :jid
+        """,
+        params={"jid": job_post_id},
+    ))
+    if not row:
+        return
+
+    coro = NotificationFunctions.notify(
+        recipient_user_id=str(row["user_id"]),
+        notif_type="job_closed_scam",
+        title="Job Post Closed",
+        body=DEFAULT_CLOSURE_NOTE_SCAM,
+        data={"job_post_id": job_post_id},
+    )
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        try:
+            asyncio.run(coro)
+        except Exception as e:
+            logger("ADMIN", f"Scam closure notification failed: {e}", level="WARNING")
+        return
+    loop.create_task(coro)
+
+
 def queue_scam_scan(
     job_post_id: str,
     client_id: str,
@@ -603,27 +633,15 @@ def queue_scam_scan(
     title: str = "",
     description: str = "",
 ) -> Optional[Dict]:
-    """
-    Run ML-based scam scan (SBERT + RF, falls back to keyword) on a job post.
-
-    If scam is detected:
-      1. Immediately closes the job post (status → 'closed').
-      2. Inserts a pending flag into scam_job_flags for admin review.
-         Admin can mark it safe (job reopens) or confirm removal.
-
-    Returns the flag row, or None if clean.
-    """
-    # Prefer explicit title/description for the ML model; fall back to combined text.
     if title or description:
         result = scan_for_scam_with_ml_fallback(title, description)
     else:
-        # Legacy callers pass combined text; split heuristically on first 60 chars.
         result = scan_for_scam_with_ml_fallback("", text)
 
     scan_method = result.get("scan_method", "unknown")
     scam_score  = result["scam_score"]
-    is_hard     = result["is_flagged"]                              # score >= 0.4 → auto-close
-    is_soft     = not is_hard and scam_score >= SCAM_SOFT_FLAG_THRESHOLD  # 0.25–0.4 → review only
+    is_hard     = result["is_flagged"]
+    is_soft     = not is_hard and result.get("needs_review", False)
 
     if not is_hard and not is_soft:
         logger(
@@ -635,23 +653,25 @@ def queue_scam_scan(
 
     auto_remove_at = datetime.utcnow() + timedelta(days=AUTO_REMOVE_DAYS)
     try:
+        closed = []
         if is_hard:
-            # Close the job immediately; high-confidence scam.
-            get_db().execute_query(
-                """
+            closed = _rows(get_db().execute_query(
+                f"""
                 UPDATE job_post
                 SET status         = 'closed',
                     closure_reason = :reason,
-                    closure_note   = :note
+                    closure_note   = :note,
+                    closed_at      = NOW()
                 WHERE job_post_id = :jid
-                  AND status NOT IN ('closed', 'filled')
+                  AND status = 'active'{_ACTIVE_NO_ENGAGEMENT}
+                RETURNING job_post_id
                 """,
                 params={
                     "jid":    job_post_id,
                     "reason": DEFAULT_CLOSURE_REASON_SCAM,
                     "note":   DEFAULT_CLOSURE_NOTE_SCAM,
                 },
-            )
+            ))
 
         row = _row(get_db().execute_query(
             """
@@ -671,13 +691,21 @@ def queue_scam_scan(
                 "keywords":       json.dumps(result["detected_keywords"]),
                 "text":           text[:500],
                 "auto_remove_at": auto_remove_at,
-                "auto_closed":    is_hard,
+                "auto_closed":    bool(closed),
             },
         ))
-        if is_hard:
+        if is_hard and closed:
             logger(
                 "ADMIN",
                 f"Scam detected ({scan_method}): job {job_post_id} auto-closed and flagged, score={scam_score:.3f}",
+                level="WARNING",
+            )
+            _notify_scam_closure(job_post_id)
+        elif is_hard:
+            logger(
+                "ADMIN",
+                f"Scam detected ({scan_method}): job {job_post_id} flagged but not closed "
+                f"(not active or has ongoing engagement), score={scam_score:.3f}",
                 level="WARNING",
             )
         else:
@@ -694,7 +722,6 @@ def queue_scam_scan(
 
 
 def _flag_client_for_scam(client_id: str):
-    """Increment confirmed-scam count; ban client if total reaches 3."""
     get_db().execute_query(
         """
         INSERT INTO client_scam_record (client_id, total_scam_confirmed)
@@ -723,7 +750,8 @@ def _flag_client_for_scam(client_id: str):
             UPDATE job_post
             SET status = 'closed',
                 closure_reason = :reason,
-                closure_note   = :note
+                closure_note   = :note,
+                closed_at      = NOW()
             WHERE client_id = :cid AND status = 'active'
             """,
             params={
@@ -736,13 +764,15 @@ def _flag_client_for_scam(client_id: str):
 
 
 def _process_auto_remove():
-    """Process auto-removal of expired scam flags after 30 days.
+    from ai_related.job_scam_detection.scam_detector import get_thresholds
 
-    High score (>=85%) confirms scam: closes job post and flags client.
-    Low score (<85%): dismisses flag as false positive.
-    """
-    # high score: confirmed scam
-    expired_high = _rows(get_db().execute_query(
+    try:
+        expire_close = get_thresholds()["expire_close"]
+    except Exception as e:
+        logger("ADMIN", f"Scam expiry sweep skipped, thresholds unavailable: {e}", level="ERROR")
+        return
+
+    expired = _rows(get_db().execute_query(
         """
         UPDATE scam_job_flags
         SET status = 'removed', actioned_at = NOW()
@@ -751,37 +781,60 @@ def _process_auto_remove():
           AND scam_score >= :threshold
         RETURNING *
         """,
-        params={"threshold": SCAM_AUTO_REMOVE_THRESHOLD},
+        params={"threshold": expire_close},
     ))
-    for flag in expired_high:
-        _flag_client_for_scam(str(flag["client_id"]))
-        get_db().execute_query(
-            """
+    for flag in expired:
+        job_post_id = str(flag["job_post_id"])
+        closed = _rows(get_db().execute_query(
+            f"""
             UPDATE job_post
-            SET status = 'closed',
+            SET status         = 'closed',
                 closure_reason = :reason,
-                closure_note   = :note
+                closure_note   = :note,
+                closed_at      = NOW()
             WHERE job_post_id = :jid
+              AND status = 'active'{_ACTIVE_NO_ENGAGEMENT}
+            RETURNING job_post_id
             """,
             params={
-                "jid":    str(flag["job_post_id"]),
+                "jid":    job_post_id,
                 "reason": DEFAULT_CLOSURE_REASON_SCAM,
                 "note":   DEFAULT_CLOSURE_NOTE_SCAM,
             },
-        )
-        logger("ADMIN", f"Auto-removed scam job {flag['job_post_id']}, score={flag['scam_score']:.2f}", level="WARNING")
+        ))
+        if closed:
+            logger(
+                "ADMIN",
+                f"Scam flag {flag['flag_id']} expired unreviewed: job {job_post_id} closed, "
+                f"score={flag['scam_score']:.3f} (no strike applied)",
+                level="WARNING",
+            )
+            _notify_scam_closure(job_post_id)
+        else:
+            logger(
+                "ADMIN",
+                f"Scam flag {flag['flag_id']} expired unreviewed but job {job_post_id} not "
+                f"closed (not active or has ongoing engagement)",
+                level="INFO",
+            )
 
-    # low score: false positive, mark safe
-    get_db().execute_query(
+    dismissed = _rows(get_db().execute_query(
         """
         UPDATE scam_job_flags
         SET status = 'safe', actioned_at = NOW()
         WHERE status = 'pending'
           AND auto_remove_at <= NOW()
           AND scam_score < :threshold
+        RETURNING flag_id
         """,
-        params={"threshold": SCAM_AUTO_REMOVE_THRESHOLD},
-    )
+        params={"threshold": expire_close},
+    ))
+    if dismissed:
+        logger(
+            "ADMIN",
+            f"{len(dismissed)} scam flag(s) expired below the {expire_close:.4f} cutoff, dismissed",
+            level="INFO",
+        )
 
 
 def list_scam_flags(
@@ -822,10 +875,6 @@ def action_scam_flag(
     admin_user_id: str,
     admin_note: Optional[str] = None,
 ) -> Optional[Dict]:
-    """
-    Approve (safe) or remove a scam-flagged job.
-    Removing closes the job post and flags the client.
-    """
     new_status = "safe" if action == "approve" else "removed"
     updated = _row(get_db().execute_query(
         """
@@ -844,13 +893,13 @@ def action_scam_flag(
     ))
     if updated and new_status == "safe":
         if updated.get("auto_closed"):
-            # Hard flag false positive; job was auto-closed, reopen it.
             get_db().execute_query(
                 """
                 UPDATE job_post
                 SET status         = 'active',
                     closure_reason = NULL,
-                    closure_note   = NULL
+                    closure_note   = NULL,
+                    closed_at      = NULL
                 WHERE job_post_id = :jid
                   AND closure_reason = 'scam'
                 """,
@@ -858,7 +907,6 @@ def action_scam_flag(
             )
             logger("ADMIN", f"Scam flag {flag_id} cleared: job {updated['job_post_id']} reopened by {admin_user_id}", level="INFO")
         else:
-            # Soft flag dismissed; job was never closed, nothing to reopen.
             logger("ADMIN", f"Soft scam flag {flag_id} dismissed as safe by {admin_user_id} (job was active)", level="INFO")
 
     if updated and new_status == "removed":
@@ -869,7 +917,8 @@ def action_scam_flag(
             UPDATE job_post
             SET status         = 'closed',
                 closure_reason = :reason,
-                closure_note   = :note
+                closure_note   = :note,
+                closed_at      = NOW()
             WHERE job_post_id = :jid
             """,
             params={

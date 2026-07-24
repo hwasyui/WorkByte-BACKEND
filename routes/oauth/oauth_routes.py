@@ -45,6 +45,7 @@ def _error_response(message: str, status_code: int = 400):
         return RedirectResponse(url, status_code=302)
     return ResponseSchema.error(message, status_code)
 
+# public web surface - opened by browsers / Android, not the Flutter app
 @oauth_router.get("/google")
 async def google_login():
     """Redirect the browser to Google's OAuth consent screen."""
@@ -57,6 +58,7 @@ async def google_login():
         return _error_response(str(e), 501)
 
 
+# public web surface - opened by browsers / Android, not the Flutter app
 @oauth_router.get("/google/callback")
 async def google_callback(code: str = None, state: str = None, error: str = None):
     """Handle Google's redirect back with an authorization code."""

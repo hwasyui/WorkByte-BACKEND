@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
-from functions.authentication import get_current_user
+from functions.authentication import get_current_user, get_admin_user
 from functions.schema_model import UserInDB
 from ai_related.harmful_text_detection.model_inference import (
     batch_predict,
@@ -114,9 +114,12 @@ async def get_labels() -> Dict[str, Any]:
     return ResponseSchema.success(labels_info)
 
 
-# dev only
+# dev/admin only - reports which trained model folders exist on the server, which is
+# infrastructure detail, so it's admin-gated rather than open.
 @harmful_text_router.get("/models", response_model=None)
-async def get_available_models() -> Dict[str, Any]:
+async def get_available_models(
+    current_user: UserInDB = Depends(get_admin_user),
+) -> Dict[str, Any]:
     """Which trained model folders are present (only bert ships by default)."""
     available_models = [m for m in get_model_registry() if m["available"]]
     if not available_models:

@@ -2,11 +2,12 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from typing import List, Optional, Dict
 from functions.schema_model import ProposalFileCreate, ProposalFileUpdate, ProposalFileResponse
 from functions.schema_model import UserInDB
 from functions.authentication import get_current_user
+from functions.access_control import assert_freelancer_owns
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.proposal_files.proposal_file_functions import ProposalFileFunctions
@@ -15,6 +16,16 @@ from functions.minio_client import upload_proposal_file, resolve_file_url, BUCKE
 from mimetypes import guess_type as guess_mime
 
 proposal_file_router = APIRouter(prefix="/proposal-files", tags=["Proposal Files"])
+
+
+def _assert_owns_proposal_file(current_user, proposal_file):
+    """A proposal file inherits its owner from the proposal it belongs to."""
+    proposal = ProposalFunctions.get_proposal_by_id(str(proposal_file["proposal_id"]))
+    if not proposal:
+        return ResponseSchema.error(
+            f"Proposal for file {proposal_file['proposal_file_id']} not found", 404)
+    assert_freelancer_owns(current_user, proposal["freelancer_id"])
+    return None
 
 
 def _resolve(pf: dict) -> dict:
@@ -80,6 +91,8 @@ async def create_proposal_file(
         existing_proposal = ProposalFunctions.get_proposal_by_id(proposal_id)
         if not existing_proposal:
             return ResponseSchema.error(f"Proposal {proposal_id} not found", 404)
+        # Only the freelancer who wrote the proposal may attach files to it.
+        assert_freelancer_owns(current_user, existing_proposal["freelancer_id"])
 
         if not files:
             return ResponseSchema.error("At least one file must be uploaded", 400)
@@ -120,6 +133,8 @@ async def create_proposal_file(
         success_msg = f"Created {len(created_files)} proposal file(s) for proposal {proposal_id}"
         logger("PROPOSAL_FILE", success_msg, "POST /proposal-files", "INFO")
         return ResponseSchema.success(created_files, 201)
+    except HTTPException:
+        raise  # let the 403 from assert_freelancer_owns through instead of masking it as 500
     except ValueError as e:
         error_msg = f"Validation error: {str(e)}"
         logger("PROPOSAL_FILE", error_msg, "POST /proposal-files", "WARNING")
@@ -139,13 +154,19 @@ async def update_proposal_file(proposal_file_id: str, proposal_file_update: Prop
             error_msg = f"Proposal file {proposal_file_id} not found"
             logger("PROPOSAL_FILE", error_msg, "PUT /proposal-files/{proposal_file_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
-        
+
+        missing = _assert_owns_proposal_file(current_user, existing_proposal_file)
+        if missing:
+            return missing
+
         update_data = proposal_file_update.model_dump(exclude_unset=True)
         updated_proposal_file = ProposalFileFunctions.update_proposal_file(proposal_file_id, update_data)
         
         success_msg = f"Updated proposal file {proposal_file_id}"
         logger("PROPOSAL_FILE", success_msg, "PUT /proposal-files/{proposal_file_id}", "INFO")
         return ResponseSchema.success(updated_proposal_file, 200)
+    except HTTPException:
+        raise
     except Exception as e:
         error_msg = f"Failed to update proposal file {proposal_file_id}: {str(e)}"
         logger("PROPOSAL_FILE", error_msg, "PUT /proposal-files/{proposal_file_id}", "ERROR")
@@ -161,12 +182,18 @@ async def delete_proposal_file(proposal_file_id: str, current_user: UserInDB = D
             error_msg = f"Proposal file {proposal_file_id} not found"
             logger("PROPOSAL_FILE", error_msg, "DELETE /proposal-files/{proposal_file_id}", "WARNING")
             return ResponseSchema.error(error_msg, 404)
-        
+
+        missing = _assert_owns_proposal_file(current_user, existing_proposal_file)
+        if missing:
+            return missing
+
         ProposalFileFunctions.delete_proposal_file(proposal_file_id)
         
         success_msg = f"Deleted proposal file {proposal_file_id}"
         logger("PROPOSAL_FILE", success_msg, "DELETE /proposal-files/{proposal_file_id}", "INFO")
         return ResponseSchema.success("Deleted successfully", 200)
+    except HTTPException:
+        raise
     except Exception as e:
         error_msg = f"Failed to delete proposal file {proposal_file_id}: {str(e)}"
         logger("PROPOSAL_FILE", error_msg, "DELETE /proposal-files/{proposal_file_id}", "ERROR")

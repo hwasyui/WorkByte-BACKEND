@@ -38,6 +38,8 @@ ai_related/job_matching/machine_learning/models/*.png
 *.parquet
 
 ai_related/job_scam_detection/model1_sbert_rf_complete
+ai_related/job_scam_detection/model2_sbert_rf_complete
+ai_related/job_scam_detection/model3_sbert_rf_complete
 
 ai_related/review_analysis/review_ml/machine_learning/_feature_cache/
 

@@ -58,6 +58,7 @@ def _validate_statuses(label: str, statuses: set, allowed: set):
     return None
 
 
+# dev/admin only - not called by the Flutter app
 @dashboard_router.get("/freelancer")
 async def get_freelancer_dashboard(
     tracking_status: Optional[str] = Query(
@@ -164,6 +165,7 @@ async def get_freelancer_dashboard(
         return ResponseSchema.error(f"Failed to fetch dashboard: {str(e)}", 500)
 
 
+# dev/admin only - not called by the Flutter app
 @dashboard_router.get("/client")
 async def get_client_dashboard(
     tracking_status: Optional[str] = Query(

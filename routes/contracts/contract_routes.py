@@ -224,6 +224,7 @@ async def get_contract_pdf_url(contract_id: str, current_user: UserInDB = Depend
         return ResponseSchema.error(f"Failed to create PDF URL for contract {contract_id}: {str(e)}", 500)
 
 
+# dev/admin only - not called by the Flutter app
 @contract_router.get("/{contract_id}/pdf-download")
 async def download_contract_pdf(contract_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Download the generated contract PDF directly."""

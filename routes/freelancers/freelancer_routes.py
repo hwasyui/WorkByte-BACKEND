@@ -70,6 +70,7 @@ async def freelancer_update_form(
 freelancer_router = APIRouter(prefix="/freelancers", tags=["Freelancers"])
 
 
+# dev/admin only - not called by the Flutter app
 @freelancer_router.get("", response_model=None)
 async def get_all_freelancers(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
     try:
@@ -82,6 +83,7 @@ async def get_all_freelancers(limit: Optional[int] = None, current_user: UserInD
         return ResponseSchema.error(error_msg, 500)
 
 
+# dev/admin only - not called by the Flutter app
 @freelancer_router.post("", response_model=None, status_code=201)
 async def create_freelancer(
     freelancer: FreelancerCreate = Depends(),
@@ -277,6 +279,7 @@ async def get_freelancer_skills(freelancer_id: str, current_user: UserInDB = Dep
         return ResponseSchema.error(error_msg, 500)
 
 
+# dev/admin only - not called by the Flutter app
 @freelancer_router.get("/{freelancer_id}/embedding", response_model=None)
 async def get_freelancer_embedding(freelancer_id: str, current_user: UserInDB = Depends(get_current_user)):
     try:

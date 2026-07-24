@@ -53,6 +53,7 @@ async def browse_all_clients(
         return ResponseSchema.error(error_msg, 500)
 
 
+# dev/admin only - not called by the Flutter app
 @client_router.get("", response_model=None)
 async def get_all_clients(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
     """Fetch current client profile - Authenticated users only - JSON response."""
@@ -100,6 +101,7 @@ async def get_client(identifier: str, current_user: UserInDB = Depends(get_curre
         logger("CLIENT", error_msg, "GET /clients/{identifier}", "ERROR")
         return ResponseSchema.error(error_msg, 500)
 
+# dev/admin only - not called by the Flutter app
 @client_router.post("", response_model=None, status_code=201)
 async def create_client(
     client: ClientCreate = Depends(),

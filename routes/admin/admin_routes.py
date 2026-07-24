@@ -184,6 +184,7 @@ async def reject_moderation(
         return ResponseSchema.error(f"Failed to reject item: {e}", 500)
 
 
+# dev/admin only - not called by the Flutter app
 @admin_router.post("/moderation/force-expire")
 async def force_expire_mod_items(
     body: ForceExpireBody,
@@ -352,6 +353,7 @@ async def admin_list_reports(
         return ResponseSchema.error(f"Failed to fetch reports: {e}", 500)
 
 
+# dev/admin only - not called by the Flutter app
 @admin_router.get("/reports/targets")
 async def admin_list_report_targets(
     target_type: str = Query(default="all",          description="user | job_post | all"),
@@ -408,6 +410,7 @@ async def accept_report(
         return ResponseSchema.error(f"Failed to accept report: {e}", 500)
 
 
+# dev/admin only - not called by the Flutter app
 @admin_router.get("/reports/auto-actions")
 async def list_auto_actions(
     page:      int = Query(default=1, ge=1),
@@ -446,6 +449,7 @@ async def dismiss_report(
         return ResponseSchema.error(f"Failed to dismiss report: {e}", 500)
 
 
+# dev/admin only - not called by the Flutter app
 @admin_router.post("/reports/force-expire-target")
 async def force_expire_report_target(
     body: ForceExpireReportBody,
@@ -462,6 +466,7 @@ async def force_expire_report_target(
         return ResponseSchema.error(f"Force expire failed: {e}", 500)
 
 
+# dev/admin only - not called by the Flutter app
 @admin_router.get("/reports/{report_id}")
 async def admin_get_report(
     report_id: str,
@@ -510,6 +515,7 @@ async def admin_list_appeals(
         return ResponseSchema.error(f"Failed to fetch appeals: {e}", 500)
 
 
+# dev/admin only - not called by the Flutter app
 @admin_router.get("/appeals/{appeal_id}")
 async def admin_get_appeal(
     appeal_id: str,
@@ -595,6 +601,7 @@ async def force_close_job(
         return ResponseSchema.error(f"Failed to close job post: {e}", 500)
 
 
+# dev/admin only - not called by the Flutter app
 @admin_router.post("/jobs/{job_post_id}/reopen")
 async def force_reopen_job(
     job_post_id: str,
@@ -637,6 +644,7 @@ async def force_close_account(
         return ResponseSchema.error(f"Failed to close account: {e}", 500)
 
 
+# dev/admin only - not called by the Flutter app
 @admin_router.post("/accounts/{user_id}/reopen")
 async def force_reopen_account(
     user_id: str,
@@ -751,6 +759,7 @@ async def admin_browse_users(
         return ResponseSchema.error(f"Failed to list users: {e}", 500)
 
 
+# dev/admin only - not called by the Flutter app
 @admin_router.get("/users/{user_id}")
 async def admin_get_user(
     user_id: str,

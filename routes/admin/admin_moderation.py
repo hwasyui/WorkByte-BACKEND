@@ -17,9 +17,8 @@ with open(_KEYWORDS_PATH, "r", encoding="utf-8") as _f:
 _LABEL_KEYWORDS: Dict[str, List[str]] = _kw_data["content_labels"]
 _SCAM_KEYWORDS: List[str] = _kw_data["scam_keywords"]
 
-# Scam thresholds (also documented in moderation_keywords.json _meta)
-SCAM_FLAG_THRESHOLD: float = 0.10       # ≥ 1 keyword match → admin review queue
-SCAM_AUTO_REMOVE_THRESHOLD: float = 0.85  # ≥ 5 matches + 30 days → auto-remove
+SCAM_FLAG_THRESHOLD: float = 0.10
+SCAM_AUTO_REMOVE_THRESHOLD: float = 0.85
 
 
 def _normalize(text: str) -> str:
@@ -75,39 +74,25 @@ def scan_harmful_text(text: str) -> Dict:
 
 
 def scan_for_scam(text: str) -> Dict:
-    """
-    Keyword-based scam indicator scan for job posts.
-    Score = min(matched_count / 6.0, 1.0)
-      - 6 keywords: 100% scam score
-      - 5 keywords: 83% (near auto-remove threshold)
-    Keyword list and threshold rationale: moderation_keywords.json.
-    """
     normalized = _normalize(text)
     matched = [kw for kw in _SCAM_KEYWORDS if kw in normalized]
     score = round(min(len(matched) / 6.0, 1.0), 4)
     return {
         "scam_score":        score,
         "detected_keywords": matched,
-        "is_flagged":        score >= SCAM_FLAG_THRESHOLD,
+        "is_flagged":        score >= SCAM_AUTO_REMOVE_THRESHOLD,
+        "needs_review":      score >= SCAM_FLAG_THRESHOLD,
         "scan_method":       "keyword",
     }
 
 
 def scan_for_scam_with_ml_fallback(title: str, description: str) -> Dict:
-    """
-    ML-first scam scan using SBERT + Random Forest (AUC-ROC 0.978).
-    Falls back transparently to keyword scan if the model is unavailable.
-
-    Returns the same shape as scan_for_scam() plus a 'scan_method' key
-    ('sbert_rf' or 'keyword') so callers can log which path ran.
-    """
     combined = f"{title} {description}"
     try:
         from ai_related.job_scam_detection.scam_detector import predict_scam
 
         ml = predict_scam(title, description)
 
-        # Also collect keyword matches for admin review context (informational only).
         normalized = _normalize(combined)
         matched_keywords = [kw for kw in _SCAM_KEYWORDS if kw in normalized]
 
@@ -115,7 +100,8 @@ def scan_for_scam_with_ml_fallback(title: str, description: str) -> Dict:
             "scam_score":        ml["scam_probability"],
             "detected_keywords": matched_keywords,
             "is_flagged":        ml["is_scam"],
-            "scan_method":       "sbert_rf",
+            "needs_review":      ml["needs_review"],
+            "scan_method":       "sbert_rf_calibrated",
         }
     except Exception as exc:
         logger(

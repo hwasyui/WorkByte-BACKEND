@@ -278,9 +278,17 @@ class ContractSubmissionFunctions:
                 raise Exception("Client not found")
             actor_user_id = str(client_rows[0]["user_id"])  # ← actual user_id, not client_id
 
+            # revision_note/reviewed_at exist on this table but were never
+            # written anywhere - the note only ever reached the freelancer as
+            # an ephemeral DM system message below, with no structured record
+            # of what was said or when the client actually reviewed it.
             ContractSubmissionFunctions.update_submission(
                 submission_id,
-                {"status": "revision_requested"},
+                {
+                    "status": "revision_requested",
+                    "revision_note": note,
+                    "reviewed_at": datetime.now(timezone.utc),
+                },
             )
 
             db.update_data(
@@ -331,7 +339,7 @@ class ContractSubmissionFunctions:
 
             ContractSubmissionFunctions.update_submission(
                 submission_id,
-                {"status": "approved"},
+                {"status": "approved", "reviewed_at": datetime.now(timezone.utc)},
             )
 
             ContractFunctions.update_contract(

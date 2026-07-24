@@ -26,11 +26,22 @@ def convert_uuids_to_str(data: Dict) -> Dict:
 class ClientFunctions:
     """Handle all client-related database operations."""
 
+    # total_jobs_posted is a column on `client`, incremented once at job-post
+    # creation time regardless of status - it's never decremented on delete
+    # and never incremented again on a draft->published transition. That
+    # drifts from reality and, worse, counts drafts as "posted" jobs. We
+    # compute the real, always-accurate count live instead: every published
+    # (non-draft) job_post row for the client.
+    _NON_DRAFT_JOBS_POSTED_SQL = (
+        "(SELECT COUNT(*) FROM job_post jp WHERE jp.client_id = c.client_id "
+        "AND jp.status <> 'draft')"
+    )
+
     _CLIENT_SORT_FIELDS = {
         "created_at":                   "c.created_at",
         "updated_at":                   "c.updated_at",
         "full_name":                    "c.full_name",
-        "total_jobs_posted":            "c.total_jobs_posted",
+        "total_jobs_posted":            _NON_DRAFT_JOBS_POSTED_SQL,
         "total_jobs_completed":         "c.total_jobs_completed",
         "weighted_review_avg_received": "cts.weighted_review_avg_received",
         "total_reviews_received":       "cts.total_reviews_received",
@@ -57,7 +68,8 @@ class ClientFunctions:
             data_rows = db.execute_query(
                 f"""
                 SELECT c.client_id, c.user_id, c.full_name, c.bio, c.website_url, c.profile_picture_url,
-                       c.total_jobs_posted, c.total_jobs_completed, c.average_rating_given,
+                       {ClientFunctions._NON_DRAFT_JOBS_POSTED_SQL} AS total_jobs_posted,
+                       c.total_jobs_completed, c.average_rating_given,
                        c.created_at, c.updated_at,
                        cts.weighted_review_avg_received, cts.total_reviews_received
                 FROM client c
@@ -106,6 +118,16 @@ class ClientFunctions:
             raise
 
     @staticmethod
+    def _count_non_draft_jobs_posted(client_id: str) -> int:
+        """Real, always-accurate jobs-posted count - see _NON_DRAFT_JOBS_POSTED_SQL."""
+        db = get_db()
+        rows = db.execute_query(
+            "SELECT COUNT(*) AS total FROM job_post WHERE client_id = :client_id AND status <> 'draft'",
+            {"client_id": client_id},
+        )
+        return int(rows[0]["total"]) if rows else 0
+
+    @staticmethod
     def get_client_by_id(client_id: str) -> Optional[Dict]:
         """Fetch a single client by ID."""
         try:
@@ -116,13 +138,15 @@ class ClientFunctions:
                 conditions=conditions,
                 limit=1
             )
-            
+
             if rows:
                 logger("CLIENT_FUNCTIONS", f"Client {client_id} found", level="INFO")
-                return convert_uuids_to_str(dict(rows[0]))
-            
+                client = convert_uuids_to_str(dict(rows[0]))
+                client["total_jobs_posted"] = ClientFunctions._count_non_draft_jobs_posted(client_id)
+                return client
+
             return None
-        
+
         except Exception as e:
             logger("CLIENT_FUNCTIONS", f"Error fetching client: {str(e)}", level="ERROR")
             raise
@@ -138,13 +162,17 @@ class ClientFunctions:
                 conditions=conditions,
                 limit=1
             )
-            
+
             if rows:
                 logger("CLIENT_FUNCTIONS", f"Client for user {user_id} found", level="INFO")
-                return convert_uuids_to_str(dict(rows[0]))
-            
+                client = convert_uuids_to_str(dict(rows[0]))
+                client["total_jobs_posted"] = ClientFunctions._count_non_draft_jobs_posted(
+                    client["client_id"]
+                )
+                return client
+
             return None
-        
+
         except Exception as e:
             logger("CLIENT_FUNCTIONS", f"Error fetching client by user_id: {str(e)}", level="ERROR")
             raise

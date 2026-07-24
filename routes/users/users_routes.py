@@ -7,7 +7,7 @@ from typing import List, Optional, Dict
 import uuid
 from functions.schema_model import UserCreate, UserUpdate, UserResponseDetail
 from functions.schema_model import UserInDB
-from functions.authentication import get_current_user
+from functions.authentication import get_current_user, get_admin_user
 from functions.access_control import assert_user_owns
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
@@ -16,6 +16,7 @@ from routes.users.users_functions import UserFunctions
 users_router = APIRouter(prefix="/users", tags=["Users"])
 
 
+# dev/admin only - not called by the Flutter app
 @users_router.get("", response_model=None)
 async def get_all_users(limit: Optional[int] = None, offset: int = 0, current_user: UserInDB = Depends(get_current_user)):
     """Fetch current user only - Authenticated users only - JSON response."""
@@ -30,9 +31,10 @@ async def get_all_users(limit: Optional[int] = None, offset: int = 0, current_us
         return ResponseSchema.error(error_msg, 500)
 
 
+# dev/admin only - not called by the Flutter app
 @users_router.get("/search", response_model=None)
 async def search_users(
-    name: str = Query(..., untu="User email or name to search for"),
+    name: str = Query(..., description="User email or name to search for"),
     current_user: UserInDB = Depends(get_current_user),
 ):
     """Search users by email - Authenticated users only - JSON response."""
@@ -46,6 +48,7 @@ async def search_users(
         return ResponseSchema.error(error_msg, 500)
 
 
+# dev/admin only - not called by the Flutter app
 @users_router.get("/{user_id}", response_model=None)
 async def get_user(user_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Fetch a single user by ID - Authenticated users only - JSON response."""
@@ -67,9 +70,12 @@ async def get_user(user_id: str, current_user: UserInDB = Depends(get_current_us
         return ResponseSchema.error(error_msg, 500)
 
 
+# dev/admin only - the app signs people up through POST /auth/register, which sends the
+# verification OTP. This one writes a user straight to the table, so it stays admin-gated:
+# left open it would mint accounts that skip email verification entirely.
 @users_router.post("", response_model=None, status_code=201)
-async def create_user(user: UserCreate, current_user: UserInDB = Depends(get_current_user)):
-    """Create a new user - Authenticated users only - JSON body accepted."""
+async def create_user(user: UserCreate, current_user: UserInDB = Depends(get_admin_user)):
+    """Create a new user directly - admin only - JSON body accepted."""
     try:
         # Generate UUID if not provided
         user_id = user.user_id or str(uuid.uuid4())
@@ -95,6 +101,7 @@ async def create_user(user: UserCreate, current_user: UserInDB = Depends(get_cur
         return ResponseSchema.error(error_msg, 500)
 
 
+# dev/admin only - not called by the Flutter app
 @users_router.put("/{user_id}", response_model=None)
 async def update_user(user_id: str, user_update: UserUpdate, current_user: UserInDB = Depends(get_current_user)):
     """Update user information - Authenticated users only."""
@@ -129,6 +136,7 @@ async def update_user(user_id: str, user_update: UserUpdate, current_user: UserI
         return ResponseSchema.error(error_msg, 500)
 
 
+# dev/admin only - not called by the Flutter app
 @users_router.delete("/{user_id}", status_code=200)
 async def delete_user(user_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Delete a user - Authenticated users only."""
