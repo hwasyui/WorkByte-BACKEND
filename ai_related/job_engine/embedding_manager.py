@@ -436,6 +436,14 @@ async def upsert_contract_embedding(contract_id: str) -> dict:
             logger("EMBEDDING_MANAGER", f"Contract embedding CREATED | contract_id={contract_id} | dim={len(vector)}", level="INFO")
             return {"status": "created", "contract_id": contract_id, "dim": len(vector)}
 
+    except _IntegrityError as e:
+        if "ForeignKeyViolation" in type(e.__cause__).__name__:
+            logger("EMBEDDING_MANAGER",
+                   f"Contract deleted before embedding task ran, skipping | contract_id={contract_id}",
+                   level="DEBUG")
+            return {"status": "skipped", "reason": "entity_deleted"}
+        logger("EMBEDDING_MANAGER", f"Error upserting contract embedding | contract_id={contract_id} | error={e}", level="ERROR", exc_info=False)
+        raise
     except Exception as e:
         logger("EMBEDDING_MANAGER", f"Error upserting contract embedding | contract_id={contract_id} | error={e}", level="ERROR", exc_info=False)
         raise
@@ -582,6 +590,14 @@ async def upsert_portfolio_embedding(portfolio_id: str) -> dict:
             logger("EMBEDDING_MANAGER", f"Portfolio embedding CREATED | portfolio_id={portfolio_id} | dim={len(vector)}", level="INFO")
             return {"status": "created", "portfolio_id": portfolio_id, "dim": len(vector)}
 
+    except _IntegrityError as e:
+        if "ForeignKeyViolation" in type(e.__cause__).__name__:
+            logger("EMBEDDING_MANAGER",
+                   f"Portfolio deleted before embedding task ran, skipping | portfolio_id={portfolio_id}",
+                   level="DEBUG")
+            return {"status": "skipped", "reason": "entity_deleted"}
+        logger("EMBEDDING_MANAGER", f"Error upserting portfolio embedding | portfolio_id={portfolio_id} | error={e}", level="ERROR", exc_info=False)
+        raise
     except Exception as e:
         logger("EMBEDDING_MANAGER", f"Error upserting portfolio embedding | portfolio_id={portfolio_id} | error={e}", level="ERROR", exc_info=False)
         raise

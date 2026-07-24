@@ -1,7 +1,26 @@
+import re
 from fastapi import File, Form, Request, UploadFile
 from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional, Any, Dict, List
 from datetime import date, datetime
+
+
+def _validate_password_strength(v: str) -> str:
+    """Shared password policy: 8+ chars with upper, lower, digit, and a symbol."""
+    missing = []
+    if len(v) < 8:
+        missing.append("at least 8 characters")
+    if not re.search(r'[A-Z]', v):
+        missing.append("an uppercase letter")
+    if not re.search(r'[a-z]', v):
+        missing.append("a lowercase letter")
+    if not re.search(r'\d', v):
+        missing.append("a number")
+    if not re.search(r'[^A-Za-z0-9]', v):
+        missing.append("a special character")
+    if missing:
+        raise ValueError("Password must contain " + ", ".join(missing))
+    return v
 
 # Authentication
 class Token(BaseModel):
@@ -34,9 +53,7 @@ class UserRegister(BaseModel):
     @field_validator('password')
     @classmethod
     def password_strength(cls, v):
-        if len(v) < 8:
-            raise ValueError('Password must be at least 8 characters long')
-        return v
+        return _validate_password_strength(v)
 
     @field_validator('user_type')
     @classmethod
@@ -78,9 +95,7 @@ class ResetPasswordRequest(BaseModel):
     @field_validator('new_password')
     @classmethod
     def password_strength(cls, v):
-        if len(v) < 8:
-            raise ValueError('Password must be at least 8 characters long')
-        return v
+        return _validate_password_strength(v)
 
 class RefreshRequest(BaseModel):
     refresh_token: str
@@ -95,9 +110,7 @@ class ChangePasswordRequest(BaseModel):
     @field_validator('new_password')
     @classmethod
     def password_strength(cls, v):
-        if len(v) < 8:
-            raise ValueError('Password must be at least 8 characters long')
-        return v
+        return _validate_password_strength(v)
 
 class SetPasswordRequest(BaseModel):
     new_password: str
@@ -105,9 +118,7 @@ class SetPasswordRequest(BaseModel):
     @field_validator('new_password')
     @classmethod
     def password_strength(cls, v):
-        if len(v) < 8:
-            raise ValueError('Password must be at least 8 characters long')
-        return v
+        return _validate_password_strength(v)
 
 class UserResponse(BaseModel):
     user_id: str

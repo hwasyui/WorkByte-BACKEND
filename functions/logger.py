@@ -27,7 +27,10 @@ class Logger:
 
             console_handler = logging.StreamHandler()
             console_handler.setFormatter(formatter)
-            console_handler.setLevel(logging.DEBUG)
+            # Routine INFO already lands in app.log, which rotates. stdout does
+            # not - whatever the process is launched with just accumulates - so
+            # only surface WARNING+ there.
+            console_handler.setLevel(logging.WARNING)
 
             # Logger itself is set to INFO above, so DEBUG records (per-row
             # success lines, "no dirty rows" checks) never reach either
@@ -50,6 +53,7 @@ class Logger:
 
             isolated_console_handler = logging.StreamHandler()
             isolated_console_handler.setFormatter(formatter)
+            isolated_console_handler.setLevel(logging.WARNING)
             self.isolated_logger.addHandler(isolated_console_handler)
 
             isolated_file_handler = logging.handlers.RotatingFileHandler(

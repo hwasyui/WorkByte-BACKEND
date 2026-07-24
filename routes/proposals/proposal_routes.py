@@ -244,6 +244,16 @@ async def update_proposal_status(
         else:
             return ResponseSchema.error("Unauthorized", 403)
 
+        # A proposal is decided once: only a still-pending proposal can be accepted,
+        # rejected, or withdrawn. Blocks re-accepting a withdrawn/rejected proposal
+        # (which would notify the freelancer and let a contract be created for someone
+        # who already pulled out).
+        current_status = proposal.get("status")
+        if current_status != "pending":
+            return ResponseSchema.error(
+                f"This proposal is already '{current_status}' and can no longer be changed", 409
+            )
+
         updated = ProposalFunctions.update_proposal(proposal_id, {"status": status})
 
         # Notify freelancer on accept/reject

@@ -574,13 +574,19 @@ class ContractFunctions:
         Non-fatal - this must never break the actual cancel/delete operation."""
         try:
             proposal = ProposalFunctions.get_proposal_by_id(str(proposal_id))
-            if proposal and proposal.get("status") == "accepted":
-                ProposalFunctions.update_proposal(str(proposal_id), {"status": "rejected"})
-                logger(
-                    "CONTRACT_FUNCTIONS",
-                    f"Proposal {proposal_id} reverted to 'rejected' after its contract was removed",
-                    level="INFO",
-                )
+            # Slot release is tied to the proposal's accepted -> rejected flip so it
+            # runs exactly once per hire. If the proposal is already 'rejected' (e.g.
+            # the contract was cancelled earlier and is now being deleted), bail out -
+            # otherwise positions_filled would be decremented twice and a still-active
+            # contract on the same role would silently lose its slot.
+            if not proposal or proposal.get("status") != "accepted":
+                return
+            ProposalFunctions.update_proposal(str(proposal_id), {"status": "rejected"})
+            logger(
+                "CONTRACT_FUNCTIONS",
+                f"Proposal {proposal_id} reverted to 'rejected' after its contract was removed",
+                level="INFO",
+            )
             if job_role_id:
                 role_rows = get_db().execute_query(
                     """

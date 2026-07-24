@@ -84,7 +84,7 @@ class Database:
 
             rows = result.mappings().all()
 
-            logger("DATABASE", f"Fetched {len(rows)} rows from {table_name}", level="INFO")
+            logger("DATABASE", f"Fetched {len(rows)} rows from {table_name}", level="DEBUG")
 
             return rows
 
@@ -233,21 +233,21 @@ class Database:
 
             if result.returns_rows:
                 rows = result.mappings().all()
-                logger("DATABASE", f"Query returned {len(rows)} rows", level="INFO")
-                
+                logger("DATABASE", f"Query returned {len(rows)} rows", level="DEBUG")
+
                 # Commit write operations even if they return rows (e.g., INSERT ... RETURNING)
                 if is_write_query:
                     conn.commit()
-                    logger("DATABASE", "Write query executed and committed", level="INFO")
+                    logger("DATABASE", "Write query executed and committed", level="DEBUG")
                 
                 return rows
 
             # For queries that don't return rows
             if is_write_query:
                 conn.commit()
-                logger("DATABASE", "Write query executed and committed", level="INFO")
+                logger("DATABASE", "Write query executed and committed", level="DEBUG")
             else:
-                logger("DATABASE", "Query executed successfully", level="INFO")
+                logger("DATABASE", "Query executed successfully", level="DEBUG")
 
             return None
 
