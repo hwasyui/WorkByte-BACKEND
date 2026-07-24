@@ -2,6 +2,7 @@ import asyncio
 import os
 import re
 import sys
+from datetime import datetime, timedelta, timezone
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 import json
@@ -17,7 +18,7 @@ from routes.reviews.review_routes import trigger_review_pipeline_on_completion
 from routes.client_reviews.client_review_routes import trigger_client_review_pipeline_on_completion
 from typing import Dict, List, Optional
 import uuid
-from functions.schema_model import CancelContractRequest, ContractCreate, ContractUpdate, ContractResponse, ContractGenerateRequest
+from functions.schema_model import CancelContractRequest, ContractCreate, ContractUpdate, ContractResponse, ContractGenerateRequest, RaiseDisputeRequest
 from functions.schema_model import UserInDB
 from functions.authentication import get_current_user
 from functions.access_control import (
@@ -112,6 +113,12 @@ _PDF_RELEVANT_FIELDS = {
     "contract_title", "role_title", "agreed_budget", "budget_currency",
     "payment_structure", "agreed_duration", "start_date", "end_date",
 }
+
+# A cancellation is otherwise terminal and un-appealable - this is how long the
+# party who did NOT initiate it has to dispute it (see raise_dispute below)
+# before it's considered final. Keeps the escape hatch without leaving
+# cancelled contracts disputable indefinitely.
+_CANCELLATION_DISPUTE_WINDOW = timedelta(hours=72)
 
 contract_router = APIRouter(prefix="/contracts", tags=["Contracts"])
 
@@ -662,6 +669,84 @@ async def update_contract(contract_id: str, contract_update: ContractUpdate, bac
         return ResponseSchema.error(f"Failed to update contract {contract_id}: {str(e)}", 500)
 
 
+# Dispute endpoint (either party can raise; admin resolves via /admin/contracts/{id}/arbitrate)
+
+
+@contract_router.put("/{contract_id}/dispute")
+async def raise_dispute(
+    contract_id: str,
+    payload: RaiseDisputeRequest,
+    current_user: UserInDB = Depends(get_current_user),
+):
+    """
+    Either party raises a dispute while work is under review or being revised.
+    Also the recourse against a cancellation: the party who did NOT cancel a
+    contract can dispute that cancellation within _CANCELLATION_DISPUTE_WINDOW,
+    since cancelling is otherwise unilateral and immediately terminal - without
+    this, whoever didn't initiate it would have zero way to contest a
+    cancellation that happened after real work was already in progress.
+    Moves the contract to 'disputed' - only an admin can resolve it from there
+    (PUT /admin/contracts/{contract_id}/arbitrate).
+    """
+    try:
+        contract = ContractFunctions.get_contract_by_id(contract_id)
+        if not contract:
+            return ResponseSchema.error(f"Contract {contract_id} not found", 404)
+
+        assert_current_user_is_contract_party(current_user, contract)
+
+        disputable_statuses = {"under_review", "revision_requested"}
+        if contract["status"] == "cancelled":
+            if str(contract.get("cancelled_by")) == str(current_user.user_id):
+                return ResponseSchema.error("You cannot dispute your own cancellation.", 403)
+
+            cancelled_at = contract.get("updated_at")
+            if isinstance(cancelled_at, str):
+                cancelled_at = datetime.fromisoformat(cancelled_at)
+            if cancelled_at:
+                if cancelled_at.tzinfo is None:
+                    cancelled_at = cancelled_at.replace(tzinfo=timezone.utc)
+                if datetime.now(timezone.utc) - cancelled_at > _CANCELLATION_DISPUTE_WINDOW:
+                    return ResponseSchema.error(
+                        "The window to dispute this cancellation has passed.", 400,
+                    )
+        elif contract["status"] not in disputable_statuses:
+            return ResponseSchema.error(
+                f"Cannot raise a dispute on a contract with status '{contract['status']}'", 400,
+            )
+
+        updated_contract = ContractFunctions.raise_dispute(
+            contract_id=contract_id,
+            raised_by=str(current_user.user_id),
+            reason=payload.reason,
+        )
+
+        try:
+            fl = FreelancerFunctions.get_freelancer_by_id(str(contract["freelancer_id"]))
+            cl = ClientFunctions.get_client_by_id(str(contract["client_id"]))
+            is_client_raising = current_user.client_id and str(current_user.user_id) == str(cl["user_id"])
+            other_party = fl if is_client_raising else cl
+
+            await NotificationFunctions.notify(
+                recipient_user_id=str(other_party["user_id"]),
+                notif_type="contract_disputed",
+                title="Contract Under Dispute",
+                body=f"A dispute was raised on \"{contract.get('contract_title')}\". An admin will review it.",
+                data={"contract_id": contract_id},
+            )
+        except Exception as notif_err:
+            logger("CONTRACT", f"Dispute notification failed (non-fatal): {notif_err}", "PUT /contracts/{contract_id}/dispute", "WARNING")
+
+        logger("CONTRACT", f"Contract {contract_id} disputed by {current_user.user_id}", "PUT /contracts/{contract_id}/dispute", "INFO")
+        return ResponseSchema.success(updated_contract, 200)
+    except HTTPException as e:
+        logger("CONTRACT", f"HTTP {e.status_code}: {e.detail}", "PUT /contracts/{contract_id}/dispute", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
+    except Exception as e:
+        logger("CONTRACT", f"Failed to raise dispute for {contract_id}: {str(e)}", "PUT /contracts/{contract_id}/dispute", "ERROR")
+        return ResponseSchema.error(f"Failed to raise dispute: {str(e)}", 500)
+
+
 # Cancel endpoint
 
 
@@ -688,6 +773,16 @@ async def cancel_contract(
             return ResponseSchema.error(
                 f"Cannot cancel a contract with status '{contract['status']}'",
                 400,
+            )
+
+        # Free to cancel with no reason while nothing has been delivered yet.
+        # Once real work exists (a submission has been made or is being revised),
+        # a reason becomes mandatory - it's the only accountability trail the
+        # other party gets, and it's also what a later dispute against this
+        # cancellation (see raise_dispute) would be responding to.
+        if contract["status"] != "active" and not (payload.reason and payload.reason.strip()):
+            return ResponseSchema.error(
+                "A reason is required to cancel a contract once work is in progress", 400,
             )
 
         cancelled_contract = ContractFunctions.cancel_contract(

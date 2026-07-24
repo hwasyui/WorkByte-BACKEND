@@ -3,13 +3,16 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from typing import List, Optional
+from typing import Dict, List, Optional
 from pydantic import BaseModel
 
-from functions.schema_model import UserInDB
+from functions.schema_model import UserInDB, ArbitrateDisputeRequest
 from functions.authentication import get_current_user, get_admin_user
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
+from functions.db_manager import get_db
+from routes.contracts.contract_functions import ContractFunctions
+from routes.clients.client_functions import ClientFunctions
 from routes.admin.admin_functions import (
     VALID_REPORT_REASONS,
     action_moderation_item,
@@ -775,6 +778,198 @@ async def admin_get_user(
     except Exception as e:
         logger("ADMIN", f"Get user detail error: {e}", "GET /admin/users/{user_id}", "ERROR")
         return ResponseSchema.error(f"Failed to fetch user: {e}", 500)
+
+
+@admin_router.get("/contracts/disputed")
+async def admin_list_disputed_contracts(
+    search: Optional[str] = None,
+    page: int = 1,
+    page_size: int = 20,
+    current_user: UserInDB = Depends(get_admin_user),
+):
+    """
+    List contracts currently in 'disputed' status, for admin arbitration.
+
+    raise_dispute() never got a dedicated reason/raised_at column (see
+    ContractFunctions.raise_dispute's docstring) - the reason only exists as a
+    DM system-event message on the contract's thread. This pulls the most
+    recent 'dispute_raised' event per contract (DISTINCT ON, in case a
+    contract has been disputed more than once) so the admin UI can show the
+    reason without a separate round trip per card.
+    """
+    try:
+        offset = (page - 1) * page_size
+        where = ["c.status = 'disputed'"]
+        params: Dict = {}
+        if search:
+            where.append(
+                "(c.contract_title ILIKE :search OR cl_u.email ILIKE :search "
+                "OR fl_u.email ILIKE :search OR cl.full_name ILIKE :search "
+                "OR fl.full_name ILIKE :search)"
+            )
+            params["search"] = f"%{search}%"
+        where_sql = "WHERE " + " AND ".join(where)
+
+        rows = get_db().execute_query(
+            f"""
+            WITH latest_dispute AS (
+                SELECT DISTINCT ON (dt.contract_id)
+                    dt.contract_id, dm.message_text, dm.metadata, dm.sent_at
+                FROM dm_message dm
+                JOIN dm_thread dt ON dt.thread_id = dm.thread_id
+                WHERE dm.metadata->>'type' = 'dispute_raised'
+                ORDER BY dt.contract_id, dm.sent_at DESC
+            )
+            SELECT
+                c.contract_id, c.contract_title, c.agreed_budget, c.budget_currency,
+                c.client_id, c.freelancer_id,
+                cl.full_name AS client_name, cl_u.email AS client_email,
+                fl.full_name AS freelancer_name, fl_u.email AS freelancer_email,
+                ld.metadata->>'reason' AS dispute_reason,
+                ld.sent_at AS dispute_raised_at
+            FROM contract c
+            LEFT JOIN client     cl   ON cl.client_id     = c.client_id
+            LEFT JOIN users      cl_u ON cl_u.user_id      = cl.user_id
+            LEFT JOIN freelancer fl   ON fl.freelancer_id  = c.freelancer_id
+            LEFT JOIN users      fl_u ON fl_u.user_id      = fl.user_id
+            LEFT JOIN latest_dispute ld ON ld.contract_id  = c.contract_id
+            {where_sql}
+            ORDER BY ld.sent_at DESC NULLS LAST, c.updated_at DESC
+            LIMIT :limit OFFSET :offset
+            """,
+            {**params, "limit": page_size, "offset": offset},
+        )
+
+        total_row = get_db().execute_query(
+            f"""
+            SELECT COUNT(*) AS cnt
+            FROM contract c
+            LEFT JOIN client     cl   ON cl.client_id     = c.client_id
+            LEFT JOIN users      cl_u ON cl_u.user_id      = cl.user_id
+            LEFT JOIN freelancer fl   ON fl.freelancer_id  = c.freelancer_id
+            LEFT JOIN users      fl_u ON fl_u.user_id      = fl.user_id
+            {where_sql}
+            """,
+            params,
+        )
+        total = int(total_row[0]["cnt"]) if total_row else 0
+
+        items = [dict(row) for row in rows or []]
+        result = {
+            "items": items,
+            "pagination": {
+                "total": total,
+                "page": page,
+                "page_size": page_size,
+                "total_pages": (total + page_size - 1) // page_size if page_size > 0 else 0,
+            },
+        }
+        logger("ADMIN", f"Retrieved {len(items)} disputed contracts (page {page})", "GET /admin/contracts/disputed", "INFO")
+        return ResponseSchema.success(result, 200)
+    except Exception as e:
+        logger("ADMIN", f"Failed to list disputed contracts: {e}", "GET /admin/contracts/disputed", "ERROR")
+        return ResponseSchema.error(f"Failed to list disputed contracts: {e}", 500)
+
+
+@admin_router.put("/contracts/{contract_id}/arbitrate")
+async def admin_arbitrate_contract_dispute(
+    contract_id: str,
+    payload: ArbitrateDisputeRequest,
+    current_user: UserInDB = Depends(get_admin_user),
+):
+    """
+    Resolve a disputed contract (status must be 'disputed', set via
+    PUT /contracts/{contract_id}/dispute). Three outcomes:
+      - approve: force-complete, reusing the same completion path as a manual approve.
+      - cancel:  force-cancel, reusing the same path as a manual cancel.
+      - revise:  send back for another revision round with a new deadline.
+    """
+    try:
+        contract = ContractFunctions.get_contract_by_id(contract_id)
+        if not contract:
+            return ResponseSchema.error(f"Contract {contract_id} not found", 404)
+
+        if contract["status"] != "disputed":
+            return ResponseSchema.error(
+                f"Cannot arbitrate a contract with status '{contract['status']}' - must be 'disputed'", 400,
+            )
+
+        if payload.outcome == "revise" and not payload.new_deadline:
+            return ResponseSchema.error("new_deadline is required when outcome is 'revise'", 400)
+
+        updated_contract = ContractFunctions.arbitrate_dispute(
+            contract_id=contract_id,
+            outcome=payload.outcome,
+            admin_user_id=str(current_user.user_id),
+            note=payload.note,
+            new_deadline=payload.new_deadline,
+        )
+
+        try:
+            from routes.freelancers.freelancer_functions import FreelancerFunctions
+            from routes.notifications.notification_functions import NotificationFunctions
+
+            fl = FreelancerFunctions.get_freelancer_by_id(str(contract["freelancer_id"]))
+            cl = ClientFunctions.get_client_by_id(str(contract["client_id"]))
+            body = f"Admin resolved the dispute on \"{contract.get('contract_title')}\": {payload.outcome}."
+            for party in (fl, cl):
+                if party:
+                    await NotificationFunctions.notify(
+                        recipient_user_id=str(party["user_id"]),
+                        notif_type="dispute_resolved",
+                        title="Dispute Resolved",
+                        body=body,
+                        data={"contract_id": contract_id, "outcome": payload.outcome},
+                    )
+        except Exception as notif_err:
+            logger("ADMIN", f"Dispute-resolved notification failed (non-fatal): {notif_err}", "PUT /admin/contracts/{contract_id}/arbitrate", "WARNING")
+
+        logger("ADMIN", f"Contract {contract_id} dispute arbitrated by admin {current_user.user_id}: {payload.outcome}", "PUT /admin/contracts/{contract_id}/arbitrate", "INFO")
+        return ResponseSchema.success(updated_contract, 200)
+    except ValueError as e:
+        logger("ADMIN", f"Validation error: {e}", "PUT /admin/contracts/{contract_id}/arbitrate", "WARNING")
+        return ResponseSchema.error(str(e), 400)
+    except Exception as e:
+        logger("ADMIN", f"Failed to arbitrate dispute for contract {contract_id}: {e}", "PUT /admin/contracts/{contract_id}/arbitrate", "ERROR")
+        return ResponseSchema.error(f"Failed to arbitrate dispute: {e}", 500)
+
+
+@admin_router.get("/clients/{client_id}/autoapprove-history")
+async def admin_get_client_autoapprove_history(
+    client_id: str,
+    current_user: UserInDB = Depends(get_admin_user),
+):
+    """
+    Read-only audit trail for the 3-strike auto-approve penalty (monitoring only -
+    no action taken here; the ban itself already happens automatically at strike 3
+    without any admin input). Meant for reviewing a client's pattern before deciding
+    an appeal: which contracts triggered a strike, when, and the account's current
+    ban/reliability state - all derived from existing data, nothing new stored.
+    """
+    try:
+        client = ClientFunctions.get_client_by_id_or_user_id(client_id)
+        if not client:
+            return ResponseSchema.error(f"Client {client_id} not found", 404)
+
+        user_id = str(client["user_id"])
+        user_detail = get_admin_user_detail(user_id) or {}
+        history = ContractFunctions.get_client_autoapprove_history(user_id)
+
+        result = {
+            "client_id": str(client["client_id"]),
+            "email": user_detail.get("email"),
+            "strike_count": len(history),
+            "reliability_label": ContractFunctions.get_client_reliability_label(user_id),
+            "is_banned": user_detail.get("is_report_banned", False),
+            "ban_reason": user_detail.get("ban_reason"),
+            "banned_at": user_detail.get("report_banned_at"),
+            "history": history,
+        }
+        logger("ADMIN", f"Retrieved autoapprove history for client {client_id}", "GET /admin/clients/{client_id}/autoapprove-history", "INFO")
+        return ResponseSchema.success(result, 200)
+    except Exception as e:
+        logger("ADMIN", f"Failed to fetch autoapprove history for client {client_id}: {e}", "GET /admin/clients/{client_id}/autoapprove-history", "ERROR")
+        return ResponseSchema.error(f"Failed to fetch autoapprove history: {e}", 500)
 
 
 @reports_router.get("/reasons")

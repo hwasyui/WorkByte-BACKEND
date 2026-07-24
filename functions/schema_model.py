@@ -1,7 +1,7 @@
 import re
 from fastapi import File, Form, Request, UploadFile
 from pydantic import BaseModel, EmailStr, field_validator
-from typing import Optional, Any, Dict, List
+from typing import Optional, Any, Dict, List, Literal
 from datetime import date, datetime
 
 
@@ -700,11 +700,11 @@ class JobFileResponse(BaseModel):
 class ProposalCreate(BaseModel):
     proposal_id: Optional[str] = None
     job_post_id: str
-    job_role_id: Optional[str] = None
+    job_role_id: str  # required: a proposal always targets one specific role
     cover_letter: str
     proposed_budget: float
     proposed_duration: Optional[str] = None
-    status: Optional[str] = "pending"  # pending, accepted, rejected, withdrawn
+    status: Optional[str] = "pending"  # pending, accepted, rejected
     is_ai_generated: Optional[bool] = False
 
 class ProposalUpdate(BaseModel):
@@ -1133,6 +1133,15 @@ class RevisionRequest(BaseModel):
 class CancelContractRequest(BaseModel):
     reason: Optional[str] = None
     
+class RaiseDisputeRequest(BaseModel):
+    reason: str
+
+class ArbitrateDisputeRequest(BaseModel):
+    outcome: Literal["approve", "cancel", "revise"]
+    note: Optional[str] = None
+    new_deadline: Optional[date] = None
+
+
 # Comprehensive freelancer profile
 class FreelancerSkillWithDetails(BaseModel):
     freelancer_skill_id: str

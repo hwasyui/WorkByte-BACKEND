@@ -12,6 +12,7 @@ from functions.access_control import assert_client_owns, get_client_profile_for_
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from routes.clients.client_functions import ClientFunctions
+from routes.contracts.contract_functions import ContractFunctions
 from functions.minio_client import upload_client_profile_picture, delete_file, BUCKET_USER_ASSETS
 from mimetypes import guess_type as guess_mime
 
@@ -81,6 +82,27 @@ async def search_clients(
     except Exception as e:
         error_msg = f"Failed to search clients with term '{name}': {str(e)}"
         logger("CLIENT", error_msg, "GET /clients/search", "ERROR")
+        return ResponseSchema.error(error_msg, 500)
+
+
+@client_router.get("/{client_id}/reliability")
+async def get_client_reliability(client_id: str, current_user: UserInDB = Depends(get_current_user)):
+    """
+    Qualitative signal for freelancers deciding whether to work with a client -
+    'Kurang Responsif' once a client has let 2+ contracts auto-approve from
+    inactivity (one strike away from the account being closed automatically).
+    """
+    try:
+        client = ClientFunctions.get_client_by_id_or_user_id(client_id)
+        if not client:
+            return ResponseSchema.error(f"Client {client_id} not found", 404)
+
+        label = ContractFunctions.get_client_reliability_label(str(client["user_id"]))
+        logger("CLIENT", f"Retrieved reliability label for client {client_id}", "GET /clients/{client_id}/reliability", "INFO")
+        return ResponseSchema.success({"label": label}, 200)
+    except Exception as e:
+        error_msg = f"Failed to fetch reliability for client {client_id}: {str(e)}"
+        logger("CLIENT", error_msg, "GET /clients/{client_id}/reliability", "ERROR")
         return ResponseSchema.error(error_msg, 500)
 
 

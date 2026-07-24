@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 import asyncio
 import os
 import sys
@@ -676,6 +676,89 @@ class ContractFunctions:
             return updated_contract
         except Exception as e:
             logger("CONTRACT_FUNCTIONS", f"Error cancelling contract: {str(e)}", level="ERROR")
+            raise
+
+    @staticmethod
+    def raise_dispute(contract_id: str, raised_by: str, reason: str) -> Optional[Dict]:
+        """Flip a contract into 'disputed' (status/value both already exist in the
+        contract_status enum - see create_table.sql). The reason and every subsequent
+        arbitration action are kept as DM system-event history on the contract's thread
+        rather than dedicated columns, per the no-new-schema constraint for this pass."""
+        try:
+            contract = ContractFunctions.get_contract_by_id(contract_id)
+            if not contract:
+                raise Exception("Contract not found")
+
+            updated_contract = ContractFunctions.update_contract(contract_id, {"status": "disputed"})
+
+            try:
+                DMFunctions.send_system_event(
+                    contract_id=contract_id,
+                    actor_id=raised_by,
+                    message_text=f"Dispute raised: {reason}",
+                    event_type="dispute_raised",
+                    metadata={"raised_by": raised_by, "reason": reason},
+                )
+            except Exception:
+                pass
+
+            logger("CONTRACT_FUNCTIONS", f"Contract {contract_id} disputed by {raised_by}", level="INFO")
+            return updated_contract
+        except Exception as e:
+            logger("CONTRACT_FUNCTIONS", f"Error raising dispute: {str(e)}", level="ERROR")
+            raise
+
+    @staticmethod
+    def arbitrate_dispute(
+        contract_id: str,
+        outcome: str,
+        admin_user_id: str,
+        note: Optional[str] = None,
+        new_deadline: Optional[date] = None,
+    ) -> Optional[Dict]:
+        """Admin resolves a disputed contract. Reuses the exact same completion/cancel/
+        revision-request functions the manual flows use, so rating/AI-review/portfolio
+        side effects stay consistent regardless of how the contract got there."""
+        from routes.contract_submissions.contract_submission_functions import ContractSubmissionFunctions
+
+        try:
+            contract = ContractFunctions.get_contract_by_id(contract_id)
+            if not contract:
+                raise Exception("Contract not found")
+
+            if outcome == "approve":
+                latest_submission = ContractSubmissionFunctions.get_latest_submission_by_contract_id(contract_id)
+                if latest_submission and latest_submission.get("status") == "submitted":
+                    ContractSubmissionFunctions.approve_latest_submission(contract_id)
+                else:
+                    ContractFunctions.update_contract(contract_id, {"status": "completed"})
+                from ai_related.review_analysis.review_pipeline import run_post_completion_pipeline
+                _fire_notification(run_post_completion_pipeline(contract_id))
+            elif outcome == "cancel":
+                ContractFunctions.cancel_contract(contract_id, cancelled_by=admin_user_id, reason=note)
+            elif outcome == "revise":
+                if not new_deadline:
+                    raise ValueError("new_deadline is required when outcome='revise'")
+                ContractSubmissionFunctions.request_revision_for_latest_submission(contract_id, note=note)
+                ContractFunctions.update_contract(contract_id, {"end_date": new_deadline})
+            else:
+                raise ValueError(f"Invalid outcome: {outcome}")
+
+            try:
+                DMFunctions.send_system_event(
+                    contract_id=contract_id,
+                    actor_id=admin_user_id,
+                    message_text=f"Dispute resolved by admin: {outcome}." + (f" {note}" if note else ""),
+                    event_type="dispute_resolved",
+                    metadata={"outcome": outcome, "note": note, "resolved_by": admin_user_id},
+                )
+            except Exception:
+                pass
+
+            logger("CONTRACT_FUNCTIONS", f"Contract {contract_id} dispute arbitrated: {outcome}", level="INFO")
+            return ContractFunctions.get_contract_by_id(contract_id)
+        except Exception as e:
+            logger("CONTRACT_FUNCTIONS", f"Error arbitrating dispute: {str(e)}", level="ERROR")
             raise
 
     @staticmethod
