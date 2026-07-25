@@ -116,17 +116,58 @@ class ProposalFunctions:
             logger("PROPOSAL_FUNCTIONS", f"Error fetching enriched proposals: {str(e)}", level="ERROR")
             raise
 
+    # Columns we sort a freelancer's proposal list by. Keys are the values the API
+    # accepts; values are the actual SQL columns (interpolated, so never user input).
+    _SORT_COLUMNS = {
+        "submitted_at": "p.submitted_at",
+        "proposed_budget": "p.proposed_budget",
+    }
+
     @staticmethod
-    def get_proposals_by_freelancer_id(freelancer_id: str) -> List[Dict]:
-        """Fetch all proposals from a freelancer."""
+    def get_proposals_by_freelancer_id(
+        freelancer_id: str,
+        proposal_status: Optional[str] = None,
+        job_post_status: Optional[str] = None,
+        sort_by: str = "submitted_at",
+        sort_order: str = "desc",
+    ) -> List[Dict]:
+        """Fetch a freelancer's proposals, joined to the job post so the caller gets
+        the job's current status/title alongside each proposal. A proposal stays
+        'pending' even after its job post is closed/filled - the freelancer sees that
+        from job_post_status, not from the proposal status changing.
+
+        Optional filters: proposal_status, job_post_status. sort_by is one of
+        _SORT_COLUMNS, sort_order is asc/desc (both whitelisted before interpolation)."""
         try:
             db = get_db()
-            conditions = [("freelancer_id", "=", freelancer_id)]
-            rows = db.fetch_data(
-                table_name="proposal",
-                conditions=conditions,
-                order_by="submitted_at DESC",
+
+            sort_column = ProposalFunctions._SORT_COLUMNS.get(
+                (sort_by or "").lower(), "p.submitted_at"
             )
+            direction = "ASC" if (sort_order or "").lower() == "asc" else "DESC"
+
+            where = ["p.freelancer_id = :fid"]
+            params: Dict = {"fid": freelancer_id}
+            if proposal_status:
+                where.append("p.status::text = :pstatus")
+                params["pstatus"] = proposal_status
+            if job_post_status:
+                where.append("jp.status::text = :jpstatus")
+                params["jpstatus"] = job_post_status
+
+            query = f"""
+                SELECT
+                    p.proposal_id, p.job_post_id, p.job_role_id, p.freelancer_id,
+                    p.cover_letter, p.proposed_budget, p.proposed_duration,
+                    p.status, p.is_ai_generated, p.submitted_at,
+                    jp.status    AS job_post_status,
+                    jp.job_title AS job_title
+                FROM proposal p
+                JOIN job_post jp ON p.job_post_id = jp.job_post_id
+                WHERE {' AND '.join(where)}
+                ORDER BY {sort_column} {direction}
+            """
+            rows = db.execute_query(query, params)
             logger("PROPOSAL_FUNCTIONS",
                    f"Fetched {len(rows)} proposals from freelancer {freelancer_id}", level="INFO")
             return [convert_uuids_to_str(dict(row)) for row in rows]

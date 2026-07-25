@@ -725,6 +725,10 @@ class ProposalResponse(BaseModel):
     status: str
     is_ai_generated: Optional[bool] = False
     submitted_at: Optional[datetime] = None
+    # Set on the freelancer's proposal-list endpoints (/me, /freelancer/{id}) from the
+    # joined job post; a pending proposal on a closed job shows it here, not in status.
+    job_post_status: Optional[str] = None
+    job_title: Optional[str] = None
 
     class Config:
         from_attributes = True
