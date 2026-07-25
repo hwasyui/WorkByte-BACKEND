@@ -161,21 +161,6 @@ class UserFunctions:
             raise
 
     @staticmethod
-    def delete_user(user_id: str) -> bool:
-        """Delete a user (cascades to freelancer/client profiles)."""
-        try:
-            db = get_db()
-            conditions = [("user_id", "=", user_id)]
-            db.delete_data(table_name="users", conditions=conditions)
-            
-            logger("USERS_FUNCTIONS", f"User {user_id} deleted", level="INFO")
-            return True
-        
-        except Exception as e:
-            logger("USERS_FUNCTIONS", f"Error deleting user {user_id}: {str(e)}", level="ERROR")
-            raise
-
-    @staticmethod
     def search_users(search_term: str) -> List[Dict]:
         """Search users by email."""
         try:

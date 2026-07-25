@@ -134,28 +134,3 @@ async def update_user(user_id: str, user_update: UserUpdate, current_user: UserI
         error_msg = f"Failed to update user {user_id}: {str(e)}"
         logger("USER", error_msg, "PUT /users/{user_id}", "ERROR")
         return ResponseSchema.error(error_msg, 500)
-
-
-# dev/admin only - not called by the Flutter app
-@users_router.delete("/{user_id}", status_code=200)
-async def delete_user(user_id: str, current_user: UserInDB = Depends(get_current_user)):
-    """Delete a user - Authenticated users only."""
-    try:
-        assert_user_owns(current_user, user_id)
-        # Check if user exists
-        existing_user = UserFunctions.get_user_by_id(user_id)
-        if not existing_user:
-            error_msg = f"User {user_id} not found for deletion"
-            logger("USER", error_msg, "DELETE /users/{user_id}", "WARNING")
-            return ResponseSchema.error(error_msg, 404)
-        
-        UserFunctions.delete_user(user_id)
-        success_msg = f"User {user_id} deleted successfully"
-        logger("USER", success_msg, "DELETE /users/{user_id}", "INFO")
-        return ResponseSchema.success(success_msg, 200)
-    except HTTPException:
-        raise
-    except Exception as e:
-        error_msg = f"Failed to delete user {user_id}: {str(e)}"
-        logger("USER", error_msg, "DELETE /users/{user_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)

@@ -160,10 +160,12 @@ class ProposalFunctions:
                     p.proposal_id, p.job_post_id, p.job_role_id, p.freelancer_id,
                     p.cover_letter, p.proposed_budget, p.proposed_duration,
                     p.status, p.is_ai_generated, p.submitted_at,
-                    jp.status    AS job_post_status,
-                    jp.job_title AS job_title
+                    jp.status     AS job_post_status,
+                    jp.job_title  AS job_title,
+                    jr.role_title AS role_title
                 FROM proposal p
                 JOIN job_post jp ON p.job_post_id = jp.job_post_id
+                JOIN job_role jr ON p.job_role_id = jr.job_role_id
                 WHERE {' AND '.join(where)}
                 ORDER BY {sort_column} {direction}
             """

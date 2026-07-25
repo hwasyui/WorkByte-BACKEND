@@ -186,27 +186,6 @@ class ContractFunctions:
             raise
 
     @staticmethod
-    def get_contracts_by_user_id(user_id: str) -> List[Dict]:
-        """Fetch all contracts where this user is the freelancer or the client (via their
-        user_id), any status - used to pre-check account deletability, since
-        contract.freelancer_id/client_id are ON DELETE RESTRICT."""
-        try:
-            rows = get_db().execute_query(
-                """
-                SELECT c.*
-                FROM contract c
-                LEFT JOIN freelancer f ON f.freelancer_id = c.freelancer_id
-                LEFT JOIN client cl    ON cl.client_id     = c.client_id
-                WHERE f.user_id = :uid OR cl.user_id = :uid
-                """,
-                {"uid": user_id},
-            )
-            return [convert_uuids_to_str(dict(row)) for row in rows]
-        except Exception as e:
-            logger("CONTRACT_FUNCTIONS", f"Error fetching contracts for user: {str(e)}", level="ERROR")
-            raise
-
-    @staticmethod
     def get_contract_by_proposal_id(proposal_id: str) -> Optional[Dict]:
         """Fetch the contract already created from a given proposal, if any."""
         try:
