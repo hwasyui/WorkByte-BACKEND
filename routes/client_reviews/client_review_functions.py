@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 import uuid
@@ -58,14 +59,14 @@ class ClientReviewFunctions:
             raise
 
     @staticmethod
-    def get_reviews_by_client_id(client_user_id: str) -> List[Dict]:
+    def get_reviews_by_client_id(client_id: str) -> List[Dict]:
         """All published reviews FOR a client, written BY freelancers they worked with."""
         try:
             db = get_db()
             rows = db.fetch_data(
                 table_name="client_reviews",
                 conditions=[
-                    ("client_id", "=", client_user_id),
+                    ("client_id", "=", client_id),
                     ("status", "=", "published"),
                 ],
                 order_by="created_at DESC",
@@ -101,7 +102,7 @@ class ClientReviewFunctions:
 
             logger(
                 "CLIENT_REVIEW_FUNCTIONS",
-                f"Fetched {len(reviews)} reviews for client {client_user_id}",
+                f"Fetched {len(reviews)} reviews for client {client_id}",
                 level="INFO",
             )
             return reviews
@@ -117,6 +118,9 @@ class ClientReviewFunctions:
         reviewer_id: str,
         client_id: str,
     ) -> Dict:
+        """reviewer_id is a freelancer.freelancer_id (the freelancer party of the
+        contract) and client_id a client.client_id - symmetric with
+        ReviewFunctions.create_pending_review."""
         try:
             db = get_db()
             review_id = str(uuid.uuid4())
@@ -163,23 +167,25 @@ class ClientReviewFunctions:
     ) -> None:
         try:
             db = get_db()
-            for rating in ratings:
-                db.insert_data(
-                    table_name="client_review_ratings",
-                    data={
-                        "id": str(uuid.uuid4()),
-                        "client_review_id": client_review_id,
-                        "category": rating["category"],
-                        "score": rating["score"],
-                    },
-                )
+            # Single transaction - see the note in ReviewFunctions.save_client_review.
+            with db.transaction() as tx:
+                for rating in ratings:
+                    tx.insert_data(
+                        table_name="client_review_ratings",
+                        data={
+                            "id": str(uuid.uuid4()),
+                            "client_review_id": client_review_id,
+                            "category": rating["category"],
+                            "score": rating["score"],
+                        },
+                    )
 
-            db.execute_query(
-                """UPDATE client_review_written_content
-                   SET freelancer_answer = :answer, overall_comment = :comment
-                   WHERE client_review_id = :crid""",
-                {"answer": freelancer_answer, "comment": overall_comment, "crid": client_review_id},
-            )
+                tx.execute_query(
+                    """UPDATE client_review_written_content
+                       SET freelancer_answer = :answer, overall_comment = :comment
+                       WHERE client_review_id = :crid""",
+                    {"answer": freelancer_answer, "comment": overall_comment, "crid": client_review_id},
+                )
 
             logger("CLIENT_REVIEW_FUNCTIONS", f"Saved freelancer review for {client_review_id}", level="INFO")
         except Exception as e:
@@ -203,9 +209,31 @@ class ClientReviewFunctions:
     ) -> None:
         try:
             db = get_db()
-            db.insert_data(
-                table_name="client_review_ai_analysis",
-                data={
+            # Upsert - see the note in ReviewFunctions.save_ai_analysis.
+            db.execute_query(
+                """
+                INSERT INTO client_review_ai_analysis (
+                    id, client_review_id, sentiment_score, sentiment_label, sentiment_mismatch,
+                    mismatch_severity, authenticity_score, is_flagged_fake,
+                    is_flagged_coerced, flag_reasons, overall_pass, analyzed_at
+                ) VALUES (
+                    :id, :client_review_id, :sentiment_score, :sentiment_label, :sentiment_mismatch,
+                    :mismatch_severity, :authenticity_score, :is_flagged_fake,
+                    :is_flagged_coerced, CAST(:flag_reasons AS jsonb), :overall_pass, NOW()
+                )
+                ON CONFLICT (client_review_id) DO UPDATE SET
+                    sentiment_score    = EXCLUDED.sentiment_score,
+                    sentiment_label    = EXCLUDED.sentiment_label,
+                    sentiment_mismatch = EXCLUDED.sentiment_mismatch,
+                    mismatch_severity  = EXCLUDED.mismatch_severity,
+                    authenticity_score = EXCLUDED.authenticity_score,
+                    is_flagged_fake    = EXCLUDED.is_flagged_fake,
+                    is_flagged_coerced = EXCLUDED.is_flagged_coerced,
+                    flag_reasons       = EXCLUDED.flag_reasons,
+                    overall_pass       = EXCLUDED.overall_pass,
+                    analyzed_at        = NOW()
+                """,
+                {
                     "id": str(uuid.uuid4()),
                     "client_review_id": client_review_id,
                     "sentiment_score": sentiment_score,
@@ -215,7 +243,7 @@ class ClientReviewFunctions:
                     "authenticity_score": authenticity_score,
                     "is_flagged_fake": is_flagged_fake,
                     "is_flagged_coerced": is_flagged_coerced,
-                    "flag_reasons": flag_reasons,
+                    "flag_reasons": json.dumps(flag_reasons),
                     "overall_pass": overall_pass,
                 },
             )
@@ -260,6 +288,7 @@ class ClientReviewFunctions:
         client_id: str,
         trust_score: float,
         weighted_review_avg_received: float,
+        effective_review_avg_received: Optional[float],
         responsiveness_score: float,
         communication_sentiment: Optional[float],
         authenticity_confidence: float,
@@ -279,6 +308,7 @@ class ClientReviewFunctions:
                 "client_id": client_id,
                 "trust_score": trust_score,
                 "weighted_review_avg_received": weighted_review_avg_received,
+                "effective_review_avg_received": effective_review_avg_received,
                 "responsiveness_score": responsiveness_score,
                 "communication_sentiment": communication_sentiment,
                 "authenticity_confidence": authenticity_confidence,
@@ -300,18 +330,59 @@ class ClientReviewFunctions:
             else:
                 data["client_trust_score_id"] = str(uuid.uuid4())
                 db.insert_data(table_name="client_trust_score", data=data)
+
+            # Append-only snapshot, mirroring trust_score_history on the freelancer
+            # side. check_and_create_red_flag reads the previous snapshot from here,
+            # so this must happen even though client_trust_score already holds the
+            # current value - that row has just been overwritten.
+            db.insert_data(
+                table_name="client_trust_score_history",
+                data={
+                    "id": str(uuid.uuid4()),
+                    "client_id": client_id,
+                    "trust_score": trust_score,
+                    "snapshot_reason": "review_published",
+                },
+            )
             logger("CLIENT_REVIEW_FUNCTIONS", f"Trust score upserted for client {client_id}: {trust_score}", level="INFO")
         except Exception as e:
             logger("CLIENT_REVIEW_FUNCTIONS", f"Error upserting client trust score: {str(e)}", level="ERROR")
             raise
 
     @staticmethod
-    def get_client_trust_score(client_user_id: str) -> Optional[Dict]:
+    def get_sentiment_distribution(client_id: str) -> Dict:
+        """Counts of published reviews by sentiment label - see the note in
+        ReviewFunctions.get_sentiment_distribution."""
+        empty = {"positive": 0, "neutral": 0, "negative": 0, "unclassified": 0, "total": 0}
+        try:
+            rows = get_db().execute_query(
+                """
+                SELECT cra.sentiment_label, COUNT(*) AS n
+                FROM client_reviews cr
+                LEFT JOIN client_review_ai_analysis cra ON cra.client_review_id = cr.id
+                WHERE cr.client_id = :cid AND cr.status = 'published'
+                GROUP BY cra.sentiment_label
+                """,
+                {"cid": client_id},
+            )
+            counts = dict(empty)
+            for row in rows or []:
+                label = row["sentiment_label"]
+                key = label if label in ("positive", "neutral", "negative") else "unclassified"
+                counts[key] += int(row["n"])
+                counts["total"] += int(row["n"])
+            return counts
+        except Exception as e:
+            logger("CLIENT_REVIEW_FUNCTIONS", f"Error computing sentiment distribution: {str(e)}", level="ERROR")
+            return empty
+
+    @staticmethod
+    def get_client_trust_score(client_id: str) -> Optional[Dict]:
         try:
             db = get_db()
             rows = db.fetch_data(
                 table_name="client_trust_score",
-                conditions=[("client_id", "=", client_user_id)],
+                conditions=[("client_id", "=", client_id)],
                 limit=1,
             )
             return convert_uuids_to_str(dict(rows[0])) if rows else None
@@ -323,17 +394,27 @@ class ClientReviewFunctions:
 
     @staticmethod
     def check_and_create_red_flag(client_id: str, new_score: float) -> None:
-        """Compare latest 2 snapshots for this client. Fire alert if drop > 10 points.
-        Reuses red_flag_alerts (subject_type='client') rather than a separate table -
-        no history-snapshot table exists for clients, so this compares against the
-        previous trust_score value directly instead of a trust_score_history row."""
+        """Compare latest 2 snapshots. Fire alert if drop > 10 points.
+
+        Reads the previous score from client_trust_score_history rather than from
+        client_trust_score: the caller upserts the new score before calling this,
+        so the live row already holds new_score and every comparison against it
+        yielded a drop of exactly 0 - no client red flag could ever fire. The
+        history table is append-only, so snapshots[1] is genuinely the prior
+        value. Identical to ReviewFunctions.check_and_create_red_flag.
+        """
         try:
             db = get_db()
-            existing = ClientReviewFunctions.get_client_trust_score(client_id)
-            if not existing or existing.get("trust_score") is None:
+            snapshots = db.fetch_data(
+                table_name="client_trust_score_history",
+                conditions=[("client_id", "=", client_id)],
+                order_by="recorded_at DESC",
+                limit=2,
+            )
+            if len(snapshots) < 2:
                 return
 
-            previous_score = float(existing["trust_score"])
+            previous_score = float(snapshots[1]["trust_score"])
             drop = previous_score - new_score
             if drop <= 10:
                 return
@@ -348,7 +429,7 @@ class ClientReviewFunctions:
                 table_name="red_flag_alerts",
                 data={
                     "id": str(uuid.uuid4()),
-                    "freelancer_id": client_id,  # column name predates client support - see alter_table.sql note
+                    "client_id": client_id,
                     "subject_type": "client",
                     "alert_type": "score_drop",
                     "severity": severity,
@@ -362,14 +443,13 @@ class ClientReviewFunctions:
             raise
 
     @staticmethod
-    def get_red_flags(client_user_id: str) -> List[Dict]:
+    def get_red_flags(client_id: str) -> List[Dict]:
         try:
             db = get_db()
             rows = db.fetch_data(
                 "red_flag_alerts",
                 conditions=[
-                    ("freelancer_id", "=", client_user_id),  # column name predates client support - see alter_table.sql note
-                    ("subject_type", "=", "client"),
+                    ("client_id", "=", client_id),
                     ("is_resolved", "=", False),
                 ],
                 order_by="triggered_at DESC",

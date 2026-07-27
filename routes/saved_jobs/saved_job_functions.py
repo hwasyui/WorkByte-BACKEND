@@ -23,6 +23,7 @@ def convert_uuids_to_str(data: Dict) -> Dict:
 class SavedJobFunctions:
     """Handle all saved job-related database operations."""
 
+    # dev function - no callers.
     @staticmethod
     def get_all_saved_jobs(limit: Optional[int] = None) -> List[Dict]:
         """Fetch all saved jobs."""
@@ -107,6 +108,7 @@ class SavedJobFunctions:
             logger("SAVED_JOB_FUNCTIONS", f"Error creating saved job: {str(e)}", level="ERROR")
             raise
 
+    # dev function - no callers.
     @staticmethod
     def update_saved_job(saved_job_id: str, update_data: Dict) -> Optional[Dict]:
         """Update saved job information."""

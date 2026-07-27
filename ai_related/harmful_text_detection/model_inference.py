@@ -35,10 +35,8 @@ _MODEL_FOLDERS = {
 _DEFAULT_MODEL_TYPE = "bert"
 _DEFAULT_FLAT_THRESHOLD = 0.5  # fallback when config.pkl's tuned thresholds aren't available
 
-# Chunking: matches the training-time window (see harmful_text.md Section 3/9). A single
-# truncation pass silently drops anything past this many tokens; chunking instead scores every
-# overlapping window and max-pools each label's probability, so a harmful phrase deep in a long
-# text is still caught rather than truncated away.
+# Matches the training-time window. Truncating would silently drop anything past this many
+# tokens, so every overlapping window is scored and each label max-pooled instead.
 _CHUNK_MAX_LENGTH = 128
 _CHUNK_STRIDE = 20
 

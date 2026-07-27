@@ -27,7 +27,7 @@ async def get_guidelines_ack(user_id: str, current_user: UserInDB = Depends(get_
     except Exception as e:
         error_msg = f"Failed to fetch guideline ack status for user {user_id}: {str(e)}"
         logger("GUIDELINES", error_msg, "GET /users/{user_id}/guidelines-ack", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch guideline ack status for user. Please try again.", 500)
 
 
 @guidelines_router.post("/{user_id}/guidelines-ack", response_model=None)
@@ -48,4 +48,4 @@ async def acknowledge_guideline_section(
     except Exception as e:
         error_msg = f"Failed to acknowledge guideline section for user {user_id}: {str(e)}"
         logger("GUIDELINES", error_msg, "POST /users/{user_id}/guidelines-ack", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to acknowledge guideline section for user. Please try again.", 500)

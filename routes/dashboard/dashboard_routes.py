@@ -162,7 +162,7 @@ async def get_freelancer_dashboard(
         return ResponseSchema.success(data, 200)
     except Exception as e:
         logger("DASHBOARD", f"Error fetching freelancer dashboard: {str(e)}", level="ERROR")
-        return ResponseSchema.error(f"Failed to fetch dashboard: {str(e)}", 500)
+        return ResponseSchema.error("Failed to fetch dashboard. Please try again.", 500)
 
 
 # dev/admin only - not called by the Flutter app
@@ -269,4 +269,4 @@ async def get_client_dashboard(
         return ResponseSchema.success(data, 200)
     except Exception as e:
         logger("DASHBOARD", f"Error fetching client dashboard: {str(e)}", level="ERROR")
-        return ResponseSchema.error(f"Failed to fetch dashboard: {str(e)}", 500)
+        return ResponseSchema.error("Failed to fetch dashboard. Please try again.", 500)

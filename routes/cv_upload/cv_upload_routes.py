@@ -215,7 +215,7 @@ async def upload_and_analyze_cv(
         raise
     except Exception as e:
         logger("CV_UPLOAD", f"CV upload/analyze failed: {str(e)}", level="ERROR")
-        return ResponseSchema.error(f"CV upload/analyze failed: {str(e)}", 500)
+        return ResponseSchema.error("CV upload/analyze failed. Please try again.", 500)
 
 
 @cv_upload_router.post("/apply")
@@ -333,7 +333,7 @@ async def apply_cv_profile(
         raise
     except Exception as e:
         logger("CV_UPLOAD", f"Apply CV profile failed: {str(e)}", level="ERROR")
-        return ResponseSchema.error(f"Apply CV profile failed: {str(e)}", 500)
+        return ResponseSchema.error("Apply CV profile failed. Please try again.", 500)
 
 
 def normalize_partial_date(value: str | None) -> str | None:

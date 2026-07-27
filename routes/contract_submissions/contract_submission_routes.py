@@ -140,7 +140,7 @@ async def create_contract_submission(
 
     except Exception as e:
         logger("CONTRACT_SUBMISSION", f"Failed to create submission: {str(e)}", "POST /contract-submissions", "ERROR")
-        return ResponseSchema.error(f"Failed to create submission: {str(e)}", 500)
+        return ResponseSchema.error("Failed to create submission. Please try again.", 500)
 
 
 @contract_submission_router.get("/contract/{contract_id}")
@@ -171,7 +171,7 @@ async def get_submissions_by_contract(
 
     except Exception as e:
         logger("CONTRACT_SUBMISSION", f"Failed to fetch submissions: {str(e)}", "GET /contract-submissions/contract/{contract_id}", "ERROR")
-        return ResponseSchema.error(f"Failed to fetch submissions: {str(e)}", 500)
+        return ResponseSchema.error("Failed to fetch submissions. Please try again.", 500)
 
 
 @contract_submission_router.put("/contract/{contract_id}/request-revision")
@@ -249,7 +249,7 @@ async def request_revision_for_latest_submission(
 
     except Exception as e:
         logger("CONTRACT_SUBMISSION", f"Failed to request revision: {str(e)}", "PUT /contract-submissions/contract/{contract_id}/request-revision", "ERROR")
-        return ResponseSchema.error(f"Failed to request revision: {str(e)}", 500)
+        return ResponseSchema.error("Failed to request revision. Please try again.", 500)
 
 
 @contract_submission_router.put("/contract/{contract_id}/approve")
@@ -315,4 +315,4 @@ async def approve_latest_submission(
 
     except Exception as e:
         logger("CONTRACT_SUBMISSION", f"Failed to approve submission: {str(e)}", "PUT /contract-submissions/contract/{contract_id}/approve", "ERROR")
-        return ResponseSchema.error(f"Failed to approve submission: {str(e)}", 500)
+        return ResponseSchema.error("Failed to approve submission. Please try again.", 500)

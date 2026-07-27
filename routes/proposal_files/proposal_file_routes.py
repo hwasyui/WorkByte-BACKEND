@@ -45,7 +45,7 @@ async def get_all_proposal_files(limit: Optional[int] = None, current_user: User
     except Exception as e:
         error_msg = f"Failed to fetch proposal files: {str(e)}"
         logger("PROPOSAL_FILE", error_msg, "GET /proposal-files", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch proposal files. Please try again.", 500)
 
 
 @proposal_file_router.get("/{proposal_file_id}", response_model=None)
@@ -63,7 +63,7 @@ async def get_proposal_file(proposal_file_id: str, current_user: UserInDB = Depe
     except Exception as e:
         error_msg = f"Failed to fetch proposal file {proposal_file_id}: {str(e)}"
         logger("PROPOSAL_FILE", error_msg, "GET /proposal-files/{proposal_file_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch proposal file. Please try again.", 500)
 
 
 @proposal_file_router.get("/proposal/{proposal_id}", response_model=None)
@@ -77,7 +77,7 @@ async def get_proposal_files_by_proposal(proposal_id: str, current_user: UserInD
     except Exception as e:
         error_msg = f"Failed to fetch files for proposal {proposal_id}: {str(e)}"
         logger("PROPOSAL_FILE", error_msg, "GET /proposal-files/proposal/{proposal_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch files for proposal. Please try again.", 500)
 
 
 @proposal_file_router.post("", response_model=None, status_code=201)
@@ -142,7 +142,7 @@ async def create_proposal_file(
     except Exception as e:
         error_msg = f"Failed to create proposal file: {str(e)}"
         logger("PROPOSAL_FILE", error_msg, "POST /proposal-files", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to create proposal file. Please try again.", 500)
 
 
 @proposal_file_router.put("/{proposal_file_id}", response_model=None)
@@ -170,7 +170,7 @@ async def update_proposal_file(proposal_file_id: str, proposal_file_update: Prop
     except Exception as e:
         error_msg = f"Failed to update proposal file {proposal_file_id}: {str(e)}"
         logger("PROPOSAL_FILE", error_msg, "PUT /proposal-files/{proposal_file_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to update proposal file. Please try again.", 500)
 
 
 @proposal_file_router.delete("/{proposal_file_id}", status_code=200)
@@ -197,4 +197,4 @@ async def delete_proposal_file(proposal_file_id: str, current_user: UserInDB = D
     except Exception as e:
         error_msg = f"Failed to delete proposal file {proposal_file_id}: {str(e)}"
         logger("PROPOSAL_FILE", error_msg, "DELETE /proposal-files/{proposal_file_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to delete proposal file. Please try again.", 500)

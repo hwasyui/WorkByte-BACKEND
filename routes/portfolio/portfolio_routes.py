@@ -29,7 +29,7 @@ async def get_all_portfolios(limit: Optional[int] = None, current_user: UserInDB
     except Exception as e:
         error_msg = f"Failed to fetch portfolios: {str(e)}"
         logger("PORTFOLIO", error_msg, "GET /portfolios", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch portfolios. Please try again.", 500)
 
 
 @portfolio_router.get("/{portfolio_id}", response_model=PortfolioResponse)
@@ -47,7 +47,7 @@ async def get_portfolio(portfolio_id: str, current_user: UserInDB = Depends(get_
     except Exception as e:
         error_msg = f"Failed to fetch portfolio {portfolio_id}: {str(e)}"
         logger("PORTFOLIO", error_msg, "GET /portfolios/{portfolio_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch portfolio. Please try again.", 500)
 
 
 @portfolio_router.get("/freelancer/{freelancer_id}", response_model=List[PortfolioResponse])
@@ -61,7 +61,7 @@ async def get_portfolios_by_freelancer(freelancer_id: str, current_user: UserInD
     except Exception as e:
         error_msg = f"Failed to fetch portfolios for freelancer {freelancer_id}: {str(e)}"
         logger("PORTFOLIO", error_msg, "GET /portfolios/freelancer/{freelancer_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch portfolios for freelancer. Please try again.", 500)
 
 
 @portfolio_router.post("", response_model=PortfolioResponse, status_code=201)
@@ -92,7 +92,7 @@ async def create_portfolio(portfolio: PortfolioCreate, current_user: UserInDB = 
     except Exception as e:
         error_msg = f"Failed to create portfolio: {str(e)}"
         logger("PORTFOLIO", error_msg, "POST /portfolios", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to create portfolio. Please try again.", 500)
 
 
 @portfolio_router.put("/{portfolio_id}", response_model=PortfolioResponse)
@@ -117,7 +117,7 @@ async def update_portfolio(portfolio_id: str, portfolio_update: PortfolioUpdate,
     except Exception as e:
         error_msg = f"Failed to update portfolio {portfolio_id}: {str(e)}"
         logger("PORTFOLIO", error_msg, "PUT /portfolios/{portfolio_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to update portfolio. Please try again.", 500)
 
 
 @portfolio_router.delete("/{portfolio_id}", status_code=200)
@@ -140,4 +140,4 @@ async def delete_portfolio(portfolio_id: str, current_user: UserInDB = Depends(g
     except Exception as e:
         error_msg = f"Failed to delete portfolio {portfolio_id}: {str(e)}"
         logger("PORTFOLIO", error_msg, "DELETE /portfolios/{portfolio_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to delete portfolio. Please try again.", 500)

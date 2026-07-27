@@ -11,6 +11,7 @@ import math
 import re
 import json
 import urllib.request
+from functools import lru_cache
 from datetime import datetime, timezone
 
 
@@ -55,13 +56,25 @@ _JOB_POST_SELECT = """
 
 _SCOPE_MARKET_CACHE_PATH = os.path.join(os.path.dirname(__file__), "project_scope_market_cache.json")
 _SCOPE_CACHE_REFRESH_SECONDS = 7 * 24 * 60 * 60  # weekly refresh
+
+# Rates shipped with the repo. Previously nothing read this file while the live
+# refresh silently failed, so the effective rate table was {"USD": 1.0} and every
+# non-USD budget was converted 1:1 - an IDR 17,000,000 contract (~$950) was scored
+# as a $17,000,000 project. This is now the seed and the floor: live rates overlay
+# it, they never replace it.
+_BUNDLED_FX_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+    "ai_related", "job_engine", "currency_rates.json",
+)
+
+# frankfurter.app returns 403 to urllib's default Python-urllib/x.y agent. That is
+# why every refresh had been failing; it is a user-agent block, not an outage.
+#
+# Project scope no longer uses FX at all (budget was dropped as a signal), but
+# _to_usd_scope is still live: review scoring weights each review by its contract
+# value, normalized to USD (see compute_value_weight in review_ai_functions).
+_FX_USER_AGENT = "capstone-backend/1.0 (+project-scope-fx)"
 _scope_market_cache: dict[str, Any] | None = None
-_GLOBAL_MONTHLY_ROLE_BUDGET_USD = {
-    "entry": 1600.0,
-    "intermediate": 3200.0,
-    "expert": 6000.0,
-    "default": 2800.0,
-}
 
 
 class JobPostFunctions:
@@ -115,27 +128,58 @@ class JobPostFunctions:
 
 
     @staticmethod
-    def _refresh_scope_fx_rates_if_needed() -> Dict[str, float]:
-        cache = JobPostFunctions._load_scope_market_cache()
-        if not JobPostFunctions._cache_is_stale(cache.get("fx_rates_fetched_at")) and cache.get("fx_rates"):
-            return {k.upper(): float(v) for k, v in cache["fx_rates"].items()}
+    @lru_cache(maxsize=1)
+    def _bundled_fx_rates() -> Dict[str, float]:
+        """Repo-shipped rates relative to USD. Used to seed the table and as the
+        floor whenever the live feed is unavailable or incomplete, so a failed
+        refresh degrades to slightly-stale rates instead of to no rates at all.
 
-
+        Cached: the file never changes at runtime, and _to_usd_scope is called once
+        per review rating row when scoring a freelancer's history."""
         try:
-            with urllib.request.urlopen(
-                "https://api.frankfurter.app/latest?from=USD", timeout=4
-            ) as resp:
-                data = json.loads(resp.read())
-            rates = {k.upper(): float(v) for k, v in data.get("rates", {}).items()}
+            with open(_BUNDLED_FX_PATH, "r", encoding="utf-8") as fh:
+                data = json.load(fh)
+            rates = {k.upper(): float(v) for k, v in (data.get("rates") or {}).items()}
             rates["USD"] = 1.0
-            cache["fx_rates"] = rates
-            cache["fx_rates_fetched_at"] = JobPostFunctions._now_utc_iso()
-            JobPostFunctions._save_scope_market_cache()
-            logger("JOB_POST_FUNCTIONS", f"Project-scope FX cache refreshed | {len(rates)} currencies", level="INFO")
             return rates
         except Exception as e:
-            logger("JOB_POST_FUNCTIONS", f"Project-scope FX refresh failed ({e}); using cached rates", level="WARNING")
-            return {k.upper(): float(v) for k, v in cache.get("fx_rates", {"USD": 1.0}).items()}
+            logger("JOB_POST_FUNCTIONS", f"Bundled FX rates unreadable ({e})", level="ERROR")
+            return {"USD": 1.0}
+
+
+    @staticmethod
+    def _refresh_scope_fx_rates_if_needed() -> Dict[str, float]:
+        cache = JobPostFunctions._load_scope_market_cache()
+        bundled = JobPostFunctions._bundled_fx_rates()
+
+        # Bundled first, live/cached overlaid on top: the live feed wins wherever it
+        # has an entry, and anything it omits still resolves rather than silently
+        # falling back to a 1:1 conversion.
+        cached = {k.upper(): float(v) for k, v in (cache.get("fx_rates") or {}).items()}
+        if not JobPostFunctions._cache_is_stale(cache.get("fx_rates_fetched_at")) and cached:
+            return {**bundled, **cached}
+
+        try:
+            request = urllib.request.Request(
+                "https://api.frankfurter.app/latest?from=USD",
+                headers={"User-Agent": _FX_USER_AGENT},
+            )
+            with urllib.request.urlopen(request, timeout=4) as resp:
+                data = json.loads(resp.read())
+            fetched = {k.upper(): float(v) for k, v in data.get("rates", {}).items()}
+            fetched["USD"] = 1.0
+            cache["fx_rates"] = fetched
+            cache["fx_rates_fetched_at"] = JobPostFunctions._now_utc_iso()
+            JobPostFunctions._save_scope_market_cache()
+            logger("JOB_POST_FUNCTIONS", f"Project-scope FX cache refreshed | {len(fetched)} currencies", level="INFO")
+            return {**bundled, **fetched}
+        except Exception as e:
+            logger(
+                "JOB_POST_FUNCTIONS",
+                f"Project-scope FX refresh failed ({e}); using cached + bundled rates",
+                level="WARNING",
+            )
+            return {**bundled, **cached}
 
 
     @staticmethod
@@ -144,7 +188,17 @@ class JobPostFunctions:
             return 0.0
         code = (currency or "USD").upper()
         rates = JobPostFunctions._refresh_scope_fx_rates_if_needed()
-        rate = float(rates.get(code, 1.0))
+        rate = rates.get(code)
+        if rate is None:
+            # Returning the amount unconverted is the only option left, but it will
+            # skew project-scope classification, so say so rather than failing silently.
+            logger(
+                "JOB_POST_FUNCTIONS",
+                f"No FX rate for '{code}'; treating {amount} as USD, scope may be misclassified",
+                level="WARNING",
+            )
+            return float(amount)
+        rate = float(rate)
         if rate <= 0:
             return float(amount)
         return float(amount) / rate
@@ -242,43 +296,57 @@ class JobPostFunctions:
 
 
     @staticmethod
-    def _estimate_contributor_count(project_type: str, role_count: int) -> int:
-        normalized_project_type = (project_type or "").strip().lower()
-        minimum_for_type = 2 if normalized_project_type == "team" else 1
-        return max(role_count, minimum_for_type)
+    def recompute_project_scope(job_post_id: str) -> Optional[str]:
+        """Recalculate and persist project_scope for a post, if it is still auto.
 
+        Needed because a post is created as a draft before its roles exist - roles
+        are added afterwards through POST /job-roles - so the scope computed at
+        creation is based on an incomplete picture and stays wrong forever. Every
+        job post in the database being 'small' was this, not a coincidence.
 
-    @staticmethod
-    def _calculate_roles_budget_usd(roles: Optional[List[Dict[str, Any]]]) -> Optional[float]:
-        if not roles:
+        Skips posts where project_scope_is_auto is FALSE, so a scope the client
+        deliberately chose is never overwritten. Returns the scope in force after
+        the call, or None if the post is gone.
+        """
+        try:
+            db = get_db()
+            rows = db.execute_query(
+                """SELECT jp.estimated_duration, jp.working_days,
+                          jp.project_scope, jp.project_scope_is_auto,
+                          (SELECT COALESCE(SUM(jr.positions_available), 0)
+                             FROM job_role jr WHERE jr.job_post_id = jp.job_post_id) AS position_count
+                   FROM job_post jp WHERE jp.job_post_id = :id""",
+                {"id": job_post_id},
+            )
+            if not rows:
+                return None
+
+            post = dict(rows[0])
+            if not post.get("project_scope_is_auto"):
+                return post.get("project_scope")
+
+            calculation = JobPostFunctions.calculate_project_scope(
+                estimated_duration=post.get("estimated_duration"),
+                working_days=post.get("working_days"),
+                position_count=int(post.get("position_count") or 0) or 1,
+            )
+            recommended = calculation["recommended_project_scope"]
+
+            if recommended != post.get("project_scope"):
+                db.execute_query(
+                    "UPDATE job_post SET project_scope = :scope WHERE job_post_id = :id",
+                    {"scope": recommended, "id": job_post_id},
+                )
+                logger(
+                    "JOB_POST_FUNCTIONS",
+                    f"Recomputed project_scope for {job_post_id}: {post.get('project_scope')} -> {recommended}",
+                    level="INFO",
+                )
+            return recommended
+        except Exception as e:
+            # Never fail the caller's operation over a scope recalculation.
+            logger("JOB_POST_FUNCTIONS", f"Could not recompute project_scope for {job_post_id}: {e}", level="WARNING")
             return None
-
-
-        total_budget_usd = 0.0
-        has_budget = False
-        for role in roles:
-            role_budget = role.get("role_budget")
-            if role_budget is None:
-                continue
-            try:
-                positions_available = max(int(role.get("positions_available") or 1), 1)
-            except (ValueError, TypeError):
-                positions_available = 1
-            budget_currency = role.get("budget_currency") or "USD"
-            total_budget_usd += JobPostFunctions._to_usd_scope(float(role_budget), budget_currency) * positions_available
-            has_budget = True
-
-
-        return total_budget_usd if has_budget else None
-
-
-    @staticmethod
-    def _get_global_monthly_role_budget_usd(experience_level: str) -> float:
-        normalized_experience = (experience_level or "").strip().lower()
-        return _GLOBAL_MONTHLY_ROLE_BUDGET_USD.get(
-            normalized_experience,
-            _GLOBAL_MONTHLY_ROLE_BUDGET_USD["default"],
-        )
 
 
     # NEW: Category inference
@@ -369,143 +437,71 @@ class JobPostFunctions:
 
     @staticmethod
     def calculate_project_scope(
-        job_title: str,
-        job_description: str,
-        project_type: str,
         estimated_duration: Optional[str] = None,
         working_days: Optional[int] = None,
-        experience_level: Optional[str] = None,
-        role_count: Optional[int] = 1,
-        roles: Optional[List[Dict[str, Any]]] = None,
+        position_count: Optional[int] = 1,
     ) -> Dict[str, Any]:
-        """
-        Heuristic scope calculator.
-        Returns a recommendation only; does not persist anything.
+        """Recommend a scope from timeline (0-3) and positions (0-3), max 6. Persists nothing.
+
+        Counts positions, not roles - one role hiring five people is five people's work.
+        Budget was dropped because market price for the same work differs per country, so
+        converting currencies does not make the figure comparable. Thresholds are tuning knobs.
         """
         score = 0
         reasons: List[str] = []
 
-
-        normalized_project_type = (project_type or "").strip().lower()
-        normalized_experience = (experience_level or "").strip().lower()
-        normalized_role_count = max(int(role_count or len(roles or []) or 1), 1)
-        contributor_count = JobPostFunctions._estimate_contributor_count(
-            normalized_project_type,
-            normalized_role_count,
-        )
-        description_word_count = len((job_description or "").split())
+        normalized_positions = max(int(position_count or 1), 1)
         duration_days = working_days or JobPostFunctions._estimate_days_from_duration(estimated_duration)
         duration_months_estimate = max((duration_days or 30) / 30.0, 1.0)
-        budget_usd = JobPostFunctions._calculate_roles_budget_usd(roles)
-        monthly_budget_benchmark_usd = JobPostFunctions._get_global_monthly_role_budget_usd(normalized_experience)
-        budget_to_market_multiple = None
-
 
         if duration_days is not None:
             if duration_days >= 61:
                 score += 3
-                reasons.append(f"Long timeline detected ({duration_days} days).")
+                reasons.append(f"Long timeline ({duration_days} days).")
             elif duration_days >= 31:
                 score += 2
-                reasons.append(f"Moderate-to-long timeline detected ({duration_days} days).")
+                reasons.append(f"Moderate-to-long timeline ({duration_days} days).")
             elif duration_days >= 11:
                 score += 1
-                reasons.append(f"Short-to-moderate timeline detected ({duration_days} days).")
+                reasons.append(f"Short-to-moderate timeline ({duration_days} days).")
+            else:
+                reasons.append(f"Short timeline ({duration_days} days).")
 
-
-        if normalized_role_count >= 4:
+        if normalized_positions >= 5:
             score += 3
-            reasons.append(f"High role complexity detected ({normalized_role_count} roles).")
-        elif normalized_role_count >= 2:
-            score += 1
-            reasons.append(f"Multiple roles detected ({normalized_role_count} roles).")
-
-
-        if normalized_project_type == "team":
-            score += 1
-            reasons.append("Team-based project increases coordination complexity.")
-
-
-        if normalized_experience == "expert":
+            reasons.append(f"Large team ({normalized_positions} positions).")
+        elif normalized_positions >= 3:
             score += 2
-            reasons.append("Expert-level experience requirement suggests higher complexity.")
-        elif normalized_experience == "intermediate":
+            reasons.append(f"Mid-sized team ({normalized_positions} positions).")
+        elif normalized_positions == 2:
             score += 1
-            reasons.append("Intermediate-level experience requirement suggests moderate complexity.")
+            reasons.append("Two positions to fill.")
+        else:
+            reasons.append("Single position.")
 
-
-        if budget_usd is not None:
-            baseline = monthly_budget_benchmark_usd * duration_months_estimate * contributor_count
-            if baseline > 0:
-                budget_to_market_multiple = budget_usd / baseline
-                if budget_to_market_multiple >= 2.25:
-                    score += 3
-                    reasons.append(
-                        f"Combined role budget is high versus a global freelance benchmark: about {budget_to_market_multiple:.2f}x for {contributor_count} contributor(s) over {duration_months_estimate:.1f} months."
-                    )
-                elif budget_to_market_multiple >= 1.0:
-                    score += 2
-                    reasons.append(
-                        f"Combined role budget is moderate-to-high versus a global freelance benchmark: about {budget_to_market_multiple:.2f}x for {contributor_count} contributor(s) over {duration_months_estimate:.1f} months."
-                    )
-                elif budget_to_market_multiple >= 0.55:
-                    score += 1
-                    reasons.append(
-                        f"Combined role budget is moderate versus a global freelance benchmark: about {budget_to_market_multiple:.2f}x for {contributor_count} contributor(s) over {duration_months_estimate:.1f} months."
-                    )
-                else:
-                    reasons.append(
-                        f"Combined role budget is relatively low versus a global freelance benchmark: about {budget_to_market_multiple:.2f}x for {contributor_count} contributor(s) over {duration_months_estimate:.1f} months."
-                    )
-
-        if description_word_count >= 180:
-            score += 2
-            reasons.append(f"Detailed job description detected ({description_word_count} words).")
-        elif description_word_count >= 80:
-            score += 1
-            reasons.append(f"Moderately detailed job description detected ({description_word_count} words).")
-
-
-        if score >= 7:
+        if score >= 5:
             recommended_scope = "large"
         elif score >= 3:
             recommended_scope = "medium"
         else:
             recommended_scope = "small"
 
-
-        non_empty_signals = sum([
-            1 if duration_days is not None else 0,
-            1 if normalized_role_count is not None else 0,
-            1 if normalized_project_type else 0,
-            1 if normalized_experience else 0,
-            1 if budget_usd is not None else 0,
-            1 if description_word_count > 0 else 0,
-        ])
-        confidence = "high" if non_empty_signals >= 5 else "medium" if non_empty_signals >= 3 else "low"
-
+        # Only the timeline can actually be missing - position count defaults to 1, which is
+        # a real answer (a solo post), not a gap.
+        confidence = "high" if duration_days is not None else "low"
 
         return {
             "recommended_project_scope": recommended_scope,
             "score": score,
             "confidence": confidence,
             "factors": {
-                "job_title": job_title,
-                "project_type": normalized_project_type,
                 "working_days": working_days,
                 "estimated_duration": estimated_duration,
                 "duration_days_estimate": duration_days,
                 "duration_months_estimate": round(duration_months_estimate, 2),
-                "experience_level": normalized_experience or None,
-                "role_count": normalized_role_count,
-                "contributor_count_estimate": contributor_count,
-                "budget_usd": round(budget_usd, 2) if budget_usd is not None else None,
-                "roles_budget_summary": roles or [],
-                "global_monthly_role_budget_benchmark_usd": monthly_budget_benchmark_usd,
-                "budget_to_market_multiple": round(budget_to_market_multiple, 3) if budget_to_market_multiple is not None else None,
-                "job_description_word_count": description_word_count,
+                "position_count": normalized_positions,
             },
-            "reasons": reasons or ["Insufficient complexity signals found; defaulting to small scope."],
+            "reasons": reasons,
         }
 
 
@@ -827,16 +823,18 @@ class JobPostFunctions:
         try:
             db = get_db()
             job_post_id = str(uuid.uuid4())
+            # A client-supplied scope is theirs and must never be recomputed; an
+            # omitted one is a recommendation we own and may revise as the post
+            # gains roles (see recompute_project_scope).
+            project_scope_is_auto = not project_scope
             resolved_project_scope = project_scope
             if not resolved_project_scope:
+                # Headcount is 1 by necessity: a post is inserted before its roles exist.
+                # recompute_project_scope() corrects it on the first POST /job-roles.
                 calculation = JobPostFunctions.calculate_project_scope(
-                    job_title=job_title,
-                    job_description=job_description,
-                    project_type=project_type,
                     estimated_duration=estimated_duration,
                     working_days=working_days,
-                    experience_level=experience_level,
-                    role_count=1,
+                    position_count=1,
                 )
                 resolved_project_scope = calculation["recommended_project_scope"]
                 logger(
@@ -860,6 +858,7 @@ class JobPostFunctions:
                 "job_description":    job_description,
                 "project_type":       project_type,
                 "project_scope":      resolved_project_scope,
+                "project_scope_is_auto": project_scope_is_auto,
                 "estimated_duration": estimated_duration,
                 "working_days":       working_days,
                 "deadline":           deadline,
@@ -910,6 +909,11 @@ class JobPostFunctions:
                 logger("JOB_POST_FUNCTIONS", "No data to update", level="WARNING")
                 return JobPostFunctions.get_job_post_by_id(job_post_id)
 
+            # An explicit scope in the payload is a deliberate client choice: pin it
+            # so later role changes stop moving it.
+            if "project_scope" in update_data:
+                update_data["project_scope_is_auto"] = False
+
             # NEW: re-infer category if title or description changed
             if "job_title" in update_data or "job_description" in update_data:
                 existing = JobPostFunctions.get_job_post_by_id(job_post_id)
@@ -944,6 +948,11 @@ class JobPostFunctions:
             if draft_delta and transition_client_id:
                 JobPostFunctions._adjust_client_jobs_posted(db, transition_client_id, draft_delta)
 
+            # Timeline fields only - headcount lives on job_role, so POST/DELETE /job-roles
+            # runs its own recompute. No-ops when the client pinned the scope.
+            _SCOPE_SIGNAL_FIELDS = {"estimated_duration", "working_days"}
+            if "project_scope" not in update_data and (_SCOPE_SIGNAL_FIELDS & update_data.keys()):
+                JobPostFunctions.recompute_project_scope(job_post_id)
 
             logger("JOB_POST_FUNCTIONS", f"Job post {job_post_id} updated", level="INFO")
             return JobPostFunctions.get_job_post_by_id(job_post_id)

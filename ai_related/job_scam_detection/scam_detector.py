@@ -8,7 +8,15 @@ import joblib
 
 _MODEL_DIR = os.path.join(os.path.dirname(__file__), "model3_sbert_rf_complete")
 
-EXPIRE_CLOSE_THRESHOLD = 0.4
+# The calibrator is isotonic with only 18 distinct output levels, and it jumps straight from
+# 0.3265 to 0.6 - nothing ever lands in between. 0.4 sat inside that gap, so the expire band
+# [0.4, 0.6) could never hold a flag: everything either auto-closed on sight or fell under the
+# cutoff and got dismissed, and the 30-day close was dead code. 0.3 puts the 0.3265 level -
+# where blatant scam copy actually lands - back inside the band, which is what the three-tier
+# design intended: not sure enough to close on sight, but 30 days with nobody vouching for it
+# is. Kept below 0.3265 rather than equal to it so the >= comparison doesn't ride on a float
+# round-trip. Re-check both numbers against the level list after any retrain.
+EXPIRE_CLOSE_THRESHOLD = 0.3
 AUTO_CLOSE_THRESHOLD = 0.6
 
 _NLTK_PACKAGES = {

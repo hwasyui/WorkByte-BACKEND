@@ -23,6 +23,7 @@ def convert_uuids_to_str(data: Dict) -> Dict:
 class WorkExperienceFunctions:
     """Handle all work experience-related database operations."""
 
+    # dev function - no callers.
     @staticmethod
     def get_all_work_experiences(limit: Optional[int] = None) -> List[Dict]:
         """Fetch all work experiences."""

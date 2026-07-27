@@ -5,20 +5,28 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 
 from functions.db_manager import get_db
 from functions.logger import logger
+from functions.profile_ids import user_id_for_client, user_id_for_freelancer
 from routes.client_reviews.client_review_functions import ClientReviewFunctions
+from routes.reviews.review_functions import ReviewFunctions
 from routes.dm.dm_functions import DMFunctions
 from routes.notifications.notification_functions import NotificationFunctions
 from ai_related.review_analysis.client_review_ai_functions import (
-    get_client_targeted_question,
+    generate_client_targeted_question,
     compute_client_responsiveness_score,
     compute_client_dispute_rate_score,
     calculate_weighted_client_review_avg,
     calculate_client_ai_trust_components,
+    calculate_client_coerced_ratio,
     calculate_client_trust_score,
     analyze_client_review_full,
     generate_client_review_summary,
 )
-from ai_related.review_analysis.review_ai_functions import MIN_REVIEWS_FOR_SUMMARY, SUMMARY_REGEN_INTERVAL
+from ai_related.review_analysis.review_ai_functions import (
+    MIN_REVIEWS_FOR_SUMMARY,
+    SUMMARY_REGEN_INTERVAL,
+    compute_revision_scores,
+    shrink_toward_prior,
+)
 from ai_related.review_analysis.review_ml.authenticity_detector import predict_authenticity
 from ai_related.review_analysis.review_ml.mismatch_detector import predict_mismatch
 from ai_related.review_analysis.review_ml.sentiment_detector import predict_sentiment
@@ -45,7 +53,13 @@ async def run_client_review_post_completion_pipeline(contract_id: str) -> None:
 
         db = get_db()
         rows = db.execute_query(
-            "SELECT contract_id, freelancer_id, client_id FROM contract WHERE contract_id = :cid",
+            """SELECT c.contract_id, c.freelancer_id, c.client_id, c.contract_title,
+                      jp.job_title, jp.job_description,
+                      jr.role_title
+               FROM contract c
+               JOIN job_post jp ON jp.job_post_id = c.job_post_id
+               JOIN job_role jr ON jr.job_role_id = c.job_role_id
+               WHERE c.contract_id = :cid""",
             {"cid": contract_id},
         )
         if not rows:
@@ -53,23 +67,26 @@ async def run_client_review_post_completion_pipeline(contract_id: str) -> None:
             return
         contract = rows[0]
 
-        freelancer_rows = db.fetch_data("freelancer", conditions=[("freelancer_id", "=", str(contract["freelancer_id"]))], limit=1)
-        client_rows = db.fetch_data("client", conditions=[("client_id", "=", str(contract["client_id"]))], limit=1)
-        if not freelancer_rows or not client_rows:
-            logger("CLIENT_REVIEW_PIPELINE", "Could not resolve user IDs, pipeline aborted", level="ERROR")
-            return
-
-        freelancer_user_id = str(freelancer_rows[0]["user_id"])
-        client_user_id = str(client_rows[0]["user_id"])
-
+        # contract.freelancer_id/client_id are already the profile ids the
+        # client_reviews table keys on - no resolution step needed.
         review = ClientReviewFunctions.create_pending_client_review(
             contract_id=contract_id,
-            reviewer_id=freelancer_user_id,
-            client_id=client_user_id,
+            reviewer_id=str(contract["freelancer_id"]),
+            client_id=str(contract["client_id"]),
         )
         review_id = review["id"]
 
-        question = get_client_targeted_question()
+        # Project-specific question about the client, falling back to the rotating
+        # static list if generation fails or the result fails validation.
+        revision_count, _ = compute_revision_scores(contract_id)
+        question = await generate_client_targeted_question(
+            job_title=contract.get("job_title") or "",
+            role_title=contract.get("role_title") or "",
+            job_description=contract.get("job_description") or "",
+            contract_title=contract.get("contract_title") or "",
+            role_skills=ReviewFunctions.get_suggested_skill_tags(contract_id),
+            revision_count=revision_count,
+        )
         ClientReviewFunctions.save_ai_question(review_id, question)
 
         logger("CLIENT_REVIEW_PIPELINE", f"Client-review post-completion pipeline done | contract={contract_id}", level="INFO")
@@ -78,7 +95,7 @@ async def run_client_review_post_completion_pipeline(contract_id: str) -> None:
         logger("CLIENT_REVIEW_PIPELINE", f"Pipeline failed for contract {contract_id}: {str(e)}", level="ERROR")
 
 
-async def run_client_review_post_submission_pipeline(client_review_id: str) -> None:
+async def run_client_review_post_submission_pipeline(client_review_id: str, is_retry: bool = False) -> None:
     """
     Freelancer-reviews-client counterpart to run_post_review_pipeline. Runs
     in background after the freelancer submits their review of the client.
@@ -97,10 +114,14 @@ async def run_client_review_post_submission_pipeline(client_review_id: str) -> N
         client_id = review["client_id"]
         client_name = "the client"
         client_rows = get_db().execute_query(
-            "SELECT full_name FROM client WHERE user_id = :uid", {"uid": client_id}
+            "SELECT full_name FROM client WHERE client_id = :cid", {"cid": client_id}
         )
         if client_rows and client_rows[0].get("full_name"):
             client_name = client_rows[0]["full_name"]
+
+        # Notifications address users, not profiles - resolve both parties once.
+        client_user_id   = user_id_for_client(client_id)
+        reviewer_user_id = user_id_for_freelancer(review["reviewer_id"])
 
         written = review.get("written_content") or {}
         overall_comment = written.get("overall_comment", "")
@@ -112,7 +133,10 @@ async def run_client_review_post_submission_pipeline(client_review_id: str) -> N
             return
 
         avg_stars = round(sum(float(r["score"]) for r in ratings) / len(ratings), 2)
-        review_text = f"{overall_comment} {freelancer_answer}".strip()
+        # overall_comment ONLY - see the note in review_pipeline.py: concatenating the
+        # targeted-question answer drags sentiment negative and inflates mismatch
+        # severity, because the question invites factual, problem-mentioning answers.
+        review_text = (overall_comment or "").strip()
 
         # Extract freelancer's explicit communication star rating (1-5) from client_review_ratings
         communication_star_rating = next(
@@ -147,6 +171,7 @@ async def run_client_review_post_submission_pipeline(client_review_id: str) -> N
             performance_score_summary=performance_summary,
             message_thread=message_thread,
             communication_star_rating=communication_star_rating,
+            ai_question=written.get("ai_question") or "",
         )
 
         # Three trained classical models as independent signals alongside the LLM,
@@ -157,14 +182,27 @@ async def run_client_review_post_submission_pipeline(client_review_id: str) -> N
 
         flag_reasons = list(analysis_result["flag_reasons"])
 
+        # Authenticity blend + agreement-based veto, symmetric with the freelancer side.
         ml_authenticity_score = 1.0 - ml_authenticity["fake_probability"]
-        authenticity_score = round((analysis_result["authenticity_score"] + ml_authenticity_score) / 2, 3)
-        is_flagged_fake = analysis_result["is_flagged_fake"] or ml_authenticity["is_likely_fake"]
+        groundedness = analysis_result.get("answer_groundedness")
+        if groundedness is not None and freelancer_answer.strip():
+            authenticity_score = round(
+                0.4 * analysis_result["authenticity_score"]
+                + 0.4 * ml_authenticity_score
+                + 0.2 * groundedness,
+                3,
+            )
+        else:
+            authenticity_score = round((analysis_result["authenticity_score"] + ml_authenticity_score) / 2, 3)
+
+        is_flagged_fake = analysis_result["is_flagged_fake"] and ml_authenticity["is_likely_fake"]
         if ml_authenticity["is_likely_fake"] and not analysis_result["is_flagged_fake"]:
             flag_reasons.append(
-                f"Statistical model flagged generic/templated language "
+                f"Statistical model flagged generic/templated language, LLM did not "
                 f"(fake_probability={ml_authenticity['fake_probability']})"
             )
+        elif analysis_result["is_flagged_fake"] and not ml_authenticity["is_likely_fake"]:
+            flag_reasons.append("LLM flagged the review as fabricated, statistical model did not")
 
         sentiment_mismatch = analysis_result["sentiment_mismatch"] or ml_mismatch["is_mismatched"]
         if ml_mismatch["is_mismatched"] and not analysis_result["sentiment_mismatch"]:
@@ -182,7 +220,8 @@ async def run_client_review_post_submission_pipeline(client_review_id: str) -> N
         # is_flagged_fake and is_flagged_coerced are vetoes, not just contributing
         # signals - see the symmetric note in review_pipeline.py.
         overall_pass = (
-            authenticity_score >= 0.5
+            not analysis_result.get("analysis_unavailable")
+            and authenticity_score >= 0.5
             and not is_flagged_fake
             and not is_flagged_coerced
             and not (
@@ -209,14 +248,14 @@ async def run_client_review_post_submission_pipeline(client_review_id: str) -> N
             ClientReviewFunctions.publish_review(client_review_id)
             try:
                 await NotificationFunctions.notify(
-                    recipient_user_id=client_id,
+                    recipient_user_id=client_user_id,
                     notif_type="review_published",
                     title="New Review Received ⭐",
                     body=f"You received a new review with an average rating of {avg_stars}★.",
                     data={"contract_id": review["contract_id"], "client_review_id": client_review_id},
                 )
                 await NotificationFunctions.notify(
-                    recipient_user_id=review["reviewer_id"],
+                    recipient_user_id=reviewer_user_id,
                     notif_type="review_publish_confirmed",
                     title="Your Review Was Published",
                     body=f"Your review for {client_name} is now live.",
@@ -229,13 +268,18 @@ async def run_client_review_post_submission_pipeline(client_review_id: str) -> N
             # didn't pass for a softer reason (is_flagged_fake or is_flagged_coerced alone,
             # or the mismatch rule) - still held for admin review, not written off as
             # almost-certainly fake.
-            suppress = authenticity_score < 0.3
+            suppress = (
+                not analysis_result.get("analysis_unavailable")
+                and authenticity_score < 0.3
+            )
             ClientReviewFunctions.flag_review(client_review_id, suppress=suppress)
             logger("CLIENT_REVIEW_PIPELINE", f"Client review {client_review_id} not published (pass={overall_pass}, suppressed={suppress})", level="WARNING")
             try:
-                if suppress:
+                if is_retry:
+                    logger("CLIENT_REVIEW_PIPELINE", f"Retry still not passing for {client_review_id}, hold-back notification suppressed", level="INFO")
+                elif suppress:
                     await NotificationFunctions.notify(
-                        recipient_user_id=review["reviewer_id"],
+                        recipient_user_id=reviewer_user_id,
                         notif_type="review_suppressed",
                         title="Your Review Couldn't Be Published",
                         body=f"Your review for {client_name} didn't pass our automated review checks and will not be published.",
@@ -243,7 +287,7 @@ async def run_client_review_post_submission_pipeline(client_review_id: str) -> N
                     )
                 else:
                     await NotificationFunctions.notify(
-                        recipient_user_id=review["reviewer_id"],
+                        recipient_user_id=reviewer_user_id,
                         notif_type="review_flagged",
                         title="Your Review Is Under Review",
                         body=f"Your review for {client_name} is being held for manual review before publishing. We'll notify you once it's resolved.",
@@ -286,6 +330,8 @@ async def recalculate_and_persist_client_trust_score(client_id: str) -> float:
         authenticity_confidence=ai_trust["authenticity_confidence"],
         consistency_score=ai_trust["consistency_score"],
         communication_sentiment=ai_trust["communication_sentiment"],
+        total_reviews=total_reviews,
+        coerced_ratio=calculate_client_coerced_ratio(client_id),
     )
 
     # Regenerate the profile-level AI summary only every SUMMARY_REGEN_INTERVAL
@@ -298,7 +344,7 @@ async def recalculate_and_persist_client_trust_score(client_id: str) -> float:
     ):
         client_name = "the client"
         name_rows = get_db().execute_query(
-            "SELECT full_name FROM client WHERE user_id = :uid", {"uid": client_id}
+            "SELECT full_name FROM client WHERE client_id = :cid", {"cid": client_id}
         )
         if name_rows and name_rows[0].get("full_name"):
             client_name = name_rows[0]["full_name"]
@@ -308,6 +354,7 @@ async def recalculate_and_persist_client_trust_score(client_id: str) -> float:
         client_id=client_id,
         trust_score=trust_score,
         weighted_review_avg_received=weighted_avg,
+        effective_review_avg_received=round(shrink_toward_prior(weighted_avg, total_reviews), 3),
         responsiveness_score=responsiveness_score,
         communication_sentiment=ai_trust["communication_sentiment"],
         authenticity_confidence=ai_trust["authenticity_confidence"],

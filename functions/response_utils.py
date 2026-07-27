@@ -1,9 +1,12 @@
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
-from typing import Any
+from typing import Any, Optional
 from uuid import UUID
 from datetime import date, datetime
 from decimal import Decimal
+
+
+_RESERVED_ERROR_KEYS = frozenset({"status", "details"})
 
 
 class ResponseSchema:
@@ -34,12 +37,22 @@ class ResponseSchema:
         return JSONResponse(status_code=status_code, content=encoded_body)
 
     @staticmethod
-    def error(details: str, status_code: int = 400) -> JSONResponse:
-        """Build an error response."""
+    def error(details: str, status_code: int = 400, extra: Optional[dict] = None) -> JSONResponse:
+        """Build an error response. `extra` keys are merged into the body top-level, where
+        the frontend reads them. status/details are reserved - a clash raises rather than
+        silently shadowing them."""
         body = {
             "status": "error",
             "details": details
         }
+
+        if extra:
+            clash = _RESERVED_ERROR_KEYS & extra.keys()
+            if clash:
+                raise ValueError(
+                    f"ResponseSchema.error: extra cannot override reserved response keys: {sorted(clash)}"
+                )
+            body.update(extra)
 
         return JSONResponse(
             status_code=status_code,

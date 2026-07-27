@@ -65,6 +65,7 @@ def convert_uuids_to_str(data: Dict) -> Dict:
     return result
 
 
+# dev function - no callers.
 def _format_contract_created_text(data: dict) -> str:
     budget = data.get("agreed_budget") or 0
     currency = data.get("budget_currency") or "USD"
@@ -88,6 +89,7 @@ def _format_contract_created_text(data: dict) -> str:
 class ContractFunctions:
     """Handle all contract-related database operations."""
 
+    # dev function - no callers.
     @staticmethod
     def get_all_contracts(limit: Optional[int] = None) -> List[Dict]:
         """Fetch all contracts."""
@@ -161,6 +163,7 @@ class ContractFunctions:
             logger("CONTRACT_FUNCTIONS", f"Error fetching contract: {str(e)}", level="ERROR")
             raise
 
+    # dev function - no callers.
     @staticmethod
     def get_contracts_by_job_post_id(job_post_id: str) -> List[Dict]:
         """Fetch all contracts under a job post, any status - used to pre-check
@@ -173,6 +176,7 @@ class ContractFunctions:
             logger("CONTRACT_FUNCTIONS", f"Error fetching contracts for job post: {str(e)}", level="ERROR")
             raise
 
+    # dev function - no callers.
     @staticmethod
     def get_contracts_by_job_role_id(job_role_id: str) -> List[Dict]:
         """Fetch all contracts under a job role, any status - used to pre-check

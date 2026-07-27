@@ -9,6 +9,7 @@ from functions.access_control import assert_current_user_is_contract_party
 from functions.response_utils import ResponseSchema
 from functions.logger import logger
 from functions.db_manager import get_db
+from functions.review_views import public_review, public_reviews, public_trust_score, review_confidence
 from routes.client_reviews.client_review_functions import ClientReviewFunctions
 from ai_related.review_analysis.client_review_pipeline import (
     run_client_review_post_completion_pipeline,
@@ -57,7 +58,7 @@ async def get_client_review_for_contract(
                 404,
             )
 
-        detail = ClientReviewFunctions.get_review_detail(review["id"])
+        detail = public_review(ClientReviewFunctions.get_review_detail(review["id"]))
         logger("CLIENT_REVIEW", f"Fetched client-review form for contract {contract_id}", "GET /client-reviews/contract/{contract_id}", "INFO")
         return ResponseSchema.success(detail, 200)
     except HTTPException as e:
@@ -65,7 +66,7 @@ async def get_client_review_for_contract(
         return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("CLIENT_REVIEW", f"Error: {str(e)}", "GET /client-reviews/contract/{contract_id}", "ERROR")
-        return ResponseSchema.error(str(e), 500)
+        return ResponseSchema.error("Failed to fetch client review. Please try again.", 500)
 
 
 @client_review_router.post("/{client_review_id}/submit")
@@ -98,7 +99,9 @@ async def submit_client_review(
             return ResponseSchema.error(f"Client review {client_review_id} not found", 404)
         if review["status"] != "pending":
             return ResponseSchema.error(f"Review has already been {review['status']}.", 400)
-        if review["reviewer_id"] != str(current_user.user_id):
+        # client_reviews.reviewer_id is a freelancer.freelancer_id, so compare
+        # against the caller's freelancer profile rather than their user_id.
+        if not current_user.freelancer_id or review["reviewer_id"] != str(current_user.freelancer_id):
             return ResponseSchema.error("Only the freelancer who owns this contract can submit this review.", 403)
 
         ratings = payload.get("ratings", [])
@@ -115,7 +118,7 @@ async def submit_client_review(
         freelancer_answer = payload.get("freelancer_answer", "").strip()
 
         if not overall_comment:
-            return ResponseSchema.error("overall_comment is required.", 400)
+            return ResponseSchema.error("Please write an overall comment.", 400)
 
         ClientReviewFunctions.save_freelancer_review(
             client_review_id=client_review_id,
@@ -133,7 +136,7 @@ async def submit_client_review(
         )
     except Exception as e:
         logger("CLIENT_REVIEW", f"Error: {str(e)}", "POST /client-reviews/{client_review_id}/submit", "ERROR")
-        return ResponseSchema.error(str(e), 500)
+        return ResponseSchema.error("Failed to submit client review. Please try again.", 500)
 
 
 @client_review_router.get("/client/{client_id}")
@@ -148,14 +151,13 @@ async def get_reviews_for_client(
         cl_rows = db.fetch_data("client", conditions=[("client_id", "=", client_id)], limit=1)
         if not cl_rows:
             return ResponseSchema.error(f"Client {client_id} not found", 404)
-        client_user_id = str(cl_rows[0]["user_id"])
 
-        reviews = ClientReviewFunctions.get_reviews_by_client_id(client_user_id)
+        reviews = public_reviews(ClientReviewFunctions.get_reviews_by_client_id(client_id))
         logger("CLIENT_REVIEW", f"Fetched {len(reviews)} reviews for client {client_id}", "GET /client-reviews/client/{client_id}", "INFO")
         return ResponseSchema.success(reviews, 200)
     except Exception as e:
         logger("CLIENT_REVIEW", f"Error: {str(e)}", "GET /client-reviews/client/{client_id}", "ERROR")
-        return ResponseSchema.error(str(e), 500)
+        return ResponseSchema.error("Failed to fetch client reviews. Please try again.", 500)
 
 
 @client_review_router.get("/trust-score/{client_id}")
@@ -169,22 +171,28 @@ async def get_client_trust_score_route(
         cl_rows = db.fetch_data("client", conditions=[("client_id", "=", client_id)], limit=1)
         if not cl_rows:
             return ResponseSchema.error(f"Client {client_id} not found", 404)
-        client_user_id = str(cl_rows[0]["user_id"])
 
-        trust_score = ClientReviewFunctions.get_client_trust_score(client_user_id)
+        trust_score = public_trust_score(
+            ClientReviewFunctions.get_client_trust_score(client_id),
+            total_reviews_key="total_reviews_received",
+        )
+        distribution = ClientReviewFunctions.get_sentiment_distribution(client_id)
         if not trust_score:
             return ResponseSchema.success({
-                "client_id": client_user_id,
+                "client_id": client_id,
                 "trust_score": 0,
                 "total_reviews_received": 0,
+                "confidence": review_confidence(0),
+                "sentiment_distribution": distribution,
                 "message": "No reviews yet.",
             }, 200)
+        trust_score["sentiment_distribution"] = distribution
 
         logger("CLIENT_REVIEW", f"Fetched trust score for client {client_id}", "GET /client-reviews/trust-score/{client_id}", "INFO")
         return ResponseSchema.success(trust_score, 200)
     except Exception as e:
         logger("CLIENT_REVIEW", f"Error: {str(e)}", "GET /client-reviews/trust-score/{client_id}", "ERROR")
-        return ResponseSchema.error(str(e), 500)
+        return ResponseSchema.error("Failed to fetch client trust score. Please try again.", 500)
 
 
 @client_review_router.get("/red-flags/{client_id}")
@@ -198,14 +206,13 @@ async def get_client_red_flags(
         cl_rows = db.fetch_data("client", conditions=[("client_id", "=", client_id)], limit=1)
         if not cl_rows:
             return ResponseSchema.error(f"Client {client_id} not found", 404)
-        client_user_id = str(cl_rows[0]["user_id"])
 
-        alerts = ClientReviewFunctions.get_red_flags(client_user_id)
+        alerts = ClientReviewFunctions.get_red_flags(client_id)
         logger("CLIENT_REVIEW", f"Fetched {len(alerts)} red flags for client {client_id}", "GET /client-reviews/red-flags/{client_id}", "INFO")
         return ResponseSchema.success(alerts, 200)
     except Exception as e:
         logger("CLIENT_REVIEW", f"Error: {str(e)}", "GET /client-reviews/red-flags/{client_id}", "ERROR")
-        return ResponseSchema.error(str(e), 500)
+        return ResponseSchema.error("Failed to fetch client red flags. Please try again.", 500)
 
 
 # GET /client-reviews/{client_review_id}  ← wildcard last so specific routes above match first
@@ -216,11 +223,11 @@ async def get_client_review(
 ):
     """Full client-review detail including ratings, written content, and AI analysis."""
     try:
-        review = ClientReviewFunctions.get_review_detail(client_review_id)
+        review = public_review(ClientReviewFunctions.get_review_detail(client_review_id))
         if not review:
             return ResponseSchema.error(f"Client review {client_review_id} not found", 404)
         logger("CLIENT_REVIEW", f"Fetched client review {client_review_id}", "GET /client-reviews/{client_review_id}", "INFO")
         return ResponseSchema.success(review, 200)
     except Exception as e:
         logger("CLIENT_REVIEW", f"Error: {str(e)}", "GET /client-reviews/{client_review_id}", "ERROR")
-        return ResponseSchema.error(str(e), 500)
+        return ResponseSchema.error("Failed to fetch client review. Please try again.", 500)

@@ -11,6 +11,7 @@ from fastapi import HTTPException
 
 from functions.db_manager import get_db
 from functions.logger import logger
+from functions.profile_ids import user_id_for_client, user_id_for_freelancer
 from routes.admin.admin_moderation import (
     scan_harmful_text,
     scan_for_scam,
@@ -22,12 +23,9 @@ from routes.notifications.notification_functions import NotificationFunctions
 AUTO_APPROVE_DAYS = 30
 AUTO_REMOVE_DAYS  = 30
 
-# Matches the BERT model's own "precision" threshold profile (machine_learning/models/
-# threshold_profiles.json / bert/metrics.json): the grid search that tuned per-label cutoffs
-# could not reach the intended PRECISION_FLOOR of 0.95 for any label (HARMFUL_TEXT.md Section 11),
-# so 0.88 is the most conservative, best-evidenced cutoff the model actually produced. Compared
-# against max(label_scores) in _auto_approve_expired(), not a sum across labels, so this is an
-# exact match for "at least one label individually cleared the model's high-precision bar."
+# The BERT tuning run never reached the intended 0.95 precision floor on any label, so 0.88 is
+# the most conservative cutoff it actually produced. Compared against max(label_scores), not
+# their sum: one label alone has to clear the bar.
 CONTENT_AUTO_CLOSE_THRESHOLD_JOB     = 0.88
 
 REPORT_AUTO_ACTION_THRESHOLD = 10   # min reports to trigger auto-action
@@ -38,9 +36,11 @@ REPORT_AUTO_ACTION_DAYS      = 30   # min age (days) of oldest report
 # keeps its own, on its own scale, in admin_moderation.py.
 
 # Default closure / ban messages (admin can override via admin_note / ban_message)
-DEFAULT_CLOSURE_REASON_CONTENT = "content_violation"
+DEFAULT_CLOSURE_REASON_CONTENT = "harmful_text"
+# Names the system, never the labels it fired on - a category in the owner's copy reads as
+# an accusation when the model is wrong. Admins still see labels + scores in the queue.
 DEFAULT_CLOSURE_NOTE_CONTENT   = (
-    "This job post was removed due to a content policy violation. "
+    "This job post was closed by Harmful Text Detection. "
     "Submit an appeal if you believe this was a mistake."
 )
 DEFAULT_CLOSURE_REASON_SCAM    = "scam"
@@ -114,25 +114,6 @@ def _is_engaged_sql(job_post_id_expr: str) -> str:
 # confirmation in the UI. NOT (A OR B) == (NOT A AND NOT B), same effect as two separate NOT EXISTS.
 _ACTIVE_NO_ENGAGEMENT = f"\n      AND NOT {_is_engaged_sql('job_post.job_post_id')}"
 
-
-def _closure_note_with_labels(detected_labels) -> str:
-    """Closure note that names the categories the classifier actually triggered, so the
-    owner knows what to fix instead of getting an unexplained removal. Uses the same raw
-    label strings (toxicity/obscene/threat/insult/identity_hate) as the DM and proposal harmful-
-    content block messages, rather than a separate display mapping, so the wording matches
-    across every surface that reports a moderation label."""
-    labels = detected_labels or []
-    if isinstance(labels, str):
-        try:
-            labels = json.loads(labels)
-        except Exception:
-            labels = []
-    if not labels:
-        return DEFAULT_CLOSURE_NOTE_CONTENT
-    return (
-        f"This job post was removed because its content was flagged for "
-        f"{', '.join(str(l) for l in labels)}. Submit an appeal if you believe this was a mistake."
-    )
 
 # Sort-column whitelists (safe f-string interpolation; values are hardcoded)
 _MOD_SORT_COLS = {
@@ -255,7 +236,8 @@ def queue_harmful_text_scan(
 ) -> Optional[Dict]:
     """
     Run harmful text scan and insert a pending moderation record if any label is triggered.
-    content_type: 'job_post' | 'freelancer_profile' | 'client_profile'
+    content_type: 'job_post' -- job posts are the only surface that queues scans; profiles,
+    reviews and the rest are deliberately not scanned.
     A content item that already has a pending row is left alone (ON CONFLICT DO NOTHING against
     idx_htq_content_pending_unique) rather than queued again -- rescanning the same content
     (e.g. repeated manual scans) must not pile up duplicate queue rows.
@@ -320,10 +302,8 @@ def _auto_approve_expired():
     """
     Process pending moderation items whose 30-day window has closed.
     A job post auto-closes when at least one individual label score clears
-    CONTENT_AUTO_CLOSE_THRESHOLD_JOB (status='approved'). Anything else -- a job post whose
-    labels all stayed below that bar, or any non-job_post item (freelancer_profile/
-    client_profile have no real action to take even when approved, see HARMFUL_TEXT.md
-    Section 17) -- is auto-dismissed as a false positive (status='rejected').
+    CONTENT_AUTO_CLOSE_THRESHOLD_JOB (status='approved'). One whose labels all stayed below
+    that bar is auto-dismissed as a false positive (status='rejected').
     """
     expired = _rows(get_db().execute_query(
         """
@@ -345,11 +325,7 @@ def _auto_approve_expired():
         content_id = str(item.get("content_id", ""))
         mid        = str(item.get("moderation_id", ""))
 
-        new_status = (
-            "approved"
-            if ctype == "job_post" and max_score >= CONTENT_AUTO_CLOSE_THRESHOLD_JOB
-            else "rejected"
-        )
+        new_status = "approved" if max_score >= CONTENT_AUTO_CLOSE_THRESHOLD_JOB else "rejected"
 
         # If this would auto-close a job that has a freelancer engaged (filled position /
         # live contract), the guard below can't close it -- only a human admin can. Leave the
@@ -392,7 +368,7 @@ def _auto_approve_expired():
             continue  # another run already handled it
 
         if new_status == "approved":  # flag confirmed: harmful content actioned
-            note = _closure_note_with_labels(item.get("detected_labels"))
+            note = DEFAULT_CLOSURE_NOTE_CONTENT
             # active jobs only: don't stomp a draft/filled/already-closed job (their status
             # was set deliberately elsewhere). RETURNING tells us if a row actually closed so
             # the "job closed" notify/log only fires when it really did.
@@ -416,13 +392,13 @@ def _auto_approve_expired():
                 logger("ADMIN", f"Auto-closed {ctype} {content_id}, max_label_score={max_score:.2f} >= {CONTENT_AUTO_CLOSE_THRESHOLD_JOB}", level="WARNING")
                 _notify_job_post_closed(
                     content_id,
-                    "job_closed_content_violation",
+                    "job_closed_harmful_text",
                     "Job Post Closed",
                     note,
                 )
             else:
                 logger("ADMIN", f"Flag confirmed but {ctype} {content_id} not active or has ongoing engagement (skipped close)", level="INFO")
-        else:  # flag dismissed: false positive (or non-job_post, no action to take)
+        else:  # flag dismissed: false positive
             logger("ADMIN", f"Auto-dismissed {ctype} {content_id}, max_label_score={max_score:.2f}", level="INFO")
 
 MODERATION_SWEEP_INTERVAL_SECONDS = int(os.getenv("MODERATION_SWEEP_INTERVAL_SECONDS", "3600"))
@@ -565,7 +541,7 @@ def action_moderation_item(
         content_type = updated.get("content_type", "")
         content_id   = str(updated.get("content_id", ""))
         if content_type == "job_post":
-            closure_note = admin_note or _closure_note_with_labels(updated.get("detected_labels"))
+            closure_note = admin_note or DEFAULT_CLOSURE_NOTE_CONTENT
             closed = _rows(get_db().execute_query(
                 """
                 UPDATE job_post
@@ -586,7 +562,7 @@ def action_moderation_item(
                 logger("ADMIN", f"Job post {content_id} closed after moderation rejection", level="INFO")
                 _notify_job_post_closed(
                     content_id,
-                    "job_closed_content_violation",
+                    "job_closed_harmful_text",
                     "Job Post Closed",
                     closure_note,
                 )
@@ -2202,9 +2178,9 @@ def list_red_flag_alerts(
     page_size: int = 20,
 ) -> List[Dict]:
     """Admin-wide (not per-subject) red flag alert listing, mirroring list_scam_flags.
-    red_flag_alerts.freelancer_id is really just "subject's user_id" - LEFT JOIN both
-    freelancer and client tables and coalesce, since a row's subject_type determines
-    which one actually matches."""
+    Exactly one of rfa.freelancer_id / rfa.client_id is set (enforced by
+    red_flag_alerts_one_subject_check), so both sides can be LEFT JOINed
+    unconditionally and coalesced - no subject_type predicate in the join."""
     offset    = (page - 1) * page_size
     sort_col  = _RED_FLAG_SORT_COLS.get(sort_by, "rfa.triggered_at")
     direction = "ASC" if sort_dir.lower() == "asc" else "DESC"
@@ -2212,11 +2188,12 @@ def list_red_flag_alerts(
         f"""
         SELECT rfa.*,
                COALESCE(f.full_name, c.full_name) AS subject_name,
-               u.email AS subject_email
+               COALESCE(fu.email, cu.email)       AS subject_email
         FROM red_flag_alerts rfa
-        LEFT JOIN freelancer f ON f.user_id = rfa.freelancer_id AND rfa.subject_type = 'freelancer'
-        LEFT JOIN client     c ON c.user_id = rfa.freelancer_id AND rfa.subject_type = 'client'
-        JOIN users u ON u.user_id = rfa.freelancer_id
+        LEFT JOIN freelancer f  ON f.freelancer_id = rfa.freelancer_id
+        LEFT JOIN users      fu ON fu.user_id      = f.user_id
+        LEFT JOIN client     c  ON c.client_id     = rfa.client_id
+        LEFT JOIN users      cu ON cu.user_id      = c.user_id
         WHERE (:is_resolved IS NULL OR rfa.is_resolved = :is_resolved)
           AND (:subject_type = 'all' OR rfa.subject_type = :subject_type)
         ORDER BY {sort_col} {direction}
@@ -2264,7 +2241,7 @@ def list_flagged_reviews(
                ra.authenticity_score, ra.is_flagged_fake, ra.is_flagged_coerced, ra.flag_reasons,
                ra.overall_pass
         FROM reviews r
-        JOIN freelancer f ON f.user_id = r.freelancer_id
+        JOIN freelancer f ON f.freelancer_id = r.freelancer_id
         LEFT JOIN review_written_content wc ON wc.review_id = r.id
         LEFT JOIN review_ai_analysis     ra ON ra.review_id = r.id
         WHERE {status_filter}
@@ -2295,12 +2272,13 @@ async def override_publish_review(review_id: str, admin_user_id: str) -> Optiona
 
     freelancer_name = "the freelancer"
     freelancer_rows = get_db().execute_query(
-        "SELECT full_name FROM freelancer WHERE user_id = :uid", {"uid": updated["freelancer_id"]}
+        "SELECT full_name FROM freelancer WHERE freelancer_id = :fid", {"fid": updated["freelancer_id"]}
     )
     if freelancer_rows and freelancer_rows[0].get("full_name"):
         freelancer_name = freelancer_rows[0]["full_name"]
-    _fire_notification(NotificationFunctions.notify(
-        recipient_user_id=str(updated["reviewer_id"]),
+    # reviews.reviewer_id is a client.client_id; notifications address users.
+    _schedule_notification(NotificationFunctions.notify(
+        recipient_user_id=user_id_for_client(str(updated["reviewer_id"])),
         notif_type="review_publish_confirmed",
         title="Your Review Was Published",
         body=f"After manual review, your review for {freelancer_name} has been approved and is now live.",
@@ -2343,7 +2321,7 @@ def list_flagged_client_reviews(
                cra.authenticity_score, cra.is_flagged_fake, cra.is_flagged_coerced, cra.flag_reasons,
                cra.overall_pass
         FROM client_reviews cr
-        JOIN client c ON c.user_id = cr.client_id
+        JOIN client c ON c.client_id = cr.client_id
         LEFT JOIN client_review_written_content wc ON wc.client_review_id = cr.id
         LEFT JOIN client_review_ai_analysis     cra ON cra.client_review_id = cr.id
         WHERE {status_filter}
@@ -2374,12 +2352,13 @@ async def override_publish_client_review(client_review_id: str, admin_user_id: s
 
     client_name = "the client"
     client_rows = get_db().execute_query(
-        "SELECT full_name FROM client WHERE user_id = :uid", {"uid": updated["client_id"]}
+        "SELECT full_name FROM client WHERE client_id = :cid", {"cid": updated["client_id"]}
     )
     if client_rows and client_rows[0].get("full_name"):
         client_name = client_rows[0]["full_name"]
-    _fire_notification(NotificationFunctions.notify(
-        recipient_user_id=str(updated["reviewer_id"]),
+    # client_reviews.reviewer_id is a freelancer.freelancer_id; notifications address users.
+    _schedule_notification(NotificationFunctions.notify(
+        recipient_user_id=user_id_for_freelancer(str(updated["reviewer_id"])),
         notif_type="review_publish_confirmed",
         title="Your Review Was Published",
         body=f"After manual review, your review for {client_name} has been approved and is now live.",

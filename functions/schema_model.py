@@ -575,14 +575,12 @@ class JobPostResponse(BaseModel):
 
 
 class JobPostScopeCalculationRequest(BaseModel):
-    job_title: str
-    job_description: str
-    project_type: str  # individual, team
+    # Scope is timeline x headcount and nothing else - see calculate_project_scope for why
+    # budget, description length, experience level and project_type were all dropped.
+    # Extra keys an older client still sends are ignored rather than rejected.
     estimated_duration: Optional[str] = None
     working_days: Optional[int] = None
-    experience_level: Optional[str] = None  # entry, intermediate, expert
-    role_count: Optional[int] = 1
-    roles: Optional[List["JobPostScopeRoleInput"]] = None
+    position_count: Optional[int] = 1
 
 
 class JobPostScopeCalculationResponse(BaseModel):
@@ -595,14 +593,6 @@ class JobPostScopeCalculationResponse(BaseModel):
     class Config:
         from_attributes = True
 
-
-class JobPostScopeRoleInput(BaseModel):
-    role_title: Optional[str] = None
-    role_budget: Optional[float] = None
-    budget_currency: Optional[str] = "USD"
-    budget_type: Optional[str] = None
-    positions_available: Optional[int] = 1
-    is_required: Optional[bool] = True
 
 # Job roles
 class JobRoleCreate(BaseModel):
@@ -935,43 +925,10 @@ class SavedJobResponse(BaseModel):
         from_attributes = True
 
 
-# Ratings
-class RatingCreate(BaseModel):
-    rating_id: Optional[str] = None
-    contract_id: str
-    freelancer_id: str
-    communication_score: int
-    result_quality_score: int
-    professionalism_score: int
-    timeline_compliance_score: int
-    overall_rating: float
-    review_text: Optional[str] = None
-
-class RatingUpdate(BaseModel):
-    communication_score: Optional[int] = None
-    result_quality_score: Optional[int] = None
-    professionalism_score: Optional[int] = None
-    timeline_compliance_score: Optional[int] = None
-    overall_rating: Optional[float] = None
-    review_text: Optional[str] = None
-
-class RatingResponse(BaseModel):
-    rating_id: str
-    contract_id: str
-    client_id: str
-    freelancer_id: str
-    communication_score: Optional[int] = None
-    result_quality_score: Optional[int] = None
-    professionalism_score: Optional[int] = None
-    timeline_compliance_score: Optional[int] = None
-    overall_rating: Optional[float] = None
-    review_text: Optional[str] = None
-    update_count: Optional[int] = 0
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
+# Ratings: the standalone `rating` table was dropped (see alter_table.sql) and
+# its RatingCreate/RatingUpdate/RatingResponse models with it. Per-review scores
+# now live in review_ratings / client_review_ratings, and the aggregates in
+# freelancer_trust_scores / client_trust_score.
 
 
 # Performance ratings removed: the standalone performance_rating table was dropped and its
@@ -994,8 +951,8 @@ class SubmitClientReviewRequest(BaseModel):
 class ClientReviewResponse(BaseModel):
     id: str
     contract_id: str
-    reviewer_id: str
-    client_id: str
+    reviewer_id: str  # freelancer.freelancer_id of the reviewing freelancer
+    client_id: str    # client.client_id being reviewed
     status: str
     is_anonymous: bool
     created_at: Optional[datetime] = None
@@ -1012,9 +969,10 @@ class ClientReviewDetailResponse(ClientReviewResponse):
 
 
 class ClientTrustScoreV2Response(BaseModel):
-    client_id: str
+    client_id: str  # client.client_id
     trust_score: Optional[float] = None
     weighted_review_avg_received: Optional[float] = None
+    effective_review_avg_received: Optional[float] = None
     responsiveness_score: Optional[float] = None
     communication_sentiment: Optional[float] = None
     authenticity_confidence: Optional[float] = None
@@ -1163,7 +1121,7 @@ class FreelancerProfileComplete(BaseModel):
     education: List[EducationResponse] = []
     work_experience: List[WorkExperienceResponse] = []
     portfolio: List[PortfolioResponse] = []
-    ratings: List[RatingResponse] = []  # Ratings received by this freelancer
+    ratings: List[dict] = []  # published reviews received, from the review system
     total_ratings: Optional[int] = 0
     average_rating: Optional[float] = None
 
@@ -1187,8 +1145,8 @@ class SubmitReviewRequest(BaseModel):
 class ReviewResponse(BaseModel):
     id: str
     contract_id: str
-    reviewer_id: str
-    freelancer_id: str
+    reviewer_id: str    # client.client_id of the reviewing client
+    freelancer_id: str  # freelancer.freelancer_id being reviewed
     inferred_category: str
     status: str
     is_anonymous: bool
@@ -1208,10 +1166,13 @@ class ReviewDetailResponse(ReviewResponse):
 
 
 class TrustScoreResponse(BaseModel):
-    freelancer_id: str
+    freelancer_id: str  # freelancer.freelancer_id
     overall_score: float
     weighted_review_avg: Optional[float] = None
-    work_quality_score: Optional[float] = None
+    # weighted_review_avg shrunk toward a neutral prior by total_reviews - this is
+    # what overall_score is actually computed from. Read the pair together: a high
+    # raw average with a low effective one means "well rated, but barely reviewed".
+    effective_review_avg: Optional[float] = None
     revision_rate_score: Optional[float] = None
     responsiveness_score: Optional[float] = None
     communication_sentiment: Optional[float] = None
@@ -1226,7 +1187,10 @@ class TrustScoreResponse(BaseModel):
 
 class RedFlagAlertResponse(BaseModel):
     id: str
-    freelancer_id: str
+    # Exactly one of these is set, per red_flag_alerts_one_subject_check.
+    freelancer_id: Optional[str] = None
+    client_id: Optional[str] = None
+    subject_type: str = "freelancer"
     alert_type: str
     severity: str
     message: str

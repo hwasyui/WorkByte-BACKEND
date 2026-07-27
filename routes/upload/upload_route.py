@@ -63,7 +63,7 @@ async def upload_file_endpoint(
         raise
     except Exception as e:
         logger("UPLOAD", f"Upload failed: {str(e)}", level="ERROR")
-        return ResponseSchema.error(f"Upload failed: {str(e)}", 500)
+        return ResponseSchema.error("Upload failed. Please try again.", 500)
 
 
 # dev/admin only - not called by the Flutter app

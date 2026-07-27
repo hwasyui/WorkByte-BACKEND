@@ -284,7 +284,7 @@ def build_job_role_source_text(job_role_id: str) -> Optional[str]:
         db = get_db()
 
         rows = db.execute_query(
-            """SELECT jp.job_title, jp.job_description, jp.project_type, jp.project_scope,
+            """SELECT jp.job_title, jp.job_description,
                       jp.estimated_duration, jp.experience_level,
                       jr.role_title, jr.role_description,
                       jr.role_budget, jr.budget_currency, jr.budget_type
@@ -346,11 +346,10 @@ def build_job_role_source_text(job_role_id: str) -> Optional[str]:
         if r.get("role_description"):
             parts.append(f"Role Description: {r['role_description']}")
 
+        # project_type/project_scope left out: this is matched against a freelancer profile
+        # by cosine, and no profile states the team size or project scale it wants. Browse
+        # filters still use both.
         meta: list[str] = []
-        if r.get("project_type"):
-            meta.append(f"Type: {r['project_type']}")
-        if r.get("project_scope"):
-            meta.append(f"Scope: {r['project_scope']}")
         if r.get("estimated_duration"):
             meta.append(f"Duration: {r['estimated_duration']}")
         if r.get("experience_level"):

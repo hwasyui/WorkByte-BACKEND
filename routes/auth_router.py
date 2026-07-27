@@ -142,7 +142,7 @@ async def register(user: UserRegister):
     except Exception as e:
         error_msg = f"Registration failed: {str(e)}"
         logger("AUTH", error_msg, "POST /auth/register", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Registration failed. Please try again.", 500)
 
 
 @auth_router.post("/verify-email", response_model=None)
@@ -158,7 +158,7 @@ async def verify_email(request: EmailVerificationRequest):
     except Exception as e:
         error_msg = f"Email verification error: {str(e)}"
         logger("AUTH", error_msg, "POST /auth/verify-email", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Email verification error. Please try again.", 500)
 
 
 @auth_router.post("/resend-verification", response_model=None)
@@ -174,7 +174,7 @@ async def resend_verification(request: ResendVerificationRequest):
     except Exception as e:
         error_msg = f"Resend verification error: {str(e)}"
         logger("AUTH", error_msg, "POST /auth/resend-verification", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Resend verification error. Please try again.", 500)
 
 
 @auth_router.post("/login", response_model=None)
@@ -218,7 +218,7 @@ async def login(credentials: UserLogin, request: Request):
     except Exception as e:
         error_msg = f"Login error: {str(e)}"
         logger("AUTH", error_msg, "POST /auth/login", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Login error. Please try again.", 500)
 
 
 @auth_router.get("/me", response_model=None)
@@ -242,7 +242,7 @@ async def get_me(current_user: UserInDB = Depends(get_current_user)):
     except Exception as e:
         error_msg = f"Failed to retrieve user info: {str(e)}"
         logger("AUTH", error_msg, "GET /auth/me", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to retrieve user info. Please try again.", 500)
 
 @auth_router.post("/forgot-password", response_model=None)
 async def forgot_password(request: ForgotPasswordRequest):
@@ -257,7 +257,7 @@ async def forgot_password(request: ForgotPasswordRequest):
     except Exception as e:
         error_msg = f"Password reset request error: {str(e)}"
         logger("AUTH", error_msg, "POST /auth/forgot-password", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Password reset request error. Please try again.", 500)
 
 
 @auth_router.post("/reset-password", response_model=None)
@@ -273,7 +273,7 @@ async def reset_password_route(request: ResetPasswordRequest):
     except Exception as e:
         error_msg = f"Password reset error: {str(e)}"
         logger("AUTH", error_msg, "POST /auth/reset-password", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Password reset error. Please try again.", 500)
 
 
 @auth_router.post("/add-role", response_model=None)
@@ -292,7 +292,7 @@ async def add_second_role(
     except Exception as e:
         error_msg = f"Add role failed: {str(e)}"
         logger("AUTH", error_msg, "POST /auth/add-role", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Add role failed. Please try again.", 500)
 
 
 @auth_router.post("/refresh", response_model=None)
@@ -321,7 +321,7 @@ async def refresh_token_endpoint(payload: RefreshRequest):
     except Exception as e:
         error_msg = f"Token refresh error: {str(e)}"
         logger("AUTH", error_msg, "POST /auth/refresh", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Token refresh error. Please try again.", 500)
 
 
 @auth_router.post("/change-password", response_model=None)
@@ -344,7 +344,7 @@ async def change_password_endpoint(
     except Exception as e:
         error_msg = f"Change password error: {str(e)}"
         logger("AUTH", error_msg, "POST /auth/change-password", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Change password error. Please try again.", 500)
 
 
 @auth_router.post("/set-password", response_model=None)
@@ -363,7 +363,7 @@ async def set_password_endpoint(
     except Exception as e:
         error_msg = f"Set password error: {str(e)}"
         logger("AUTH", error_msg, "POST /auth/set-password", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Set password error. Please try again.", 500)
 
 
 @auth_router.post("/logout", response_model=None)
@@ -380,4 +380,4 @@ async def logout(payload: RefreshRequest):
     except Exception as e:
         error_msg = f"Logout error: {str(e)}"
         logger("AUTH", error_msg, "POST /auth/logout", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Logout error. Please try again.", 500)

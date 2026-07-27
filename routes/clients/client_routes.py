@@ -51,7 +51,7 @@ async def browse_all_clients(
     except Exception as e:
         error_msg = f"Failed to fetch clients for browse: {str(e)}"
         logger("CLIENT", error_msg, "GET /clients/browse/all", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch clients for browse. Please try again.", 500)
 
 
 # dev/admin only - not called by the Flutter app
@@ -66,7 +66,7 @@ async def get_all_clients(limit: Optional[int] = None, current_user: UserInDB = 
     except Exception as e:
         error_msg = f"Failed to fetch clients: {str(e)}"
         logger("CLIENT", error_msg, "GET /clients", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch clients. Please try again.", 500)
 
 
 @client_router.get("/search", response_model=None)
@@ -82,7 +82,7 @@ async def search_clients(
     except Exception as e:
         error_msg = f"Failed to search clients with term '{name}': {str(e)}"
         logger("CLIENT", error_msg, "GET /clients/search", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to search clients. Please try again.", 500)
 
 
 @client_router.get("/{client_id}/reliability")
@@ -103,7 +103,7 @@ async def get_client_reliability(client_id: str, current_user: UserInDB = Depend
     except Exception as e:
         error_msg = f"Failed to fetch reliability for client {client_id}: {str(e)}"
         logger("CLIENT", error_msg, "GET /clients/{client_id}/reliability", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch reliability for client. Please try again.", 500)
 
 
 @client_router.get("/{identifier}", response_model=None)
@@ -121,7 +121,7 @@ async def get_client(identifier: str, current_user: UserInDB = Depends(get_curre
     except Exception as e:
         error_msg = f"Failed to fetch client {identifier}: {str(e)}"
         logger("CLIENT", error_msg, "GET /clients/{identifier}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch client. Please try again.", 500)
 
 # dev/admin only - not called by the Flutter app
 @client_router.post("", response_model=None, status_code=201)
@@ -173,7 +173,7 @@ async def create_client(
     except Exception as e:
         error_msg = f"Failed to create client: {str(e)}"
         logger("CLIENT", error_msg, "POST /clients", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to create client. Please try again.", 500)
 
 
 @client_router.put("/{identifier}", response_model=None)
@@ -223,7 +223,7 @@ async def update_client(
     except Exception as e:
         error_msg = f"Failed to update client {identifier}: {str(e)}"
         logger("CLIENT", error_msg, "PUT /clients/{identifier}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to update client. Please try again.", 500)
 
 
 @client_router.delete("/{identifier}", status_code=200)
@@ -247,7 +247,7 @@ async def delete_client(identifier: str, current_user: UserInDB = Depends(get_cl
     except Exception as e:
         error_msg = f"Failed to delete client {identifier}: {str(e)}"
         logger("CLIENT", error_msg, "DELETE /clients/{identifier}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to delete client. Please try again.", 500)
 
 
 @client_router.post("/{client_id}/profile-picture", response_model=None)
@@ -290,7 +290,7 @@ async def upload_client_profile_picture_endpoint(
     except Exception as e:
         error_msg = f"Failed to upload profile picture for client {client_id}: {str(e)}"
         logger("CLIENT", error_msg, f"POST /clients/{client_id}/profile-picture", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to upload profile picture for client. Please try again.", 500)
 
 
 @client_router.delete("/{client_id}/profile-picture", status_code=200)
@@ -330,4 +330,4 @@ async def delete_client_profile_picture(
     except Exception as e:
         error_msg = f"Failed to delete profile picture for client {client_id}: {str(e)}"
         logger("CLIENT", error_msg, f"DELETE /clients/{client_id}/profile-picture", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to delete profile picture for client. Please try again.", 500)

@@ -14,6 +14,12 @@ reportlab
 minio
 numpy
 joblib
+# Pinned to the version the review_ml model artifacts were trained and pickled
+# with. It arrives transitively via sentence-transformers, which had been pulling
+# 1.8.0 - loading the .pkl files then emitted InconsistentVersionWarning, which
+# warns of silently invalid results, on every prediction. Retrain the artifacts in
+# ai_related/review_analysis/review_ml/model_artifacts/ before changing this.
+scikit-learn==1.5.2
 nltk
 httpx
 groq

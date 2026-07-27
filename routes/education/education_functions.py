@@ -23,6 +23,7 @@ def convert_uuids_to_str(data: Dict) -> Dict:
 class EducationFunctions:
     """Handle all education-related database operations."""
 
+    # dev function - no callers.
     @staticmethod
     def get_all_educations(limit: Optional[int] = None) -> List[Dict]:
         """Fetch all educations."""

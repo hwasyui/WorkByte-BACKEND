@@ -30,7 +30,7 @@ async def get_all_job_role_skills(limit: Optional[int] = None, current_user: Use
     except Exception as e:
         error_msg = f"Failed to fetch job role skills: {str(e)}"
         logger("JOB_ROLE_SKILL", error_msg, "GET /job-role-skills", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch job role skills. Please try again.", 500)
 
 
 @job_role_skill_router.get("/{job_role_skill_id}", response_model=None)
@@ -53,7 +53,7 @@ async def get_job_role_skill(job_role_skill_id: str, current_user: UserInDB = De
     except Exception as e:
         error_msg = f"Failed to fetch job role skill {job_role_skill_id}: {str(e)}"
         logger("JOB_ROLE_SKILL", error_msg, "GET /job-role-skills/{job_role_skill_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch job role skill. Please try again.", 500)
 
 
 @job_role_skill_router.get("/job-role/{job_role_id}", response_model=None)
@@ -67,7 +67,7 @@ async def get_job_role_skills_by_job_role(job_role_id: str, current_user: UserIn
     except Exception as e:
         error_msg = f"Failed to fetch skills for job role {job_role_id}: {str(e)}"
         logger("JOB_ROLE_SKILL", error_msg, "GET /job-role-skills/job-role/{job_role_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch skills for job role. Please try again.", 500)
 
 @job_role_skill_router.post("", response_model=None, status_code=201)
 async def create_job_role_skill(job_role_skill: JobRoleSkillCreate, current_user: UserInDB = Depends(get_current_user)):
@@ -98,7 +98,7 @@ async def create_job_role_skill(job_role_skill: JobRoleSkillCreate, current_user
     except Exception as e:
         error_msg = f"Failed to create job role skill: {str(e)}"
         logger("JOB_ROLE_SKILL", error_msg, "POST /job-role-skills", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to create job role skill. Please try again.", 500)
 
 
 @job_role_skill_router.put("/{job_role_skill_id}", response_model=None)
@@ -126,7 +126,7 @@ async def update_job_role_skill(job_role_skill_id: str, job_role_skill_update: J
     except Exception as e:
         error_msg = f"Failed to update job role skill {job_role_skill_id}: {str(e)}"
         logger("JOB_ROLE_SKILL", error_msg, "PUT /job-role-skills/{job_role_skill_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to update job role skill. Please try again.", 500)
 
 
 @job_role_skill_router.delete("/{job_role_skill_id}", status_code=200)
@@ -153,4 +153,4 @@ async def delete_job_role_skill(job_role_skill_id: str, current_user: UserInDB =
     except Exception as e:
         error_msg = f"Failed to delete job role skill {job_role_skill_id}: {str(e)}"
         logger("JOB_ROLE_SKILL", error_msg, "DELETE /job-role-skills/{job_role_skill_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to delete job role skill. Please try again.", 500)

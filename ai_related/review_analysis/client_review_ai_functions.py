@@ -9,8 +9,18 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 
 from functions.db_manager import get_db
 from functions.logger import logger
+from functions.profile_ids import user_id_for_client
 from routes.dm.dm_functions import DMFunctions
-from ai_related.review_analysis.review_ai_functions import call_llm, MIN_REVIEWS_FOR_SUMMARY
+from ai_related.review_analysis.review_ai_functions import (
+    ANALYSIS_UNAVAILABLE_REASON,
+    call_llm,
+    MIN_REVIEWS_FOR_SUMMARY,
+    _fmt_metric,
+    _validate_generated_question,
+    compute_repeat_weight,
+    compute_value_weight,
+    shrink_toward_prior,
+)
 
 # Client reviews get the same LLM analysis pass as freelancer reviews
 # (analyze_client_review_full below), just with a prompt framed around what's
@@ -34,6 +44,78 @@ def get_client_targeted_question() -> str:
     return random.choice(_CLIENT_REVIEW_QUESTIONS)
 
 
+async def generate_client_targeted_question(
+    job_title: str,
+    role_title: str,
+    job_description: str,
+    contract_title: str,
+    role_skills: List[str],
+    revision_count: int,
+) -> str:
+    """Project-specific question for the freelancer about the client they worked
+    for - counterpart to generate_targeted_question on the freelancer side, and
+    the same reasoning: a question grounded in this project is hard to answer
+    convincingly without having lived it, which is what makes the answer usable
+    as an authenticity signal.
+
+    Framed around what a freelancer can actually observe about a client -
+    requirement clarity, scope stability, responsiveness - rather than delivery
+    quality, which is the other side's concern. Falls back to the rotating
+    _CLIENT_REVIEW_QUESTIONS list.
+    """
+    try:
+        system = (
+            "You write a single neutral review question for a freelancing platform. "
+            "Return valid JSON only, no markdown fences or commentary."
+        )
+
+        skills_line = ", ".join(role_skills[:12]) if role_skills else "not specified"
+
+        user = (
+            "A freelancer is about to review the CLIENT they worked for on this "
+            "completed project.\n\n"
+            f"Job title: {job_title}\n"
+            f"Contract title: {contract_title}\n"
+            f"Role the freelancer filled: {role_title}\n"
+            f"Required skills: {skills_line}\n"
+            f"Revision rounds requested: {revision_count}\n"
+            f"Job description as the client wrote it:\n{(job_description or '')[:1500]}\n\n"
+            "Write ONE question for the freelancer about what this client was like "
+            "to work with on this project.\n"
+            "Rules:\n"
+            "- Focus on the CLIENT's conduct: how clearly they specified requirements, "
+            "whether scope stayed stable, how they handled feedback or revisions, how "
+            "reachable they were. Do NOT ask about the freelancer's own work.\n"
+            "- Reference a concrete aspect of THIS project (a named deliverable, "
+            "technology, constraint, or requirement above).\n"
+            "- Stay strictly neutral: do NOT presuppose the client was good or bad, "
+            "and do not use evaluative adjectives.\n"
+            "- Open-ended. Must NOT be answerable with yes or no. Start it with a word "
+            "like How, What, Which, or Where.\n"
+            "- One sentence, under 200 characters, ending in a question mark.\n"
+            '- Address the freelancer as "you".\n'
+            'Return exactly: {"question": "..."}'
+        )
+
+        result = await call_llm(system, user, json_mode=True)
+        validated = _validate_generated_question(
+            result.get("question") if isinstance(result, dict) else None
+        )
+        if validated:
+            logger("CLIENT_REVIEW_AI", "Generated targeted client question", level="INFO")
+            return validated
+
+        logger(
+            "CLIENT_REVIEW_AI",
+            "Generated client question rejected by validation, using static list",
+            level="WARNING",
+        )
+    except Exception as e:
+        logger("CLIENT_REVIEW_AI", f"Client question generation failed, using static list: {str(e)}", level="WARNING")
+
+    return get_client_targeted_question()
+
+
 async def analyze_client_review_full(
     overall_comment: str,
     freelancer_answer: str,
@@ -42,6 +124,7 @@ async def analyze_client_review_full(
     performance_score_summary: Dict,
     message_thread: str,
     communication_star_rating: Optional[float] = None,  # raw 1-5 from client_review_ratings, shown as context only
+    ai_question: str = "",
 ) -> Dict:
     """Client-side counterpart to analyze_review_full (review_ai_functions.py).
 
@@ -68,6 +151,14 @@ async def analyze_client_review_full(
         "is_flagged_coerced": "boolean, true if review appears pressured or coerced",
         "flag_reasons": "list of strings describing specific red flags, empty list if none",
         "sentiment_mismatch": "boolean, true if the review text's tone contradicts the star rating (e.g. negative text with 5 stars)",
+        "answer_groundedness": (
+            "float between 0.0 and 1.0. The question asked was generated from this specific "
+            "project. Judge ONLY whether the answer actually engages with it using concrete, "
+            "checkable specifics someone who lived this project would know. 1.0 = specific and "
+            "clearly grounded in this project; 0.5 = on topic but generic; 0.0 = evasive, "
+            "contradictory, or could have been written about any project without seeing this one. "
+            "Judge specificity, NOT whether the answer is positive or negative."
+        ),
     }
 
     comm_star_line = (
@@ -76,17 +167,31 @@ async def analyze_client_review_full(
         else ""
     )
 
+    # The question is project-generated, so groundedness can only be judged if the
+    # model is told what was actually asked (see the freelancer-side note).
+    qa_block = (
+        f"Project-specific question the freelancer was asked:\n{ai_question}\n"
+        f"Their answer:\n{freelancer_answer}\n\n"
+        if ai_question
+        else f"Freelancer's answer to a follow-up question:\n{freelancer_answer}\n\n"
+    )
+
     user = (
-        f"Review text:\n{overall_comment}\n{freelancer_answer}\n\n"
+        f"Review text:\n{overall_comment}\n\n"
+        f"{qa_block}"
         f"Star rating given: {avg_star_rating:.1f} out of 5\n"
         f"Client name: {client_name}\n\n"
-        "Objective signals about this client (0-1 scale):\n"
-        f"- Responsiveness: {performance_score_summary.get('responsiveness', 'N/A')}\n"
-        f"- Dispute fairness (1 - dispute rate): {performance_score_summary.get('dispute_fairness', 'N/A')}\n"
+        "Objective signals about this client (0-1 scale). 'not recorded' means the "
+        "platform has no measurement for it - that is missing data, NOT evidence "
+        "against the review, and must not be treated as contradicting anything the "
+        "reviewer says:\n"
+        f"- Responsiveness: {_fmt_metric(performance_score_summary.get('responsiveness'))}\n"
+        f"- Dispute fairness (1 - dispute rate): {_fmt_metric(performance_score_summary.get('dispute_fairness'))}\n"
         f"{comm_star_line}"
         "\nMessage thread from the project (for context only):\n"
         f"{message_thread[:3000]}\n\n"
-        "Assess the review for authenticity, coercion, and sentiment/rating mismatch. "
+        "Assess the review for authenticity, coercion, sentiment/rating mismatch, and how "
+        "well the answer is grounded in this specific project. "
         "Base your analysis entirely on the data above, do not invent or assume anything.\n"
         "Return exactly one JSON object matching this schema:\n"
         f"{json.dumps(schema_description, ensure_ascii=False, indent=2)}"
@@ -95,39 +200,55 @@ async def analyze_client_review_full(
     try:
         result = await call_llm(system, user, json_mode=True)
 
+        groundedness = result.get("answer_groundedness")
         return {
             "sentiment_mismatch":  bool(result.get("sentiment_mismatch", False)),
             "authenticity_score":  float(result.get("authenticity_score", 1.0)),
             "is_flagged_fake":     bool(result.get("is_flagged_fake", False)),
             "is_flagged_coerced":  bool(result.get("is_flagged_coerced", False)),
             "flag_reasons":        result.get("flag_reasons", []),
+            "answer_groundedness": max(0.0, min(1.0, float(groundedness))) if groundedness is not None else None,
+            "analysis_unavailable": False,
         }
 
     except Exception as e:
-        logger("CLIENT_REVIEW_AI", f"Client review analysis failed: {str(e)}", level="ERROR")
+        # Fail CLOSED - see the symmetric note in analyze_review_full.
+        logger("CLIENT_REVIEW_AI", f"Client review analysis failed, failing closed: {str(e)}", level="ERROR")
         return {
             "sentiment_mismatch": False,
-            "authenticity_score": 1.0,
+            "authenticity_score": 0.0,
             "is_flagged_fake":    False,
             "is_flagged_coerced": False,
-            "flag_reasons":       [],
+            "flag_reasons":       [ANALYSIS_UNAVAILABLE_REASON],
+            "answer_groundedness": None,
+            "analysis_unavailable": True,
         }
 
 
-def compute_client_responsiveness_score(client_user_id: str) -> float:
+def compute_client_responsiveness_score(client_id: str) -> float:
     """
     Symmetric counterpart to compute_responsiveness_score (freelancer side),
     aggregated live across ALL of this client's contracts rather than a
     per-contract snapshot table - avoids the same "single contract dominates
     the aggregate" bug fixed on the freelancer side (see calculate_trust_score).
+
+    Previously took a users.user_id and filtered contract.client_id with it.
+    contract.client_id is a client.client_id, so the filter never matched and
+    this silently returned its 0.8 fallback for every client. It now takes the
+    client profile id the review tables key on, and resolves the user id only
+    where it is genuinely needed: dm_message.sender_id.
     """
     try:
         db = get_db()
         contracts = db.fetch_data(
             "contract",
-            conditions=[("client_id", "=", client_user_id)],
+            conditions=[("client_id", "=", client_id)],
         )
         if not contracts:
+            return 0.8
+
+        client_user_id = user_id_for_client(client_id)
+        if not client_user_id:
             return 0.8
 
         all_gaps = []
@@ -157,7 +278,7 @@ def compute_client_responsiveness_score(client_user_id: str) -> float:
         return 0.8
 
 
-def compute_client_dispute_rate_score(client_user_id: str) -> float:
+def compute_client_dispute_rate_score(client_id: str) -> float:
     """
     1 - (disputed contracts / total contracts). Measures how often working
     with this client escalated to a dispute - not who was at fault, since
@@ -165,13 +286,21 @@ def compute_client_dispute_rate_score(client_user_id: str) -> float:
     blame to either party. Dispute history lives as DM system-events
     (event_type='dispute_raised'), not a dedicated contract column - see
     ContractFunctions.raise_dispute.
+
+    Had two independent faults before: it filtered contract.client_id by a
+    users.user_id (never matched), and dm_message.metadata is TEXT holding a
+    JSON string, so the bare `->>` raised "operator does not exist: text ->>
+    unknown" and the except below turned every client's dispute-fairness score
+    into a constant 1.0. The cast is explicit rather than relying on the column
+    type, since metadata is written as json.dumps(...) by
+    DMFunctions.send_system_event.
     """
     try:
         db = get_db()
         rows = db.execute_query(
             """
             SELECT COUNT(DISTINCT c.contract_id) AS total,
-                   COUNT(DISTINCT CASE WHEN dm.metadata->>'type' = 'dispute_raised'
+                   COUNT(DISTINCT CASE WHEN dm.metadata::jsonb->>'type' = 'dispute_raised'
                                         THEN c.contract_id END) AS disputed
             FROM contract c
             LEFT JOIN dm_thread dt ON dt.contract_id = c.contract_id
@@ -179,7 +308,7 @@ def compute_client_dispute_rate_score(client_user_id: str) -> float:
             WHERE c.client_id = :cid
               AND c.status IN ('completed', 'cancelled', 'disputed')
             """,
-            {"cid": client_user_id},
+            {"cid": client_id},
         )
         if not rows or not rows[0]["total"]:
             return 1.0
@@ -192,20 +321,25 @@ def compute_client_dispute_rate_score(client_user_id: str) -> float:
         return 1.0
 
 
-def calculate_weighted_client_review_avg(client_user_id: str) -> Tuple[float, int]:
+def calculate_weighted_client_review_avg(client_id: str) -> Tuple[float, int]:
     """Recency + authenticity confidence-weighted average, mirroring
     calculate_weighted_review_avg on the freelancer side."""
     try:
         db = get_db()
         rows = db.execute_query(
             """
-            SELECT crr.score, cr.published_at, cra.authenticity_score
+            SELECT crr.score, cr.published_at, cra.authenticity_score,
+                   c.agreed_budget, c.budget_currency,
+                   DENSE_RANK() OVER (
+                       PARTITION BY cr.reviewer_id ORDER BY cr.published_at, cr.id
+                   ) AS pair_occurrence
             FROM client_review_ratings crr
             JOIN client_reviews cr ON cr.id = crr.client_review_id
+            JOIN contract c ON c.contract_id = cr.contract_id
             LEFT JOIN client_review_ai_analysis cra ON cra.client_review_id = cr.id
             WHERE cr.client_id = :cid AND cr.status = 'published'
             """,
-            {"cid": client_user_id},
+            {"cid": client_id},
         )
         if not rows:
             return 0.0, 0
@@ -222,7 +356,12 @@ def calculate_weighted_client_review_avg(client_user_id: str) -> Tuple[float, in
             months_ago = max(0, (now - published_at).days / 30)
             recency_weight = 1 / (1 + months_ago)
             authenticity_weight = float(row["authenticity_score"]) if row["authenticity_score"] is not None else 1.0
-            weight = recency_weight * authenticity_weight
+            # Same anti-gaming weighting as the freelancer side: repeat reviews from
+            # the same counterparty decay, and contract size (normalized to USD)
+            # scales the weight.
+            value_weight = compute_value_weight(row["agreed_budget"], row["budget_currency"])
+            repeat_weight = compute_repeat_weight(row["pair_occurrence"])
+            weight = recency_weight * authenticity_weight * value_weight * repeat_weight
 
             weighted_sum += float(row["score"]) * weight
             weight_total += weight
@@ -235,7 +374,7 @@ def calculate_weighted_client_review_avg(client_user_id: str) -> Tuple[float, in
             FROM client_reviews cr
             WHERE cr.client_id = :cid AND cr.status = 'published'
             """,
-            {"cid": client_user_id},
+            {"cid": client_id},
         )
         total = int(count_rows[0]["cnt"]) if count_rows else 0
 
@@ -245,7 +384,7 @@ def calculate_weighted_client_review_avg(client_user_id: str) -> Tuple[float, in
         return 0.0, 0
 
 
-def calculate_client_ai_trust_components(client_user_id: str) -> Dict:
+def calculate_client_ai_trust_components(client_id: str) -> Dict:
     """Averages the review_ml model outputs across this client's published
     reviews - mirrors calculate_ai_trust_components on the freelancer side."""
     try:
@@ -257,7 +396,7 @@ def calculate_client_ai_trust_components(client_user_id: str) -> Dict:
             JOIN client_reviews cr ON cr.id = cra.client_review_id
             WHERE cr.client_id = :cid AND cr.status = 'published'
             """,
-            {"cid": client_user_id},
+            {"cid": client_id},
         )
         if not rows:
             return {"authenticity_confidence": 1.0, "consistency_score": 1.0, "communication_sentiment": None}
@@ -288,11 +427,13 @@ def calculate_client_ai_trust_components(client_user_id: str) -> Dict:
 
 def calculate_client_trust_score(
     weighted_review_avg: float,
-    responsiveness_score: float,
-    dispute_fairness_score: float,
+    responsiveness_score: Optional[float],
+    dispute_fairness_score: Optional[float],
     authenticity_confidence: float,
     consistency_score: float,
     communication_sentiment: Optional[float],
+    total_reviews: int = 0,
+    coerced_ratio: float = 0.0,
 ) -> float:
     """
     Client trust score - built entirely from what's actually observable on
@@ -305,24 +446,69 @@ def calculate_client_trust_score(
       10%  authenticity_confidence  - review_ml Model 1, averaged across their received reviews
       10%  consistency_score        - review_ml Model 2, averaged across their received reviews
        5%  communication_sentiment  - review_ml Model 3, averaged sentiment of received reviews
-    """
-    comm = communication_sentiment if communication_sentiment is not None else 0.5
+      -15  coerced_ratio            - proportional penalty, symmetric to the freelancer side
 
-    score  = (weighted_review_avg / 5.0) * 35
-    score += responsiveness_score       * 25
-    score += dispute_fairness_score     * 15
-    score += authenticity_confidence    * 10
-    score += consistency_score          * 10
-    score += comm                       * 5
+    Shrinkage and weight renormalization work exactly as on the freelancer side -
+    see calculate_trust_score. A client pressuring a freelancer into a favourable
+    review is as much a trust problem as the reverse, but the coercion flag was
+    previously computed, stored in client_review_ai_analysis.is_flagged_coerced,
+    and then never read by any score.
+    """
+    effective_avg = shrink_toward_prior(weighted_review_avg, total_reviews)
+
+    components = [
+        (35.0, effective_avg / 5.0),
+        (25.0, responsiveness_score),
+        (15.0, dispute_fairness_score),
+        (10.0, authenticity_confidence),
+        (10.0, consistency_score),
+        (5.0,  communication_sentiment),
+    ]
+
+    present = [(w, float(v)) for w, v in components if v is not None]
+    total_weight = sum(w for w, _ in present)
+    if total_weight <= 0:
+        return 0.0
+
+    score = 100.0 * sum(w * v for w, v in present) / total_weight
+    score -= min(15.0, coerced_ratio * 30)
 
     return round(min(100.0, max(0.0, score)), 2)
+
+
+def calculate_client_coerced_ratio(client_id: str) -> float:
+    """Share of this client's analysed reviews that were flagged as coerced.
+
+    Counts every review the pipeline analysed, not just published ones - a coerced
+    review is held back from publishing, so a published-only filter would make this
+    structurally zero. Same reasoning as the freelancer-side fix in
+    calculate_aggregate_performance.
+    """
+    try:
+        rows = get_db().execute_query(
+            """
+            SELECT cra.is_flagged_coerced
+            FROM client_review_ai_analysis cra
+            JOIN client_reviews cr ON cr.id = cra.client_review_id
+            WHERE cr.client_id = :cid
+              AND cr.status IN ('published', 'flagged', 'suppressed')
+            """,
+            {"cid": client_id},
+        )
+        if not rows:
+            return 0.0
+        coerced = sum(1 for r in rows if r["is_flagged_coerced"])
+        return round(coerced / len(rows), 3)
+    except Exception as e:
+        logger("CLIENT_REVIEW_AI", f"Error computing client coerced ratio: {str(e)}", level="ERROR")
+        return 0.0
 
 
 # Profile-level AI review summary (client side) - symmetric counterpart to
 # generate_freelancer_review_summary. Reuses the same MIN_REVIEWS_FOR_SUMMARY/
 # SUMMARY_REGEN_INTERVAL thresholds rather than duplicating the constants.
 
-def _fetch_published_client_review_texts(client_user_id: str) -> List[Dict]:
+def _fetch_published_client_review_texts(client_id: str) -> List[Dict]:
     db = get_db()
     return db.execute_query(
         """
@@ -332,12 +518,12 @@ def _fetch_published_client_review_texts(client_user_id: str) -> List[Dict]:
         WHERE cr.client_id = :cid AND cr.status = 'published'
         ORDER BY cr.published_at DESC
         """,
-        {"cid": client_user_id},
+        {"cid": client_id},
     )
 
 
 async def generate_client_review_summary(
-    client_user_id: str,
+    client_id: str,
     client_name: str,
 ) -> Optional[str]:
     """
@@ -354,7 +540,7 @@ async def generate_client_review_summary(
     already scores).
     """
     try:
-        review_rows = _fetch_published_client_review_texts(client_user_id)
+        review_rows = _fetch_published_client_review_texts(client_id)
         if len(review_rows) < MIN_REVIEWS_FOR_SUMMARY:
             return None
 
@@ -385,5 +571,5 @@ async def generate_client_review_summary(
         return summary.strip() if summary else None
 
     except Exception as e:
-        logger("CLIENT_REVIEW_AI", f"Review summary generation failed for {client_user_id}: {str(e)}", level="ERROR")
+        logger("CLIENT_REVIEW_AI", f"Review summary generation failed for {client_id}: {str(e)}", level="ERROR")
         return None

@@ -29,7 +29,7 @@ async def get_all_educations(limit: Optional[int] = None, current_user: UserInDB
     except Exception as e:
         error_msg = f"Failed to fetch educations: {str(e)}"
         logger("EDUCATION", error_msg, "GET /educations", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch educations. Please try again.", 500)
 
 
 @education_router.get("/{education_id}", response_model=None)
@@ -47,7 +47,7 @@ async def get_education(education_id: str, current_user: UserInDB = Depends(get_
     except Exception as e:
         error_msg = f"Failed to fetch education {education_id}: {str(e)}"
         logger("EDUCATION", error_msg, "GET /educations/{education_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch education. Please try again.", 500)
 
 
 @education_router.get("/freelancer/{freelancer_id}", response_model=None)
@@ -61,7 +61,7 @@ async def get_educations_by_freelancer(freelancer_id: str, current_user: UserInD
     except Exception as e:
         error_msg = f"Failed to fetch educations for freelancer {freelancer_id}: {str(e)}"
         logger("EDUCATION", error_msg, "GET /educations/freelancer/{freelancer_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch educations for freelancer. Please try again.", 500)
 
 
 @education_router.post("", response_model=None, status_code=201)
@@ -95,7 +95,7 @@ async def create_education(education: EducationCreate, current_user: UserInDB = 
     except Exception as e:
         error_msg = f"Failed to create education: {str(e)}"
         logger("EDUCATION", error_msg, "POST /educations", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to create education. Please try again.", 500)
 
 
 @education_router.put("/{education_id}", response_model=None)
@@ -121,7 +121,7 @@ async def update_education(education_id: str, education_update: EducationUpdate,
     except Exception as e:
         error_msg = f"Failed to update education {education_id}: {str(e)}"
         logger("EDUCATION", error_msg, "PUT /educations/{education_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to update education. Please try again.", 500)
 
 
 @education_router.delete("/{education_id}", status_code=200)
@@ -146,4 +146,4 @@ async def delete_education(education_id: str, current_user: UserInDB = Depends(g
     except Exception as e:
         error_msg = f"Failed to delete education {education_id}: {str(e)}"
         logger("EDUCATION", error_msg, "DELETE /educations/{education_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to delete education. Please try again.", 500)

@@ -22,7 +22,7 @@ def _assert_owns_job_file(current_user, job_file):
     """A job file inherits its owner from the job post it hangs off."""
     job_post = JobPostFunctions.get_job_post_by_id(str(job_file["job_post_id"]))
     if not job_post:
-        return ResponseSchema.error(f"Job post for file {job_file['job_file_id']} not found", 404)
+        return ResponseSchema.error("The job post this file belongs to no longer exists.", 404)
     assert_client_owns(current_user, job_post["client_id"])
     return None
 
@@ -38,7 +38,7 @@ async def get_all_job_files(limit: Optional[int] = None, current_user: UserInDB 
     except Exception as e:
         error_msg = f"Failed to fetch job files: {str(e)}"
         logger("JOB_FILE", error_msg, "GET /job-files", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch job files. Please try again.", 500)
 
 
 @job_file_router.get("/{job_file_id}", response_model=None)
@@ -56,7 +56,7 @@ async def get_job_file(job_file_id: str, current_user: UserInDB = Depends(get_cu
     except Exception as e:
         error_msg = f"Failed to fetch job file {job_file_id}: {str(e)}"
         logger("JOB_FILE", error_msg, "GET /job-files/{job_file_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch job file. Please try again.", 500)
 
 
 @job_file_router.get("/job-post/{job_post_id}", response_model=None)
@@ -70,7 +70,7 @@ async def get_job_files_by_job_post(job_post_id: str, current_user: UserInDB = D
     except Exception as e:
         error_msg = f"Failed to fetch files for job post {job_post_id}: {str(e)}"
         logger("JOB_FILE", error_msg, "GET /job-files/job-post/{job_post_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch files for job post. Please try again.", 500)
 
 
 @job_file_router.post("", response_model=None, status_code=201)
@@ -136,7 +136,7 @@ async def create_job_file(
     except Exception as e:
         error_msg = f"Failed to create job file: {str(e)}"
         logger("JOB_FILE", error_msg, "POST /job-files", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to create job file. Please try again.", 500)
 
 
 @job_file_router.put("/{job_file_id}", response_model=None)
@@ -164,7 +164,7 @@ async def update_job_file(job_file_id: str, job_file_update: JobFileUpdate, curr
     except Exception as e:
         error_msg = f"Failed to update job file {job_file_id}: {str(e)}"
         logger("JOB_FILE", error_msg, "PUT /job-files/{job_file_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to update job file. Please try again.", 500)
 
 
 @job_file_router.delete("/{job_file_id}", status_code=200)
@@ -191,4 +191,4 @@ async def delete_job_file(job_file_id: str, current_user: UserInDB = Depends(get
     except Exception as e:
         error_msg = f"Failed to delete job file {job_file_id}: {str(e)}"
         logger("JOB_FILE", error_msg, "DELETE /job-files/{job_file_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to delete job file. Please try again.", 500)

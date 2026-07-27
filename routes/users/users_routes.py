@@ -28,7 +28,7 @@ async def get_all_users(limit: Optional[int] = None, offset: int = 0, current_us
     except Exception as e:
         error_msg = f"Failed to fetch users: {str(e)}"
         logger("USER", error_msg, "GET /users", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch users. Please try again.", 500)
 
 
 # dev/admin only - not called by the Flutter app
@@ -45,7 +45,7 @@ async def search_users(
     except Exception as e:
         error_msg = f"Failed to search users with term '{name}': {str(e)}"
         logger("USER", error_msg, "GET /users/search", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to search users. Please try again.", 500)
 
 
 # dev/admin only - not called by the Flutter app
@@ -67,7 +67,7 @@ async def get_user(user_id: str, current_user: UserInDB = Depends(get_current_us
     except Exception as e:
         error_msg = f"Failed to fetch user {user_id}: {str(e)}"
         logger("USER", error_msg, "GET /users/{user_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch user. Please try again.", 500)
 
 
 # dev/admin only - the app signs people up through POST /auth/register, which sends the
@@ -98,7 +98,7 @@ async def create_user(user: UserCreate, current_user: UserInDB = Depends(get_adm
     except Exception as e:
         error_msg = f"Failed to create user: {str(e)}"
         logger("USER", error_msg, "POST /users", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to create user. Please try again.", 500)
 
 
 # dev/admin only - not called by the Flutter app
@@ -133,4 +133,4 @@ async def update_user(user_id: str, user_update: UserUpdate, current_user: UserI
     except Exception as e:
         error_msg = f"Failed to update user {user_id}: {str(e)}"
         logger("USER", error_msg, "PUT /users/{user_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to update user. Please try again.", 500)

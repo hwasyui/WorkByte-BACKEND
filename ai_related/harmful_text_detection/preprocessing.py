@@ -35,17 +35,20 @@ class TextPreprocessor:
 
         return text
 
+    # dev function - no callers.
     @staticmethod
     def normalize_whitespace(text: str) -> str:
         """Normalize whitespace."""
         return re.sub(r'\s+', ' ', text).strip()
 
+    # dev function - no callers.
     @staticmethod
     def remove_extra_punctuation(text: str) -> str:
         """Remove excessive punctuation repetition (e.g., '!!!!' → '!')."""
         return re.sub(r'([.!?])\1{2,}', r'\1', text)
 
 
+# dev function - no callers.
 def create_label_array(label_indices: List[int], num_labels: int = 6) -> np.ndarray:
     """
     Convert label indices to multi-hot encoded array.
@@ -64,6 +67,7 @@ def create_label_array(label_indices: List[int], num_labels: int = 6) -> np.ndar
     return array
 
 
+# dev function - no callers.
 def labels_to_indices(multi_hot_array: np.ndarray) -> List[int]:
     """
     Convert multi-hot encoded array back to label indices.

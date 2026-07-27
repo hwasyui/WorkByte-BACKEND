@@ -23,6 +23,7 @@ def convert_uuids_to_str(data: Dict) -> Dict:
 class FreelancerSkillFunctions:
     """Handle all freelancer skill-related database operations."""
 
+    # dev function - no callers.
     @staticmethod
     def get_all_freelancer_skills(limit: Optional[int] = None) -> List[Dict]:
         """Fetch all freelancer skills."""

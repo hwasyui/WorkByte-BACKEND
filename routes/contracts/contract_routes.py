@@ -41,15 +41,6 @@ from routes.notifications.notification_functions import NotificationFunctions
 from ai_related.job_engine.embedding_manager import mark_contract_dirty
 from routes.admin.admin_moderation import scan_harmful_text
 
-_CONTRACT_LABEL_NAMES = {
-    "toxic": "toxicity",
-    "toxicity": "toxicity",
-    "obscene": "obscenity",
-    "threat": "threats",
-    "insult": "insults",
-    "identity_hate": "identity-based hate speech",
-}
-
 
 def _reject_contract_short_text_if_harmful(*fields: Optional[str]) -> Optional[Dict]:
     """contract_title/role_title carry no context (1-4 words) - keyword only, same
@@ -62,10 +53,9 @@ def _reject_contract_short_text_if_harmful(*fields: Optional[str]) -> Optional[D
     if not harm_result["is_flagged"]:
         return None
     detected_labels = harm_result.get("detected_labels", [])
-    labels = [_CONTRACT_LABEL_NAMES.get(l, l) for l in detected_labels]
     logger("CONTRACT", f"Blocked contract save, labels={detected_labels}", level="WARNING")
     return {
-        "message": f"This contract couldn't be saved. It was flagged for {', '.join(labels) or 'a policy violation'}.",
+        "message": "This contract couldn't be saved. It was flagged by Harmful Text Detection.",
         "detected_labels": detected_labels,
     }
 
@@ -146,7 +136,7 @@ async def get_all_contracts(limit: Optional[int] = None, current_user: UserInDB 
         return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("CONTRACT", f"Failed to fetch contracts: {str(e)}", "GET /contracts", "ERROR")
-        return ResponseSchema.error(f"Failed to fetch contracts: {str(e)}", 500)
+        return ResponseSchema.error("Failed to fetch contracts. Please try again.", 500)
 
 
 # Specific sub-paths BEFORE /{contract_id} so they are not shadowed
@@ -165,7 +155,7 @@ async def get_contracts_by_freelancer(freelancer_id: str, current_user: UserInDB
         return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("CONTRACT", f"Failed to fetch contracts for freelancer {freelancer_id}: {str(e)}", "GET /contracts/freelancer/{freelancer_id}", "ERROR")
-        return ResponseSchema.error(f"Failed to fetch contracts for freelancer {freelancer_id}: {str(e)}", 500)
+        return ResponseSchema.error("Failed to fetch contracts for freelancer. Please try again.", 500)
 
 
 @contract_router.get("/client/{client_id}", response_model=None)
@@ -181,7 +171,7 @@ async def get_contracts_by_client(client_id: str, current_user: UserInDB = Depen
         return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("CONTRACT", f"Failed to fetch contracts for client {client_id}: {str(e)}", "GET /contracts/client/{client_id}", "ERROR")
-        return ResponseSchema.error(f"Failed to fetch contracts for client {client_id}: {str(e)}", 500)
+        return ResponseSchema.error("Failed to fetch contracts for client. Please try again.", 500)
 
 
 @contract_router.get("/{contract_id}/generation-data")
@@ -195,7 +185,7 @@ async def get_contract_generation_data(contract_id: str, current_user: UserInDB 
 
         context = ContractGenerationFunctions.build_generation_context(contract_id)
         if not context:
-            return ResponseSchema.error(f"Failed to build generation context for contract {contract_id}", 500)
+            return ResponseSchema.error("Couldn't prepare this contract. Please try again.", 500)
 
         logger("CONTRACT", f"Retrieved generation data for contract {contract_id}", "GET /contracts/{contract_id}/generation-data", "INFO")
         return ResponseSchema.success(context, 200)
@@ -204,7 +194,7 @@ async def get_contract_generation_data(contract_id: str, current_user: UserInDB 
         return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("CONTRACT", f"Failed to fetch generation data for contract {contract_id}: {str(e)}", "GET /contracts/{contract_id}/generation-data", "ERROR")
-        return ResponseSchema.error(f"Failed to fetch generation data for contract {contract_id}: {str(e)}", 500)
+        return ResponseSchema.error("Failed to fetch generation data for contract. Please try again.", 500)
 
 
 @contract_router.get("/{contract_id}/pdf-url")
@@ -228,7 +218,7 @@ async def get_contract_pdf_url(contract_id: str, current_user: UserInDB = Depend
         return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("CONTRACT", f"Failed to create PDF URL for contract {contract_id}: {str(e)}", "GET /contracts/{contract_id}/pdf-url", "ERROR")
-        return ResponseSchema.error(f"Failed to create PDF URL for contract {contract_id}: {str(e)}", 500)
+        return ResponseSchema.error("Failed to create PDF URL for contract. Please try again.", 500)
 
 
 # dev/admin only - not called by the Flutter app
@@ -257,7 +247,7 @@ async def download_contract_pdf(contract_id: str, current_user: UserInDB = Depen
         return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("CONTRACT", f"Failed to download PDF for contract {contract_id}: {str(e)}", "GET /contracts/{contract_id}/pdf-download", "ERROR")
-        return ResponseSchema.error(f"Failed to download PDF for contract {contract_id}: {str(e)}", 500)
+        return ResponseSchema.error("Failed to download PDF for contract. Please try again.", 500)
 
 
 # Generic /{contract_id} GET, must come AFTER all literal sub-paths
@@ -279,7 +269,7 @@ async def get_contract(contract_id: str, current_user: UserInDB = Depends(get_cu
         return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("CONTRACT", f"Failed to fetch contract {contract_id}: {str(e)}", "GET /contracts/{contract_id}", "ERROR")
-        return ResponseSchema.error(f"Failed to fetch contract {contract_id}: {str(e)}", 500)
+        return ResponseSchema.error("Failed to fetch contract. Please try again.", 500)
 
 
 # Mutations
@@ -326,7 +316,7 @@ async def create_contract(contract: ContractCreate, current_user: UserInDB = Dep
 
         rejection = _reject_contract_short_text_if_harmful(contract.contract_title, contract.role_title)
         if rejection:
-            return ResponseSchema.error(rejection["message"], 400, extra={"detected_labels": rejection["detected_labels"]})
+            return ResponseSchema.error(rejection["message"], 400, extra={"blocked_by": "harmful_text", "detected_labels": rejection["detected_labels"]})
         duration_error = _reject_contract_duration_if_invalid(contract.agreed_duration)
         if duration_error:
             return ResponseSchema.error(duration_error["message"], 400)
@@ -399,13 +389,15 @@ async def create_contract(contract: ContractCreate, current_user: UserInDB = Dep
         return ResponseSchema.success(new_contract, 201)
     except ValueError as e:
         logger("CONTRACT", f"Validation error: {str(e)}", "POST /contracts", "WARNING")
-        return ResponseSchema.error(f"Validation error: {str(e)}", 400)
+        # str(e) on purpose: ValueError here is a hand-written sentence from
+        # contract_functions.py, not a system exception. "Try again" would be wrong advice.
+        return ResponseSchema.error(str(e), 400)
     except HTTPException as e:
         logger("CONTRACT", f"HTTP {e.status_code}: {e.detail}", "POST /contracts", "WARNING")
         return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("CONTRACT", f"Failed to create contract: {str(e)}", "POST /contracts", "ERROR")
-        return ResponseSchema.error(f"Failed to create contract: {str(e)}", 500)
+        return ResponseSchema.error("Failed to create contract. Please try again.", 500)
 
 
 @contract_router.post("/{contract_id}/generate", response_model=None)
@@ -418,9 +410,9 @@ async def generate_contract_pdf(contract_id: str, generation_data: ContractGener
         assert_current_user_is_contract_party(current_user, contract)
 
         if generation_data.termination_notice not in {7, 14, 30}:
-            return ResponseSchema.error("termination_notice must be 7, 14, or 30 days", 400)
+            return ResponseSchema.error("Termination notice must be 7, 14, or 30 days.", 400)
         if generation_data.dispute_resolution not in {"negotiation", "mediation", "arbitration"}:
-            return ResponseSchema.error("Invalid dispute_resolution value", 400)
+            return ResponseSchema.error("Choose a dispute resolution method: negotiation, mediation, or arbitration.", 400)
 
         # These end up baked into the generated PDF and persisted in contract_terms - a
         # flagged clause here would ship inside an actual legal-document artifact shared
@@ -430,7 +422,7 @@ async def generate_contract_pdf(contract_id: str, generation_data: ContractGener
         # as contract_title/role_title; added 2026-07-11, missed by the original fix.
         rejection = _reject_contract_short_text_if_harmful(generation_data.governing_law)
         if rejection:
-            return ResponseSchema.error(rejection["message"], 400, extra={"detected_labels": rejection["detected_labels"]})
+            return ResponseSchema.error(rejection["message"], 400, extra={"blocked_by": "harmful_text", "detected_labels": rejection["detected_labels"]})
         # agreed_duration is re-editable at generate time (same TextField+dropdown the
         # create/update endpoints validate) but this endpoint never checked it at all
         # until now - found while replacing the harmful-text scan with format validation.
@@ -543,13 +535,14 @@ async def generate_contract_pdf(contract_id: str, generation_data: ContractGener
         return ResponseSchema.success(refreshed, 200)
     except ValueError as e:
         logger("CONTRACT", f"Validation error: {str(e)}", "POST /contracts/{contract_id}/generate", "WARNING")
-        return ResponseSchema.error(f"Validation error: {str(e)}", 400)
+        # str(e) on purpose - same reason as POST /contracts above.
+        return ResponseSchema.error(str(e), 400)
     except HTTPException as e:
         logger("CONTRACT", f"HTTP {e.status_code}: {e.detail}", "POST /contracts/{contract_id}/generate", "WARNING")
         return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("CONTRACT", f"Failed to generate contract PDF for {contract_id}: {str(e)}", "POST /contracts/{contract_id}/generate", "ERROR")
-        return ResponseSchema.error(f"Failed to generate contract PDF for {contract_id}: {str(e)}", 500)
+        return ResponseSchema.error("Failed to generate contract PDF. Please try again.", 500)
 
 
 @contract_router.put("/{contract_id}", response_model=None)
@@ -582,7 +575,7 @@ async def update_contract(contract_id: str, contract_update: ContractUpdate, bac
             _role_title = update_data.get("role_title", existing_contract.get("role_title", ""))
             rejection = _reject_contract_short_text_if_harmful(_contract_title, _role_title)
             if rejection:
-                return ResponseSchema.error(rejection["message"], 400, extra={"detected_labels": rejection["detected_labels"]})
+                return ResponseSchema.error(rejection["message"], 400, extra={"blocked_by": "harmful_text", "detected_labels": rejection["detected_labels"]})
 
         if "agreed_duration" in update_data:
             duration_error = _reject_contract_duration_if_invalid(update_data.get("agreed_duration"))
@@ -666,7 +659,7 @@ async def update_contract(contract_id: str, contract_update: ContractUpdate, bac
         return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("CONTRACT", f"Failed to update contract {contract_id}: {str(e)}", "PUT /contracts/{contract_id}", "ERROR")
-        return ResponseSchema.error(f"Failed to update contract {contract_id}: {str(e)}", 500)
+        return ResponseSchema.error("Failed to update contract. Please try again.", 500)
 
 
 # Dispute endpoint (either party can raise; admin resolves via /admin/contracts/{id}/arbitrate)
@@ -744,7 +737,7 @@ async def raise_dispute(
         return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("CONTRACT", f"Failed to raise dispute for {contract_id}: {str(e)}", "PUT /contracts/{contract_id}/dispute", "ERROR")
-        return ResponseSchema.error(f"Failed to raise dispute: {str(e)}", 500)
+        return ResponseSchema.error("Failed to raise dispute. Please try again.", 500)
 
 
 # Cancel endpoint
@@ -816,7 +809,7 @@ async def cancel_contract(
         return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("CONTRACT", f"Failed to cancel contract {contract_id}: {str(e)}", "PUT /contracts/{contract_id}/cancel", "ERROR")
-        return ResponseSchema.error(f"Failed to cancel contract {contract_id}: {str(e)}", 500)
+        return ResponseSchema.error("Failed to cancel contract. Please try again.", 500)
 
 
 # DELETE
@@ -840,4 +833,4 @@ async def delete_contract(contract_id: str, current_user: UserInDB = Depends(get
         return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("CONTRACT", f"Failed to delete contract {contract_id}: {str(e)}", "DELETE /contracts/{contract_id}", "ERROR")
-        return ResponseSchema.error(f"Failed to delete contract {contract_id}: {str(e)}", 500)
+        return ResponseSchema.error("Failed to delete contract. Please try again.", 500)

@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 from datetime import datetime
@@ -53,13 +54,13 @@ class ReviewFunctions:
             raise
 
     @staticmethod
-    def get_reviews_by_freelancer_id(freelancer_user_id: str) -> List[Dict]:
+    def get_reviews_by_freelancer_id(freelancer_id: str) -> List[Dict]:
         try:
             db = get_db()
             rows = db.fetch_data(
                 table_name="reviews",
                 conditions=[
-                    ("freelancer_id", "=", freelancer_user_id),
+                    ("freelancer_id", "=", freelancer_id),
                     ("status", "=", "published"),
                 ],
                 order_by="created_at DESC",
@@ -103,7 +104,7 @@ class ReviewFunctions:
 
             logger(
                 "REVIEW_FUNCTIONS",
-                f"Fetched {len(reviews)} detailed reviews for freelancer {freelancer_user_id}",
+                f"Fetched {len(reviews)} detailed reviews for freelancer {freelancer_id}",
                 level="INFO",
             )
             return reviews
@@ -124,6 +125,10 @@ class ReviewFunctions:
         """
         Called right after contract is marked complete.
         Creates the review shell with status=pending and the AI-inferred category.
+
+        reviewer_id is a client.client_id (the client party of the contract) and
+        freelancer_id a freelancer.freelancer_id - the review tables key on
+        profile IDs, like the rest of the schema.
         """
         try:
             db = get_db()
@@ -246,44 +251,58 @@ class ReviewFunctions:
         try:
             db = get_db()
 
-            for rating in ratings:
-                db.insert_data(
-                    table_name="review_ratings",
-                    data={
-                        "id": str(uuid.uuid4()),
-                        "review_id": review_id,
-                        "category": rating["category"],
-                        "score": rating["score"],
-                    },
+            # Deduplicate before inserting. confirmed_skill_tags comes from the
+            # contract's job_role_skill rows and extra_skill_tags is free text the
+            # client typed, so the two lists overlap whenever a client re-types a
+            # skill the role already lists (or types the same tag twice), colliding
+            # with uq_review_skill_tag (review_id, skill_tag). Matching is
+            # case-insensitive because these are free text; the first spelling seen
+            # wins, and an AI-suggested tag beats a typed duplicate.
+            seen = set()
+            tags_to_insert = []
+            for tag, is_suggested in (
+                [(t, True) for t in confirmed_skill_tags] + [(t, False) for t in extra_skill_tags]
+            ):
+                normalized = (tag or "").strip()
+                if not normalized or normalized.casefold() in seen:
+                    continue
+                seen.add(normalized.casefold())
+                tags_to_insert.append((normalized, is_suggested))
+
+            # One transaction for the whole submission. Previously each statement
+            # committed on its own, so a failure partway - the tag collision above
+            # being the one that actually happened - left ratings and written content
+            # committed with no tags. The retry then hit uq_review_rating_category and
+            # the review was stuck in pending permanently. All or nothing now.
+            with db.transaction() as tx:
+                for rating in ratings:
+                    tx.insert_data(
+                        table_name="review_ratings",
+                        data={
+                            "id": str(uuid.uuid4()),
+                            "review_id": review_id,
+                            "category": rating["category"],
+                            "score": rating["score"],
+                        },
+                    )
+
+                tx.execute_query(
+                    """UPDATE review_written_content
+                       SET client_answer = :answer, overall_comment = :comment
+                       WHERE review_id = :rid""",
+                    {"answer": client_answer, "comment": overall_comment, "rid": review_id},
                 )
 
-            db.execute_query(
-                """UPDATE review_written_content
-                   SET client_answer = :answer, overall_comment = :comment
-                   WHERE review_id = :rid""",
-                {"answer": client_answer, "comment": overall_comment, "rid": review_id},
-            )
-
-            for tag in confirmed_skill_tags:
-                db.insert_data(
-                    table_name="review_skill_tags",
-                    data={
-                        "id": str(uuid.uuid4()),
-                        "review_id": review_id,
-                        "skill_tag": tag,
-                        "is_ai_suggested": True,
-                    },
-                )
-            for tag in extra_skill_tags:
-                db.insert_data(
-                    table_name="review_skill_tags",
-                    data={
-                        "id": str(uuid.uuid4()),
-                        "review_id": review_id,
-                        "skill_tag": tag,
-                        "is_ai_suggested": False,
-                    },
-                )
+                for tag, is_suggested in tags_to_insert:
+                    tx.insert_data(
+                        table_name="review_skill_tags",
+                        data={
+                            "id": str(uuid.uuid4()),
+                            "review_id": review_id,
+                            "skill_tag": tag,
+                            "is_ai_suggested": is_suggested,
+                        },
+                    )
 
             logger("REVIEW_FUNCTIONS", f"Saved client review for {review_id}", level="INFO")
         except Exception as e:
@@ -307,9 +326,35 @@ class ReviewFunctions:
     ) -> None:
         try:
             db = get_db()
-            db.insert_data(
-                table_name="review_ai_analysis",
-                data={
+            # Upsert, not insert: review_ai_analysis has a UNIQUE on review_id, and
+            # the reconcile sweep re-runs the pipeline for reviews whose analysis was
+            # interrupted or unavailable. A plain insert made those retries fail on
+            # the constraint, so the very reviews the sweep exists to rescue were the
+            # ones it could not rescue.
+            db.execute_query(
+                """
+                INSERT INTO review_ai_analysis (
+                    id, review_id, sentiment_score, sentiment_label, sentiment_mismatch,
+                    mismatch_severity, authenticity_score, is_flagged_fake,
+                    is_flagged_coerced, flag_reasons, overall_pass, analyzed_at
+                ) VALUES (
+                    :id, :review_id, :sentiment_score, :sentiment_label, :sentiment_mismatch,
+                    :mismatch_severity, :authenticity_score, :is_flagged_fake,
+                    :is_flagged_coerced, CAST(:flag_reasons AS jsonb), :overall_pass, NOW()
+                )
+                ON CONFLICT (review_id) DO UPDATE SET
+                    sentiment_score    = EXCLUDED.sentiment_score,
+                    sentiment_label    = EXCLUDED.sentiment_label,
+                    sentiment_mismatch = EXCLUDED.sentiment_mismatch,
+                    mismatch_severity  = EXCLUDED.mismatch_severity,
+                    authenticity_score = EXCLUDED.authenticity_score,
+                    is_flagged_fake    = EXCLUDED.is_flagged_fake,
+                    is_flagged_coerced = EXCLUDED.is_flagged_coerced,
+                    flag_reasons       = EXCLUDED.flag_reasons,
+                    overall_pass       = EXCLUDED.overall_pass,
+                    analyzed_at        = NOW()
+                """,
+                {
                     "id": str(uuid.uuid4()),
                     "review_id": review_id,
                     "sentiment_score": sentiment_score,
@@ -319,7 +364,7 @@ class ReviewFunctions:
                     "authenticity_score": authenticity_score,
                     "is_flagged_fake": is_flagged_fake,
                     "is_flagged_coerced": is_flagged_coerced,
-                    "flag_reasons": flag_reasons,
+                    "flag_reasons": json.dumps(flag_reasons),
                     "overall_pass": overall_pass,
                 },
             )
@@ -364,6 +409,7 @@ class ReviewFunctions:
         freelancer_id: str,
         overall_score: float,
         weighted_review_avg: float,
+        effective_review_avg: Optional[float],
         display_star_avg: Optional[float],
         revision_rate_score: float,
         responsiveness_score: float,
@@ -387,6 +433,7 @@ class ReviewFunctions:
                 "freelancer_id":          freelancer_id,
                 "overall_score":          overall_score,
                 "weighted_review_avg":    weighted_review_avg,
+                "effective_review_avg":   effective_review_avg,
                 "display_star_avg":       display_star_avg,
                 "revision_rate_score":    revision_rate_score,
                 "responsiveness_score":   responsiveness_score,
@@ -498,12 +545,43 @@ class ReviewFunctions:
             raise
 
     @staticmethod
-    def get_trust_score(freelancer_user_id: str) -> Optional[Dict]:
+    def get_sentiment_distribution(freelancer_id: str) -> Dict:
+        """Counts of published reviews by sentiment label, for a profile-level chart.
+
+        Aggregated server-side rather than counted from the review list so it stays
+        correct if that list is ever paginated. `unclassified` covers reviews whose
+        analysis produced no label (an LLM outage, or an older row).
+        """
+        empty = {"positive": 0, "neutral": 0, "negative": 0, "unclassified": 0, "total": 0}
+        try:
+            rows = get_db().execute_query(
+                """
+                SELECT ra.sentiment_label, COUNT(*) AS n
+                FROM reviews r
+                LEFT JOIN review_ai_analysis ra ON ra.review_id = r.id
+                WHERE r.freelancer_id = :fid AND r.status = 'published'
+                GROUP BY ra.sentiment_label
+                """,
+                {"fid": freelancer_id},
+            )
+            counts = dict(empty)
+            for row in rows or []:
+                label = row["sentiment_label"]
+                key = label if label in ("positive", "neutral", "negative") else "unclassified"
+                counts[key] += int(row["n"])
+                counts["total"] += int(row["n"])
+            return counts
+        except Exception as e:
+            logger("REVIEW_FUNCTIONS", f"Error computing sentiment distribution: {str(e)}", level="ERROR")
+            return empty
+
+    @staticmethod
+    def get_trust_score(freelancer_id: str) -> Optional[Dict]:
         try:
             db = get_db()
             rows = db.fetch_data(
                 "freelancer_trust_scores",
-                conditions=[("freelancer_id", "=", freelancer_user_id)],
+                conditions=[("freelancer_id", "=", freelancer_id)],
                 limit=1,
             )
             return convert_uuids_to_str(dict(rows[0])) if rows else None
@@ -512,14 +590,13 @@ class ReviewFunctions:
             raise
 
     @staticmethod
-    def get_red_flags(freelancer_user_id: str) -> List[Dict]:
+    def get_red_flags(freelancer_id: str) -> List[Dict]:
         try:
             db = get_db()
             rows = db.fetch_data(
                 "red_flag_alerts",
                 conditions=[
-                    ("freelancer_id", "=", freelancer_user_id),
-                    ("subject_type", "=", "freelancer"),
+                    ("freelancer_id", "=", freelancer_id),
                     ("is_resolved", "=", False),
                 ],
                 order_by="triggered_at DESC",

@@ -23,6 +23,7 @@ def convert_uuids_to_str(data: Dict) -> Dict:
 class UserFunctions:
     """Handle all user-related database operations."""
 
+    # dev function - no callers.
     @staticmethod
     def get_all_users(limit: Optional[int] = None, offset: int = 0) -> List[Dict]:
         """Fetch all users with optional pagination."""

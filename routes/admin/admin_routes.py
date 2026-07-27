@@ -103,7 +103,7 @@ async def admin_dashboard(current_user: UserInDB = Depends(get_admin_user)):
         return ResponseSchema.success(stats, 200)
     except Exception as e:
         logger("ADMIN", f"Dashboard error: {e}", "GET /admin/dashboard", "ERROR")
-        return ResponseSchema.error(f"Failed to fetch dashboard stats: {e}", 500)
+        return ResponseSchema.error("Failed to fetch dashboard stats. Please try again.", 500)
 
 
 @admin_router.get("/moderation")
@@ -123,11 +123,11 @@ async def list_moderation(
     """List harmful text detection queue items. Supports filtering by status/severity and sorting."""
     try:
         if status not in ("pending", "approved", "rejected", "all"):
-            return ResponseSchema.error("status must be pending, approved, rejected, or all", 400)
+            return ResponseSchema.error("Invalid status. Choose pending, approved, rejected, or all.", 400)
         if sort_by not in ("created_at", "total_score", "max_score", "content_type", "status"):
-            return ResponseSchema.error("sort_by must be created_at, total_score, max_score, content_type, or status", 400)
+            return ResponseSchema.error("Invalid sort option. Choose created_at, total_score, max_score, content_type, or status.", 400)
         if sort_dir not in ("asc", "desc"):
-            return ResponseSchema.error("sort_dir must be asc or desc", 400)
+            return ResponseSchema.error("Invalid sort direction. Choose asc or desc.", 400)
         items = list_moderation_queue(
             status=status,
             sort_by=sort_by, sort_dir=sort_dir,
@@ -138,7 +138,7 @@ async def list_moderation(
         return ResponseSchema.success(items, 200)
     except Exception as e:
         logger("ADMIN", f"Moderation list error: {e}", "GET /admin/moderation", "ERROR")
-        return ResponseSchema.error(f"Failed to fetch moderation queue: {e}", 500)
+        return ResponseSchema.error("Failed to fetch moderation queue. Please try again.", 500)
 
 
 @admin_router.post("/moderation/{moderation_id}/approve")
@@ -161,7 +161,7 @@ async def approve_moderation(
         return ResponseSchema.success(updated, 200)
     except Exception as e:
         logger("ADMIN", f"Approve moderation error: {e}", "POST /admin/moderation/approve", "ERROR")
-        return ResponseSchema.error(f"Failed to approve item: {e}", 500)
+        return ResponseSchema.error("Failed to approve item. Please try again.", 500)
 
 
 @admin_router.post("/moderation/{moderation_id}/reject")
@@ -184,7 +184,7 @@ async def reject_moderation(
         return ResponseSchema.success(updated, 200)
     except Exception as e:
         logger("ADMIN", f"Reject moderation error: {e}", "POST /admin/moderation/reject", "ERROR")
-        return ResponseSchema.error(f"Failed to reject item: {e}", 500)
+        return ResponseSchema.error("Failed to reject item. Please try again.", 500)
 
 
 # dev/admin only - not called by the Flutter app
@@ -199,7 +199,7 @@ async def force_expire_mod_items(
         return ResponseSchema.success({"processed": len(body.ids)}, 200)
     except Exception as e:
         logger("ADMIN", f"Force expire mod error: {e}", "POST /admin/moderation/force-expire", "ERROR")
-        return ResponseSchema.error(f"Force expire failed: {e}", 500)
+        return ResponseSchema.error("Force expire failed. Please try again.", 500)
 
 
 @admin_router.get("/scam-flags")
@@ -214,17 +214,17 @@ async def list_scam(
     """List scam-flagged job posts. Supports sorting by date or score."""
     try:
         if status not in ("pending", "safe", "removed", "all"):
-            return ResponseSchema.error("status must be pending, safe, removed, or all", 400)
+            return ResponseSchema.error("Invalid status. Choose pending, safe, removed, or all.", 400)
         if sort_by not in ("created_at", "scam_score"):
-            return ResponseSchema.error("sort_by must be created_at or scam_score", 400)
+            return ResponseSchema.error("Invalid sort option. Choose created_at or scam_score.", 400)
         if sort_dir not in ("asc", "desc"):
-            return ResponseSchema.error("sort_dir must be asc or desc", 400)
+            return ResponseSchema.error("Invalid sort direction. Choose asc or desc.", 400)
         flags = list_scam_flags(status=status, sort_by=sort_by, sort_dir=sort_dir, page=page, page_size=page_size)
         logger("ADMIN", f"Scam flags fetched: status={status} sort={sort_by} {sort_dir}", "GET /admin/scam-flags", "INFO")
         return ResponseSchema.success(flags, 200)
     except Exception as e:
         logger("ADMIN", f"Scam flags list error: {e}", "GET /admin/scam-flags", "ERROR")
-        return ResponseSchema.error(f"Failed to fetch scam flags: {e}", 500)
+        return ResponseSchema.error("Failed to fetch scam flags. Please try again.", 500)
 
 
 @admin_router.post("/scam-flags/{flag_id}/approve")
@@ -247,7 +247,7 @@ async def approve_scam_flag(
         return ResponseSchema.success(updated, 200)
     except Exception as e:
         logger("ADMIN", f"Approve scam flag error: {e}", "POST /admin/scam-flags/approve", "ERROR")
-        return ResponseSchema.error(f"Failed to approve flag: {e}", 500)
+        return ResponseSchema.error("Failed to approve flag. Please try again.", 500)
 
 
 @admin_router.post("/scam-flags/{flag_id}/remove")
@@ -273,7 +273,7 @@ async def remove_scam_job(
         return ResponseSchema.success(updated, 200)
     except Exception as e:
         logger("ADMIN", f"Remove scam job error: {e}", "POST /admin/scam-flags/remove", "ERROR")
-        return ResponseSchema.error(f"Failed to remove scam job: {e}", 500)
+        return ResponseSchema.error("Failed to remove scam job. Please try again.", 500)
 
 
 @admin_router.post("/scam-flags/force-expire")
@@ -287,7 +287,7 @@ async def force_expire_scam_flag_items(
         return ResponseSchema.success({"processed": len(body.ids)}, 200)
     except Exception as e:
         logger("ADMIN", f"Force expire scam error: {e}", "POST /admin/scam-flags/force-expire", "ERROR")
-        return ResponseSchema.error(f"Force expire failed: {e}", 500)
+        return ResponseSchema.error("Force expire failed. Please try again.", 500)
 
 
 @admin_router.post("/scam-flags/scan")
@@ -307,7 +307,7 @@ async def trigger_scam_scan(
         return ResponseSchema.success({"flagged": True, "scam_flag": result}, 200)
     except Exception as e:
         logger("ADMIN", f"Scam scan error: {e}", "POST /admin/scam-flags/scan", "ERROR")
-        return ResponseSchema.error(f"Scam scan failed: {e}", 500)
+        return ResponseSchema.error("Scam scan failed. Please try again.", 500)
 
 
 @admin_router.get("/scam-flags/client/{client_id}")
@@ -321,7 +321,7 @@ async def get_client_scam_info(
         return ResponseSchema.success(record or {"client_id": client_id, "total_scam_confirmed": 0, "is_banned": False}, 200)
     except Exception as e:
         logger("ADMIN", f"Client scam record error: {e}", "GET /admin/scam-flags/client", "ERROR")
-        return ResponseSchema.error(f"Failed to fetch client scam record: {e}", 500)
+        return ResponseSchema.error("Failed to fetch client scam record. Please try again.", 500)
 
 
 @admin_router.get("/reports")
@@ -337,13 +337,13 @@ async def admin_list_reports(
     """List individual user reports. Filter by status and reported_type; sort by date or type."""
     try:
         if status not in ("pending", "accepted", "dismissed", "all"):
-            return ResponseSchema.error("status must be pending, accepted, dismissed, or all", 400)
+            return ResponseSchema.error("Invalid status. Choose pending, accepted, dismissed, or all.", 400)
         if reported_type not in ("freelancer", "client", "job_post", "all"):
-            return ResponseSchema.error("reported_type must be freelancer, client, job_post, or all", 400)
+            return ResponseSchema.error("Invalid report type. Choose freelancer, client, job post, or all.", 400)
         if sort_by not in ("created_at", "reported_type", "status"):
-            return ResponseSchema.error("sort_by must be created_at, reported_type, or status", 400)
+            return ResponseSchema.error("Invalid sort option. Choose created_at, reported_type, or status.", 400)
         if sort_dir not in ("asc", "desc"):
-            return ResponseSchema.error("sort_dir must be asc or desc", 400)
+            return ResponseSchema.error("Invalid sort direction. Choose asc or desc.", 400)
         items = list_reports(
             status=status, reported_type=reported_type,
             sort_by=sort_by, sort_dir=sort_dir,
@@ -353,7 +353,7 @@ async def admin_list_reports(
         return ResponseSchema.success(items, 200)
     except Exception as e:
         logger("ADMIN", f"Reports list error: {e}", "GET /admin/reports", "ERROR")
-        return ResponseSchema.error(f"Failed to fetch reports: {e}", 500)
+        return ResponseSchema.error("Failed to fetch reports. Please try again.", 500)
 
 
 # dev/admin only - not called by the Flutter app
@@ -374,11 +374,11 @@ async def admin_list_report_targets(
     """
     try:
         if target_type not in ("user", "job_post", "all"):
-            return ResponseSchema.error("target_type must be user, job_post, or all", 400)
+            return ResponseSchema.error("Invalid target type. Choose user, job post, or all.", 400)
         if sort_by not in ("report_count", "oldest_report", "latest_report"):
-            return ResponseSchema.error("sort_by must be report_count, oldest_report, or latest_report", 400)
+            return ResponseSchema.error("Invalid sort option. Choose report_count, oldest_report, or latest_report.", 400)
         if sort_dir not in ("asc", "desc"):
-            return ResponseSchema.error("sort_dir must be asc or desc", 400)
+            return ResponseSchema.error("Invalid sort direction. Choose asc or desc.", 400)
         items = list_report_targets(
             target_type=target_type, sort_by=sort_by, sort_dir=sort_dir,
             min_count=min_count, page=page, page_size=page_size,
@@ -387,7 +387,7 @@ async def admin_list_report_targets(
         return ResponseSchema.success(items, 200)
     except Exception as e:
         logger("ADMIN", f"Report targets error: {e}", "GET /admin/reports/targets", "ERROR")
-        return ResponseSchema.error(f"Failed to fetch report targets: {e}", 500)
+        return ResponseSchema.error("Failed to fetch report targets. Please try again.", 500)
 
 
 @admin_router.post("/reports/{report_id}/accept")
@@ -410,7 +410,7 @@ async def accept_report(
         return ResponseSchema.success(updated, 200)
     except Exception as e:
         logger("ADMIN", f"Accept report error: {e}", "POST /admin/reports/accept", "ERROR")
-        return ResponseSchema.error(f"Failed to accept report: {e}", 500)
+        return ResponseSchema.error("Failed to accept report. Please try again.", 500)
 
 
 # dev/admin only - not called by the Flutter app
@@ -426,7 +426,7 @@ async def list_auto_actions(
         return ResponseSchema.success(items, 200)
     except Exception as e:
         logger("ADMIN", f"Auto-actions list error: {e}", "GET /admin/reports/auto-actions", "ERROR")
-        return ResponseSchema.error(f"Failed to fetch auto-actions: {e}", 500)
+        return ResponseSchema.error("Failed to fetch auto-actions. Please try again.", 500)
 
 
 @admin_router.post("/reports/{report_id}/dismiss")
@@ -449,7 +449,7 @@ async def dismiss_report(
         return ResponseSchema.success(updated, 200)
     except Exception as e:
         logger("ADMIN", f"Dismiss report error: {e}", "POST /admin/reports/dismiss", "ERROR")
-        return ResponseSchema.error(f"Failed to dismiss report: {e}", 500)
+        return ResponseSchema.error("Failed to dismiss report. Please try again.", 500)
 
 
 # dev/admin only - not called by the Flutter app
@@ -461,12 +461,12 @@ async def force_expire_report_target(
     """Backdate report created_at for a target and immediately trigger auto-action sweep (testing utility)."""
     try:
         if body.target_type not in ("user", "job_post"):
-            return ResponseSchema.error("target_type must be 'user' or 'job_post'", 400)
+            return ResponseSchema.error("Invalid target type. Choose user or job post.", 400)
         force_expire_reports(body.target_type, body.target_id)
         return ResponseSchema.success({"target_type": body.target_type, "target_id": body.target_id}, 200)
     except Exception as e:
         logger("ADMIN", f"Force expire reports error: {e}", "POST /admin/reports/force-expire-target", "ERROR")
-        return ResponseSchema.error(f"Force expire failed: {e}", 500)
+        return ResponseSchema.error("Force expire failed. Please try again.", 500)
 
 
 # dev/admin only - not called by the Flutter app
@@ -484,7 +484,7 @@ async def admin_get_report(
         return ResponseSchema.success(item, 200)
     except Exception as e:
         logger("ADMIN", f"Get report error: {e}", "GET /admin/reports/{report_id}", "ERROR")
-        return ResponseSchema.error(f"Failed to fetch report: {e}", 500)
+        return ResponseSchema.error("Failed to fetch report. Please try again.", 500)
 
 
 @admin_router.get("/appeals")
@@ -500,9 +500,9 @@ async def admin_list_appeals(
     """List all user appeals with optional filters by status, target type, attempt number, and submitter email."""
     try:
         if status not in ("pending", "approved", "rejected", "all"):
-            return ResponseSchema.error("status must be pending, approved, rejected, or all", 400)
+            return ResponseSchema.error("Invalid status. Choose pending, approved, rejected, or all.", 400)
         if target_type and target_type not in ("user", "job_post"):
-            return ResponseSchema.error("target_type must be 'user' or 'job_post'", 400)
+            return ResponseSchema.error("Invalid target type. Choose user or job post.", 400)
         items = list_appeals(
             status=status,
             target_type=target_type,
@@ -515,7 +515,7 @@ async def admin_list_appeals(
         return ResponseSchema.success(items, 200)
     except Exception as e:
         logger("ADMIN", f"Appeals list error: {e}", "GET /admin/appeals", "ERROR")
-        return ResponseSchema.error(f"Failed to fetch appeals: {e}", 500)
+        return ResponseSchema.error("Failed to fetch appeals. Please try again.", 500)
 
 
 # dev/admin only - not called by the Flutter app
@@ -533,7 +533,7 @@ async def admin_get_appeal(
         return ResponseSchema.success(item, 200)
     except Exception as e:
         logger("ADMIN", f"Get appeal error: {e}", "GET /admin/appeals/{appeal_id}", "ERROR")
-        return ResponseSchema.error(f"Failed to fetch appeal: {e}", 500)
+        return ResponseSchema.error("Failed to fetch appeal. Please try again.", 500)
 
 
 @admin_router.post("/appeals/{appeal_id}/approve")
@@ -556,7 +556,7 @@ async def approve_appeal(
         return ResponseSchema.success(updated, 200)
     except Exception as e:
         logger("ADMIN", f"Approve appeal error: {e}", "POST /admin/appeals/approve", "ERROR")
-        return ResponseSchema.error(f"Failed to approve appeal: {e}", 500)
+        return ResponseSchema.error("Failed to approve appeal. Please try again.", 500)
 
 
 @admin_router.post("/appeals/{appeal_id}/reject")
@@ -579,7 +579,7 @@ async def reject_appeal(
         return ResponseSchema.success(updated, 200)
     except Exception as e:
         logger("ADMIN", f"Reject appeal error: {e}", "POST /admin/appeals/reject", "ERROR")
-        return ResponseSchema.error(f"Failed to reject appeal: {e}", 500)
+        return ResponseSchema.error("Failed to reject appeal. Please try again.", 500)
 
 
 @admin_router.post("/jobs/{job_post_id}/close")
@@ -601,7 +601,7 @@ async def force_close_job(
         return ResponseSchema.success(updated, 200)
     except Exception as e:
         logger("ADMIN", f"Force close job error: {e}", "POST /admin/jobs/close", "ERROR")
-        return ResponseSchema.error(f"Failed to close job post: {e}", 500)
+        return ResponseSchema.error("Failed to close job post. Please try again.", 500)
 
 
 # dev/admin only - not called by the Flutter app
@@ -622,7 +622,7 @@ async def force_reopen_job(
         return ResponseSchema.success(updated, 200)
     except Exception as e:
         logger("ADMIN", f"Force reopen job error: {e}", "POST /admin/jobs/reopen", "ERROR")
-        return ResponseSchema.error(f"Failed to reopen job post: {e}", 500)
+        return ResponseSchema.error("Failed to reopen job post. Please try again.", 500)
 
 
 @admin_router.post("/accounts/{user_id}/close")
@@ -644,7 +644,7 @@ async def force_close_account(
         return ResponseSchema.success(updated, 200)
     except Exception as e:
         logger("ADMIN", f"Force close account error: {e}", "POST /admin/accounts/close", "ERROR")
-        return ResponseSchema.error(f"Failed to close account: {e}", 500)
+        return ResponseSchema.error("Failed to close account. Please try again.", 500)
 
 
 # dev/admin only - not called by the Flutter app
@@ -665,14 +665,14 @@ async def force_reopen_account(
         return ResponseSchema.success(updated, 200)
     except Exception as e:
         logger("ADMIN", f"Force reopen account error: {e}", "POST /admin/accounts/reopen", "ERROR")
-        return ResponseSchema.error(f"Failed to restore account: {e}", 500)
+        return ResponseSchema.error("Failed to restore account. Please try again.", 500)
 
 
 @admin_router.get("/jobs")
 async def admin_browse_jobs(
     status:                   Optional[str]  = Query(None, description="Include statuses (comma-sep): draft,active,closed,filled"),
     exclude_status:           Optional[str]  = Query(None, description="Exclude statuses (comma-sep)"),
-    closure_reason:           Optional[str]  = Query(None, description="Include closure reasons (comma-sep): scam,content_violation,admin_override,community_reports"),
+    closure_reason:           Optional[str]  = Query(None, description="Include closure reasons (comma-sep): scam,harmful_text,admin_override,community_reports"),
     exclude_closure_reason:   Optional[str]  = Query(None, description="Exclude closure reasons (comma-sep)"),
     project_type:             Optional[str]  = Query(None, description="Include project types (comma-sep): individual,team"),
     exclude_project_type:     Optional[str]  = Query(None, description="Exclude project types (comma-sep)"),
@@ -697,9 +697,10 @@ async def admin_browse_jobs(
     """Browse all job posts with flexible include/exclude filters and sorting."""
     try:
         if sort_by not in ("created_at", "closed_at", "updated_at", "job_title", "status", "proposal_count", "view_count"):
-            return ResponseSchema.error("Invalid sort_by value", 400)
+            return ResponseSchema.error(
+                "Invalid sort option. Choose created_at, closed_at, updated_at, job_title, status, proposal_count, or view_count.", 400)
         if sort_dir not in ("asc", "desc"):
-            return ResponseSchema.error("sort_dir must be asc or desc", 400)
+            return ResponseSchema.error("Invalid sort direction. Choose asc or desc.", 400)
         result = admin_list_jobs(
             status=status,                       exclude_status=exclude_status,
             closure_reason=closure_reason,       exclude_closure_reason=exclude_closure_reason,
@@ -717,7 +718,7 @@ async def admin_browse_jobs(
         return ResponseSchema.success(result, 200)
     except Exception as e:
         logger("ADMIN", f"Jobs browse error: {e}", "GET /admin/jobs", "ERROR")
-        return ResponseSchema.error(f"Failed to list jobs: {e}", 500)
+        return ResponseSchema.error("Failed to list jobs. Please try again.", 500)
 
 
 @admin_router.get("/users")
@@ -742,9 +743,10 @@ async def admin_browse_users(
     """Browse all user accounts with flexible include/exclude filters and sorting."""
     try:
         if sort_by not in ("created_at", "updated_at", "email", "report_banned_at", "ban_reason"):
-            return ResponseSchema.error("Invalid sort_by value", 400)
+            return ResponseSchema.error(
+                "Invalid sort option. Choose created_at, updated_at, email, report_banned_at, or ban_reason.", 400)
         if sort_dir not in ("asc", "desc"):
-            return ResponseSchema.error("sort_dir must be asc or desc", 400)
+            return ResponseSchema.error("Invalid sort direction. Choose asc or desc.", 400)
         result = admin_list_users(
             role=role,               exclude_role=exclude_role,
             is_banned=is_banned,     email_verified=email_verified,
@@ -759,7 +761,7 @@ async def admin_browse_users(
         return ResponseSchema.success(result, 200)
     except Exception as e:
         logger("ADMIN", f"Users browse error: {e}", "GET /admin/users", "ERROR")
-        return ResponseSchema.error(f"Failed to list users: {e}", 500)
+        return ResponseSchema.error("Failed to list users. Please try again.", 500)
 
 
 # dev/admin only - not called by the Flutter app
@@ -777,7 +779,7 @@ async def admin_get_user(
         return ResponseSchema.success(item, 200)
     except Exception as e:
         logger("ADMIN", f"Get user detail error: {e}", "GET /admin/users/{user_id}", "ERROR")
-        return ResponseSchema.error(f"Failed to fetch user: {e}", 500)
+        return ResponseSchema.error("Failed to fetch user. Please try again.", 500)
 
 
 @admin_router.get("/contracts/disputed")
@@ -817,7 +819,7 @@ async def admin_list_disputed_contracts(
                     dt.contract_id, dm.message_text, dm.metadata, dm.sent_at
                 FROM dm_message dm
                 JOIN dm_thread dt ON dt.thread_id = dm.thread_id
-                WHERE dm.metadata->>'type' = 'dispute_raised'
+                WHERE dm.metadata::jsonb->>'type' = 'dispute_raised'
                 ORDER BY dt.contract_id, dm.sent_at DESC
             )
             SELECT
@@ -825,7 +827,7 @@ async def admin_list_disputed_contracts(
                 c.client_id, c.freelancer_id,
                 cl.full_name AS client_name, cl_u.email AS client_email,
                 fl.full_name AS freelancer_name, fl_u.email AS freelancer_email,
-                ld.metadata->>'reason' AS dispute_reason,
+                ld.metadata::jsonb->>'reason' AS dispute_reason,
                 ld.sent_at AS dispute_raised_at
             FROM contract c
             LEFT JOIN client     cl   ON cl.client_id     = c.client_id
@@ -868,7 +870,7 @@ async def admin_list_disputed_contracts(
         return ResponseSchema.success(result, 200)
     except Exception as e:
         logger("ADMIN", f"Failed to list disputed contracts: {e}", "GET /admin/contracts/disputed", "ERROR")
-        return ResponseSchema.error(f"Failed to list disputed contracts: {e}", 500)
+        return ResponseSchema.error("Failed to list disputed contracts. Please try again.", 500)
 
 
 @admin_router.put("/contracts/{contract_id}/arbitrate")
@@ -895,7 +897,7 @@ async def admin_arbitrate_contract_dispute(
             )
 
         if payload.outcome == "revise" and not payload.new_deadline:
-            return ResponseSchema.error("new_deadline is required when outcome is 'revise'", 400)
+            return ResponseSchema.error("A new deadline is required when the outcome is 'revise'.", 400)
 
         updated_contract = ContractFunctions.arbitrate_dispute(
             contract_id=contract_id,
@@ -931,7 +933,7 @@ async def admin_arbitrate_contract_dispute(
         return ResponseSchema.error(str(e), 400)
     except Exception as e:
         logger("ADMIN", f"Failed to arbitrate dispute for contract {contract_id}: {e}", "PUT /admin/contracts/{contract_id}/arbitrate", "ERROR")
-        return ResponseSchema.error(f"Failed to arbitrate dispute: {e}", 500)
+        return ResponseSchema.error("Failed to arbitrate dispute. Please try again.", 500)
 
 
 @admin_router.get("/clients/{client_id}/autoapprove-history")
@@ -969,7 +971,7 @@ async def admin_get_client_autoapprove_history(
         return ResponseSchema.success(result, 200)
     except Exception as e:
         logger("ADMIN", f"Failed to fetch autoapprove history for client {client_id}: {e}", "GET /admin/clients/{client_id}/autoapprove-history", "ERROR")
-        return ResponseSchema.error(f"Failed to fetch autoapprove history: {e}", 500)
+        return ResponseSchema.error("Failed to fetch autoapprove history. Please try again.", 500)
 
 
 @reports_router.get("/reasons")
@@ -995,12 +997,12 @@ async def user_get_appeal_status(
     """
     try:
         if target_type not in ("user", "job_post"):
-            return ResponseSchema.error("target_type must be 'user' or 'job_post'", 400)
+            return ResponseSchema.error("Choose what you're appealing: your account or a job post.", 400)
         result = get_appeal_status(current_user.user_id, target_type, target_id)
         return ResponseSchema.success(result, 200)
     except Exception as e:
         logger("APPEAL", f"Appeal status check error: {e}", "GET /appeals/status", "ERROR")
-        return ResponseSchema.error(f"Failed to check appeal status: {e}", 500)
+        return ResponseSchema.error("Failed to check appeal status. Please try again.", 500)
 
 
 @appeals_router.post("")
@@ -1017,7 +1019,7 @@ async def user_submit_appeal(
     """
     try:
         if body.target_type not in ("user", "job_post"):
-            return ResponseSchema.error("target_type must be 'user' or 'job_post'", 400)
+            return ResponseSchema.error("Choose what you're appealing: your account or a job post.", 400)
         if not body.message.strip():
             return ResponseSchema.error("Appeal message cannot be empty", 400)
         appeal = submit_appeal(
@@ -1034,7 +1036,7 @@ async def user_submit_appeal(
         return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("APPEAL", f"Submit appeal error: {e}", "POST /appeals", "ERROR")
-        return ResponseSchema.error(f"Failed to submit appeal: {e}", 500)
+        return ResponseSchema.error("Failed to submit appeal. Please try again.", 500)
 
 
 @appeals_router.get("/mine")
@@ -1045,7 +1047,7 @@ async def user_list_appeals(current_user: UserInDB = Depends(get_current_user)):
         return ResponseSchema.success(items, 200)
     except Exception as e:
         logger("APPEAL", f"List appeals error: {e}", "GET /appeals/mine", "ERROR")
-        return ResponseSchema.error(f"Failed to fetch appeals: {e}", 500)
+        return ResponseSchema.error("Failed to fetch appeals. Please try again.", 500)
 
 
 @reports_router.post("")
@@ -1059,17 +1061,17 @@ async def submit_report(
     """
     try:
         if body.reported_type not in ("freelancer", "client", "job_post"):
-            return ResponseSchema.error("reported_type must be 'freelancer', 'client', or 'job_post'", 400)
+            return ResponseSchema.error("Choose what you're reporting: a freelancer, a client, or a job post.", 400)
 
         if body.reported_type in ("freelancer", "client"):
             if not body.reported_user_id:
-                return ResponseSchema.error("reported_user_id is required for freelancer/client reports", 400)
+                return ResponseSchema.error("Select the person you want to report.", 400)
             if body.reported_user_id == current_user.user_id:
                 return ResponseSchema.error("You cannot report yourself", 400)
 
         if body.reported_type == "job_post":
             if not body.job_post_id:
-                return ResponseSchema.error("job_post_id is required for job post reports", 400)
+                return ResponseSchema.error("Select the job post you want to report.", 400)
 
         invalid = [r for r in body.reasons if r not in VALID_REPORT_REASONS]
         if invalid:
@@ -1078,7 +1080,7 @@ async def submit_report(
             )
 
         if not body.reasons and not body.custom_reason:
-            return ResponseSchema.error("Provide at least one reason or a custom_reason", 400)
+            return ResponseSchema.error("Give at least one reason, or write your own.", 400)
 
         report = create_report(
             reporter_id=current_user.user_id,
@@ -1096,7 +1098,7 @@ async def submit_report(
         return ResponseSchema.success({"message": "Report submitted successfully", "report_id": str(report["report_id"])}, 201)
     except Exception as e:
         logger("REPORT", f"Submit report error: {e}", "POST /reports", "ERROR")
-        return ResponseSchema.error(f"Failed to submit report: {e}", 500)
+        return ResponseSchema.error("Failed to submit report. Please try again.", 500)
 
 @admin_router.get("/reviews/red-flags")
 async def list_review_red_flags(
@@ -1111,17 +1113,17 @@ async def list_review_red_flags(
     """Admin-wide red flag alert listing (trust score drops), across freelancers and/or clients."""
     try:
         if subject_type not in ("freelancer", "client", "all"):
-            return ResponseSchema.error("subject_type must be freelancer, client, or all", 400)
+            return ResponseSchema.error("Invalid subject type. Choose freelancer, client, or all.", 400)
         if sort_by not in ("triggered_at", "severity"):
-            return ResponseSchema.error("sort_by must be triggered_at or severity", 400)
+            return ResponseSchema.error("Invalid sort option. Choose triggered_at or severity.", 400)
         if sort_dir not in ("asc", "desc"):
-            return ResponseSchema.error("sort_dir must be asc or desc", 400)
+            return ResponseSchema.error("Invalid sort direction. Choose asc or desc.", 400)
         flags = list_red_flag_alerts(is_resolved=is_resolved, subject_type=subject_type, sort_by=sort_by, sort_dir=sort_dir, page=page, page_size=page_size)
         logger("ADMIN", f"Review red flags fetched: is_resolved={is_resolved} subject_type={subject_type} sort={sort_by} {sort_dir}", "GET /admin/reviews/red-flags", "INFO")
         return ResponseSchema.success(flags, 200)
     except Exception as e:
         logger("ADMIN", f"Review red flags list error: {e}", "GET /admin/reviews/red-flags", "ERROR")
-        return ResponseSchema.error(f"Failed to fetch red flags: {e}", 500)
+        return ResponseSchema.error("Failed to fetch red flags. Please try again.", 500)
 
 
 @admin_router.post("/reviews/red-flags/{alert_id}/resolve")
@@ -1138,7 +1140,7 @@ async def resolve_review_red_flag(
         return ResponseSchema.success(updated, 200)
     except Exception as e:
         logger("ADMIN", f"Resolve red flag error: {e}", "POST /admin/reviews/red-flags/resolve", "ERROR")
-        return ResponseSchema.error(f"Failed to resolve red flag: {e}", 500)
+        return ResponseSchema.error("Failed to resolve red flag. Please try again.", 500)
 
 
 @admin_router.get("/reviews/flagged")
@@ -1153,17 +1155,17 @@ async def list_review_flagged(
     """List reviews held back from publishing (overall_pass=false), with the AI analysis that caused the hold."""
     try:
         if status not in ("flagged", "suppressed", "all"):
-            return ResponseSchema.error("status must be flagged, suppressed, or all", 400)
+            return ResponseSchema.error("Invalid status. Choose flagged, suppressed, or all.", 400)
         if sort_by not in ("created_at", "status"):
-            return ResponseSchema.error("sort_by must be created_at or status", 400)
+            return ResponseSchema.error("Invalid sort option. Choose created_at or status.", 400)
         if sort_dir not in ("asc", "desc"):
-            return ResponseSchema.error("sort_dir must be asc or desc", 400)
+            return ResponseSchema.error("Invalid sort direction. Choose asc or desc.", 400)
         reviews = list_flagged_reviews(status=status, sort_by=sort_by, sort_dir=sort_dir, page=page, page_size=page_size)
         logger("ADMIN", f"Flagged reviews fetched: status={status} sort={sort_by} {sort_dir}", "GET /admin/reviews/flagged", "INFO")
         return ResponseSchema.success(reviews, 200)
     except Exception as e:
         logger("ADMIN", f"Flagged reviews list error: {e}", "GET /admin/reviews/flagged", "ERROR")
-        return ResponseSchema.error(f"Failed to fetch flagged reviews: {e}", 500)
+        return ResponseSchema.error("Failed to fetch flagged reviews. Please try again.", 500)
 
 
 @admin_router.post("/reviews/{review_id}/override-publish")
@@ -1180,7 +1182,7 @@ async def override_publish_review_route(
         return ResponseSchema.success(updated, 200)
     except Exception as e:
         logger("ADMIN", f"Override publish review error: {e}", "POST /admin/reviews/override-publish", "ERROR")
-        return ResponseSchema.error(f"Failed to override-publish review: {e}", 500)
+        return ResponseSchema.error("Failed to override-publish review. Please try again.", 500)
 
 
 @admin_router.get("/client-reviews/flagged")
@@ -1195,17 +1197,17 @@ async def list_client_review_flagged(
     """List client reviews (written by freelancers) held back from publishing."""
     try:
         if status not in ("flagged", "suppressed", "all"):
-            return ResponseSchema.error("status must be flagged, suppressed, or all", 400)
+            return ResponseSchema.error("Invalid status. Choose flagged, suppressed, or all.", 400)
         if sort_by not in ("created_at", "status"):
-            return ResponseSchema.error("sort_by must be created_at or status", 400)
+            return ResponseSchema.error("Invalid sort option. Choose created_at or status.", 400)
         if sort_dir not in ("asc", "desc"):
-            return ResponseSchema.error("sort_dir must be asc or desc", 400)
+            return ResponseSchema.error("Invalid sort direction. Choose asc or desc.", 400)
         reviews = list_flagged_client_reviews(status=status, sort_by=sort_by, sort_dir=sort_dir, page=page, page_size=page_size)
         logger("ADMIN", f"Flagged client reviews fetched: status={status} sort={sort_by} {sort_dir}", "GET /admin/client-reviews/flagged", "INFO")
         return ResponseSchema.success(reviews, 200)
     except Exception as e:
         logger("ADMIN", f"Flagged client reviews list error: {e}", "GET /admin/client-reviews/flagged", "ERROR")
-        return ResponseSchema.error(f"Failed to fetch flagged client reviews: {e}", 500)
+        return ResponseSchema.error("Failed to fetch flagged client reviews. Please try again.", 500)
 
 
 @admin_router.post("/client-reviews/{client_review_id}/override-publish")
@@ -1222,5 +1224,5 @@ async def override_publish_client_review_route(
         return ResponseSchema.success(updated, 200)
     except Exception as e:
         logger("ADMIN", f"Override publish client review error: {e}", "POST /admin/client-reviews/override-publish", "ERROR")
-        return ResponseSchema.error(f"Failed to override-publish client review: {e}", 500)
+        return ResponseSchema.error("Failed to override-publish client review. Please try again.", 500)
 

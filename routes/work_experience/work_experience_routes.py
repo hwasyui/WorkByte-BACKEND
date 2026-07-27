@@ -29,7 +29,7 @@ async def get_all_work_experiences(limit: Optional[int] = None, current_user: Us
     except Exception as e:
         error_msg = f"Failed to fetch work experiences: {str(e)}"
         logger("WORK_EXPERIENCE", error_msg, "GET /work-experiences", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch work experiences. Please try again.", 500)
 
 
 @work_experience_router.get("/{work_experience_id}", response_model=None)
@@ -47,7 +47,7 @@ async def get_work_experience(work_experience_id: str, current_user: UserInDB = 
     except Exception as e:
         error_msg = f"Failed to fetch work experience {work_experience_id}: {str(e)}"
         logger("WORK_EXPERIENCE", error_msg, "GET /work-experiences/{work_experience_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch work experience. Please try again.", 500)
 
 
 @work_experience_router.get("/freelancer/{freelancer_id}", response_model=None)
@@ -61,7 +61,7 @@ async def get_work_experiences_by_freelancer(freelancer_id: str, current_user: U
     except Exception as e:
         error_msg = f"Failed to fetch work experiences for freelancer {freelancer_id}: {str(e)}"
         logger("WORK_EXPERIENCE", error_msg, "GET /work-experiences/freelancer/{freelancer_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch work experiences for freelancer. Please try again.", 500)
 
 
 @work_experience_router.post("", response_model=None, status_code=201)
@@ -94,7 +94,7 @@ async def create_work_experience(work_experience: WorkExperienceCreate, current_
     except Exception as e:
         error_msg = f"Failed to create work experience: {str(e)}"
         logger("WORK_EXPERIENCE", error_msg, "POST /work-experiences", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to create work experience. Please try again.", 500)
 
 
 @work_experience_router.put("/{work_experience_id}", response_model=None)
@@ -120,7 +120,7 @@ async def update_work_experience(work_experience_id: str, work_experience_update
     except Exception as e:
         error_msg = f"Failed to update work experience {work_experience_id}: {str(e)}"
         logger("WORK_EXPERIENCE", error_msg, "PUT /work-experiences/{work_experience_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to update work experience. Please try again.", 500)
 
 
 @work_experience_router.delete("/{work_experience_id}", status_code=200)
@@ -145,4 +145,4 @@ async def delete_work_experience(work_experience_id: str, current_user: UserInDB
     except Exception as e:
         error_msg = f"Failed to delete work experience {work_experience_id}: {str(e)}"
         logger("WORK_EXPERIENCE", error_msg, "DELETE /work-experiences/{work_experience_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to delete work experience. Please try again.", 500)

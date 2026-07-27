@@ -13,7 +13,13 @@ _MODEL_DIR = os.path.join(os.path.dirname(__file__), "model_artifacts", "authent
 _MODEL_PATH = os.path.join(_MODEL_DIR, "model.pkl")
 _SCALER_PATH = os.path.join(_MODEL_DIR, "scaler.pkl")
 
-FAKE_PREDICT_THRESHOLD = 0.5
+# Raised from 0.50. The model is trained on e-commerce review text, and short warm
+# praise - "Very professional and easy to work with. Highly recommended." - is
+# exactly what it learned to call templated. At 0.50 it flagged 2 of 8 realistic
+# genuine reviews. The pipelines additionally require the LLM to agree before this
+# vetoes publication, so a lone high score now lowers authenticity rather than
+# blocking a real client's review.
+FAKE_PREDICT_THRESHOLD = 0.75
 
 
 @lru_cache(maxsize=1)

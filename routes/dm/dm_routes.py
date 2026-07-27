@@ -127,7 +127,7 @@ async def start_thread(
         # first_message and broadcast immediately, so it must be checked before either.
         if payload.message_text and payload.message_text.strip():
             if len(payload.message_text) > 2500:
-                return ResponseSchema.error("message_text cannot exceed 2500 characters", 400)
+                return ResponseSchema.error("Your message is too long. Keep it under 2,500 characters.", 400)
             harm_result = scan_harmful_text_with_ml_fallback(payload.message_text)
             if harm_result["is_flagged"]:
                 labels = harm_result.get("detected_labels", [])
@@ -138,8 +138,9 @@ async def start_thread(
                     "WARNING",
                 )
                 return ResponseSchema.error(
-                    f"Your message was not sent. It was detected as harmful ({', '.join(labels)}).",
+                    "Your message was not sent. It was flagged by Harmful Text Detection.",
                     400,
+                    extra={"blocked_by": "harmful_text", "detected_labels": labels},
                 )
 
         result = DMFunctions.create_thread(
@@ -159,7 +160,7 @@ async def start_thread(
         return ResponseSchema.error(str(e), 400)
     except Exception as e:
         logger("DM", f"Failed to start thread: {e}", "POST /dm/threads", "ERROR")
-        return ResponseSchema.error(str(e), 500)
+        return ResponseSchema.error("Failed to start thread. Please try again.", 500)
 
 
 # GET /dm/threads
@@ -181,7 +182,7 @@ async def list_threads(
         )
     except Exception as e:
         logger("DM", f"Failed to list threads: {e}", "GET /dm/threads", "ERROR")
-        return ResponseSchema.error(str(e), 500)
+        return ResponseSchema.error("Failed to list threads. Please try again.", 500)
 
 
 # GET /dm/threads/requests
@@ -200,7 +201,7 @@ async def list_requests(
         )
     except Exception as e:
         logger("DM", f"Failed to list requests: {e}", "GET /dm/threads/requests", "ERROR")
-        return ResponseSchema.error(str(e), 500)
+        return ResponseSchema.error("Failed to list requests. Please try again.", 500)
 
 
 # GET /dm/threads/{thread_id}
@@ -220,7 +221,7 @@ async def get_thread(
         return ResponseSchema.success(thread, 200)
     except Exception as e:
         logger("DM", f"Failed to get thread: {e}", "GET /dm/threads/{thread_id}", "ERROR")
-        return ResponseSchema.error(str(e), 500)
+        return ResponseSchema.error("Failed to get thread. Please try again.", 500)
 
 
 # PUT /dm/threads/{thread_id}/accept
@@ -266,7 +267,7 @@ async def accept_thread(
         return ResponseSchema.success(updated, 200)
     except Exception as e:
         logger("DM", f"Failed to accept thread: {e}", "PUT /dm/threads/{thread_id}/accept", "ERROR")
-        return ResponseSchema.error(str(e), 500)
+        return ResponseSchema.error("Failed to accept thread. Please try again.", 500)
 
 
 # PUT /dm/threads/{thread_id}/decline
@@ -292,7 +293,7 @@ async def decline_thread(
         return ResponseSchema.success(updated, 200)
     except Exception as e:
         logger("DM", f"Failed to decline thread: {e}", "PUT /dm/threads/{thread_id}/decline", "ERROR")
-        return ResponseSchema.error(str(e), 500)
+        return ResponseSchema.error("Failed to decline thread. Please try again.", 500)
 
 
 # GET /dm/threads/{thread_id}/messages
@@ -321,7 +322,7 @@ async def get_messages(
         )
     except Exception as e:
         logger("DM", f"Failed to fetch messages: {e}", "GET /dm/threads/{thread_id}/messages", "ERROR")
-        return ResponseSchema.error(str(e), 500)
+        return ResponseSchema.error("Failed to fetch messages. Please try again.", 500)
 
 
 # POST /dm/threads/{thread_id}/messages
@@ -340,17 +341,18 @@ async def send_message(
         if not _is_participant(thread, str(current_user.user_id)):
             return ResponseSchema.error("Access denied", 403)
         if not payload.message_text.strip():
-            return ResponseSchema.error("message_text cannot be empty", 400)
+            return ResponseSchema.error("Your message can't be empty.", 400)
         if len(payload.message_text) > 2500:
-            return ResponseSchema.error("message_text cannot exceed 2500 characters", 400)
+            return ResponseSchema.error("Your message is too long. Keep it under 2,500 characters.", 400)
 
         harm_result = scan_harmful_text_with_ml_fallback(payload.message_text)
         if harm_result["is_flagged"]:
             labels = harm_result.get("detected_labels", [])
             logger("DM", f"Blocked toxic message from {current_user.user_id} in thread {thread_id}, labels={labels}", "POST /dm/threads/{thread_id}/messages", "WARNING")
             return ResponseSchema.error(
-                f"Your message was not sent. It was detected as harmful ({', '.join(labels)}).",
+                "Your message was not sent. It was flagged by Harmful Text Detection.",
                 400,
+                extra={"blocked_by": "harmful_text", "detected_labels": labels},
             )
 
         msg = DMFunctions.send_message(
@@ -385,7 +387,7 @@ async def send_message(
         return ResponseSchema.error(str(e), 403)
     except Exception as e:
         logger("DM", f"Failed to send message: {e}", "POST /dm/threads/{thread_id}/messages", "ERROR")
-        return ResponseSchema.error(str(e), 500)
+        return ResponseSchema.error("Failed to send message. Please try again.", 500)
 
 
 # POST /dm/threads/{thread_id}/messages/upload
@@ -407,9 +409,9 @@ async def send_message_with_attachment(
 
         text = (message_text or "").strip()
         if not text and (not file or not file.filename):
-            return ResponseSchema.error("Provide message_text, a file, or both", 400)
+            return ResponseSchema.error("Add a message, a file, or both.", 400)
         if len(text) > 2500:
-            return ResponseSchema.error("message_text cannot exceed 2500 characters", 400)
+            return ResponseSchema.error("Your message is too long. Keep it under 2,500 characters.", 400)
 
         if text:
             harm_result = scan_harmful_text_with_ml_fallback(text)
@@ -422,8 +424,9 @@ async def send_message_with_attachment(
                     "WARNING",
                 )
                 return ResponseSchema.error(
-                    f"Your message was not sent. It was detected as harmful ({', '.join(labels)}).",
+                    "Your message was not sent. It was flagged by Harmful Text Detection.",
                     400,
+                    extra={"blocked_by": "harmful_text", "detected_labels": labels},
                 )
 
         msg = DMFunctions.send_message(
@@ -497,7 +500,7 @@ async def send_message_with_attachment(
             "POST /dm/threads/{thread_id}/messages/upload",
             "ERROR",
         )
-        return ResponseSchema.error(str(e), 500)
+        return ResponseSchema.error("Failed to send message with attachment. Please try again.", 500)
 
 # PUT /dm/threads/{thread_id}/read
 
@@ -519,7 +522,7 @@ async def mark_read(
         return ResponseSchema.success({"updated_count": count}, 200)
     except Exception as e:
         logger("DM", f"Failed to mark read: {e}", "PUT /dm/threads/{thread_id}/read", "ERROR")
-        return ResponseSchema.error(str(e), 500)
+        return ResponseSchema.error("Failed to mark read. Please try again.", 500)
 
 
 # WS /dm/ws/{thread_id}

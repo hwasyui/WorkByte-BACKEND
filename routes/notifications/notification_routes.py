@@ -32,7 +32,7 @@ async def get_notifications(
     except Exception as e:
         error_msg = f"Failed to fetch notifications: {str(e)}"
         logger("NOTIFICATION", error_msg, "GET /notifications", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch notifications. Please try again.", 500)
 
 
 @notification_router.get("/unread-count")
@@ -45,7 +45,7 @@ async def get_unread_count(current_user: UserInDB = Depends(get_current_user)):
     except Exception as e:
         error_msg = f"Failed to fetch unread count: {str(e)}"
         logger("NOTIFICATION", error_msg, "GET /notifications/unread-count", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch unread count. Please try again.", 500)
 
 
 # NOTE: /read-all must be declared BEFORE /{notification_id}/read
@@ -60,7 +60,7 @@ async def mark_all_read(current_user: UserInDB = Depends(get_current_user)):
     except Exception as e:
         error_msg = f"Failed to mark all as read: {str(e)}"
         logger("NOTIFICATION", error_msg, "PATCH /notifications/read-all", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to mark all as read. Please try again.", 500)
 
 
 @notification_router.patch("/{notification_id}/read")
@@ -76,7 +76,7 @@ async def mark_as_read(
     except Exception as e:
         error_msg = f"Failed to mark notification as read: {str(e)}"
         logger("NOTIFICATION", error_msg, "PATCH /notifications/{id}/read", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to mark notification as read. Please try again.", 500)
 
 
 @notification_router.put("/fcm-token")
@@ -92,4 +92,4 @@ async def save_fcm_token(
     except Exception as e:
         error_msg = f"Failed to save FCM token: {str(e)}"
         logger("NOTIFICATION", error_msg, "PUT /notifications/fcm-token", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Couldn't register this device for notifications. Please try again.", 500)

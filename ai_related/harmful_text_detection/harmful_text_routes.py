@@ -58,7 +58,7 @@ async def detect_harmful_text(
         raise
     except Exception as e:
         logger("HARMFUL_TEXT", f"Detection failed: {str(e)}", level="ERROR")
-        raise HTTPException(status_code=500, detail=f"Harmful text detection failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Harmful text detection failed. Please try again.")
 
 
 # dev only
@@ -97,7 +97,7 @@ async def detect_harmful_text_batch(
         raise
     except Exception as e:
         logger("HARMFUL_TEXT", f"Batch detection failed: {str(e)}", level="ERROR")
-        raise HTTPException(status_code=500, detail=f"Harmful text batch detection failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Harmful text batch detection failed. Please try again.")
 
 
 # dev only

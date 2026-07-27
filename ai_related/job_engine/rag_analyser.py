@@ -38,7 +38,7 @@ def _retrieve_role_context(db, job_role_id: str) -> dict:
     rows = db.execute_query(
         """
         SELECT jr.role_title, jr.role_description,
-               jp.job_post_id, jp.job_title, jp.job_description, jp.project_type, jp.project_scope,
+               jp.job_post_id, jp.job_title, jp.job_description,
                jp.estimated_duration, jp.deadline,
                COALESCE(
                    array_agg(
@@ -58,7 +58,7 @@ def _retrieve_role_context(db, job_role_id: str) -> dict:
         WHERE jr.job_role_id = :jrid
         GROUP BY jr.job_role_id, jr.role_title, jr.role_description,
                  jp.job_post_id, jp.job_title,
-                 jp.job_description, jp.project_type, jp.project_scope,
+                 jp.job_description,
                  jp.estimated_duration, jp.deadline
         """,
         {"jrid": job_role_id},
@@ -399,7 +399,8 @@ def _build_prompt(role: dict, fc: dict, used_contracts: list[dict], used_portfol
 
     lines.append("JOB POST (background context)")
     lines.append(f"Title:       {role.get('job_title', '')}")
-    lines.append(f"Type:        {role.get('project_type', '')} / {role.get('project_scope', '')}")
+    # project_type/project_scope left out: none of the five scoring criteria below mention
+    # them. Add a criterion first if that changes.
     lines.append(f"Duration:    {role.get('estimated_duration', 'N/A')}")
     lines.append(f"Description: {(role.get('job_description') or '')[:400]}")
 

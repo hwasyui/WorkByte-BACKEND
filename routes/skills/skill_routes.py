@@ -29,7 +29,7 @@ async def get_all_skills(
     except Exception as e:
         error_msg = f"Failed to fetch skills: {str(e)}"
         logger("SKILL", error_msg, "GET /skills", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch skills. Please try again.", 500)
 
 
 @skill_router.get("/search", response_model=None)
@@ -46,7 +46,7 @@ async def search_skills(
     except Exception as e:
         error_msg = f"Failed to search skills with term '{q}': {str(e)}"
         logger("SKILL", error_msg, "GET /skills/search", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to search skills. Please try again.", 500)
 
 
 # dev/admin only - not called by the Flutter app
@@ -64,7 +64,7 @@ async def get_skills_by_alphabet(
     except Exception as e:
         error_msg = f"Failed to fetch skills by letter '{letter}': {str(e)}"
         logger("SKILL", error_msg, "GET /skills/alphabet/{letter}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch skills by letter. Please try again.", 500)
 
 
 @skill_router.get("/category/{category}", response_model=None)
@@ -82,7 +82,7 @@ async def get_skills_by_category(
     except Exception as e:
         error_msg = f"Failed to fetch skills by category '{category}': {str(e)}"
         logger("SKILL", error_msg, "GET /skills/category/{category}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch skills by category. Please try again.", 500)
 
 
 # dev/admin only - not called by the Flutter app
@@ -99,7 +99,7 @@ async def autocomplete_skills(
     except Exception as e:
         error_msg = f"Failed to fetch skill autocomplete: {str(e)}"
         logger("SKILL", error_msg, "GET /skills/autocomplete", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch skill autocomplete. Please try again.", 500)
 
 
 # dev/admin only - not called by the Flutter app
@@ -118,7 +118,7 @@ async def get_skill(skill_id: str, current_user: UserInDB = Depends(get_current_
     except Exception as e:
         error_msg = f"Failed to fetch skill {skill_id}: {str(e)}"
         logger("SKILL", error_msg, "GET /skills/{skill_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch skill. Please try again.", 500)
 
 
 @skill_router.post("", response_model=None, status_code=201)
@@ -140,7 +140,7 @@ async def create_skill(skill: SkillCreate, current_user: UserInDB = Depends(get_
     except Exception as e:
         error_msg = f"Failed to create skill: {str(e)}"
         logger("SKILL", error_msg, "POST /skills", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to create skill. Please try again.", 500)
 
 
 # dev/admin only - the app never calls this. Admin-gated because the skill catalogue is
@@ -169,7 +169,7 @@ async def update_skill(skill_id: str, skill_update: SkillUpdate, current_user: U
     except Exception as e:
         error_msg = f"Failed to update skill {skill_id}: {str(e)}"
         logger("SKILL", error_msg, "PUT /skills/{skill_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to update skill. Please try again.", 500)
 
 
 # dev/admin only - the app never calls this. Deleting a catalogue entry strips it from
@@ -191,4 +191,4 @@ async def delete_skill(skill_id: str, current_user: UserInDB = Depends(get_admin
     except Exception as e:
         error_msg = f"Failed to delete skill {skill_id}: {str(e)}"
         logger("SKILL", error_msg, "DELETE /skills/{skill_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to delete skill. Please try again.", 500)

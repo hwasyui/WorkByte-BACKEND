@@ -18,6 +18,7 @@ from routes.contracts.contract_pdf_generator import generate_contract_pdf
 CONTRACT_BUCKET = "contract-assets"
 
 
+# dev function - no callers.
 def _convert_rows_to_dicts(rows):
     if not rows:
         return []

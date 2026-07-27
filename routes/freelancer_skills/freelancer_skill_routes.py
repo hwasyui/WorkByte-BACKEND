@@ -29,7 +29,7 @@ async def get_all_freelancer_skills(limit: Optional[int] = None, current_user: U
     except Exception as e:
         error_msg = f"Failed to fetch freelancer skills: {str(e)}"
         logger("FREELANCER_SKILL", error_msg, "GET /freelancer-skills", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch freelancer skills. Please try again.", 500)
 
 
 @freelancer_skill_router.get("/{freelancer_skill_id}", response_model=None)
@@ -47,7 +47,7 @@ async def get_freelancer_skill(freelancer_skill_id: str, current_user: UserInDB 
     except Exception as e:
         error_msg = f"Failed to fetch freelancer skill {freelancer_skill_id}: {str(e)}"
         logger("FREELANCER_SKILL", error_msg, "GET /freelancer-skills/{freelancer_skill_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch freelancer skill. Please try again.", 500)
 
 
 # dev/admin only - not called by the Flutter app
@@ -62,7 +62,7 @@ async def get_freelancer_skills_by_freelancer(freelancer_id: str, current_user: 
     except Exception as e:
         error_msg = f"Failed to fetch skills for freelancer {freelancer_id}: {str(e)}"
         logger("FREELANCER_SKILL", error_msg, "GET /freelancer-skills/freelancer/{freelancer_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch skills for freelancer. Please try again.", 500)
 
 
 @freelancer_skill_router.post("", response_model=None, status_code=201)
@@ -91,7 +91,7 @@ async def create_freelancer_skill(freelancer_skill: FreelancerSkillCreate, curre
     except Exception as e:
         error_msg = f"Failed to create freelancer skill: {str(e)}"
         logger("FREELANCER_SKILL", error_msg, "POST /freelancer-skills", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to create freelancer skill. Please try again.", 500)
 
 
 @freelancer_skill_router.put("/{freelancer_skill_id}", response_model=None)
@@ -117,7 +117,7 @@ async def update_freelancer_skill(freelancer_skill_id: str, freelancer_skill_upd
     except Exception as e:
         error_msg = f"Failed to update freelancer skill {freelancer_skill_id}: {str(e)}"
         logger("FREELANCER_SKILL", error_msg, "PUT /freelancer-skills/{freelancer_skill_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to update freelancer skill. Please try again.", 500)
 
 
 @freelancer_skill_router.delete("/{freelancer_skill_id}", status_code=200)
@@ -142,7 +142,7 @@ async def delete_freelancer_skill(freelancer_skill_id: str, current_user: UserIn
     except Exception as e:
         error_msg = f"Failed to delete freelancer skill {freelancer_skill_id}: {str(e)}"
         logger("FREELANCER_SKILL", error_msg, "DELETE /freelancer-skills/{freelancer_skill_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to delete freelancer skill. Please try again.", 500)
 
 
 # dev/admin only - not called by the Flutter app
@@ -161,4 +161,4 @@ async def delete_freelancer_skill_by_ids(freelancer_id: str, skill_id: str, curr
     except Exception as e:
         error_msg = f"Failed to delete freelancer skill: {str(e)}"
         logger("FREELANCER_SKILL", error_msg, "DELETE /freelancer-skills/freelancer/{freelancer_id}/skill/{skill_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to delete freelancer skill. Please try again.", 500)

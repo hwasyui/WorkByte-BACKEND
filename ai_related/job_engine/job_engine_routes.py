@@ -14,6 +14,7 @@ from ai_related.job_engine.usage_limits import check_and_increment_daily_usage, 
 router = APIRouter(prefix="/ai/job-engine", tags=["Job Engine"])
 
 
+# dev function - no callers.
 def _serialize_rows(rows) -> list:
     result = []
     for row in rows:
@@ -113,7 +114,7 @@ async def analyse_role(
     except Exception as e:
         total_ms = (time.perf_counter() - t_request) * 1000
         logger("JOB_ENGINE", f"Error in RAG analysis after {total_ms:.0f}ms | error={e}", level="ERROR")
-        return ResponseSchema.error(str(e), 500)
+        return ResponseSchema.error("Job fit analysis failed. Please try again.", 500)
 
 
 @router.get("/usage")
@@ -129,7 +130,7 @@ async def get_usage(
         return ResponseSchema.success(usage, 200)
     except Exception as e:
         logger("JOB_ENGINE", f"Error fetching usage: {e}", level="ERROR")
-        return ResponseSchema.error(str(e), 500)
+        return ResponseSchema.error("Error fetching usage. Please try again.", 500)
 
 
 # dev only — background worker (embedding_sweep_loop) already runs this on a timer;
@@ -143,6 +144,6 @@ async def trigger_sweep(current_user: UserInDB = Depends(get_current_user)):
         return ResponseSchema.success(result, 200)
     except Exception as e:
         logger("JOB_ENGINE", f"Sweep error: {e}", level="ERROR")
-        return ResponseSchema.error(str(e), 500)
+        return ResponseSchema.error("Sweep error. Please try again.", 500)
 
 

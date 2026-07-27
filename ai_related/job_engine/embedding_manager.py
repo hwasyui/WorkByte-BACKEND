@@ -603,6 +603,7 @@ async def upsert_portfolio_embedding(portfolio_id: str) -> dict:
         raise
 
 
+# dev function - no callers.
 def delete_portfolio_embedding(portfolio_id: str) -> None:
     """
     Remove a portfolio embedding row when the source portfolio entry is deleted.

@@ -74,7 +74,7 @@ class ClientFunctions:
                        cts.weighted_review_avg_received, cts.total_reviews_received
                 FROM client c
                 LEFT JOIN client_trust_score cts
-                    ON cts.client_id = c.user_id
+                    ON cts.client_id = c.client_id
                 ORDER BY {sort_col} {direction} NULLS LAST
                 LIMIT :limit OFFSET :offset
                 """,
@@ -96,6 +96,7 @@ class ClientFunctions:
             logger("CLIENT_FUNCTIONS", f"Error browsing clients: {str(e)}", level="ERROR")
             raise
 
+    # dev function - no callers.
     @staticmethod
     def get_all_clients(limit: Optional[int] = None, offset: int = 0) -> List[Dict]:
         """Fetch all clients."""

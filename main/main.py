@@ -36,6 +36,7 @@ from routes.proposal_files.proposal_file_routes import proposal_file_router
 from routes.contracts.contract_routes import contract_router
 from routes.contracts.contract_deadline_worker import contract_deadline_loop
 from routes.contract_submissions.contract_autoapprove_worker import contract_autoapprove_loop
+from ai_related.review_analysis.review_reconcile_worker import review_reconcile_loop
 from routes.portfolio.portfolio_routes import portfolio_router
 from routes.saved_jobs.saved_job_routes import saved_job_router
 from routes.dm.dm_routes import dm_router
@@ -89,6 +90,9 @@ async def lifespan(app: FastAPI):
     contract_autoapprove_task = asyncio.create_task(contract_autoapprove_loop())
     logger("LIFESPAN", "Contract autoapprove sweep worker started (reminder/final-warning/auto-approve on stalled submissions)", level="INFO")
 
+    review_reconcile_task = asyncio.create_task(review_reconcile_loop())
+    logger("LIFESPAN", "Review reconcile sweep worker started (re-queues reviews whose analysis was interrupted)", level="INFO")
+
     def _warmup_harmful_text():
         try:
             from ai_related.harmful_text_detection.model_inference import load_model
@@ -128,19 +132,26 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    sweep_task.cancel()
-    try:
-        await sweep_task
-    except asyncio.CancelledError:
-        pass
-    logger("LIFESPAN", "Embedding sweep worker stopped", level="INFO")
-
-    moderation_task.cancel()
-    try:
-        await moderation_task
-    except asyncio.CancelledError:
-        pass
-    logger("LIFESPAN", "Moderation sweep worker stopped", level="INFO")
+    # Every background loop started above gets cancelled here. contract_deadline_task
+    # and contract_autoapprove_task used to be started but never stopped, so on
+    # shutdown they were left pending - which surfaces as "Task was destroyed but it
+    # is pending!" and, during a reload, as two generations of the same sweep briefly
+    # running at once.
+    for task, label in (
+        (sweep_task, "Embedding"),
+        (moderation_task, "Moderation"),
+        (contract_deadline_task, "Contract deadline"),
+        (contract_autoapprove_task, "Contract autoapprove"),
+        (review_reconcile_task, "Review reconcile"),
+    ):
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+        except Exception as e:
+            logger("LIFESPAN", f"{label} sweep worker errored on shutdown: {e}", level="WARNING")
+        logger("LIFESPAN", f"{label} sweep worker stopped", level="INFO")
 
     try:
         shutdown_embedding_executor()

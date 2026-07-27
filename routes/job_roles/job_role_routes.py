@@ -30,7 +30,7 @@ async def get_all_job_roles(limit: Optional[int] = None, current_user: UserInDB 
     except Exception as e:
         error_msg = f"Failed to fetch job roles: {str(e)}"
         logger("JOB_ROLE", error_msg, "GET /job-roles", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch job roles. Please try again.", 500)
 
 
 @job_role_router.get("/{job_role_id}", response_model=None)
@@ -52,7 +52,7 @@ async def get_job_role(job_role_id: str, current_user: UserInDB = Depends(get_cu
     except Exception as e:
         error_msg = f"Failed to fetch job role {job_role_id}: {str(e)}"
         logger("JOB_ROLE", error_msg, "GET /job-roles/{job_role_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch job role. Please try again.", 500)
 
 
 @job_role_router.get("/job-post/{job_post_id}", response_model=None)
@@ -66,7 +66,7 @@ async def get_job_roles_by_job_post(job_post_id: str, current_user: UserInDB = D
     except Exception as e:
         error_msg = f"Failed to fetch job roles for job post {job_post_id}: {str(e)}"
         logger("JOB_ROLE", error_msg, "GET /job-roles/job-post/{job_post_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch job roles for job post. Please try again.", 500)
 
 
 @job_role_router.post("", response_model=None, status_code=201)
@@ -90,6 +90,9 @@ async def create_job_role(job_role: JobRoleCreate, current_user: UserInDB = Depe
         )
         
         mark_job_dirty_by_role(str(new_job_role["job_role_id"]))
+        # Roles are added after the post is created, so the scope computed at creation
+        # assumed a headcount of 1. Refresh it now that positions_available changed.
+        JobPostFunctions.recompute_project_scope(str(job_role.job_post_id))
         success_msg = f"Created job role {job_role_id} for job post {job_role.job_post_id}"
         logger("JOB_ROLE", success_msg, "POST /job-roles", "INFO")
         return ResponseSchema.success(new_job_role, 201)
@@ -102,7 +105,7 @@ async def create_job_role(job_role: JobRoleCreate, current_user: UserInDB = Depe
     except Exception as e:
         error_msg = f"Failed to create job role: {str(e)}"
         logger("JOB_ROLE", error_msg, "POST /job-roles", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to create job role. Please try again.", 500)
 
 
 @job_role_router.put("/{job_role_id}", response_model=None)
@@ -129,7 +132,7 @@ async def update_job_role(job_role_id: str, job_role_update: JobRoleUpdate, curr
     except Exception as e:
         error_msg = f"Failed to update job role {job_role_id}: {str(e)}"
         logger("JOB_ROLE", error_msg, "PUT /job-roles/{job_role_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to update job role. Please try again.", 500)
 
 
 @job_role_router.delete("/{job_role_id}", status_code=200)
@@ -147,6 +150,7 @@ async def delete_job_role(job_role_id: str, current_user: UserInDB = Depends(get
         jpid = str(existing_job_role["job_post_id"])
         JobRoleFunctions.delete_job_role(job_role_id)
         mark_job_dirty(jpid)
+        JobPostFunctions.recompute_project_scope(jpid)
         success_msg = f"Deleted job role {job_role_id}"
         logger("JOB_ROLE", success_msg, "DELETE /job-roles/{job_role_id}", "INFO")
         return ResponseSchema.success("Deleted successfully", 200)
@@ -155,4 +159,4 @@ async def delete_job_role(job_role_id: str, current_user: UserInDB = Depends(get
     except Exception as e:
         error_msg = f"Failed to delete job role {job_role_id}: {str(e)}"
         logger("JOB_ROLE", error_msg, "DELETE /job-roles/{job_role_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to delete job role. Please try again.", 500)

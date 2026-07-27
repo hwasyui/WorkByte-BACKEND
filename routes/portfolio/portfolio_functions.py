@@ -23,6 +23,7 @@ def convert_uuids_to_str(data: Dict) -> Dict:
 class PortfolioFunctions:
     """Handle all portfolio-related database operations."""
 
+    # dev function - no callers.
     @staticmethod
     def get_all_portfolios(limit: Optional[int] = None) -> List[Dict]:
         """Fetch all portfolios."""

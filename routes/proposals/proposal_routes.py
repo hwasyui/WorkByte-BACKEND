@@ -53,7 +53,7 @@ async def get_all_proposals(
         return ResponseSchema.success(proposals, 200)
     except Exception as e:
         logger("PROPOSAL", f"Failed to fetch proposals: {str(e)}", "GET /proposals", "ERROR")
-        return ResponseSchema.error(f"Failed to fetch proposals: {str(e)}", 500)
+        return ResponseSchema.error("Failed to fetch proposals. Please try again.", 500)
 
 
 @proposal_router.get("/me", response_model=None)
@@ -87,7 +87,7 @@ async def get_my_proposals(
         return ResponseSchema.success(proposals, 200)
     except Exception as e:
         logger("PROPOSAL", f"Failed to fetch my proposals: {str(e)}", "GET /proposals/me", "ERROR")
-        return ResponseSchema.error(f"Failed to fetch proposals: {str(e)}", 500)
+        return ResponseSchema.error("Failed to fetch proposals. Please try again.", 500)
 
 
 @proposal_router.get("/job-post/{job_post_id}")
@@ -112,7 +112,7 @@ async def get_proposals_by_job_post(
         raise
     except Exception as e:
         logger("PROPOSAL", f"Failed to fetch proposals: {str(e)}", "GET /proposals/job-post/{job_post_id}", "ERROR")
-        return ResponseSchema.error(f"Failed to fetch proposals: {str(e)}", 500)
+        return ResponseSchema.error("Failed to fetch proposals. Please try again.", 500)
 
 
 @proposal_router.get("/freelancer/{freelancer_id}", response_model=None)
@@ -142,7 +142,7 @@ async def get_proposals_by_freelancer(
         return ResponseSchema.success(proposals, 200)
     except Exception as e:
         logger("PROPOSAL", f"Failed to fetch proposals: {str(e)}", "GET /proposals/freelancer/{freelancer_id}", "ERROR")
-        return ResponseSchema.error(f"Failed to fetch proposals: {str(e)}", 500)
+        return ResponseSchema.error("Failed to fetch proposals. Please try again.", 500)
 
 
 @proposal_router.get("/{proposal_id}", response_model=None)
@@ -158,7 +158,7 @@ async def get_proposal(
         return ResponseSchema.success(proposal, 200)
     except Exception as e:
         logger("PROPOSAL", f"Failed to fetch proposal: {str(e)}", "GET /proposals/{proposal_id}", "ERROR")
-        return ResponseSchema.error(f"Failed to fetch proposal: {str(e)}", 500)
+        return ResponseSchema.error("Failed to fetch proposal. Please try again.", 500)
 
 
 @proposal_router.post("", response_model=None, status_code=201)
@@ -207,8 +207,9 @@ async def create_proposal(
                 labels = harm_result.get("detected_labels", [])
                 logger("PROPOSAL", f"Blocked toxic proposal from freelancer {freelancer_id}, labels={labels}", "POST /proposals", "WARNING")
                 return ResponseSchema.error(
-                    f"Your proposal was not submitted. The cover letter was detected as harmful ({', '.join(labels)}).",
+                    "Your proposal was not submitted. The cover letter was flagged by Harmful Text Detection.",
                     400,
+                    extra={"blocked_by": "harmful_text", "detected_labels": labels},
                 )
 
         new_proposal = ProposalFunctions.create_proposal(
@@ -248,7 +249,7 @@ async def create_proposal(
         return ResponseSchema.success(new_proposal, 201)
     except Exception as e:
         logger("PROPOSAL", f"Failed to create proposal: {str(e)}", "POST /proposals", "ERROR")
-        return ResponseSchema.error(f"Failed to create proposal: {str(e)}", 500)
+        return ResponseSchema.error("Failed to create proposal. Please try again.", 500)
 
 
 @proposal_router.patch("/{proposal_id}/status")
@@ -322,7 +323,7 @@ async def update_proposal_status(
         return ResponseSchema.success(updated, 200)
     except Exception as e:
         logger("PROPOSAL", f"Failed to update status: {str(e)}", "PATCH /proposals/{proposal_id}/status", "ERROR")
-        return ResponseSchema.error(f"Failed to update status: {str(e)}", 500)
+        return ResponseSchema.error("Failed to update status. Please try again.", 500)
 
 
 # A proposal is immutable once submitted: no edit route and no delete route.

@@ -29,7 +29,7 @@ async def get_all_saved_jobs(limit: Optional[int] = None, current_user: UserInDB
     except Exception as e:
         error_msg = f"Failed to fetch saved jobs: {str(e)}"
         logger("SAVED_JOB", error_msg, "GET /saved-jobs", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch saved jobs. Please try again.", 500)
 
 
 # dev/admin only - not called by the Flutter app
@@ -51,7 +51,7 @@ async def get_saved_job(saved_job_id: str, current_user: UserInDB = Depends(get_
     except Exception as e:
         error_msg = f"Failed to fetch saved job {saved_job_id}: {str(e)}"
         logger("SAVED_JOB", error_msg, "GET /saved-jobs/{saved_job_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch saved job. Please try again.", 500)
 
 
 # dev/admin only - not called by the Flutter app
@@ -69,7 +69,7 @@ async def get_saved_jobs_by_freelancer(freelancer_id: str, current_user: UserInD
     except Exception as e:
         error_msg = f"Failed to fetch saved jobs for freelancer {freelancer_id}: {str(e)}"
         logger("SAVED_JOB", error_msg, "GET /saved-jobs/freelancer/{freelancer_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch saved jobs for freelancer. Please try again.", 500)
 
 
 # dev/admin only - not called by the Flutter app
@@ -96,7 +96,7 @@ async def create_saved_job(saved_job: SavedJobCreate, current_user: UserInDB = D
     except Exception as e:
         error_msg = f"Failed to create saved job: {str(e)}"
         logger("SAVED_JOB", error_msg, "POST /saved-jobs", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to create saved job. Please try again.", 500)
 
 
 # dev/admin only - not called by the Flutter app
@@ -121,4 +121,4 @@ async def delete_saved_job(saved_job_id: str, current_user: UserInDB = Depends(g
     except Exception as e:
         error_msg = f"Failed to delete saved job {saved_job_id}: {str(e)}"
         logger("SAVED_JOB", error_msg, "DELETE /saved-jobs/{saved_job_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to delete saved job. Please try again.", 500)

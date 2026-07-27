@@ -67,6 +67,7 @@ class ProposalFunctions:
             logger("PROPOSAL_FUNCTIONS", f"Error fetching proposal: {str(e)}", level="ERROR")
             raise
 
+    # dev function - no callers.
     @staticmethod
     def get_proposals_by_job_post_id(job_post_id: str) -> List[Dict]:
         """Fetch all proposals for a job post."""
@@ -199,6 +200,7 @@ class ProposalFunctions:
             logger("PROPOSAL_FUNCTIONS", f"Error checking duplicate proposal: {str(e)}", level="ERROR")
             raise
 
+    # dev function - no callers.
     @staticmethod
     def get_proposal_for_freelancer_role(
         freelancer_id: str,
@@ -346,6 +348,7 @@ class ProposalFunctions:
             logger("PROPOSAL_FUNCTIONS", f"Error auto-rejecting proposals for role {job_role_id}: {str(e)}", level="ERROR")
             raise
 
+    # dev function - no callers.
     @staticmethod
     def delete_proposal(proposal_id: str) -> bool:
         """Delete a proposal and sync proposal_count on the job post."""

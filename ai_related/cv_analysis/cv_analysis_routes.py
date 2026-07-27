@@ -105,4 +105,4 @@ async def analyze_cv(
         raise
     except Exception as e:
         logger("CV_ANALYSIS", f"CV analysis failed: {str(e)}", level="ERROR")
-        raise HTTPException(status_code=500, detail=f"CV analysis failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="CV analysis failed. Please try again.")

@@ -1,6 +1,8 @@
 import os
+import re
 import sys
 import json
+import math
 import asyncio
 import random
 import httpx
@@ -23,6 +25,12 @@ MODEL_FALLBACKS = [
     "openai/gpt-oss-120b",       # primary - matches ai_related/job_engine/rag_analyser.py's chain
     "llama-3.3-70b-versatile"   # fallback 1: separate rate-limit bucket
 ]
+
+# Written into flag_reasons when the LLM analysis could not run at all, so the
+# reconcile sweep can tell "we judged this and held it" apart from "we never got
+# to judge it" and retry only the latter. Shared by both analyzers and the sweep -
+# a literal duplicated in three places would drift.
+ANALYSIS_UNAVAILABLE_REASON = "Automated analysis unavailable - held for manual review"
 
 LLM_CONCURRENCY_LIMIT = 2
 llm_semaphore = asyncio.Semaphore(LLM_CONCURRENCY_LIMIT)
@@ -236,12 +244,137 @@ def get_targeted_question(category: str) -> str:
         return "How satisfied are you with the overall project outcome?"
 
 
-def compute_on_time_score(end_date, actual_completion_date) -> float:
-    if not actual_completion_date:
-        return 0.5
-    if not end_date:
-        return 0.8
-    return 1.0 if actual_completion_date <= end_date else 0.5
+# A generated question is shown verbatim to the reviewer, so it has to be neutral:
+# anything that presupposes an outcome ("how impressed were you...") biases every
+# review it produces. Cheap guard rather than trusting the prompt alone.
+_LEADING_WORDS = re.compile(
+    r"\b(excellent|impressive|impressed|amazing|outstanding|fantastic|great|"
+    r"superb|brilliant|flawless|terrible|awful|poor|disappoint\w*)\b",
+    re.IGNORECASE,
+)
+
+QUESTION_MIN_LEN = 20
+QUESTION_MAX_LEN = 200
+
+
+def _validate_generated_question(question: Optional[str]) -> Optional[str]:
+    """Return the question if it is usable, else None so the caller falls back.
+
+    Rejects anything that is not a single neutral open question: wrong length,
+    missing question mark, outcome-presupposing wording, or a yes/no opener that
+    would produce one-word answers with no signal for the groundedness check.
+    """
+    if not question:
+        return None
+
+    q = " ".join(str(question).split())
+    if not (QUESTION_MIN_LEN <= len(q) <= QUESTION_MAX_LEN):
+        return None
+    if not q.endswith("?") or q.count("?") != 1:
+        return None
+    if _LEADING_WORDS.search(q):
+        return None
+    if q.split(" ", 1)[0].lower() in {"did", "was", "were", "is", "are", "do", "does", "has", "have"}:
+        return None
+    return q
+
+
+async def generate_targeted_question(
+    job_title: str,
+    role_title: str,
+    job_description: str,
+    contract_title: str,
+    role_skills: List[str],
+    category: str,
+    submission_notes: List[str],
+) -> str:
+    """Generate the review question from the actual project.
+
+    A stock question ("How satisfied are you overall?") can be answered
+    convincingly by anyone, including someone who never did the work. A question
+    grounded in this specific project cannot, which is what makes the answer
+    usable as an authenticity signal downstream (see answer_groundedness in
+    analyze_review_full). That is the point of generating it rather than looking
+    it up.
+
+    Falls back to get_targeted_question(category) - the ai_review_prompts table -
+    and then to a hardcoded string, so a Groq outage degrades the question rather
+    than breaking contract completion.
+    """
+    try:
+        system = (
+            "You write a single neutral review question for a freelancing platform. "
+            "Return valid JSON only, no markdown fences or commentary."
+        )
+
+        skills_line = ", ".join(role_skills[:12]) if role_skills else "not specified"
+        notes_block = "\n".join(f"- {n}" for n in submission_notes[:5] if n) or "- none recorded"
+
+        user = (
+            "A client is about to review a freelancer for this completed project.\n\n"
+            f"Job title: {job_title}\n"
+            f"Contract title: {contract_title}\n"
+            f"Role: {role_title}\n"
+            f"Category: {category}\n"
+            f"Required skills: {skills_line}\n"
+            f"Job description:\n{(job_description or '')[:1500]}\n\n"
+            "Notes the freelancer attached to their submissions:\n"
+            f"{notes_block}\n\n"
+            "Write ONE question for the client about how this specific project went.\n"
+            "Rules:\n"
+            "- Reference a concrete aspect of THIS project (a named deliverable, "
+            "technology, constraint, or requirement above).\n"
+            "- Stay strictly neutral: do NOT presuppose the work went well or badly, "
+            "and do not use evaluative adjectives.\n"
+            "- Open-ended. Must NOT be answerable with yes or no. Start it with a word "
+            "like How, What, Which, or Where.\n"
+            "- One sentence, under 200 characters, ending in a question mark.\n"
+            "- Address the client as \"you\"; never name the freelancer.\n"
+            'Return exactly: {"question": "..."}'
+        )
+
+        result = await call_llm(system, user, json_mode=True)
+        validated = _validate_generated_question(
+            result.get("question") if isinstance(result, dict) else None
+        )
+        if validated:
+            logger("REVIEW_AI", f"Generated targeted question for category={category}", level="INFO")
+            return validated
+
+        logger(
+            "REVIEW_AI",
+            f"Generated question rejected by validation (category={category}), using prompt table",
+            level="WARNING",
+        )
+    except Exception as e:
+        logger("REVIEW_AI", f"Question generation failed, using prompt table: {str(e)}", level="WARNING")
+
+    return get_targeted_question(category)
+
+
+ON_TIME_ZERO_AT_DAYS = 30.0  # days late at which the on-time component bottoms out
+
+
+def compute_on_time_score(end_date, actual_completion_date) -> Optional[float]:
+    """Graded on-time score, or None when there is nothing to measure.
+
+    Was binary 1.0/0.5, which scored one day late exactly the same as one month
+    late, and returned a flattering 0.5-0.8 for contracts that had no completion
+    or deadline recorded at all - inventing delivery evidence that did not exist.
+    Now returns None in those cases so calculate_trust_score drops the component
+    and renormalizes, and decays linearly to 0 over ON_TIME_ZERO_AT_DAYS.
+
+    Callers should pass contract.original_end_date, not end_date, so a deadline
+    extension granted during dispute arbitration cannot turn a late delivery into
+    an on-time one.
+    """
+    if not actual_completion_date or not end_date:
+        return None
+
+    days_late = (actual_completion_date - end_date).days
+    if days_late <= 0:
+        return 1.0
+    return round(max(0.0, 1.0 - (days_late / ON_TIME_ZERO_AT_DAYS)), 3)
 
 
 def compute_revision_scores(contract_id: str) -> Tuple[int, float]:
@@ -265,6 +398,8 @@ def compute_revision_scores(contract_id: str) -> Tuple[int, float]:
 
 
 def compute_responsiveness_score(contract_id: str, freelancer_user_id: str) -> float:
+    """Reply-gap score from the contract's DM thread. Takes a users.user_id, not
+    a freelancer_id, because it compares against dm_message.sender_id."""
     try:
         thread = DMFunctions.get_thread_by_contract_id(contract_id)
         if not thread:
@@ -298,40 +433,52 @@ def compute_responsiveness_score(contract_id: str, freelancer_user_id: str) -> f
 def blend_communication_score(
     ai_quality_score: float,
     client_star_normalized: Optional[float],
-    responsiveness_score: float,
+    responsiveness_score: Optional[float],
     sentiment_score: float,
 ) -> float:
     """
     Blends all available communication signals into a single 0–1 score.
 
-    Signal weights (with client star rating):
+    Signal weights:
       45%: client's explicit communication star rating (1-5, normalized to 0-1)
       30%: AI assessment of the message thread
       20%: reply speed (computed from message timestamps)
        5%: overall review sentiment (weakest, indirect signal)
 
-    Without client star rating (fallback):
-      50%: AI thread assessment
-      35%: reply speed
-      15%: overall review sentiment.
+    Any signal that is None is dropped and its weight redistributed across the
+    rest, the same way calculate_trust_score handles missing components. The
+    caller used to substitute 0.8 for a missing responsiveness score, which meant
+    a contract with no message history was honestly reported as None to the trust
+    score but silently credited as reasonably responsive here.
     """
     sentiment_component = max(0.0, min(1.0, 0.5 + sentiment_score / 2.0))
 
-    if client_star_normalized is not None:
-        blended = (
-            client_star_normalized * 0.45
-            + ai_quality_score     * 0.30
-            + responsiveness_score * 0.20
-            + sentiment_component  * 0.05
-        )
-    else:
-        blended = (
-            ai_quality_score     * 0.50
-            + responsiveness_score * 0.35
-            + sentiment_component  * 0.15
-        )
+    components = [
+        (0.45, client_star_normalized),
+        (0.30, ai_quality_score),
+        (0.20, responsiveness_score),
+        (0.05, sentiment_component),
+    ]
 
+    present = [(w, float(v)) for w, v in components if v is not None]
+    total_weight = sum(w for w, _ in present)
+    if total_weight <= 0:
+        return 0.5
+
+    blended = sum(w * v for w, v in present) / total_weight
     return round(max(0.0, min(1.0, blended)), 3)
+
+
+def _fmt_metric(value) -> str:
+    """Render an objective metric for the LLM prompt.
+
+    Components with no supporting data are None since the honest-defaults change.
+    Interpolated raw, that renders as the literal "None", which the model read as
+    "the platform measured this and found nothing" - it started flagging reviews
+    for "claiming on-time delivery when objective data shows no record". Missing
+    data has to be labelled as missing, not as a zero.
+    """
+    return "not recorded" if value is None else f"{float(value):.3f}"
 
 
 async def analyze_review_full(
@@ -342,6 +489,7 @@ async def analyze_review_full(
     performance_score_summary: Dict,
     message_thread: str,
     communication_star_rating: Optional[float] = None,  # raw 1–5 from review_ratings, shown as context only
+    ai_question: str = "",
 ) -> Dict:
     """
     Sentiment is intentionally NOT requested here: the trained sentiment_detector
@@ -369,6 +517,14 @@ async def analyze_review_full(
         "sentiment_mismatch": "boolean, true if the review text's tone contradicts the star rating (e.g. negative text with 5 stars)",
         "communication_quality_score": "float between 0.0 and 1.0, quality of freelancer communication judged from the message thread ONLY, not the review text",
         "communication_summary": "string, 1-2 sentence summary of communication quality based on the message thread",
+        "answer_groundedness": (
+            "float between 0.0 and 1.0. The question asked was generated from this specific "
+            "project. Judge ONLY whether the answer actually engages with it using concrete, "
+            "checkable specifics someone who lived this project would know. 1.0 = specific and "
+            "clearly grounded in this project; 0.5 = on topic but generic; 0.0 = evasive, "
+            "contradictory, or could have been written about any project without seeing this one. "
+            "Judge specificity, NOT whether the answer is positive or negative."
+        ),
     }
 
     comm_star_line = (
@@ -377,18 +533,32 @@ async def analyze_review_full(
         else ""
     )
 
+    # The question is generated per-project, so the answer can only be judged for
+    # groundedness if the model is told what was actually asked. Without it the
+    # model was rating an answer against an unknown question.
+    qa_block = (
+        f"Project-specific question the client was asked:\n{ai_question}\n"
+        f"Their answer:\n{client_answer}\n\n"
+        if ai_question
+        else f"Client's answer to a follow-up question:\n{client_answer}\n\n"
+    )
+
     user = (
-        f"Review text:\n{overall_comment}\n{client_answer}\n\n"
+        f"Review text:\n{overall_comment}\n\n"
+        f"{qa_block}"
         f"Star rating given: {avg_star_rating:.1f} out of 5\n"
         f"Freelancer name: {freelancer_name}\n\n"
-        "Objective performance summary (0–1 scale):\n"
-        f"- On-time delivery: {performance_score_summary.get('on_time', 'N/A')}\n"
-        f"- Revision rate: {performance_score_summary.get('revision_rate', 'N/A')}\n"
-        f"- Responsiveness: {performance_score_summary.get('responsiveness', 'N/A')}\n"
+        "Objective performance summary (0–1 scale). 'not recorded' means the platform "
+        "has no measurement for it - that is missing data, NOT evidence against the "
+        "review, and must not be treated as contradicting anything the reviewer says:\n"
+        f"- On-time delivery: {_fmt_metric(performance_score_summary.get('on_time'))}\n"
+        f"- Revision rate: {_fmt_metric(performance_score_summary.get('revision_rate'))}\n"
+        f"- Responsiveness: {_fmt_metric(performance_score_summary.get('responsiveness'))}\n"
         f"{comm_star_line}"
         "\nMessage thread from the project (use this to assess communication_quality_score):\n"
         f"{message_thread[:3000]}\n\n"
-        "Assess the review for authenticity, coercion, sentiment/rating mismatch, and communication quality. "
+        "Assess the review for authenticity, coercion, sentiment/rating mismatch, communication "
+        "quality, and how well the answer is grounded in this specific project. "
         "Base your analysis entirely on the data above, do not invent or assume anything.\n"
         "Return exactly one JSON object matching this schema:\n"
         f"{json.dumps(schema_description, ensure_ascii=False, indent=2)}"
@@ -397,6 +567,7 @@ async def analyze_review_full(
     try:
         result = await call_llm(system, user, json_mode=True)
 
+        groundedness = result.get("answer_groundedness")
         return {
             "sentiment_mismatch":          bool(result.get("sentiment_mismatch", False)),
             "authenticity_score":          float(result.get("authenticity_score", 1.0)),
@@ -405,30 +576,59 @@ async def analyze_review_full(
             "flag_reasons":                result.get("flag_reasons", []),
             "communication_quality_score": max(0.0, min(1.0, float(result.get("communication_quality_score", 0.5)))),
             "communication_summary":       result.get("communication_summary", ""),
+            "answer_groundedness":         max(0.0, min(1.0, float(groundedness))) if groundedness is not None else None,
+            "analysis_unavailable":        False,
         }
 
     except Exception as e:
-        logger("REVIEW_AI", f"Review analysis failed: {str(e)}", level="ERROR")
+        # Fail CLOSED. This used to return authenticity_score=1.0 with no flags,
+        # so a Groq outage auto-published every review AND handed each one a
+        # perfect authenticity contribution through the (llm+ml)/2 blend. A review
+        # we could not analyse is a review we have not checked, so it goes to the
+        # admin queue instead of straight to the public profile.
+        logger("REVIEW_AI", f"Review analysis failed, failing closed: {str(e)}", level="ERROR")
         return {
             "sentiment_mismatch":          False,
-            "authenticity_score":          1.0,
+            "authenticity_score":          0.0,
             "is_flagged_fake":             False,
             "is_flagged_coerced":          False,
-            "flag_reasons":                [],
+            "flag_reasons":                [ANALYSIS_UNAVAILABLE_REASON],
             "communication_quality_score": 0.5,
             "communication_summary":       "Analysis unavailable.",
+            "answer_groundedness":         None,
+            "analysis_unavailable":        True,
         }
+
+
+SHRINKAGE_K = 5.0       # reviews needed before the raw average carries ~half the weight
+SHRINKAGE_PRIOR = 3.5   # neutral star rating a freelancer/client is assumed to be at
+
+
+def shrink_toward_prior(weighted_review_avg: float, total_reviews: int) -> float:
+    """Pull a star average toward a neutral prior in proportion to how little
+    evidence supports it.
+
+    Without this, one 5-star review produced the same star component as fifty,
+    and a single review was enough to score near the top of the scale. With
+    K=5, one review lands about 17% of the way from the prior to the raw
+    average, ten reviews about 67%, fifty about 91%.
+    """
+    n = max(0, int(total_reviews or 0))
+    if n <= 0:
+        return SHRINKAGE_PRIOR
+    return (n * float(weighted_review_avg) + SHRINKAGE_K * SHRINKAGE_PRIOR) / (n + SHRINKAGE_K)
 
 
 def calculate_trust_score(
     weighted_review_avg: float,
-    on_time_score: float,
-    revision_rate_score: float,
-    responsiveness_score: float,
+    on_time_score: Optional[float],
+    revision_rate_score: Optional[float],
+    responsiveness_score: Optional[float],
     communication_sentiment: Optional[float],
     authenticity_confidence: float,
     consistency_score: float,
     coerced_ratio: float,
+    total_reviews: int = 0,
 ) -> float:
     """
     Trust score, rebalanced so every sub-score is a genuine, named, weighted
@@ -458,34 +658,117 @@ def calculate_trust_score(
     coerced_ratio (fraction of a freelancer's reviews flagged as coerced) is
     a proportional penalty of up to 15 points, replacing the old flat -5
     "if any coercion flag exists" rule that scored one bad flag the same as ten.
+
+    Two things changed in how the weights are applied:
+
+    * The star average is shrunk toward a neutral prior by review count
+      (shrink_toward_prior), so a thin history cannot buy a top score.
+    * A component whose input is None has no supporting data, and is dropped
+      with its weight redistributed proportionally across the components that
+      do - rather than being filled with a generous default. Previously a
+      contract with no delivery history contributed 22.5 points of on-time and
+      revision credit it had not earned. Missing data is now neutral, not
+      rewarding; shrinkage is what handles thin evidence.
     """
-    communication_sentiment = float(communication_sentiment) if communication_sentiment is not None else 0.5
+    effective_avg = shrink_toward_prior(weighted_review_avg, total_reviews)
 
-    score  = (weighted_review_avg / 5.0) * 30
-    score += on_time_score               * 15
-    score += revision_rate_score         * 15
-    score += responsiveness_score        * 10
-    score += communication_sentiment     * 10
-    score += authenticity_confidence     * 10
-    score += consistency_score           * 10
+    components = [
+        (30.0, effective_avg / 5.0),
+        (15.0, on_time_score),
+        (15.0, revision_rate_score),
+        (10.0, responsiveness_score),
+        (10.0, communication_sentiment),
+        (10.0, authenticity_confidence),
+        (10.0, consistency_score),
+    ]
 
+    present = [(w, float(v)) for w, v in components if v is not None]
+    total_weight = sum(w for w, _ in present)
+    if total_weight <= 0:
+        return 0.0
+
+    score = 100.0 * sum(w * v for w, v in present) / total_weight
     score -= min(15.0, coerced_ratio * 30)
 
     return round(min(100.0, max(0.0, score)), 2)
 
 
-def calculate_weighted_review_avg(freelancer_user_id: str) -> Tuple[float, int]:
+REFERENCE_BUDGET_USD = 5000.0  # contract value treated as "full weight" for scoring
+VALUE_WEIGHT_MIN = 0.5
+VALUE_WEIGHT_MAX = 1.5
+
+
+def compute_value_weight(agreed_budget, budget_currency: Optional[str]) -> float:
+    """Scale a review's weight by the size of the contract it came from.
+
+    A $50 job and a $10,000 job otherwise carry identical weight, which makes
+    reputation cheap to manufacture from trivial contracts. Compressed with a log
+    so large contracts count for more without dominating, and clamped so no single
+    contract can swing an average on its own.
+
+    Budgets are normalized to USD first via JobPostFunctions._to_usd_scope. This
+    matters more than it looks: contracts here are mostly IDR, and an unnormalized
+    comparison would rank an IDR 75 contract above a USD 750 one purely on the
+    numeral. An unconvertible currency falls back to neutral weight rather than
+    being compared as if 1 unit == 1 USD.
+    """
+    if agreed_budget is None:
+        return 1.0
+    try:
+        budget = float(agreed_budget)
+    except (TypeError, ValueError):
+        return 1.0
+    if budget <= 0:
+        return 1.0
+
+    # Imported lazily: this module is loaded by the review pipelines at startup and
+    # job_post_functions pulls in the whole job-post query layer.
+    from routes.job_posts.job_post_functions import JobPostFunctions
+
+    code = (budget_currency or "USD").upper()
+    rates = JobPostFunctions._refresh_scope_fx_rates_if_needed()
+    if code not in rates:
+        logger("REVIEW_AI", f"No FX rate for '{code}', review weighted neutrally by value", level="WARNING")
+        return 1.0
+
+    budget_usd = JobPostFunctions._to_usd_scope(budget, code)
+    if budget_usd <= 0:
+        return 1.0
+
+    ratio = math.log10(1.0 + budget_usd) / math.log10(1.0 + REFERENCE_BUDGET_USD)
+    return round(max(VALUE_WEIGHT_MIN, min(VALUE_WEIGHT_MAX, ratio)), 4)
+
+
+def compute_repeat_weight(occurrence_index: int) -> float:
+    """Diminishing weight for repeated reviews from the same counterparty.
+
+    uq_reviews_contract caps one review per contract, but nothing stops the same
+    pair running many small contracts to manufacture reputation. The k-th review
+    from a given counterparty is worth 1/sqrt(k), so the first is full value and
+    the tenth is worth about 0.32. Genuine repeat business still counts, it just
+    stops counting linearly.
+    """
+    k = max(1, int(occurrence_index or 1))
+    return 1.0 / math.sqrt(k)
+
+
+def calculate_weighted_review_avg(freelancer_id: str) -> Tuple[float, int]:
     try:
         db = get_db()
         rows = db.execute_query(
             """
-            SELECT rr.score, r.published_at, ra.authenticity_score
+            SELECT rr.score, r.published_at, ra.authenticity_score,
+                   c.agreed_budget, c.budget_currency,
+                   DENSE_RANK() OVER (
+                       PARTITION BY r.reviewer_id ORDER BY r.published_at, r.id
+                   ) AS pair_occurrence
             FROM review_ratings rr
             JOIN reviews r ON r.id = rr.review_id
+            JOIN contract c ON c.contract_id = r.contract_id
             LEFT JOIN review_ai_analysis ra ON ra.review_id = r.id
             WHERE r.freelancer_id = :fid AND r.status = 'published'
             """,
-            {"fid": freelancer_user_id},
+            {"fid": freelancer_id},
         )
 
         if not rows:
@@ -507,7 +790,9 @@ def calculate_weighted_review_avg(freelancer_user_id: str) -> Tuple[float, int]:
             # review counts less than a clearly-genuine one, instead of
             # authenticity only ever acting as a binary publish/suppress gate.
             authenticity_weight = float(row["authenticity_score"]) if row["authenticity_score"] is not None else 1.0
-            weight = recency_weight * authenticity_weight
+            value_weight = compute_value_weight(row["agreed_budget"], row["budget_currency"])
+            repeat_weight = compute_repeat_weight(row["pair_occurrence"])
+            weight = recency_weight * authenticity_weight * value_weight * repeat_weight
 
             weighted_sum += float(row["score"]) * weight
             weight_total += weight
@@ -520,7 +805,7 @@ def calculate_weighted_review_avg(freelancer_user_id: str) -> Tuple[float, int]:
             FROM reviews r
             WHERE r.freelancer_id = :fid AND r.status = 'published'
             """,
-            {"fid": freelancer_user_id},
+            {"fid": freelancer_id},
         )
         total = int(count_rows[0]["cnt"]) if count_rows else 0
 
@@ -531,7 +816,7 @@ def calculate_weighted_review_avg(freelancer_user_id: str) -> Tuple[float, int]:
         return 0.0, 0
 
 
-def calculate_aggregate_performance(freelancer_user_id: str) -> Dict:
+def calculate_aggregate_performance(freelancer_id: str) -> Dict:
     """
     Averages on_time/revision/responsiveness/communication scores across
     ALL of a freelancer's completed contracts. Fixes the previous bug where
@@ -550,11 +835,11 @@ def calculate_aggregate_performance(freelancer_user_id: str) -> Dict:
     computed before the review even exists, but they ride the same join since
     they're on the same row.
     """
-    defaults = {
-        "on_time_score": 0.8,
-        "revision_rate_score": 1.0,
-        "responsiveness_score": 0.8,
-        "communication_sentiment_score": 0.5,
+    empty = {
+        "on_time_score": None,
+        "revision_rate_score": None,
+        "responsiveness_score": None,
+        "communication_sentiment_score": None,
         "coerced_ratio": 0.0,
     }
     try:
@@ -567,30 +852,55 @@ def calculate_aggregate_performance(freelancer_user_id: str) -> Dict:
             JOIN reviews r ON r.contract_id = fps.contract_id
             WHERE fps.freelancer_id = :fid AND r.status = 'published'
             """,
-            {"fid": freelancer_user_id},
+            {"fid": freelancer_id},
         )
+        # coerced_ratio is deliberately NOT read from the query above. conflict_score
+        # is set to 1.0 only when the AI analysis flags a review as coerced, and that
+        # flag forces overall_pass=False, which stops the review publishing - so the
+        # published-only join made the coerced count structurally always zero and the
+        # 15-point penalty in calculate_trust_score unreachable. It could only fire
+        # after an admin override-published a coerced review, i.e. exactly when a human
+        # had decided it was legitimate. Counted here over every review the pipeline
+        # actually analysed instead.
+        coerced_rows = db.execute_query(
+            """
+            SELECT fps.conflict_score
+            FROM freelancer_performance_scores fps
+            JOIN reviews r ON r.contract_id = fps.contract_id
+            WHERE fps.freelancer_id = :fid
+              AND r.status IN ('published', 'flagged', 'suppressed')
+            """,
+            {"fid": freelancer_id},
+        )
+        coerced_ratio = 0.0
+        if coerced_rows:
+            coerced_count = sum(1 for r in coerced_rows if float(r["conflict_score"] or 0.0) > 0.7)
+            coerced_ratio = round(coerced_count / len(coerced_rows), 3)
+
         if not rows:
-            return defaults
+            return {**empty, "coerced_ratio": coerced_ratio}
 
-        def avg(key: str, default: float) -> float:
+        # None, not a flattering constant, when a component has no supporting data.
+        # calculate_trust_score drops those components and renormalizes the remaining
+        # weights, so a contract with no delivery history contributes nothing instead
+        # of contributing 22.5 points of invented evidence.
+        def avg(key: str) -> Optional[float]:
             values = [float(r[key]) for r in rows if r[key] is not None]
-            return round(sum(values) / len(values), 3) if values else default
-
-        coerced_count = sum(1 for r in rows if float(r["conflict_score"] or 0.0) > 0.7)
+            return round(sum(values) / len(values), 3) if values else None
 
         return {
-            "on_time_score": avg("on_time_score", defaults["on_time_score"]),
-            "revision_rate_score": avg("revision_rate_score", defaults["revision_rate_score"]),
-            "responsiveness_score": avg("responsiveness_score", defaults["responsiveness_score"]),
-            "communication_sentiment_score": avg("communication_sentiment_score", defaults["communication_sentiment_score"]),
-            "coerced_ratio": round(coerced_count / len(rows), 3),
+            "on_time_score": avg("on_time_score"),
+            "revision_rate_score": avg("revision_rate_score"),
+            "responsiveness_score": avg("responsiveness_score"),
+            "communication_sentiment_score": avg("communication_sentiment_score"),
+            "coerced_ratio": coerced_ratio,
         }
     except Exception as e:
         logger("REVIEW_AI", f"Error computing aggregate performance: {str(e)}", level="ERROR")
-        return defaults
+        return empty
 
 
-def calculate_ai_trust_components(freelancer_user_id: str) -> Dict:
+def calculate_ai_trust_components(freelancer_id: str) -> Dict:
     """
     Averages this freelancer's own review_ml model outputs (authenticity,
     mismatch severity) across all their published reviews, for use as named
@@ -605,7 +915,7 @@ def calculate_ai_trust_components(freelancer_user_id: str) -> Dict:
             JOIN reviews r ON r.id = ra.review_id
             WHERE r.freelancer_id = :fid AND r.status = 'published'
             """,
-            {"fid": freelancer_user_id},
+            {"fid": freelancer_id},
         )
         if not rows:
             return {"authenticity_confidence": 1.0, "consistency_score": 1.0}
@@ -633,7 +943,7 @@ MIN_REVIEWS_FOR_SUMMARY = 3
 SUMMARY_REGEN_INTERVAL = 5  # regenerate at 3, 8, 13, 18... published reviews
 
 
-def _fetch_published_review_texts(freelancer_user_id: str) -> List[Dict]:
+def _fetch_published_review_texts(freelancer_id: str) -> List[Dict]:
     db = get_db()
     return db.execute_query(
         """
@@ -643,11 +953,11 @@ def _fetch_published_review_texts(freelancer_user_id: str) -> List[Dict]:
         WHERE r.freelancer_id = :fid AND r.status = 'published'
         ORDER BY r.published_at DESC
         """,
-        {"fid": freelancer_user_id},
+        {"fid": freelancer_id},
     )
 
 
-def _fetch_top_skill_tags(freelancer_user_id: str, limit: int = 8) -> List[str]:
+def _fetch_top_skill_tags(freelancer_id: str, limit: int = 8) -> List[str]:
     db = get_db()
     rows = db.execute_query(
         """
@@ -659,13 +969,13 @@ def _fetch_top_skill_tags(freelancer_user_id: str, limit: int = 8) -> List[str]:
         ORDER BY cnt DESC
         LIMIT :limit
         """,
-        {"fid": freelancer_user_id, "limit": limit},
+        {"fid": freelancer_id, "limit": limit},
     )
     return [row["skill_tag"] for row in rows]
 
 
 async def generate_freelancer_review_summary(
-    freelancer_user_id: str,
+    freelancer_id: str,
     freelancer_name: str,
 ) -> Optional[str]:
     """
@@ -677,11 +987,11 @@ async def generate_freelancer_review_summary(
     1-2 reviews is redundant with just reading them).
     """
     try:
-        review_rows = _fetch_published_review_texts(freelancer_user_id)
+        review_rows = _fetch_published_review_texts(freelancer_id)
         if len(review_rows) < MIN_REVIEWS_FOR_SUMMARY:
             return None
 
-        skill_tags = _fetch_top_skill_tags(freelancer_user_id)
+        skill_tags = _fetch_top_skill_tags(freelancer_id)
 
         reviews_block = "\n\n".join(
             f"- {(row.get('overall_comment') or '').strip()} {(row.get('client_answer') or '').strip()}".strip()
@@ -709,5 +1019,5 @@ async def generate_freelancer_review_summary(
         return summary.strip() if summary else None
 
     except Exception as e:
-        logger("REVIEW_AI", f"Review summary generation failed for {freelancer_user_id}: {str(e)}", level="ERROR")
+        logger("REVIEW_AI", f"Review summary generation failed for {freelancer_id}: {str(e)}", level="ERROR")
         return None

@@ -23,6 +23,7 @@ def convert_uuids_to_str(data: Dict) -> Dict:
 class JobRoleFunctions:
     """Handle all job role-related database operations."""
 
+    # dev function - no callers.
     @staticmethod
     def get_all_job_roles(limit: Optional[int] = None) -> List[Dict]:
         """Fetch all job roles."""

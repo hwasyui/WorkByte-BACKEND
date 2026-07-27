@@ -126,6 +126,7 @@ def normalize_skill_name(skill_name: str, remove_role_context: bool = False) -> 
     return normalized
 
 
+# dev function - no callers.
 def get_skill_name_for_db(skill_name: str) -> str:
     """
     Get normalized name for database storage.
@@ -135,6 +136,7 @@ def get_skill_name_for_db(skill_name: str) -> str:
     return normalize_skill_name(skill_name, remove_role_context=False)
 
 
+# dev function - no callers.
 def skill_names_equal(name1: str, name2: str, strict: bool = True) -> bool:
     """
     Check if two skill names refer to the same skill.

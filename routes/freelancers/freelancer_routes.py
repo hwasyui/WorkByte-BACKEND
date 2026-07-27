@@ -27,6 +27,7 @@ _DOCX_MIMES = {
     "application/msword",
 }
 
+# dev function - no callers.
 async def freelancer_update_form(
     request: Request,
     full_name: Optional[str] = Form(None),
@@ -80,7 +81,7 @@ async def get_all_freelancers(limit: Optional[int] = None, current_user: UserInD
     except Exception as e:
         error_msg = f"Failed to fetch freelancers: {str(e)}"
         logger("FREELANCER", error_msg, "GET /freelancers", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch freelancers. Please try again.", 500)
 
 
 # dev/admin only - not called by the Flutter app
@@ -93,7 +94,7 @@ async def create_freelancer(
         freelancer_id = freelancer.freelancer_id or str(uuid.uuid4())
         current_freelancer = FreelancerFunctions.get_freelancer_by_user_id(current_user.user_id)
         if current_freelancer:
-            return ResponseSchema.error(f"Freelancer profile already exists for user {current_user.user_id}", 400)
+            return ResponseSchema.error("You already have a freelancer profile.", 400)
         if freelancer.user_id and str(freelancer.user_id) != str(current_user.user_id):
             return ResponseSchema.error("Cannot create a freelancer profile for another user", 403)
 
@@ -134,7 +135,7 @@ async def create_freelancer(
     except Exception as e:
         error_msg = f"Failed to create freelancer: {str(e)}"
         logger("FREELANCER", error_msg, "POST /freelancers", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to create freelancer. Please try again.", 500)
 
 
 @freelancer_router.post("/parse-cv")
@@ -183,7 +184,7 @@ async def parse_cv_for_autofill(
     except Exception as e:
         error_msg = f"Failed to parse CV: {str(e)}"
         logger("FREELANCER", error_msg, "POST /freelancers/parse-cv", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to parse CV. Please try again.", 500)
 
 
 @freelancer_router.put("/{identifier}", response_model=None)
@@ -230,7 +231,7 @@ async def update_freelancer(
     except Exception as e:
         error_msg = f"Failed to update freelancer {identifier}: {str(e)}"
         logger("FREELANCER", error_msg, "PUT /freelancers/{identifier}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to update freelancer. Please try again.", 500)
 
 
 @freelancer_router.delete("/{identifier}", status_code=200)
@@ -249,7 +250,7 @@ async def delete_freelancer(identifier: str, current_user: UserInDB = Depends(ge
     except Exception as e:
         error_msg = f"Failed to delete freelancer {identifier}: {str(e)}"
         logger("FREELANCER", error_msg, "DELETE /freelancers/{identifier}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to delete freelancer. Please try again.", 500)
 
 
 @freelancer_router.get("/search", response_model=None)
@@ -264,7 +265,7 @@ async def search_freelancers(
     except Exception as e:
         error_msg = f"Failed to search freelancers: {str(e)}"
         logger("FREELANCER", error_msg, "GET /freelancers/search", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to search freelancers. Please try again.", 500)
 
 
 @freelancer_router.get("/{freelancer_id}/skills", response_model=None)
@@ -276,7 +277,7 @@ async def get_freelancer_skills(freelancer_id: str, current_user: UserInDB = Dep
     except Exception as e:
         error_msg = f"Failed to fetch skills for freelancer {freelancer_id}: {str(e)}"
         logger("FREELANCER", error_msg, "GET /freelancers/{freelancer_id}/skills", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch skills for freelancer. Please try again.", 500)
 
 
 # dev/admin only - not called by the Flutter app
@@ -285,7 +286,7 @@ async def get_freelancer_embedding(freelancer_id: str, current_user: UserInDB = 
     try:
         embedding = FreelancerFunctions.get_freelancer_embedding(freelancer_id)
         if not embedding:
-            return ResponseSchema.error(f"Embedding not found for freelancer {freelancer_id}", 404)
+            return ResponseSchema.error("Job-matching data isn't ready for this freelancer yet.", 404)
         result = {
             "embedding_id": embedding.get("embedding_id"),
             "freelancer_id": embedding.get("freelancer_id"),
@@ -298,7 +299,7 @@ async def get_freelancer_embedding(freelancer_id: str, current_user: UserInDB = 
     except Exception as e:
         error_msg = f"Failed to fetch embedding for freelancer {freelancer_id}: {str(e)}"
         logger("FREELANCER", error_msg, "GET /freelancers/{freelancer_id}/embedding", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to load job-matching data. Please try again.", 500)
 
 _VALID_FREELANCER_ORDER_BY = {"created_at", "updated_at", "full_name", "estimated_rate", "total_jobs", "weighted_review_avg", "total_reviews",}
 
@@ -330,7 +331,7 @@ async def browse_all_freelancers(
     except Exception as e:
         error_msg = f"Failed to fetch freelancers for browse: {str(e)}"
         logger("FREELANCER", error_msg, "GET /freelancers/browse/all", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch freelancers for browse. Please try again.", 500)
 
 @freelancer_router.get("/{freelancer_id}/profile", response_model=None)
 async def get_comprehensive_freelancer_profile_endpoint(freelancer_id: str, current_user: UserInDB = Depends(get_current_user)):
@@ -343,7 +344,7 @@ async def get_comprehensive_freelancer_profile_endpoint(freelancer_id: str, curr
     except Exception as e:
         error_msg = f"Failed to fetch comprehensive profile {freelancer_id}: {str(e)}"
         logger("FREELANCER", error_msg, "GET /freelancers/{freelancer_id}/profile", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch comprehensive profile. Please try again.", 500)
 
 
 @freelancer_router.post("/{freelancer_id}/profile-picture", response_model=None)
@@ -382,7 +383,7 @@ async def upload_freelancer_profile_picture_endpoint(
     except Exception as e:
         error_msg = f"Failed to upload profile picture for freelancer {freelancer_id}: {str(e)}"
         logger("FREELANCER", error_msg, f"POST /freelancers/{freelancer_id}/profile-picture", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to upload profile picture for freelancer. Please try again.", 500)
 
 
 @freelancer_router.delete("/{freelancer_id}/profile-picture", status_code=200)
@@ -422,7 +423,7 @@ async def delete_freelancer_profile_picture(
     except Exception as e:
         error_msg = f"Failed to delete profile picture for freelancer {freelancer_id}: {str(e)}"
         logger("FREELANCER", error_msg, f"DELETE /freelancers/{freelancer_id}/profile-picture", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to delete profile picture for freelancer. Please try again.", 500)
 
 
 # Wildcard last, must come after all /{freelancer_id}/xxx routes
@@ -437,4 +438,4 @@ async def get_freelancer(identifier: str, current_user: UserInDB = Depends(get_c
     except Exception as e:
         error_msg = f"Failed to fetch freelancer {identifier}: {str(e)}"
         logger("FREELANCER", error_msg, "GET /freelancers/{identifier}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch freelancer. Please try again.", 500)

@@ -37,6 +37,7 @@ class EmbeddingFunctions:
             logger("EMBEDDING_FUNCTIONS", f"Error generating embedding: {str(e)}", level="ERROR")
             raise
 
+    # dev function - no callers. Superseded by mark_freelancer_dirty() + the sweep worker.
     @staticmethod
     def create_freelancer_embedding(freelancer_id: str, source_text: str) -> Dict:
         try:
@@ -96,6 +97,7 @@ class EmbeddingFunctions:
             logger("EMBEDDING_FUNCTIONS", f"Error deleting freelancer embedding: {str(e)}", level="ERROR")
             raise
 
+    # dev function - no callers. Superseded by mark_job_dirty() + the sweep worker.
     @staticmethod
     def create_job_embedding(job_role_id: str, job_post_id: str, source_text: str) -> Dict:
         try:
@@ -145,6 +147,7 @@ class EmbeddingFunctions:
             logger("EMBEDDING_FUNCTIONS", f"Error managing job role embedding: {str(e)}", level="ERROR")
             raise
 
+    # dev function - no callers.
     @staticmethod
     def delete_job_embedding(job_role_id: str) -> bool:
         try:
@@ -195,7 +198,7 @@ class FreelancerFunctions:
                     fts.weighted_review_avg, fts.total_reviews
                 FROM freelancer f
                 LEFT JOIN freelancer_trust_scores fts
-                    ON fts.freelancer_id = f.user_id
+                    ON fts.freelancer_id = f.freelancer_id
                 ORDER BY {sort_col} {direction} NULLS LAST
                 LIMIT :limit OFFSET :offset
                 """,
@@ -217,6 +220,7 @@ class FreelancerFunctions:
             logger("FREELANCER_FUNCTIONS", f"Error browsing freelancers: {str(e)}", level="ERROR")
             raise
         
+    # dev function - no callers.
     @staticmethod
     def get_all_freelancers(limit: Optional[int] = None, offset: int = 0) -> List[Dict]:
         try:
@@ -230,7 +234,7 @@ class FreelancerFunctions:
                     fts.weighted_review_avg, fts.total_reviews
                 FROM freelancer f
                 LEFT JOIN freelancer_trust_scores fts
-                    ON fts.freelancer_id = f.user_id
+                    ON fts.freelancer_id = f.freelancer_id
                 ORDER BY fts.weighted_review_avg DESC NULLS LAST
                 {limit_clause}
                 OFFSET :offset
@@ -315,9 +319,6 @@ class FreelancerFunctions:
                 "total_jobs": 0
             }
             db.insert_data(table_name="freelancer", data=freelancer_data)
-            # TODO: re-enable when real embedding model is ready
-            # if create_embedding and bio:
-            #     EmbeddingFunctions.create_freelancer_embedding(freelancer_id, f"{full_name} - {bio}")
             logger("FREELANCER_FUNCTIONS", f"Freelancer {freelancer_id} created", level="INFO")
             return convert_uuids_to_str(freelancer_data)
         except Exception as e:
@@ -458,21 +459,23 @@ def get_comprehensive_freelancer_profile(freelancer_id: str) -> Optional[Dict]:
         portfolio = [dict(row) for row in portfolio_rows] if portfolio_rows else []
 
         # Ratings now come from the review system (reviews + review_ratings + written
-        # content) and the aggregate freelancer_trust_scores. Both are keyed by
-        # users.user_id, not freelancer.freelancer_id, so resolve via the freelancer row.
-        reviewer_user_id = freelancer.get("user_id")
+        # content) and the aggregate freelancer_trust_scores. Both key on
+        # freelancer.freelancer_id, so they take the profile id directly.
+        from functions.review_views import public_reviews
         from routes.reviews.review_functions import ReviewFunctions
 
-        reviews = (
-            ReviewFunctions.get_reviews_by_freelancer_id(str(reviewer_user_id))
-            if reviewer_user_id else []
+        # public_reviews strips the moderation analysis: this profile is readable by
+        # any authenticated user, so it must not carry authenticity/flag internals.
+        reviews = public_reviews(
+            ReviewFunctions.get_reviews_by_freelancer_id(str(freelancer_id))
+            if freelancer_id else []
         )
 
         trust_rows = db.fetch_data(
             table_name="freelancer_trust_scores",
-            conditions=[("freelancer_id", "=", reviewer_user_id)],
+            conditions=[("freelancer_id", "=", freelancer_id)],
             limit=1,
-        ) if reviewer_user_id else []
+        ) if freelancer_id else []
         trust_score = dict(trust_rows[0]) if trust_rows else None
 
         # total_ratings / average_rating are kept for the admin profile view. Prefer the

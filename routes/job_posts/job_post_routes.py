@@ -44,21 +44,16 @@ async def calculate_project_scope(
     """Calculate a recommended project_scope from job-post inputs without saving to the database."""
     try:
         result = JobPostFunctions.calculate_project_scope(
-            job_title=payload.job_title,
-            job_description=payload.job_description,
-            project_type=payload.project_type,
             estimated_duration=payload.estimated_duration,
             working_days=payload.working_days,
-            experience_level=payload.experience_level,
-            role_count=payload.role_count,
-            roles=[role.model_dump() for role in (payload.roles or [])],
+            position_count=payload.position_count,
         )
         logger("JOB_POST", "Calculated project scope recommendation", "POST /job-posts/calculate-project-scope", "INFO")
         return ResponseSchema.success(result, 200)
     except Exception as e:
         error_msg = f"Failed to calculate project scope: {str(e)}"
         logger("JOB_POST", error_msg, "POST /job-posts/calculate-project-scope", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to calculate project scope. Please try again.", 500)
 
 
 @job_post_router.get("", response_model=None)
@@ -82,17 +77,23 @@ async def get_all_job_posts(
 ):
     try:
         if status not in _VALID_JOB_STATUSES:
-            return ResponseSchema.error(f"Invalid status '{status}'. Valid values: {', '.join(sorted(_VALID_JOB_STATUSES))}", 400)
+            return ResponseSchema.error(
+                f"Invalid status '{status}'. Choose one of: {', '.join(sorted(_VALID_JOB_STATUSES))}.", 400)
         if order_by not in _VALID_JOB_ORDER_BY:
-            return ResponseSchema.error(f"Invalid order_by '{order_by}'. Valid values: {', '.join(sorted(_VALID_JOB_ORDER_BY))}", 400)
+            return ResponseSchema.error(
+                f"Invalid sort option '{order_by}'. Choose one of: {', '.join(sorted(_VALID_JOB_ORDER_BY))}.", 400)
         if project_type and project_type not in _VALID_PROJECT_TYPES:
-            return ResponseSchema.error(f"Invalid project_type '{project_type}'. Valid values: {', '.join(sorted(_VALID_PROJECT_TYPES))}", 400)
+            return ResponseSchema.error(
+                f"Invalid project type '{project_type}'. Choose one of: {', '.join(sorted(_VALID_PROJECT_TYPES))}.", 400)
         if project_scope and project_scope not in _VALID_PROJECT_SCOPES:
-            return ResponseSchema.error(f"Invalid project_scope '{project_scope}'. Valid values: {', '.join(sorted(_VALID_PROJECT_SCOPES))}", 400)
+            return ResponseSchema.error(
+                f"Invalid project scope '{project_scope}'. Choose one of: {', '.join(sorted(_VALID_PROJECT_SCOPES))}.", 400)
         if experience_level and experience_level not in _VALID_EXPERIENCE_LEVELS:
-            return ResponseSchema.error(f"Invalid experience_level '{experience_level}'. Valid values: {', '.join(sorted(_VALID_EXPERIENCE_LEVELS))}", 400)
+            return ResponseSchema.error(
+                f"Invalid experience level '{experience_level}'. Choose one of: {', '.join(sorted(_VALID_EXPERIENCE_LEVELS))}.", 400)
         if budget_type and budget_type not in _VALID_BUDGET_TYPES:
-            return ResponseSchema.error(f"Invalid budget_type '{budget_type}'. Valid values: {', '.join(sorted(_VALID_BUDGET_TYPES))}", 400)
+            return ResponseSchema.error(
+                f"Invalid budget type '{budget_type}'. Choose one of: {', '.join(sorted(_VALID_BUDGET_TYPES))}.", 400)
 
         requesting_client_id = None
         if current_user.client_id:
@@ -122,7 +123,7 @@ async def get_all_job_posts(
         return ResponseSchema.success(result, 200)
     except Exception as e:
         logger("JOB_POST", f"Failed to fetch job posts: {str(e)}", "GET /job-posts", "ERROR")
-        return ResponseSchema.error(f"Failed to fetch job posts: {str(e)}", 500)
+        return ResponseSchema.error("Failed to fetch job posts. Please try again.", 500)
 
 @job_post_router.get("/category-counts")
 async def get_category_counts(
@@ -134,7 +135,7 @@ async def get_category_counts(
         logger("JOBPOST", "Fetched category counts", "GET job-posts/category-counts", "INFO")
         return ResponseSchema.success(result, 200)
     except Exception as e:
-        return ResponseSchema.error(f"Failed to fetch category counts: {str(e)}", 500)
+        return ResponseSchema.error("Failed to fetch category counts. Please try again.", 500)
 
 
 @job_post_router.get("/popular")
@@ -179,7 +180,7 @@ async def get_popular_jobs(
         return ResponseSchema.success(items, 200)
     except Exception as e:
         logger("JOB_POST", f"Failed to fetch popular jobs: {str(e)}", "GET /job-posts/popular", "ERROR")
-        return ResponseSchema.error(f"Failed to fetch popular jobs: {str(e)}", 500)
+        return ResponseSchema.error("Failed to fetch popular jobs. Please try again.", 500)
 
 
 @job_post_router.get("/relevant")
@@ -275,7 +276,7 @@ async def get_relevant_jobs(
 
     except Exception as e:
         logger("JOB_POST", f"Failed to fetch relevant jobs: {str(e)}", "GET /job-posts/relevant", "ERROR")
-        return ResponseSchema.error(f"Failed to fetch relevant jobs: {str(e)}", 500)
+        return ResponseSchema.error("Failed to fetch relevant jobs. Please try again.", 500)
 
 @job_post_router.get("/search", response_model=None)
 async def search_job_posts(
@@ -291,7 +292,7 @@ async def search_job_posts(
     except Exception as e:
         error_msg = f"Failed to search job posts: {str(e)}"
         logger("JOB_POST", error_msg, "GET /job-posts/search", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to search job posts. Please try again.", 500)
 
 @job_post_router.get("/client/{client_id}", response_model=None)
 async def get_job_posts_by_client(
@@ -308,7 +309,7 @@ async def get_job_posts_by_client(
     except Exception as e:
         error_msg = f"Failed to fetch job posts for client {client_id}: {str(e)}"
         logger("JOB_POST", error_msg, "GET /job-posts/client/{client_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch job posts for client. Please try again.", 500)
 
 
 @job_post_router.get("/{job_post_id}", response_model=None)
@@ -327,7 +328,7 @@ async def get_job_post(job_post_id: str, current_user: UserInDB = Depends(get_cu
     except Exception as e:
         error_msg = f"Failed to fetch job post {job_post_id}: {str(e)}"
         logger("JOB_POST", error_msg, "GET /job-posts/{job_post_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to fetch job post. Please try again.", 500)
 
 
 @job_post_router.post("", response_model=None, status_code=201)
@@ -339,31 +340,12 @@ async def create_job_post(job_post: JobPostCreate, current_user: UserInDB = Depe
         if job_post.client_id and str(job_post.client_id) != str(client["client_id"]):
             return ResponseSchema.error("Cannot create a job post for another client", 403)
         
-        resolved_project_scope = job_post.project_scope
-        if not resolved_project_scope:
-            calculation = JobPostFunctions.calculate_project_scope(
-                job_title=job_post.job_title,
-                job_description=job_post.job_description,
-                project_type=job_post.project_type,
-                estimated_duration=job_post.estimated_duration,
-                working_days=job_post.working_days,
-                experience_level=job_post.experience_level,
-                role_count=1,
-            )
-            resolved_project_scope = calculation["recommended_project_scope"]
-            logger(
-                "JOB_POST",
-                f"project_scope missing on create; auto-calculated as {resolved_project_scope}",
-                "POST /job-posts",
-                "INFO",
-            )
-
         new_job_post = JobPostFunctions.create_job_post(
             client_id=client["client_id"],
             job_title=job_post.job_title,
             job_description=job_post.job_description,
             project_type=job_post.project_type,
-            project_scope=resolved_project_scope,
+            project_scope=job_post.project_scope,
             estimated_duration=job_post.estimated_duration,
             working_days=job_post.working_days,
             deadline=job_post.deadline,
@@ -400,7 +382,7 @@ async def create_job_post(job_post: JobPostCreate, current_user: UserInDB = Depe
     except Exception as e:
         error_msg = f"Failed to create job post: {str(e)}"
         logger("JOB_POST", error_msg, "POST /job-posts", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to create job post. Please try again.", 500)
 
 
 @job_post_router.put("/{job_post_id}", response_model=None)
@@ -478,7 +460,7 @@ async def update_job_post(job_post_id: str, job_post_update: JobPostUpdate, curr
     except Exception as e:
         error_msg = f"Failed to update job post {job_post_id}: {str(e)}"
         logger("JOB_POST", error_msg, "PUT /job-posts/{job_post_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to update job post. Please try again.", 500)
 
 
 @job_post_router.delete("/{job_post_id}", status_code=200)
@@ -502,4 +484,4 @@ async def delete_job_post(job_post_id: str, current_user: UserInDB = Depends(get
     except Exception as e:
         error_msg = f"Failed to delete job post {job_post_id}: {str(e)}"
         logger("JOB_POST", error_msg, "DELETE /job-posts/{job_post_id}", "ERROR")
-        return ResponseSchema.error(error_msg, 500)
+        return ResponseSchema.error("Failed to delete job post. Please try again.", 500)
