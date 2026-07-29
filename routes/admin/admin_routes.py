@@ -599,6 +599,10 @@ async def force_close_job(
             return ResponseSchema.error("Job post not found", 404)
         logger("ADMIN", f"Job {job_post_id} force-closed by {current_user.user_id}", "POST /admin/jobs/close", "INFO")
         return ResponseSchema.success(updated, 200)
+    except HTTPException as e:
+        # 409 from the engagement guard - static detail, safe to pass through
+        logger("ADMIN", f"Force close job {job_post_id} refused: {e.detail}", "POST /admin/jobs/close", "INFO")
+        return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("ADMIN", f"Force close job error: {e}", "POST /admin/jobs/close", "ERROR")
         return ResponseSchema.error("Failed to close job post. Please try again.", 500)

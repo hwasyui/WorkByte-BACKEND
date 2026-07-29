@@ -115,6 +115,16 @@ def _is_engaged_sql(job_post_id_expr: str) -> str:
 _ACTIVE_NO_ENGAGEMENT = f"\n      AND NOT {_is_engaged_sql('job_post.job_post_id')}"
 
 
+def _job_is_engaged(job_post_id: str) -> bool:
+    """Same predicate as _ACTIVE_NO_ENGAGEMENT, read back into Python for callers that have to
+    branch (and return a distinct error) before writing, instead of just skipping the row."""
+    row = _row(get_db().execute_query(
+        f"SELECT {_is_engaged_sql(':jid')} AS engaged",
+        params={"jid": job_post_id},
+    ))
+    return bool(row and row["engaged"])
+
+
 # Sort-column whitelists (safe f-string interpolation; values are hardcoded)
 _MOD_SORT_COLS = {
     "created_at":   "cmq.created_at",
@@ -488,9 +498,13 @@ def list_moderation_queue(
                CASE WHEN cmq.content_type = 'job_post'
                     THEN {_is_engaged_sql('cmq.content_id')}
                     ELSE FALSE
-               END AS is_engaged
+               END AS is_engaged,
+               jp.job_title AS job_title
         FROM harmful_text_queue cmq
         JOIN users u ON u.user_id = cmq.user_id
+        LEFT JOIN job_post jp
+               ON cmq.content_type = 'job_post'
+              AND jp.job_post_id = cmq.content_id
         WHERE (:status = 'all' OR cmq.status = :status)
           AND (
                 :min_severity IS NULL
@@ -573,6 +587,14 @@ def action_moderation_item(
 
 
 def _notify_scam_closure(job_post_id: str) -> None:
+    """Client copy for a scam takedown, plus the engaged-freelancer copy every other closer
+    already sends via _notify_job_post_closed. Kept separate from that helper on purpose: this
+    runs from queue_scam_scan, which job_post_routes hands to asyncio.to_thread - a thread with
+    no running loop, where _schedule_notification would drop the notification instead of sending
+    it. The asyncio.run fallback below is what makes the auto-close path actually notify.
+    _notify_engaged_freelancers only matters on the manual/ban paths (auto-close skips engaged
+    jobs entirely), and those run inside async routes where the loop exists."""
+    _notify_engaged_freelancers(job_post_id)
     row = _row(get_db().execute_query(
         """
         SELECT c.user_id FROM job_post jp
@@ -794,6 +816,15 @@ def _process_auto_remove():
                 level="INFO",
             )
 
+    # auto_closed flags are deliberately left out of this sweep. The timer firing means nobody
+    # reviewed the flag in 30 days - that is not the same verdict as an admin pressing 'safe',
+    # and it must not be allowed to put a job the model closed at its highest confidence back on
+    # the platform unattended. Dismissing without reopening is no better: the flag would leave
+    # the queue while the job stays down, so nothing could ever be reviewed again. Parking it as
+    # 'pending' keeps it in front of a human, the same way _auto_approve_expired parks an engaged
+    # harmful-text row. The client is not stuck meanwhile - a closed job post is appealable.
+    # (Reachable only when a retrain ships a higher expire_close than the score a pending flag
+    # was written with; under one fixed threshold set, auto_closed implies score >= auto_close.)
     dismissed = _rows(get_db().execute_query(
         """
         UPDATE scam_job_flags
@@ -801,6 +832,7 @@ def _process_auto_remove():
         WHERE status = 'pending'
           AND auto_remove_at <= NOW()
           AND scam_score < :threshold
+          AND auto_closed = FALSE
         RETURNING flag_id
         """,
         params={"threshold": expire_close},
@@ -831,7 +863,11 @@ def list_scam_flags(
                c.full_name AS client_name,
                u.email     AS client_email,
                csr.total_scam_confirmed,
-               csr.is_banned
+               csr.is_banned,
+               -- a scam flag always targets a job post, so no content_type branch here
+               -- (unlike the moderation queue). Same flag the harmful-text queue exposes:
+               -- the UI warns before an admin actions a job with live work on it.
+               {_is_engaged_sql('sf.job_post_id')} AS is_engaged
         FROM scam_job_flags sf
         JOIN job_post jp ON jp.job_post_id = sf.job_post_id
         JOIN client   c  ON c.client_id    = sf.client_id
@@ -869,41 +905,61 @@ def action_scam_flag(
     ))
     if updated and new_status == "safe":
         if updated.get("auto_closed"):
+            job_post_id = str(updated["job_post_id"])
+            # Staffing-aware restore, same as admin_reopen_job and the appeal path: a job whose
+            # roles are all filled comes back as 'filled'. Hardcoding 'active' would re-advertise
+            # slots that don't exist on a job that was only ever closed by a false positive.
             get_db().execute_query(
                 """
                 UPDATE job_post
-                SET status         = 'active',
+                SET status         = :restore,
                     closure_reason = NULL,
                     closure_note   = NULL,
                     closed_at      = NULL
                 WHERE job_post_id = :jid
                   AND closure_reason = 'scam'
                 """,
-                params={"jid": str(updated["job_post_id"])},
+                params={"jid": job_post_id, "restore": _restore_status_for(job_post_id)},
             )
             logger("ADMIN", f"Scam flag {flag_id} cleared: job {updated['job_post_id']} reopened by {admin_user_id}", level="INFO")
         else:
             logger("ADMIN", f"Soft scam flag {flag_id} dismissed as safe by {admin_user_id} (job was active)", level="INFO")
 
     if updated and new_status == "removed":
+        job_post_id = str(updated["job_post_id"])
         _flag_client_for_scam(str(updated["client_id"]))
         closure_note = admin_note or DEFAULT_CLOSURE_NOTE_SCAM
-        get_db().execute_query(
+        # Skips a job that's already closed, like action_moderation_item does: without the
+        # filter this stomps an earlier closure_reason (harmful_text / community_reports /
+        # admin_override / the client's own close) and restamps closed_at, which the admin
+        # date filters read. RETURNING so the log and the notification follow what really
+        # happened instead of announcing a close that never landed.
+        closed = _rows(get_db().execute_query(
             """
             UPDATE job_post
             SET status         = 'closed',
                 closure_reason = :reason,
                 closure_note   = :note,
                 closed_at      = NOW()
-            WHERE job_post_id = :jid
+            WHERE job_post_id = :jid AND status <> 'closed'
+            RETURNING job_post_id
             """,
             params={
-                "jid":    str(updated["job_post_id"]),
+                "jid":    job_post_id,
                 "reason": DEFAULT_CLOSURE_REASON_SCAM,
                 "note":   closure_note,
             },
-        )
-        logger("ADMIN", f"Scam job {updated['job_post_id']} confirmed removed by admin {admin_user_id}", level="WARNING")
+        ))
+        if closed:
+            logger("ADMIN", f"Scam job {job_post_id} confirmed removed by admin {admin_user_id}", level="WARNING")
+            _notify_scam_closure(job_post_id)
+        else:
+            logger(
+                "ADMIN",
+                f"Scam flag {flag_id} confirmed by {admin_user_id} but job {job_post_id} was "
+                f"already closed; strike recorded, closure reason left as-is",
+                level="INFO",
+            )
     return updated
 
 
@@ -1644,7 +1700,8 @@ def action_report(
     ))
 
     # Accepting a report that targets a job post closes that job. This is a manual admin
-    # decision, so it closes even an engaged job (full power, like admin_close_job) -- the FE
+    # decision backed by a case file, so it closes even an engaged job (unlike the bare
+    # admin_close_job override, which refuses those outright) -- the FE
     # warns via the report's is_engaged flag and confirms first. Reports that target a user are
     # left as just 'accepted' here; the report-threshold sweep is what bans users. Skips a job
     # already closed so an existing closure reason isn't stomped and the client isn't re-notified.
@@ -1681,7 +1738,18 @@ def admin_close_job(
     admin_user_id: str,
     reason: Optional[str] = None,
 ) -> Optional[Dict]:
-    """Close any job post directly, bypassing reports and AI flags."""
+    """Close any job post directly, bypassing reports and AI flags.
+
+    Refuses outright on an engaged job (live contract / filled position). This override is the
+    one close with no case file behind it - no flag, no report, nothing for the freelancer to
+    appeal against - so it stays off jobs with work in flight. To take one of those down, action
+    the flag or report it came from; those paths keep full power with a confirmation in the UI.
+    """
+    if _job_is_engaged(job_post_id):
+        raise HTTPException(
+            status_code=409,
+            detail="This job post has an active contract or an engaged freelancer and cannot be closed.",
+        )
     closure_note = reason or DEFAULT_CLOSURE_NOTE_ADMIN
     updated = _row(get_db().execute_query(
         """
