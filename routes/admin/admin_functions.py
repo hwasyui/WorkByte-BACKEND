@@ -426,6 +426,8 @@ def list_moderation_queue(
                GREATEST(cmq.toxic_score, cmq.obscene_score, cmq.threat_score,
                         cmq.insult_score, cmq.identity_hate_score) AS max_score,
                u.email AS user_email,
+               c.client_id,
+               c.full_name AS client_name,
                CASE WHEN cmq.content_type = 'job_post'
                     THEN {_is_engaged_sql('cmq.content_id')}
                     ELSE FALSE
@@ -433,6 +435,7 @@ def list_moderation_queue(
                jp.job_title AS job_title
         FROM harmful_text_queue cmq
         JOIN users u ON u.user_id = cmq.user_id
+        JOIN client c ON c.user_id = cmq.user_id
         LEFT JOIN job_post jp
                ON cmq.content_type = 'job_post'
               AND jp.job_post_id = cmq.content_id
