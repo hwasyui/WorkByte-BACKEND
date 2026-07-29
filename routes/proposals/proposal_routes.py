@@ -64,7 +64,7 @@ async def get_my_proposals(
     sort_order: str = "desc",
     current_user: UserInDB = Depends(get_current_user),
 ):
-    """Freelancer views their own proposals. Each row carries the job post's current
+    """Freelancer views own proposals. Each row carries the job post's current
     status/title so a still-'pending' proposal on a closed job reads correctly.
     Optional filters: status (proposal), job_post_status; sort_by + sort_order."""
     try:
@@ -95,7 +95,7 @@ async def get_proposals_by_job_post(
     job_post_id: str,
     current_user: UserInDB = Depends(get_current_user),
 ):
-    """Client views all proposals for their job post, includes freelancer info."""
+    """Client views all proposals on an owned job post, with freelancer info."""
     try:
         job_row = get_db().execute_query(
             "SELECT client_id FROM job_post WHERE job_post_id = :jpid",
@@ -192,8 +192,8 @@ async def create_proposal(
         if not proposal.job_role_id:
             return ResponseSchema.error("A specific role is required to apply for this job.", 400)
 
-        # One application per freelancer per job post: once you've applied to any role
-        # in this post, you can't apply to another role in the same post.
+        # One application per freelancer per job post. Applying to any role in a post
+        # blocks a second proposal on another role in that same post.
         existing = ProposalFunctions.get_proposal_for_freelancer_job(
             freelancer_id=freelancer_id,
             job_post_id=str(proposal.job_post_id),
@@ -326,6 +326,5 @@ async def update_proposal_status(
         return ResponseSchema.error("Failed to update status. Please try again.", 500)
 
 
-# A proposal is immutable once submitted: no edit route and no delete route.
-# It can only be accepted or rejected by the job's client (see PATCH .../status),
-# or auto-rejected when the role fills / the job post closes.
+# A proposal is immutable once submitted, so there's no edit or delete route. The client
+# accepts or rejects it, or it's auto-rejected when the role fills or the post closes.

@@ -36,7 +36,6 @@ from .cv_upload_functions import (
     _extract_text_from_image,
 )
 
-
 cv_upload_router = APIRouter(prefix="/cv_upload", tags=["CV Upload"])
 
 _DOCX_MIMES = {
@@ -44,17 +43,11 @@ _DOCX_MIMES = {
     "application/msword",
 }
 
-
 @cv_upload_router.post("")
 async def upload_and_analyze_cv(
     request: CVUploadRequest = Depends(),
     current_user: UserInDB = Depends(get_freelancer_user),
 ):
-    """
-    Upload a CV (PDF or DOCX) and either:
-    1. (Initial) Parse CV to suggest profile data if profile is empty
-    2. (Update) Compare against existing profile, run ATS check, and provide full analysis.
-    """
     logger("CV_UPLOAD", f"CV upload from user {current_user.user_id}", level="DEBUG")
     try:
         file = request.file
@@ -74,7 +67,6 @@ async def upload_and_analyze_cv(
         ext = original_name.rsplit(".", 1)[-1].lower() if "." in original_name else "pdf"
         mime = file.content_type or guess_mime(original_name)
 
-        # Step 1: Extract raw text
         if ext == "docx" or mime in _DOCX_MIMES:
             raw_text = _extract_text_from_docx(contents)
         elif ext == "pdf" or mime == "application/pdf":
@@ -92,7 +84,6 @@ async def upload_and_analyze_cv(
 
         logger("CV_UPLOAD", f"Extracted {len(raw_text)} chars from CV", level="DEBUG")
 
-        # Step 2: Store file in MinIO (non-fatal — parsing continues if storage is unreachable)
         safe_name = re.sub(r"[^A-Za-z0-9._-]+", "_", original_name).strip("._")
         storage_path = f"cvs/{freelancer_id}/{safe_name}"
         public_url = None
@@ -103,23 +94,19 @@ async def upload_and_analyze_cv(
         except Exception as upload_err:
             logger("CV_UPLOAD", f"CV storage upload failed (continuing): {upload_err}", level="WARNING")
 
-        # Step 3: Check if profile is meaningfully empty
         has_bio = bool(freelancer.get("bio"))
         has_skills = bool(FreelancerSkillFunctions.get_freelancer_skills_by_freelancer_id(freelancer_id))
         has_work_exp = bool(WorkExperienceFunctions.get_work_experiences_by_freelancer_id(freelancer_id))
         has_education = bool(EducationFunctions.get_educations_by_freelancer_id(freelancer_id))
         is_initial_upload = not (has_bio or has_skills or has_work_exp or has_education)
 
-        # Still build profile_text for the full-analysis path (used for similarity)
         profile_text = build_freelancer_profile_text(freelancer_id) if not is_initial_upload else None
 
         if is_initial_upload:
-            # INITIAL PROFILE CREATION: Profile is empty, parse CV for suggestions
             logger("CV_UPLOAD", f"Initial CV upload detected for freelancer {freelancer_id}. Parsing for profile suggestions.", level="INFO")
-            
-            # Parse CV for profile suggestions
+
             parsed_profile = await parse_cv_for_profile(raw_text)
-            
+
             logger(
                 "CV_UPLOAD",
                 f"Initial CV parsed | freelancer={freelancer_id} | skills={len(parsed_profile.get('skills', []))} "
@@ -140,27 +127,21 @@ async def upload_and_analyze_cv(
                 200,
             )
 
-        # PROFILE UPDATE: Profile exists, run full analysis
         logger("CV_UPLOAD", f"CV update detected for freelancer {freelancer_id}. Running full analysis.", level="INFO")
 
-        # Step 4: Embedding similarity
         cv_embedding = get_cv_embedding(raw_text)
         profile_embedding = get_cv_embedding(profile_text)
         similarity = cosine_similarity(cv_embedding, profile_embedding)
 
-        # Step 5: Skill coverage
         profile_skills = get_profile_skill_names(freelancer_id)
         matched_skills = extract_skills_from_text(raw_text, profile_skills)
         missing_skills = [s for s in profile_skills if s not in matched_skills]
         skill_coverage = len(matched_skills) / len(profile_skills) if profile_skills else None
 
-        # Step 6: ATS compliance
         ats_result = check_ats_compliance(raw_text)
 
-        # Step 7: Scoring
         resume_score = compute_resume_score(similarity, skill_coverage)
 
-        # Step 8: Structured LLM analysis (all content from GROQ)
         llm_analysis = await analyze_cv_with_llm(
             cv_text=raw_text,
             profile_text=profile_text,
@@ -171,13 +152,12 @@ async def upload_and_analyze_cv(
             ats_result=ats_result,
         )
 
-        # Step 9: Parse CV for profile suggestions
         parsed_profile = await parse_cv_for_profile(raw_text)
 
         final_resume_score = llm_analysis["resume_score"]
         ats_score = ats_result["ats_score"]
         logger("CV_UPLOAD", f"DEBUG: final_resume_score={final_resume_score} (type: {type(final_resume_score).__name__}), ats_score={ats_score} (type: {type(ats_score).__name__})", level="DEBUG")
-        
+
         overall_score = compute_overall_score(final_resume_score, ats_score)
         overall_grade = grade_overall_score(overall_score)
 
@@ -217,16 +197,11 @@ async def upload_and_analyze_cv(
         logger("CV_UPLOAD", f"CV upload/analyze failed: {str(e)}", level="ERROR")
         return ResponseSchema.error("CV upload/analyze failed. Please try again.", 500)
 
-
 @cv_upload_router.post("/apply")
 async def apply_cv_profile(
     request: CVApplyRequest,
     current_user: UserInDB = Depends(get_freelancer_user),
 ):
-    """
-    Apply confirmed CV suggestions to the current freelancer profile.
-    Matches the Flutter payload from CvAnalysisService.applyProfile().
-    """
     logger("CV_UPLOAD", f"Apply CV profile from user {current_user.user_id}", level="DEBUG")
 
     try:
@@ -334,7 +309,6 @@ async def apply_cv_profile(
     except Exception as e:
         logger("CV_UPLOAD", f"Apply CV profile failed: {str(e)}", level="ERROR")
         return ResponseSchema.error("Apply CV profile failed. Please try again.", 500)
-
 
 def normalize_partial_date(value: str | None) -> str | None:
     if not value:

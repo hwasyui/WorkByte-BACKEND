@@ -9,10 +9,6 @@ from typing import List, Optional, Dict, Any
 import uuid
 import math
 import re
-import json
-import urllib.request
-from functools import lru_cache
-from datetime import datetime, timezone
 
 
 
@@ -54,220 +50,8 @@ _JOB_POST_SELECT = """
 """
 
 
-_SCOPE_MARKET_CACHE_PATH = os.path.join(os.path.dirname(__file__), "project_scope_market_cache.json")
-_SCOPE_CACHE_REFRESH_SECONDS = 7 * 24 * 60 * 60  # weekly refresh
-
-# Rates shipped with the repo. Previously nothing read this file while the live
-# refresh silently failed, so the effective rate table was {"USD": 1.0} and every
-# non-USD budget was converted 1:1 - an IDR 17,000,000 contract (~$950) was scored
-# as a $17,000,000 project. This is now the seed and the floor: live rates overlay
-# it, they never replace it.
-_BUNDLED_FX_PATH = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-    "ai_related", "job_engine", "currency_rates.json",
-)
-
-# frankfurter.app returns 403 to urllib's default Python-urllib/x.y agent. That is
-# why every refresh had been failing; it is a user-agent block, not an outage.
-#
-# Project scope no longer uses FX at all (budget was dropped as a signal), but
-# _to_usd_scope is still live: review scoring weights each review by its contract
-# value, normalized to USD (see compute_value_weight in review_ai_functions).
-_FX_USER_AGENT = "capstone-backend/1.0 (+project-scope-fx)"
-_scope_market_cache: dict[str, Any] | None = None
-
-
 class JobPostFunctions:
     """Handle all job post-related database operations."""
-
-
-    @staticmethod
-    def _now_utc_iso() -> str:
-        return datetime.now(timezone.utc).isoformat()
-
-
-    @staticmethod
-    def _load_scope_market_cache() -> Dict[str, Any]:
-        global _scope_market_cache
-        if _scope_market_cache is not None:
-            return _scope_market_cache
-
-
-        try:
-            with open(_SCOPE_MARKET_CACHE_PATH, encoding="utf-8") as fh:
-                _scope_market_cache = json.load(fh)
-        except Exception:
-            _scope_market_cache = {
-                "fx_rates_fetched_at": None,
-                "fx_rates": {"USD": 1.0},
-                "country_income_benchmarks": {},
-            }
-        return _scope_market_cache
-
-
-    @staticmethod
-    def _save_scope_market_cache() -> None:
-        global _scope_market_cache
-        cache = JobPostFunctions._load_scope_market_cache()
-        with open(_SCOPE_MARKET_CACHE_PATH, "w", encoding="utf-8") as fh:
-            json.dump(cache, fh, indent=2, sort_keys=True)
-        _scope_market_cache = cache
-
-
-    @staticmethod
-    def _cache_is_stale(fetched_at: Optional[str]) -> bool:
-        if not fetched_at:
-            return True
-        try:
-            ts = datetime.fromisoformat(fetched_at)
-            if ts.tzinfo is None:
-                ts = ts.replace(tzinfo=timezone.utc)
-            return (datetime.now(timezone.utc) - ts).total_seconds() >= _SCOPE_CACHE_REFRESH_SECONDS
-        except Exception:
-            return True
-
-
-    @staticmethod
-    @lru_cache(maxsize=1)
-    def _bundled_fx_rates() -> Dict[str, float]:
-        """Repo-shipped rates relative to USD. Used to seed the table and as the
-        floor whenever the live feed is unavailable or incomplete, so a failed
-        refresh degrades to slightly-stale rates instead of to no rates at all.
-
-        Cached: the file never changes at runtime, and _to_usd_scope is called once
-        per review rating row when scoring a freelancer's history."""
-        try:
-            with open(_BUNDLED_FX_PATH, "r", encoding="utf-8") as fh:
-                data = json.load(fh)
-            rates = {k.upper(): float(v) for k, v in (data.get("rates") or {}).items()}
-            rates["USD"] = 1.0
-            return rates
-        except Exception as e:
-            logger("JOB_POST_FUNCTIONS", f"Bundled FX rates unreadable ({e})", level="ERROR")
-            return {"USD": 1.0}
-
-
-    @staticmethod
-    def _refresh_scope_fx_rates_if_needed() -> Dict[str, float]:
-        cache = JobPostFunctions._load_scope_market_cache()
-        bundled = JobPostFunctions._bundled_fx_rates()
-
-        # Bundled first, live/cached overlaid on top: the live feed wins wherever it
-        # has an entry, and anything it omits still resolves rather than silently
-        # falling back to a 1:1 conversion.
-        cached = {k.upper(): float(v) for k, v in (cache.get("fx_rates") or {}).items()}
-        if not JobPostFunctions._cache_is_stale(cache.get("fx_rates_fetched_at")) and cached:
-            return {**bundled, **cached}
-
-        try:
-            request = urllib.request.Request(
-                "https://api.frankfurter.app/latest?from=USD",
-                headers={"User-Agent": _FX_USER_AGENT},
-            )
-            with urllib.request.urlopen(request, timeout=4) as resp:
-                data = json.loads(resp.read())
-            fetched = {k.upper(): float(v) for k, v in data.get("rates", {}).items()}
-            fetched["USD"] = 1.0
-            cache["fx_rates"] = fetched
-            cache["fx_rates_fetched_at"] = JobPostFunctions._now_utc_iso()
-            JobPostFunctions._save_scope_market_cache()
-            logger("JOB_POST_FUNCTIONS", f"Project-scope FX cache refreshed | {len(fetched)} currencies", level="INFO")
-            return {**bundled, **fetched}
-        except Exception as e:
-            logger(
-                "JOB_POST_FUNCTIONS",
-                f"Project-scope FX refresh failed ({e}); using cached + bundled rates",
-                level="WARNING",
-            )
-            return {**bundled, **cached}
-
-
-    @staticmethod
-    def _to_usd_scope(amount: float, currency: Optional[str]) -> float:
-        if amount is None or amount <= 0:
-            return 0.0
-        code = (currency or "USD").upper()
-        rates = JobPostFunctions._refresh_scope_fx_rates_if_needed()
-        rate = rates.get(code)
-        if rate is None:
-            # Returning the amount unconverted is the only option left, but it will
-            # skew project-scope classification, so say so rather than failing silently.
-            logger(
-                "JOB_POST_FUNCTIONS",
-                f"No FX rate for '{code}'; treating {amount} as USD, scope may be misclassified",
-                level="WARNING",
-            )
-            return float(amount)
-        rate = float(rate)
-        if rate <= 0:
-            return float(amount)
-        return float(amount) / rate
-
-
-    @staticmethod
-    def _fetch_country_income_benchmark(country_code: str) -> Optional[Dict[str, Any]]:
-        """
-        Fetch annual GNI per capita in current USD from World Bank,
-        then derive a monthly benchmark in USD.
-        """
-        normalized = (country_code or "").strip().upper()
-        if not normalized:
-            return None
-
-
-        url = (
-            f"https://api.worldbank.org/v2/country/{normalized}/indicator/NY.GNP.PCAP.CD"
-            "?format=json&per_page=10"
-        )
-        try:
-            with urllib.request.urlopen(url, timeout=6) as resp:
-                payload = json.loads(resp.read())
-
-
-            rows = payload[1] if isinstance(payload, list) and len(payload) > 1 else []
-            for row in rows:
-                value = row.get("value")
-                year = row.get("date")
-                if value is not None:
-                    annual_usd = float(value)
-                    return {
-                        "country_code": normalized,
-                        "source": "world_bank_gni_per_capita_current_usd",
-                        "indicator": "NY.GNP.PCAP.CD",
-                        "year": year,
-                        "annual_income_usd": annual_usd,
-                        "monthly_income_usd": annual_usd / 12.0,
-                        "fetched_at": JobPostFunctions._now_utc_iso(),
-                    }
-        except Exception as e:
-            logger("JOB_POST_FUNCTIONS", f"Income benchmark fetch failed for {normalized}: {e}", level="WARNING")
-        return None
-
-
-    @staticmethod
-    def _get_country_income_benchmark(country_code: Optional[str]) -> Optional[Dict[str, Any]]:
-        normalized = (country_code or "").strip().upper()
-        if not normalized:
-            return None
-
-
-        cache = JobPostFunctions._load_scope_market_cache()
-        benchmarks = cache.setdefault("country_income_benchmarks", {})
-        cached = benchmarks.get(normalized)
-        if cached and not JobPostFunctions._cache_is_stale(cached.get("fetched_at")):
-            return cached
-
-
-        live = JobPostFunctions._fetch_country_income_benchmark(normalized)
-        if live:
-            benchmarks[normalized] = live
-            if not cache.get("fetched_at"):
-                cache["fetched_at"] = JobPostFunctions._now_utc_iso()
-            JobPostFunctions._save_scope_market_cache()
-            return live
-
-
-        return cached
 
 
     @staticmethod
@@ -299,14 +83,11 @@ class JobPostFunctions:
     def recompute_project_scope(job_post_id: str) -> Optional[str]:
         """Recalculate and persist project_scope for a post, if it is still auto.
 
-        Needed because a post is created as a draft before its roles exist - roles
-        are added afterwards through POST /job-roles - so the scope computed at
-        creation is based on an incomplete picture and stays wrong forever. Every
-        job post in the database being 'small' was this, not a coincidence.
+        A post is created before its roles exist, so the scope computed at creation is
+        based on an incomplete picture and needs revisiting once roles are added.
 
-        Skips posts where project_scope_is_auto is FALSE, so a scope the client
-        deliberately chose is never overwritten. Returns the scope in force after
-        the call, or None if the post is gone.
+        Skips posts where project_scope_is_auto is FALSE so a client's own choice is never
+        overwritten. Returns the scope in force after the call, or None if the post is gone.
         """
         try:
             db = get_db()
@@ -537,7 +318,7 @@ class JobPostFunctions:
     # Fetch operations
 
 
-    # Valid sort fields → SQL expression
+    # Valid sort fields mapped to their SQL expression
     _JOB_SORT_FIELDS = {
         "created_at":     "jp.created_at",
         "posted_at":      "jp.posted_at",
@@ -739,9 +520,8 @@ class JobPostFunctions:
     def get_job_posts_by_client_id(client_id: str, include_drafts: bool = False) -> List[Dict]:
         """Fetch a client's job posts with role_count, client_name, and live proposal_count.
 
-        Drafts are excluded by default - the client profile "posted jobs" tab should
-        only show published posts, and this endpoint is readable by anyone viewing the
-        profile. Pass include_drafts=True for an owner-only drafts management view.
+        Anyone viewing the profile can read this, so drafts are excluded by default.
+        Pass include_drafts=True for the owner's own drafts view.
         """
         try:
             db = get_db()
@@ -787,11 +567,8 @@ class JobPostFunctions:
     def _adjust_client_jobs_posted(db, client_id: str, delta: int) -> None:
         """Keep client.total_jobs_posted in sync as job posts cross the draft boundary.
 
-        The counter tracks only *published* (non-draft) job posts, so it must be
-        maintained on exactly three events: a post is created as non-draft (+1),
-        a draft is published (+1), a non-draft post is unpublished-to-draft (-1),
-        or a non-draft post is deleted (-1). Clamped at 0 to survive any historical
-        drift rather than going negative.
+        The counter tracks published posts only, so it moves on create, publish, unpublish
+        and delete. Clamped at 0 so drift can't push it negative.
         """
         if not delta:
             return
@@ -823,9 +600,8 @@ class JobPostFunctions:
         try:
             db = get_db()
             job_post_id = str(uuid.uuid4())
-            # A client-supplied scope is theirs and must never be recomputed; an
-            # omitted one is a recommendation we own and may revise as the post
-            # gains roles (see recompute_project_scope).
+            # A client-supplied scope is never recomputed. An omitted one is a
+            # recommendation and may be revised as the post gains roles.
             project_scope_is_auto = not project_scope
             resolved_project_scope = project_scope
             if not resolved_project_scope:
@@ -866,7 +642,7 @@ class JobPostFunctions:
                 "status":             status,
                 "is_ai_generated":    is_ai_generated,
                 "proposal_count":     0,
-                "project_category":   project_category,  # ← NEW
+                "project_category":   project_category,
             }
 
 
@@ -926,9 +702,8 @@ class JobPostFunctions:
                     level="INFO",
                 )
 
-            # If this update crosses the draft boundary, keep the client's
-            # total_jobs_posted counter in sync (draft->published => +1,
-            # published->draft => -1). Read the old status *before* updating.
+            # Keep total_jobs_posted in sync when this update crosses the draft
+            # boundary. Read the old status before updating.
             draft_delta = 0
             transition_client_id = None
             if "status" in update_data:
@@ -969,8 +744,8 @@ class JobPostFunctions:
         try:
             db = get_db()
 
-            # Read status/client before deleting so we can decrement the client's
-            # total_jobs_posted counter when a published (non-draft) post is removed.
+            # Read status and client before deleting, so total_jobs_posted can be
+            # decremented when a published post is removed.
             existing = JobPostFunctions.get_job_post_by_id(job_post_id)
 
             conditions = [("job_post_id", "=", job_post_id)]

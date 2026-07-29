@@ -249,7 +249,7 @@ async def accept_thread(
         logger("DM", f"Thread {thread_id} accepted by {current_user.user_id}", "PUT /dm/threads/{thread_id}/accept", "INFO")
         await _manager.broadcast(thread_id, {"event": "thread_accepted", "thread_id": thread_id})
 
-        # Notify initiator that their request was accepted
+        # Notify the initiator that the request was accepted
         try:
             sender_name = _get_sender_name(current_user)
             initiator_id = str(thread.get("initiator_id", ""))

@@ -143,9 +143,8 @@ async def create_skill(skill: SkillCreate, current_user: UserInDB = Depends(get_
         return ResponseSchema.error("Failed to create skill. Please try again.", 500)
 
 
-# dev/admin only - the app never calls this. Admin-gated because the skill catalogue is
-# shared: renaming an entry rewrites it for every freelancer already tagged with it.
-# Adding a skill (POST) stays open to any signed-in user - that's normal profile building.
+# Dev/admin only. The skill catalogue is shared, so renaming an entry rewrites it for
+# every freelancer tagged with it. POST stays open to any signed-in user.
 @skill_router.put("/{skill_id}", response_model=None)
 async def update_skill(skill_id: str, skill_update: SkillUpdate, current_user: UserInDB = Depends(get_admin_user)):
     """Update skill information - admin only."""

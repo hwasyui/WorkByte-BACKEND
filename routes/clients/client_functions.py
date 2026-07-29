@@ -26,12 +26,8 @@ def convert_uuids_to_str(data: Dict) -> Dict:
 class ClientFunctions:
     """Handle all client-related database operations."""
 
-    # total_jobs_posted is a column on `client`, incremented once at job-post
-    # creation time regardless of status - it's never decremented on delete
-    # and never incremented again on a draft->published transition. That
-    # drifts from reality and, worse, counts drafts as "posted" jobs. We
-    # compute the real, always-accurate count live instead: every published
-    # (non-draft) job_post row for the client.
+    # Count published job posts live instead of reading client.total_jobs_posted,
+    # which drifts and counts drafts as posted.
     _NON_DRAFT_JOBS_POSTED_SQL = (
         "(SELECT COUNT(*) FROM job_post jp WHERE jp.client_id = c.client_id "
         "AND jp.status <> 'draft')"

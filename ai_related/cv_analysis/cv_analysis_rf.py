@@ -26,9 +26,7 @@ _SECTION_KEYWORDS = {
     "has_education": ["education", "academic", "qualification", "degree"],
 }
 
-# Module-level singleton, mirrors the loading pattern in embedding_service.py.
 _models: Dict[str, Any] = {}
-
 
 def _load_models() -> Dict[str, Any]:
     if not _models:
@@ -40,7 +38,6 @@ def _load_models() -> Dict[str, Any]:
         _models["pca_match"] = joblib.load(_PCA_DIR / "pca_match.pkl")
         _models["pca_section"] = joblib.load(_PCA_DIR / "pca_section.pkl")
     return _models
-
 
 def _extract_ats_features(text: str) -> Dict[str, float]:
     t = text.lower()
@@ -64,7 +61,6 @@ def _extract_ats_features(text: str) -> Dict[str, float]:
     feats["avg_word_len"] = float(np.mean([len(w) for w in words])) if words else 0.0
     return feats
 
-
 def _extract_explicit_features(resume: str, jd: str) -> np.ndarray:
     r_lower = resume.lower()
     j_lower = jd.lower()
@@ -84,13 +80,11 @@ def _extract_explicit_features(resume: str, jd: str) -> np.ndarray:
     return np.array([overlap, len_ratio, has_email, has_phone, has_dates,
                       has_skills_kw, has_exp_kw, has_edu_kw, has_metrics, r_word_count])
 
-
 def _build_pair_features(emb_a: np.ndarray, emb_b: np.ndarray) -> np.ndarray:
     cos = float(np.dot(emb_a, emb_b))
     diff = np.abs(emb_a - emb_b)
     prod = emb_a * emb_b
     return np.hstack([[cos], diff, prod])
-
 
 async def analyze_cv_with_rf(cv_text: str, profile_text: str) -> Dict[str, Any]:
     models = _load_models()

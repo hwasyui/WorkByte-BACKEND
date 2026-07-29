@@ -34,6 +34,30 @@ _VALID_PROJECT_TYPES     = {"individual", "team"}
 _VALID_PROJECT_SCOPES    = {"small", "medium", "large"}
 _VALID_EXPERIENCE_LEVELS = {"entry", "intermediate", "expert"}
 _VALID_BUDGET_TYPES      = {"fixed", "negotiable"}
+# Statuses a client may set directly. 'all' is a browse filter, not a real status.
+_SETTABLE_JOB_STATUSES   = _VALID_JOB_STATUSES - {"all"}
+
+
+def _invalid_uuid(value: str) -> bool:
+    try:
+        uuid.UUID(str(value))
+        return False
+    except (ValueError, AttributeError, TypeError):
+        return True
+
+
+def _invalid_job_enum(project_type=None, project_scope=None, experience_level=None, status=None):
+    """First bad enum value as a message, else None. Keeps these off the SQL enum cast,
+    which would otherwise surface a driver error as a 500."""
+    for value, allowed, label in (
+        (project_type,     _VALID_PROJECT_TYPES,     "project type"),
+        (project_scope,    _VALID_PROJECT_SCOPES,    "project scope"),
+        (experience_level, _VALID_EXPERIENCE_LEVELS, "experience level"),
+        (status,           _SETTABLE_JOB_STATUSES,   "status"),
+    ):
+        if value is not None and value not in allowed:
+            return f"Invalid {label} '{value}'. Choose one of: {', '.join(sorted(allowed))}."
+    return None
 
 
 @job_post_router.post("/calculate-project-scope", response_model=None)
@@ -190,11 +214,9 @@ async def get_relevant_jobs(
     current_user: UserInDB = Depends(get_freelancer_user),
 ):
     """
-    Returns active jobs most relevant to the logged-in freelancer, ranked by
-    cosine similarity. We compare each job's role embeddings against everything
-    we know about the freelancer: their profile, past contracts, and portfolio.
-    The highest similarity across all those sources determines a job's rank.
-    Returns an empty list if the freelancer has no embeddings yet.
+    Active jobs ranked by cosine similarity for the logged-in freelancer. Each job's role
+    embeddings are compared against the freelancer profile, past contracts and portfolio,
+    and the highest similarity across those wins. Empty list when no embeddings exist yet.
     """
     try:
         freelancer = get_freelancer_profile_for_user(current_user)
@@ -316,6 +338,8 @@ async def get_job_posts_by_client(
 async def get_job_post(job_post_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Fetch a single job post by ID - Authenticated users only - JSON response."""
     try:
+        if _invalid_uuid(job_post_id):
+            return ResponseSchema.error(f"Job post {job_post_id} not found", 404)
         job_post = JobPostFunctions.get_job_post_by_id(job_post_id)
         if not job_post:
             error_msg = f"Job post {job_post_id} not found"
@@ -335,6 +359,10 @@ async def get_job_post(job_post_id: str, current_user: UserInDB = Depends(get_cu
 async def create_job_post(job_post: JobPostCreate, current_user: UserInDB = Depends(get_current_user)):
     """Create a new job post - Authenticated users only - JSON body accepted."""
     try:
+        enum_error = _invalid_job_enum(job_post.project_type, job_post.project_scope,
+                                       job_post.experience_level, job_post.status)
+        if enum_error:
+            return ResponseSchema.error(enum_error, 400)
         job_post_id = job_post.job_post_id or str(uuid.uuid4())
         client = get_client_profile_for_user(current_user)
         if job_post.client_id and str(job_post.client_id) != str(client["client_id"]):
@@ -363,14 +391,16 @@ async def create_job_post(job_post: JobPostCreate, current_user: UserInDB = Depe
         _title    = job_post.job_title
         _desc     = job_post.job_description
         _scan_text = f"{_title} {_desc}"
-        # harmful-text moderation only matters for visible (active) posts — a draft isn't
-        # public, so don't queue it for admin review until it's actually activated (the
-        # update path re-scans on draft -> active).
+        # Only active posts are public, so drafts aren't queued for moderation. The
+        # update path scans them once they go active. Scanning a draft would flag content
+        # nobody can see, and both auto-close paths only touch active posts anyway, so the
+        # flag would just sit there burning its 30-day window while still a draft.
         if job_post.status == "active":
-            asyncio.create_task(asyncio.to_thread(queue_harmful_text_scan, "job_post", _jp_id, _usr_id, _scan_text))
-        asyncio.create_task(asyncio.to_thread(
-            queue_scam_scan, _jp_id, _cl_id, _scan_text, _title, _desc,
-        ))
+            asyncio.create_task(asyncio.to_thread(
+                queue_harmful_text_scan, "job_post", _jp_id, _usr_id, _scan_text, _title, _desc))
+            asyncio.create_task(asyncio.to_thread(
+                queue_scam_scan, _jp_id, _cl_id, _scan_text, _title, _desc,
+            ))
 
         success_msg = f"Created job post {job_post_id} for client {job_post.client_id}"
         logger("JOB_POST", success_msg, "POST /job-posts", "INFO")
@@ -389,6 +419,12 @@ async def create_job_post(job_post: JobPostCreate, current_user: UserInDB = Depe
 async def update_job_post(job_post_id: str, job_post_update: JobPostUpdate, current_user: UserInDB = Depends(get_current_user)):
     """Update job post information - Authenticated users only."""
     try:
+        if _invalid_uuid(job_post_id):
+            return ResponseSchema.error(f"Job post {job_post_id} not found", 404)
+        enum_error = _invalid_job_enum(job_post_update.project_type, job_post_update.project_scope,
+                                       job_post_update.experience_level, job_post_update.status)
+        if enum_error:
+            return ResponseSchema.error(enum_error, 400)
         existing_job_post = JobPostFunctions.get_job_post_by_id(job_post_id)
         if not existing_job_post:
             error_msg = f"Job post {job_post_id} not found"
@@ -398,11 +434,9 @@ async def update_job_post(job_post_id: str, job_post_update: JobPostUpdate, curr
         
         update_data = job_post_update.model_dump(exclude_unset=True)
 
-        # A post closed by moderation / reports / scam / admin comes back only through an
-        # appeal or an admin reopen. Without this guard the client could just PUT
-        # status:'active' and relist it: the re-scan below is save-then-review, so the post
-        # is live while it waits, and nothing stops them repeating it. A close the client
-        # did themselves leaves closure_reason NULL and stays freely reopenable.
+        # A system-closed post comes back only through an appeal or an admin reopen,
+        # otherwise the client could just PUT status:'active' and relist it. A client's own
+        # close leaves closure_reason NULL and stays freely reopenable.
         _reopening = (
             update_data.get("status") == "active"
             and existing_job_post.get("status") == "closed"
@@ -422,9 +456,8 @@ async def update_job_post(job_post_id: str, job_post_update: JobPostUpdate, curr
 
         updated_job_post = JobPostFunctions.update_job_post(job_post_id, update_data)
 
-        # Reopening their own closure: drop the closure bookkeeping so an active post
-        # doesn't keep carrying a stale closed_at. Done here rather than in update_data -
-        # update_job_post strips None values, so NULLs can't ride along with the payload.
+        # Clear the closure bookkeeping so a reopened post doesn't carry a stale closed_at.
+        # Done here because update_job_post strips None values from the payload.
         if _reopening:
             get_db().execute_query(
                 """
@@ -438,11 +471,10 @@ async def update_job_post(job_post_id: str, job_post_update: JobPostUpdate, curr
 
         mark_job_dirty(job_post_id)
 
-        # Re-scan an active post when its scanned content changes, or when a post first
-        # becomes active (draft/closed -> active) so it's moderated on the way in. Skip
-        # drafts/closed posts — not visible, nothing to moderate yet. Without this an edit
-        # could turn a clean post harmful and never get re-scanned. dedup guard on
-        # queue_harmful_text_scan (ON CONFLICT ... status='pending') stops duplicate rows.
+        # Re-scan an active post when its content changes or when it first goes active,
+        # so an edit can't slip harmful text or a scam past moderation. _became_active is
+        # what covers a draft: it is scanned the moment it goes public, not before. The
+        # ON CONFLICT guard in both queue functions stops duplicate rows.
         _new_status      = updated_job_post.get("status")
         _became_active   = existing_job_post.get("status") != "active" and _new_status == "active"
         _content_changed = "job_title" in update_data or "job_description" in update_data
@@ -450,7 +482,12 @@ async def update_job_post(job_post_id: str, job_post_update: JobPostUpdate, curr
             _title     = updated_job_post.get("job_title") or ""
             _desc      = updated_job_post.get("job_description") or ""
             _scan_text = f"{_title} {_desc}"
-            asyncio.create_task(asyncio.to_thread(queue_harmful_text_scan, "job_post", job_post_id, current_user.user_id, _scan_text))
+            asyncio.create_task(asyncio.to_thread(
+                queue_harmful_text_scan, "job_post", job_post_id, current_user.user_id,
+                _scan_text, _title, _desc))
+            asyncio.create_task(asyncio.to_thread(
+                queue_scam_scan, job_post_id, str(existing_job_post["client_id"]),
+                _scan_text, _title, _desc))
 
         success_msg = f"Updated job post {job_post_id}"
         logger("JOB_POST", success_msg, "PUT /job-posts/{job_post_id}", "INFO")

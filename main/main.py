@@ -132,11 +132,9 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    # Every background loop started above gets cancelled here. contract_deadline_task
-    # and contract_autoapprove_task used to be started but never stopped, so on
-    # shutdown they were left pending - which surfaces as "Task was destroyed but it
-    # is pending!" and, during a reload, as two generations of the same sweep briefly
-    # running at once.
+    # Every background loop started above gets cancelled here. Leaving one pending
+    # shows up as "Task was destroyed but it is pending!" and, on reload, as two
+    # generations of the same sweep running at once.
     for task, label in (
         (sweep_task, "Embedding"),
         (moderation_task, "Moderation"),
@@ -164,10 +162,7 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger("LIFESPAN", f"Error during shutdown: {str(e)}", level="ERROR")
 
-
-# Swagger/ReDoc/openapi.json publish every route and parameter we have, dev-only ones
-# included. Fine locally, but the deployment sits behind a public reverse proxy, so in
-# anything other than a development env they're switched off.
+# Swagger/ReDoc/openapi.json expose every route, dev-only.
 _DEV = is_development_env()
 
 app = FastAPI(
@@ -175,8 +170,8 @@ app = FastAPI(
     description="API for CAPSTONE project",
     version="1.0",
     lifespan=lifespan,
-    docs_url="/docs"          if _DEV else None,
-    redoc_url="/redoc"        if _DEV else None,
+    docs_url="/docs" if _DEV else None,
+    redoc_url="/redoc" if _DEV else None,
     openapi_url="/openapi.json" if _DEV else None,
 )
 
@@ -258,11 +253,8 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):
-    """Normalize every HTTPException (incl. dependency-raised 401/403 from the auth guards)
-    into the standard ResponseSchema shape {"status":"error","details":...}, so the API never
-    leaks FastAPI's default {"detail":...} body. Routes that already return ResponseSchema.error
-    never reach here; this only catches the ones that raise. Original status code and any headers
-    (e.g. WWW-Authenticate on 401) are preserved."""
+    """Normalize raised HTTPExceptions into the ResponseSchema shape so FastAPI's default
+    {"detail":...} body never leaks. Status code and headers are preserved."""
     response = ResponseSchema.error(exc.detail, exc.status_code)
     if exc.headers:
         response.headers.update(exc.headers)

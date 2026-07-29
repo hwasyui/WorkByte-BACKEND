@@ -48,15 +48,9 @@ from functions.schema_model import (
 auth_router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
-# --- login throttling -------------------------------------------------------
-# /auth/login had no brute-force protection: passwords could be guessed forever.
-# The OTP flow already caps attempts and answers 429, so this mirrors that rather
-# than introducing a rate-limit dependency.
-#
-# Deliberately in-process: a single uvicorn worker serves this app, and the window
-# is short. It resets on restart and would not be shared across workers - if the
-# deployment ever scales out, move this into the DB (or Redis) alongside the
-# email_verification_otps.attempts pattern.
+# Brute-force throttling for /auth/login, mirroring how the OTP flow caps attempts
+# and answers 429. Kept in-process since one uvicorn worker serves the app; move it
+# to the DB or Redis if the deployment ever scales out.
 LOGIN_MAX_ATTEMPTS  = 8       # failures allowed inside the window
 LOGIN_WINDOW_SECONDS = 300    # 5 minutes
 LOGIN_LOCKOUT_SECONDS = 300   # how long a tripped key stays blocked
@@ -66,15 +60,13 @@ _login_lock = threading.Lock()
 
 
 def _client_ip(request: Request) -> str:
-    """The peer address we can actually trust.
+    """The peer address that can actually be trusted.
 
-    nginx forwards with `proxy_add_x_forwarded_for`, which *appends* the real peer to
-    whatever the caller already sent, producing "<client-supplied>, <real ip>". Uvicorn
-    resolves request.client from the LEFTMOST entry, which is attacker-controlled - so
-    keying the throttle off request.client.host lets anyone reset their own counter just
-    by rotating a fake header. The rightmost entry is the one nginx appended itself.
+    nginx appends the real peer to whatever X-Forwarded-For the caller sent, so the
+    rightmost entry is the trustworthy one. The leftmost is attacker-controlled, and
+    keying the throttle off it would let anyone reset the counter at will.
 
-    Falls back to request.client for direct (non-proxied) access, e.g. local runs.
+    Falls back to request.client when there's no proxy in front.
     """
     xff = request.headers.get("x-forwarded-for")
     if xff:
@@ -86,12 +78,12 @@ def _client_ip(request: Request) -> str:
 
 def _login_key(email: str, request: Request) -> str:
     """Track per email+IP so one attacker can't lock out a real user by guessing
-    at their address from elsewhere."""
+    at that address from elsewhere."""
     return f"{(email or '').strip().lower()}|{_client_ip(request)}"
 
 
 def _login_retry_after(key: str) -> int:
-    """Seconds the caller must wait, or 0 when they're free to try."""
+    """Seconds the caller must wait, or 0 when a retry is allowed."""
     now = datetime.utcnow().timestamp()
     with _login_lock:
         hits = _login_failures.get(key)

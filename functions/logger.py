@@ -68,9 +68,8 @@ class Logger:
         level = level.upper()
         target = self.isolated_logger if service in _ISOLATED_SERVICES else self.logger
 
-        # When exc_info isn't given, only attach a traceback if we're actually inside active
-        # exception handling. Avoids the spurious "NoneType: None" that logging appends when an
-        # ERROR/CRITICAL line is emitted outside an except block (validation/not-found cases).
+        # Without exc_info, only attach a traceback when inside active exception handling.
+        # Avoids the spurious "NoneType: None" logging appends outside an except block.
         if exc_info is None:
             exc_info = sys.exc_info()[0] is not None
 

@@ -95,28 +95,11 @@ async def get_freelancer_dashboard(
     current_user: UserInDB = Depends(get_current_user),
 ):
     """
-    Freelancer dashboard: every job applied to, with unified tracking_status.
+    Freelancer dashboard: every job applied to, with a unified tracking_status.
 
-    **tracking_status values**
-    | Value | Meaning |
-    |---|---|
-    | applied | Proposal sent, waiting for response |
-    | hired | Proposal accepted, contract not yet started |
-    | in_progress | Contract active, work ongoing |
-    | work_submitted | Work submitted, awaiting client review |
-    | revision_requested | Client asked for changes |
-    | completed | Contract done and approved |
-    | rejected | Proposal was rejected |
-    | withdrawn | Freelancer withdrew the proposal |
-    | cancelled | Contract was cancelled |
-    | disputed | Contract under dispute |
-
-    **Dates on each item**
-    - `submitted_at`: when the proposal was sent
-    - `start_date`: contract start date
-    - `end_date`: expected contract end date
-    - `actual_completion_date`: when work was accepted
-    - `last_activity_date`: most recent of the above (default sort field)
+    Statuses are the proposal's own (applied, rejected, withdrawn) or the contract's
+    once one exists. Each item also carries submitted_at, start_date, end_date,
+    actual_completion_date, and last_activity_date, which is the default sort field.
     """
     try:
         if tracking_status and tracking_status not in _FREELANCER_STATUSES:
@@ -204,26 +187,12 @@ async def get_client_dashboard(
     """
     Client dashboard: every job post, with roles and contracts nested inside.
 
-    **Job tracking_status values**
-    | Value | Meaning |
-    |---|---|
-    | draft | Job not yet published |
-    | open | Published, accepting proposals, no contracts yet |
-    | hiring | Some positions filled, others still open |
-    | in_progress | All positions filled, work ongoing |
-    | work_submitted | A freelancer submitted work, awaiting review |
-    | revision_requested | Client asked for revisions |
-    | completed | All roles completed |
-    | disputed | A contract is under dispute |
+    A job's tracking_status runs from draft and open through hiring and in_progress to
+    completed, and reflects how far its roles have been staffed. Roles follow the same
+    logic individually, and contracts map straight from contract status.
 
-    **Dates on each job item**
-    - `created_at`: when the job post was created
-    - `posted_at`: when it went live (published)
-    - `deadline`: application deadline
-    - `last_activity_date`: most recent contract start across all roles (default sort field)
-
-    **Role tracking_status** follows the same logic per individual role.
-    **Contract tracking_status** maps directly from contract status.
+    Each job carries created_at, posted_at, deadline, and last_activity_date, which is
+    the default sort field.
     """
     try:
         if tracking_status and tracking_status not in _CLIENT_STATUSES:

@@ -195,22 +195,15 @@ async def request_revision_for_latest_submission(
         if client["client_id"] != contract["client_id"]:
             return ResponseSchema.error("Unauthorized to request revision for this contract", 403)
 
-        # Was missing entirely - approve_latest_submission below requires
-        # status == "under_review" before it will act, but this endpoint had
-        # no equivalent guard: it would grab whatever the latest submission
-        # was and force both it and the contract to "revision_requested"
-        # regardless of current state, e.g. re-opening an already-completed
-        # or cancelled contract.
+        # Same guard approve_latest_submission uses, so a completed or cancelled
+        # contract can't be forced back into revision.
         if contract["status"] != "under_review":
             return ResponseSchema.error(
                 f"Cannot request revision when contract status is '{contract['status']}'", 400
             )
 
-        # The contract's own agreed revision_rounds (set at generation time,
-        # printed on the PDF) previously had no effect at all - every
-        # contract silently used the same hardcoded MAX_REVISION_REQUESTS
-        # regardless of what was actually agreed. Fall back to that default
-        # only when the contract has no PDF-generated terms yet.
+        # Use the revision_rounds agreed at contract generation. Fall back to
+        # MAX_REVISION_REQUESTS only when the contract has no PDF terms yet.
         contract_terms = ContractGenerationFunctions.get_contract_terms(contract_id) or {}
         configured_cap = contract_terms.get("revision_rounds")
         effective_cap = configured_cap if configured_cap is not None else MAX_REVISION_REQUESTS

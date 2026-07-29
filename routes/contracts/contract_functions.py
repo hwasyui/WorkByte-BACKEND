@@ -260,14 +260,9 @@ class ContractFunctions:
             db = get_db()
             contract_id = contract_id or str(uuid.uuid4())
 
-            # Fill-tracking (business decision: hiring is tracked per role, not per
-            # job post - a team project keeps other roles open once one is filled).
-            # Claim the slot with a single atomic UPDATE before the contract row
-            # even exists: Postgres serializes the write, so positions_filled <
-            # positions_available means two concurrent contract creations for the
-            # same role can't both succeed - whichever commits first consumes the
-            # last slot, the second matches zero rows and is rejected outright
-            # instead of creating a second contract for an already-filled role.
+            # Hiring is tracked per role, so a team project keeps other roles open.
+            # Claim the slot in one atomic UPDATE before the contract exists, so two
+            # concurrent creations can't both take the last position.
             role_fill_rows = db.execute_query(
                 """
                 UPDATE job_role
@@ -327,10 +322,8 @@ class ContractFunctions:
                         data={"job_role_id": job_role_id},
                     ))
 
-                # This role just went from open to full - if every other role on
-                # the job post is also already full, the post itself is now fully
-                # staffed. Only flips 'active' -> 'filled' (never touches a post
-                # a client already closed/drafted themselves).
+                # This role just filled, so mark the post 'filled' if every other role
+                # is full too. Only touches an active post.
                 all_roles_filled = db.execute_query(
                     """
                     SELECT NOT EXISTS (
@@ -426,12 +419,8 @@ class ContractFunctions:
                             conditions=[("freelancer_id", "=", freelancer_id)],
                         )
 
-                # Auto-create portfolio entry from completed contract.
-                # The portfolio row is a flat link to the contract; frontend
-                # joins back via contract_id to display the full work record.
-                # NOT embedded in portfolio_embedding: contract_embedding
-                # already covers this (rating + review + description); duplicating
-                # would create a sync problem when the rating updates later.
+                # Auto-create a portfolio entry linking back to the contract. Left out
+                # of portfolio_embedding since contract_embedding already covers it.
                 ContractFunctions._create_auto_portfolio_entry(
                     contract_id=contract_id,
                     contract=existing_contract,
@@ -448,13 +437,8 @@ class ContractFunctions:
         """
         Create a portfolio row tied to a completed contract.
 
-        Idempotent: does nothing if a portfolio row for this contract already
-        exists. The new row is flagged is_auto_generated=TRUE; embeddings for
-        these rows live in contract_embedding, not portfolio_embedding, so
-        portfolio_embedding only ever holds user-curated showcase items.
-
-        Failures are swallowed: the contract completion must not be blocked by
-        a portfolio insert error.
+        Idempotent, and flagged is_auto_generated so portfolio_embedding stays limited to
+        user-curated items. Failures are swallowed so completion is never blocked.
         """
         try:
             freelancer_id = contract.get("freelancer_id")
@@ -513,12 +497,8 @@ class ContractFunctions:
 
     @staticmethod
     def _notify_role_reopened(job_role_id: str) -> None:
-        """Tell freelancers who were auto-rejected when this role filled up
-        (see auto_reject_pending_proposals_for_filled_role) that it's open
-        again now a slot freed up. Reuses the 'role_filled' notification log
-        as the recipient list - same reuse-the-notifications-table pattern as
-        the auto-approve strike counter - instead of a dedicated column
-        tracking who got turned away for capacity reasons specifically."""
+        """Tell freelancers auto-rejected when this role filled up that a slot freed up.
+        The 'role_filled' notification log doubles as the recipient list."""
         try:
             role = get_db().execute_query(
                 "SELECT role_title FROM job_role WHERE job_role_id = :jrid",
@@ -547,21 +527,13 @@ class ContractFunctions:
 
     @staticmethod
     def _revert_proposal_on_contract_removal(proposal_id: str, job_role_id: Optional[str] = None) -> None:
-        """Keep proposal.status truthful once its contract is gone: 'accepted'
-        is only supposed to mean there's a live contract behind it, so once
-        that contract is cancelled/deleted, flip the proposal to 'rejected'
-        instead of leaving it stuck showing 'accepted' for work that no
-        longer exists. Also frees the role's filled slot back up - otherwise
-        positions_filled only ever goes up and a cancelled/deleted contract
-        would permanently "waste" a slot the role could actually rehire for.
-        Non-fatal - this must never break the actual cancel/delete operation."""
+        """Flip a proposal back to 'rejected' once its contract is gone, since 'accepted'
+        should only mean there's a live contract behind it. Also frees the role's filled
+        slot so it can be rehired. Non-fatal, never breaks the cancel or delete."""
         try:
             proposal = ProposalFunctions.get_proposal_by_id(str(proposal_id))
-            # Slot release is tied to the proposal's accepted -> rejected flip so it
-            # runs exactly once per hire. If the proposal is already 'rejected' (e.g.
-            # the contract was cancelled earlier and is now being deleted), bail out -
-            # otherwise positions_filled would be decremented twice and a still-active
-            # contract on the same role would silently lose its slot.
+            # Slot release rides on the accepted to rejected flip so it runs once per
+            # hire. An already-rejected proposal would double-decrement positions_filled.
             if not proposal or proposal.get("status") != "accepted":
                 return
             ProposalFunctions.update_proposal(str(proposal_id), {"status": "rejected"})
@@ -583,10 +555,8 @@ class ContractFunctions:
                 logger("CONTRACT_FUNCTIONS", f"Role {job_role_id} released one filled position after contract removal", level="INFO")
                 ContractFunctions._notify_role_reopened(job_role_id)
 
-                # A slot just reopened on this role - if the job post had been
-                # auto-marked 'filled' (3.8), that's no longer true, so revert it
-                # back to 'active' instead of leaving it stuck looking fully
-                # staffed with an open role sitting underneath it.
+                # A slot just reopened, so a job post sitting at 'filled' goes back
+                # to 'active'.
                 if role_rows and role_rows[0]["positions_filled"] < role_rows[0]["positions_available"]:
                     get_db().execute_query(
                         "UPDATE job_post SET status = 'active' WHERE job_post_id = :jpid AND status = 'filled'",
@@ -746,11 +716,8 @@ class ContractFunctions:
 
     @staticmethod
     def notify_overdue_contracts() -> int:
-        """Informational-only deadline sweep (business decision: no automatic status
-        change - freelancer/client resolve it themselves, this just turns on visibility).
-        Dedup goes through the existing `notifications` table instead of a dedicated
-        column: one notification per contract, ever, is enough since the deadline
-        itself doesn't move unless the contract is edited."""
+        """Flag overdue contracts without changing status, leaving the parties to resolve
+        it. Dedup goes through the notifications table, one per contract ever."""
         try:
             overdue = get_db().execute_query(
                 """
@@ -797,10 +764,8 @@ class ContractFunctions:
             logger("CONTRACT_FUNCTIONS", f"Error in overdue contract sweep: {str(e)}", level="ERROR")
             return 0
 
-    # A client sits at this many lifetime auto-approved contracts one strike away
-    # from AUTO_APPROVE_BAN_THRESHOLD (3, see contract_submission_functions.py) before
-    # the qualitative label below flips - gives freelancers a signal right when it
-    # matters, without exposing the raw strike count (product decision).
+    # One strike below AUTO_APPROVE_BAN_THRESHOLD. Flips the label below so freelancers
+    # get a warning without seeing the raw strike count.
     _RELIABILITY_WARNING_THRESHOLD = 2
 
     @staticmethod
@@ -815,12 +780,8 @@ class ContractFunctions:
 
     @staticmethod
     def get_client_autoapprove_history(client_user_id: str) -> List[Dict]:
-        """Read-only audit trail for admin review (e.g. when a client appeals the
-        3-strike auto-ban) - which contracts triggered a strike and when, so admin
-        doesn't have to reconstruct it by hand from raw notification rows. Derived
-        entirely from the existing `notifications` + `contract` tables, nothing new
-        stored. This is monitoring only - it does not expose any approve/cancel
-        action, the ban itself already happens automatically without admin input."""
+        """Which contracts triggered an auto-approve strike and when, for admin review of
+        an appeal. Read-only, derived from the notifications and contract tables."""
         rows = get_db().execute_query(
             """
             SELECT n.data->>'contract_id' AS contract_id, n.created_at AS notified_at,

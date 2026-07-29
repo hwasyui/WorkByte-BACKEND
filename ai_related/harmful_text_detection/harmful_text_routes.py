@@ -18,11 +18,9 @@ from ai_related.harmful_text_detection.model_inference import (
 )
 
 # dev only routes.
-# The app never calls these over HTTP — proposal/DM/job-post/review flows scan
-# server-side via scan_harmful_text_with_ml_fallback(). Kept for manual testing
-# and inspecting the model. detect/detect-batch run real inference so they're
-# auth-gated (don't leave an unauthenticated ML endpoint open); labels/models
-# are static metadata, left open.
+# The app scans server-side via scan_harmful_text_with_ml_fallback(), so these are only
+# for manual testing. detect and detect-batch are auth-gated since they run real
+# inference; labels and models are static metadata and stay open.
 harmful_text_router = APIRouter(prefix="/harmful-text", tags=["Harmful Text Detection"])
 
 
@@ -69,7 +67,7 @@ async def detect_harmful_text_batch(
     threshold: Optional[float] = None,
     current_user: UserInDB = Depends(get_current_user),
 ) -> Dict[str, Any]:
-    """Same as /detect but a list, capped at 100 (each one is a forward pass — cap keeps a single call bounded)."""
+    """Same as /detect but takes a list, capped at 100 since each one is a forward pass."""
     logger("HARMFUL_TEXT", f"Batch detect request | batch_size={len(input_data.texts)}", level="DEBUG")
     try:
         if not input_data.texts:

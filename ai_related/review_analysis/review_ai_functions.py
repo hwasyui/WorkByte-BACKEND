@@ -693,52 +693,6 @@ def calculate_trust_score(
     return round(min(100.0, max(0.0, score)), 2)
 
 
-REFERENCE_BUDGET_USD = 5000.0  # contract value treated as "full weight" for scoring
-VALUE_WEIGHT_MIN = 0.5
-VALUE_WEIGHT_MAX = 1.5
-
-
-def compute_value_weight(agreed_budget, budget_currency: Optional[str]) -> float:
-    """Scale a review's weight by the size of the contract it came from.
-
-    A $50 job and a $10,000 job otherwise carry identical weight, which makes
-    reputation cheap to manufacture from trivial contracts. Compressed with a log
-    so large contracts count for more without dominating, and clamped so no single
-    contract can swing an average on its own.
-
-    Budgets are normalized to USD first via JobPostFunctions._to_usd_scope. This
-    matters more than it looks: contracts here are mostly IDR, and an unnormalized
-    comparison would rank an IDR 75 contract above a USD 750 one purely on the
-    numeral. An unconvertible currency falls back to neutral weight rather than
-    being compared as if 1 unit == 1 USD.
-    """
-    if agreed_budget is None:
-        return 1.0
-    try:
-        budget = float(agreed_budget)
-    except (TypeError, ValueError):
-        return 1.0
-    if budget <= 0:
-        return 1.0
-
-    # Imported lazily: this module is loaded by the review pipelines at startup and
-    # job_post_functions pulls in the whole job-post query layer.
-    from routes.job_posts.job_post_functions import JobPostFunctions
-
-    code = (budget_currency or "USD").upper()
-    rates = JobPostFunctions._refresh_scope_fx_rates_if_needed()
-    if code not in rates:
-        logger("REVIEW_AI", f"No FX rate for '{code}', review weighted neutrally by value", level="WARNING")
-        return 1.0
-
-    budget_usd = JobPostFunctions._to_usd_scope(budget, code)
-    if budget_usd <= 0:
-        return 1.0
-
-    ratio = math.log10(1.0 + budget_usd) / math.log10(1.0 + REFERENCE_BUDGET_USD)
-    return round(max(VALUE_WEIGHT_MIN, min(VALUE_WEIGHT_MAX, ratio)), 4)
-
-
 def compute_repeat_weight(occurrence_index: int) -> float:
     """Diminishing weight for repeated reviews from the same counterparty.
 
@@ -758,13 +712,11 @@ def calculate_weighted_review_avg(freelancer_id: str) -> Tuple[float, int]:
         rows = db.execute_query(
             """
             SELECT rr.score, r.published_at, ra.authenticity_score,
-                   c.agreed_budget, c.budget_currency,
                    DENSE_RANK() OVER (
                        PARTITION BY r.reviewer_id ORDER BY r.published_at, r.id
                    ) AS pair_occurrence
             FROM review_ratings rr
             JOIN reviews r ON r.id = rr.review_id
-            JOIN contract c ON c.contract_id = r.contract_id
             LEFT JOIN review_ai_analysis ra ON ra.review_id = r.id
             WHERE r.freelancer_id = :fid AND r.status = 'published'
             """,
@@ -790,9 +742,8 @@ def calculate_weighted_review_avg(freelancer_id: str) -> Tuple[float, int]:
             # review counts less than a clearly-genuine one, instead of
             # authenticity only ever acting as a binary publish/suppress gate.
             authenticity_weight = float(row["authenticity_score"]) if row["authenticity_score"] is not None else 1.0
-            value_weight = compute_value_weight(row["agreed_budget"], row["budget_currency"])
             repeat_weight = compute_repeat_weight(row["pair_occurrence"])
-            weight = recency_weight * authenticity_weight * value_weight * repeat_weight
+            weight = recency_weight * authenticity_weight * repeat_weight
 
             weighted_sum += float(row["score"]) * weight
             weight_total += weight

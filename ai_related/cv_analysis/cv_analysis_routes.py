@@ -25,7 +25,6 @@ from routes.freelancers.freelancer_functions import FreelancerFunctions
 
 cv_analysis_router = APIRouter(prefix="/cv_analysis", tags=["CV Analysis"])
 
-
 @cv_analysis_router.post("/analyze", response_model=None)
 async def analyze_cv(
     cv_file: UploadFile = File(...),

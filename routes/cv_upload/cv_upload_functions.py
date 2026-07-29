@@ -9,7 +9,6 @@ from functions.logger import logger
 
 _easyocr_reader = None
 
-
 def _get_easyocr_reader():
     global _easyocr_reader
     if _easyocr_reader is None:
@@ -17,14 +16,7 @@ def _get_easyocr_reader():
         _easyocr_reader = easyocr.Reader(["en"], gpu=False, verbose=False)
     return _easyocr_reader
 
-
 def _extract_text_from_pdf(file_bytes: bytes) -> str:
-    """
-    Extract text from PDF using both pdfplumber and EasyOCR, then return whichever
-    yields more characters. pdfplumber handles selectable text (fast, preserves order);
-    EasyOCR captures text embedded in images or complex layouts that pdfplumber misses.
-    """
-    # pdfplumber
     plumber_text = ""
     try:
         logger("CV_UPLOAD", "Extracting PDF text with pdfplumber", level="DEBUG")
@@ -35,7 +27,6 @@ def _extract_text_from_pdf(file_bytes: bytes) -> str:
     except Exception as e:
         logger("CV_UPLOAD", f"pdfplumber failed: {e}", level="DEBUG")
 
-    # EasyOCR (always runs alongside pdfplumber)
     ocr_text = ""
     try:
         import numpy as np
@@ -53,7 +44,6 @@ def _extract_text_from_pdf(file_bytes: bytes) -> str:
     except Exception as e:
         logger("CV_UPLOAD", f"EasyOCR failed: {e}", level="DEBUG")
 
-    # Return whichever extraction is richer
     if ocr_text and len(ocr_text) >= len(plumber_text):
         logger("CV_UPLOAD", "Using EasyOCR result (richer or equal)", level="DEBUG")
         return ocr_text
@@ -63,9 +53,7 @@ def _extract_text_from_pdf(file_bytes: bytes) -> str:
     logger("CV_UPLOAD", "Both pdfplumber and EasyOCR returned empty text", level="DEBUG")
     return ""
 
-
 def _extract_text_from_docx(file_bytes: bytes) -> str:
-    """Extract text from DOCX including table cells (skills are often in tables)."""
     try:
         import docx
         logger("CV_UPLOAD", "Extracting DOCX text with python-docx", level="DEBUG")
@@ -86,9 +74,7 @@ def _extract_text_from_docx(file_bytes: bytes) -> str:
         logger("CV_UPLOAD", f"DOCX extraction failed: {e}", level="ERROR")
         raise RuntimeError(f"Failed to extract text from DOCX: {e}")
 
-
 def _extract_text_from_image(file_bytes: bytes) -> str:
-    """OCR chain for image file uploads (PNG/JPG/etc): EasyOCR → Tesseract."""
     logger("CV_UPLOAD", "Starting image OCR extraction", level="DEBUG")
 
     try:

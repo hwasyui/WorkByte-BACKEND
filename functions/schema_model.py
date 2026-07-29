@@ -1040,7 +1040,7 @@ class JobEmbeddingResponse(BaseModel):
 class DMThreadCreate(BaseModel):
     participant_id: str
     job_post_id: Optional[str] = None
-    message_text: Optional[str] = None  # if None + job attached → default template used
+    message_text: Optional[str] = None  # None with a job attached uses the default template
 
 class DMMessageCreate(BaseModel):
     message_text: str
@@ -1132,7 +1132,7 @@ class FreelancerProfileComplete(BaseModel):
 
 class ReviewRatingInput(BaseModel):
     category: str  # communication | quality | professionalism | value_for_money
-    score: float   # 1.0 – 5.0
+    score: float   # 1.0 to 5.0
 
 
 class SubmitReviewRequest(BaseModel):

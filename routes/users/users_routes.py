@@ -70,9 +70,8 @@ async def get_user(user_id: str, current_user: UserInDB = Depends(get_current_us
         return ResponseSchema.error("Failed to fetch user. Please try again.", 500)
 
 
-# dev/admin only - the app signs people up through POST /auth/register, which sends the
-# verification OTP. This one writes a user straight to the table, so it stays admin-gated:
-# left open it would mint accounts that skip email verification entirely.
+# Dev/admin only. This writes a user straight to the table, so leaving it open would
+# mint accounts that skip email verification. Normal signup is POST /auth/register.
 @users_router.post("", response_model=None, status_code=201)
 async def create_user(user: UserCreate, current_user: UserInDB = Depends(get_admin_user)):
     """Create a new user directly - admin only - JSON body accepted."""

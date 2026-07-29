@@ -18,7 +18,6 @@ from ai_related.review_analysis.review_ai_functions import (
     _fmt_metric,
     _validate_generated_question,
     compute_repeat_weight,
-    compute_value_weight,
     shrink_toward_prior,
 )
 
@@ -329,13 +328,11 @@ def calculate_weighted_client_review_avg(client_id: str) -> Tuple[float, int]:
         rows = db.execute_query(
             """
             SELECT crr.score, cr.published_at, cra.authenticity_score,
-                   c.agreed_budget, c.budget_currency,
                    DENSE_RANK() OVER (
                        PARTITION BY cr.reviewer_id ORDER BY cr.published_at, cr.id
                    ) AS pair_occurrence
             FROM client_review_ratings crr
             JOIN client_reviews cr ON cr.id = crr.client_review_id
-            JOIN contract c ON c.contract_id = cr.contract_id
             LEFT JOIN client_review_ai_analysis cra ON cra.client_review_id = cr.id
             WHERE cr.client_id = :cid AND cr.status = 'published'
             """,
@@ -357,11 +354,9 @@ def calculate_weighted_client_review_avg(client_id: str) -> Tuple[float, int]:
             recency_weight = 1 / (1 + months_ago)
             authenticity_weight = float(row["authenticity_score"]) if row["authenticity_score"] is not None else 1.0
             # Same anti-gaming weighting as the freelancer side: repeat reviews from
-            # the same counterparty decay, and contract size (normalized to USD)
-            # scales the weight.
-            value_weight = compute_value_weight(row["agreed_budget"], row["budget_currency"])
+            # the same counterparty decay.
             repeat_weight = compute_repeat_weight(row["pair_occurrence"])
-            weight = recency_weight * authenticity_weight * value_weight * repeat_weight
+            weight = recency_weight * authenticity_weight * repeat_weight
 
             weighted_sum += float(row["score"]) * weight
             weight_total += weight

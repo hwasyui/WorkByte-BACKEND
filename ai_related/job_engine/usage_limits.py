@@ -9,7 +9,7 @@ DAILY_JOB_FIT_ANALYSIS_LIMIT = int(os.getenv("JOB_FIT_ANALYSIS_DAILY_LIMIT", "10
 def check_and_increment_daily_usage(db, freelancer_id: str) -> Dict:
     """
     Atomically increment today's usage count for a freelancer and report whether
-    they're still under the daily limit. Runs before analyse_role_match() is even
+    the limit is still open. Runs before analyse_role_match() is even
     called, so a freelancer who's already over the limit never triggers an LLM call.
 
     The insert/increment happens unconditionally -- a request that later fails

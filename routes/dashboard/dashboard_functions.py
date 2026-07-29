@@ -152,7 +152,7 @@ class DashboardFunctions:
         """
         Returns every job the freelancer applied to, enriched with contract data.
         Dates on every item:
-          submitted_at            - when they applied
+          submitted_at            - when the proposal was sent
           start_date              - contract start (null if no contract)
           end_date                - expected contract end
           actual_completion_date  - when work was accepted
@@ -279,7 +279,7 @@ class DashboardFunctions:
     ) -> Dict[str, Any]:
         """
         Returns every job post the client created.
-        Structure: job → roles → contracts (all with tracking_status + dates).
+        Structure: job to roles to contracts (all with tracking_status + dates).
         Dates on every job item:
           created_at        - when the job post was created
           posted_at         - when it went live

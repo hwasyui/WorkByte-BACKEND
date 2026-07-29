@@ -11,16 +11,13 @@ from functions.logger import logger
 from ai_related.job_engine.source_text_builder import build_freelancer_source_text
 from ai_related.job_engine.embedding_service import _get_model
 
-
 def get_cv_embedding(text: str) -> List[float]:
     model = _get_model()
     embedding = model.encode(text, normalize_embeddings=True)
     return embedding.tolist()
 
-
 def _normalize_text(text: str) -> str:
     return re.sub(r"\s+", " ", text.strip()).lower()
-
 
 async def extract_cv_text(cv_file: UploadFile) -> str:
     contents = await cv_file.read()
@@ -53,7 +50,6 @@ async def extract_cv_text(cv_file: UploadFile) -> str:
 
     raise ValueError("Unsupported CV file type. Please upload a PDF (.pdf) or Word document (.docx).")
 
-
 def get_profile_skill_names(freelancer_id: str) -> List[str]:
     db = get_db()
     rows = db.execute_query(
@@ -67,7 +63,6 @@ def get_profile_skill_names(freelancer_id: str) -> List[str]:
     )
     return [row["skill_name"] for row in rows] if rows else []
 
-
 def extract_skills_from_text(text: str, skills: List[str]) -> List[str]:
     normalized_text = _normalize_text(text)
     matched = []
@@ -80,10 +75,8 @@ def extract_skills_from_text(text: str, skills: List[str]) -> List[str]:
             matched.append(skill)
     return matched
 
-
 def build_freelancer_profile_text(freelancer_id: str) -> Optional[str]:
     return build_freelancer_source_text(freelancer_id)
-
 
 def cosine_similarity(a: List[float], b: List[float]) -> float:
     if not a or not b or len(a) != len(b):
@@ -95,25 +88,19 @@ def cosine_similarity(a: List[float], b: List[float]) -> float:
         return 0.0
     return max(min(dot / (mag_a * mag_b), 1.0), -1.0)
 
-
 def compute_resume_score(similarity: float, skill_coverage: Optional[float]) -> int:
-    """Convert similarity + skill coverage to a 0-100 resume score."""
     sim_component = min(100.0, max(0.0, (similarity - 0.30) / 0.55 * 100.0))
     if skill_coverage is not None:
         cov_component = min(100.0, max(0.0, skill_coverage * 100.0))
         return int(round(sim_component * 0.6 + cov_component * 0.4))
     return int(round(sim_component))
 
-
 def compute_overall_score(resume_score: int, ats_score: int) -> int:
-    """Simple average of resume score and ATS score."""
     result = int(round((resume_score + ats_score) / 2))
     logger("CV_ANALYSIS", f"compute_overall_score({resume_score}, {ats_score}) = {result}", level="DEBUG")
     return result
 
-
 def grade_overall_score(overall_score: int) -> str:
-    """Map overall_score (0-100) to one of four grades."""
     if overall_score >= 80:
         return "excellent"
     if overall_score >= 60:
@@ -121,7 +108,6 @@ def grade_overall_score(overall_score: int) -> str:
     if overall_score >= 40:
         return "fair"
     return "bad"
-
 
 def classify_cv_quality(similarity: float, coverage: Optional[float], ats_score: Optional[int] = None) -> str:
     if coverage is not None:
@@ -147,9 +133,7 @@ def classify_cv_quality(similarity: float, coverage: Optional[float], ats_score:
 
     return base
 
-
 def check_ats_compliance(raw_text: str) -> dict:
-    """Rule-based ATS compliance check. Returns ats_score (0-100) and ats_flags."""
     text_lower = raw_text.lower()
     word_count = len(raw_text.split())
     flags: List[str] = []
@@ -214,12 +198,9 @@ def check_ats_compliance(raw_text: str) -> dict:
 
     return {"ats_score": score, "ats_flags": flags}
 
-
-_GROQ_TIMEOUT = 90.0  
-
+_GROQ_TIMEOUT = 90.0
 
 def _call_groq(system_prompt: str, user_prompt: str, json_mode: bool = False, max_tokens: int = 1500) -> Any:
-    """Call GROQ LLM and return the response."""
     client = Groq(timeout=_GROQ_TIMEOUT)
     kwargs: Dict[str, Any] = {
         "model": "llama-3.3-70b-versatile",
@@ -237,7 +218,6 @@ def _call_groq(system_prompt: str, user_prompt: str, json_mode: bool = False, ma
     if json_mode:
         return json.loads(content)
     return content
-
 
 async def analyze_cv_with_llm(
     cv_text: str,
@@ -327,9 +307,7 @@ async def analyze_cv_with_llm(
             "sections": [],
         }
 
-
 async def parse_cv_for_profile(cv_text: str) -> Dict[str, Any]:
-    # RoBERTa is the primary extractor; GROQ only fills fields it misses.
     roberta_result: Dict[str, Any] = {}
     try:
         from routes.cv_upload.cv_parser_roberta import parse_cv_with_roberta
@@ -351,7 +329,6 @@ async def parse_cv_for_profile(cv_text: str) -> Dict[str, Any]:
     roberta_exp = roberta_result.get("work_experience", [])
     roberta_edu = roberta_result.get("education", [])
 
-    # Skip GROQ entirely when RoBERTa already covered skills, experience and education.
     groq_result: Dict[str, Any] = {}
     if not (roberta_skills and roberta_exp and roberta_edu):
         schema_example = {
@@ -416,7 +393,6 @@ async def parse_cv_for_profile(cv_text: str) -> Dict[str, Any]:
         except Exception as e:
             logger("CV_ANALYSIS", f"GROQ structured extraction failed: {e}", level="ERROR")
 
-    # Prefer RoBERTa per field, fall back to GROQ only where RoBERTa came back empty.
     return {
         "suggested_bio": roberta_bio or groq_result.get("suggested_bio", ""),
         "skills": roberta_skills or groq_result.get("skills", []),
@@ -424,7 +400,6 @@ async def parse_cv_for_profile(cv_text: str) -> Dict[str, Any]:
         "work_experience": roberta_exp or groq_result.get("work_experience", []),
         "education": roberta_edu or groq_result.get("education", []),
     }
-
 
 async def build_cv_recommendations(
     cv_text: str,
@@ -434,7 +409,6 @@ async def build_cv_recommendations(
     matched_skills: List[str],
     missing_skills: List[str],
 ) -> List[str]:
-    """Flat recommendation list for backward compatibility with cv_upload_routes."""
     ats_result = check_ats_compliance(cv_text)
     analysis = await analyze_cv_with_llm(
         cv_text, profile_text, similarity, skill_coverage,

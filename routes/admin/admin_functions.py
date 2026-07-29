@@ -17,28 +17,19 @@ from routes.admin.admin_moderation import (
     scan_for_scam,
     scan_for_scam_with_ml_fallback,
     scan_harmful_text_with_ml_fallback,
+    scan_harmful_text_fields,
 )
 from routes.notifications.notification_functions import NotificationFunctions
 
 AUTO_APPROVE_DAYS = 30
 AUTO_REMOVE_DAYS  = 30
 
-# The BERT tuning run never reached the intended 0.95 precision floor on any label, so 0.88 is
-# the most conservative cutoff it actually produced. Compared against max(label_scores), not
-# their sum: one label alone has to clear the bar.
 CONTENT_AUTO_CLOSE_THRESHOLD_JOB     = 0.88
 
-REPORT_AUTO_ACTION_THRESHOLD = 10   # min reports to trigger auto-action
-REPORT_AUTO_ACTION_DAYS      = 30   # min age (days) of oldest report
+REPORT_AUTO_ACTION_THRESHOLD = 10
+REPORT_AUTO_ACTION_DAYS      = 30
 
-# Scam cutoffs are no longer constants here - they ship with the trained model bundle
-# (thresholds.json) so retraining can move them without a code change. The keyword fallback
-# keeps its own, on its own scale, in admin_moderation.py.
-
-# Default closure / ban messages (admin can override via admin_note / ban_message)
 DEFAULT_CLOSURE_REASON_CONTENT = "harmful_text"
-# Names the system, never the labels it fired on - a category in the owner's copy reads as
-# an accusation when the model is wrong. Admins still see labels + scores in the queue.
 DEFAULT_CLOSURE_NOTE_CONTENT   = (
     "This job post was closed by Harmful Text Detection. "
     "Submit an appeal if you believe this was a mistake."
@@ -63,9 +54,7 @@ DEFAULT_CLOSURE_NOTE_ADMIN     = (
     "This job post was closed by an administrator. "
     "Submit an appeal if you believe this was a mistake."
 )
-# Closure reasons owned by the system (moderation, reports, scam, admin). A post closed
-# for one of these can only come back via appeal or an admin reopen - the client can't
-# flip it to 'active' themselves. A client's own close leaves closure_reason NULL.
+
 SYSTEM_CLOSURE_REASONS = frozenset({
     DEFAULT_CLOSURE_REASON_CONTENT,
     DEFAULT_CLOSURE_REASON_SCAM,
@@ -82,23 +71,7 @@ DEFAULT_BAN_MESSAGE_ADMIN      = (
 LIVE_CONTRACT_STATUSES     = ("active", "revision_requested", "under_review", "disputed")
 _LIVE_CONTRACT_STATUS_SQL  = ", ".join(f"'{s}'" for s in LIVE_CONTRACT_STATUSES)
 
-
 def _is_engaged_sql(job_post_id_expr: str) -> str:
-    """Single source of truth for whether a job is 'engaged': TRUE when the given job_post_id
-    has a filled position on any role, or a live (active/pending) contract. An accepted proposal
-    is deliberately NOT engagement - only a real contract (which fills the slot) counts.
-
-    Used two ways off this one definition:
-      - the auto-close guard (_ACTIVE_NO_ENGAGEMENT) skips engaged jobs, and
-      - the admin moderation/report lists expose it as `is_engaged` so the UI can warn
-        before a human admin manually closes one.
-    Static SQL, no user input - safe to inline. job_post_id_expr is the caller's column
-    (e.g. 'job_post.job_post_id', 'cmq.content_id', 'ur.job_post_id'), all UUID."""
-    # 'ongoing' = the non-terminal contract_status values (enum is active/completed/
-    # cancelled/disputed/revision_requested/under_review). completed/cancelled are done;
-    # everything else is live work in progress. NB: positions_filled stays > 0 after a
-    # contract completes (only cancel/delete frees the slot), so a job with delivered work
-    # is still caught by the first EXISTS - the contract clause adds the in-flight states.
     return (
         f"(EXISTS (SELECT 1 FROM job_role jr "
         f"WHERE jr.job_post_id = {job_post_id_expr} AND jr.positions_filled > 0) "
@@ -107,25 +80,15 @@ def _is_engaged_sql(job_post_id_expr: str) -> str:
         f"AND c.status IN ({_LIVE_CONTRACT_STATUS_SQL})))"
     )
 
-
-# Auto-close guard clause dropped into each closing UPDATE on the job_post table: an automated
-# close (harmful or report) skips any job _is_engaged_sql() flags, so a job with a freelancer
-# already engaged is never closed out from under a live project - only a human admin can, with a
-# confirmation in the UI. NOT (A OR B) == (NOT A AND NOT B), same effect as two separate NOT EXISTS.
 _ACTIVE_NO_ENGAGEMENT = f"\n      AND NOT {_is_engaged_sql('job_post.job_post_id')}"
 
-
 def _job_is_engaged(job_post_id: str) -> bool:
-    """Same predicate as _ACTIVE_NO_ENGAGEMENT, read back into Python for callers that have to
-    branch (and return a distinct error) before writing, instead of just skipping the row."""
     row = _row(get_db().execute_query(
         f"SELECT {_is_engaged_sql(':jid')} AS engaged",
         params={"jid": job_post_id},
     ))
     return bool(row and row["engaged"])
 
-
-# Sort-column whitelists (safe f-string interpolation; values are hardcoded)
 _MOD_SORT_COLS = {
     "created_at":   "cmq.created_at",
     "total_score":  "(cmq.toxic_score + cmq.obscene_score + cmq.threat_score + cmq.insult_score + cmq.identity_hate_score)",
@@ -158,25 +121,17 @@ VALID_REPORT_REASONS = [
     "other",
 ]
 
-
 def _rows(result) -> List[Dict]:
     if not result:
         return []
     return [dict(r) for r in result]
-
 
 def _row(result) -> Optional[Dict]:
     if not result:
         return None
     return dict(result[0])
 
-
 def _schedule_notification(coro) -> None:
-    """Fire-and-forget a notification coroutine on the running event loop. Falls back
-    gracefully if no loop is available -- same pattern as
-    ai_related/job_engine/embedding_manager.py's _schedule_immediate, needed because
-    admin_close_job/action_moderation_item/_auto_approve_expired are plain sync functions
-    but NotificationFunctions.notify() is a coroutine."""
     try:
         loop = asyncio.get_running_loop()
         loop.create_task(coro)
@@ -184,11 +139,7 @@ def _schedule_notification(coro) -> None:
         logger("ADMIN", "No running event loop, cannot send job-closed notification", level="WARNING")
         coro.close()
 
-
 def _notify_engaged_freelancers(job_post_id: str) -> None:
-    """Notify freelancers holding a live contract under a job post that just closed. Their
-    contracts are left running - cancelling here would reject the proposal, free the role slot
-    and blast 'Position Open Again' to past applicants of a job that was just taken down."""
     rows = _rows(get_db().execute_query(
         f"""
         SELECT c.contract_id, c.contract_title, f.user_id, jp.job_title
@@ -213,11 +164,7 @@ def _notify_engaged_freelancers(job_post_id: str) -> None:
             data={"job_post_id": job_post_id, "contract_id": str(row["contract_id"])},
         ))
 
-
 def _notify_job_post_closed(job_post_id: str, notif_type: str, title: str, body: str) -> None:
-    """Look up the job post's owning client and fire a closure notification, best-effort.
-    Engaged freelancers get their own type and wording - the client copy is about appealing
-    a takedown they own, which does not apply to them."""
     _notify_engaged_freelancers(job_post_id)
     row = _row(get_db().execute_query(
         """
@@ -237,29 +184,26 @@ def _notify_job_post_closed(job_post_id: str, notif_type: str, title: str, body:
         data={"job_post_id": job_post_id},
     ))
 
-
-def queue_harmful_text_scan(
-    content_type: str,
+def queue_harmful_text_scan(content_type: str,
     content_id: str,
     user_id: str,
     text: str,
+    *fields: str,
 ) -> Optional[Dict]:
-    """
-    Run harmful text scan and insert a pending moderation record if any label is triggered.
-    content_type: 'job_post' -- job posts are the only surface that queues scans; profiles,
-    reviews and the rest are deliberately not scanned.
-    A content item that already has a pending row is left alone (ON CONFLICT DO NOTHING against
-    idx_htq_content_pending_unique) rather than queued again -- rescanning the same content
-    (e.g. repeated manual scans) must not pile up duplicate queue rows.
-    Returns the inserted row dict, or None if content is clean or already queued.
-    """
-    result = scan_harmful_text_with_ml_fallback(text)
-    if not result["is_flagged"]:
-        return None
-
-    scan_method = result.get("scan_method", "unknown")
-    auto_approve_at = datetime.utcnow() + timedelta(days=AUTO_APPROVE_DAYS)
+    # Callers with several fields (a job post's title and description) pass them separately
+    # so each is scored on its own. text stays the snapshot stored on the row.
+    # The whole body sits in the try because this runs as a fire-and-forget task: anything
+    # raised outside it would die with the task and leave the content unmoderated silently.
     try:
+        result = scan_harmful_text_fields(*fields) if fields else scan_harmful_text_with_ml_fallback(text)
+        if not result["is_flagged"]:
+            return None
+
+        scan_method = result.get("scan_method", "unknown")
+        # One pending row per content. A re-scan overwrites it only when the new text scores
+        # higher, so the admin and the 30-day sweep judge the worst version that went live.
+        # auto_approve_at is left alone, so the deadline still runs from the first offence.
+        auto_approve_at = datetime.utcnow() + timedelta(days=AUTO_APPROVE_DAYS)
         row = _row(get_db().execute_query(
             """
             INSERT INTO harmful_text_queue (
@@ -273,7 +217,20 @@ def queue_harmful_text_scan(
                 :threat_score, :insult_score, :identity_hate_score,
                 CAST(:detected_labels AS JSONB), :flagged_text, :auto_approve_at
             )
-            ON CONFLICT (content_type, content_id) WHERE status = 'pending' DO NOTHING
+            ON CONFLICT (content_type, content_id) WHERE status = 'pending'
+            DO UPDATE SET
+                toxic_score         = EXCLUDED.toxic_score,
+                obscene_score       = EXCLUDED.obscene_score,
+                threat_score        = EXCLUDED.threat_score,
+                insult_score        = EXCLUDED.insult_score,
+                identity_hate_score = EXCLUDED.identity_hate_score,
+                detected_labels     = EXCLUDED.detected_labels,
+                flagged_text        = EXCLUDED.flagged_text
+            WHERE GREATEST(EXCLUDED.toxic_score, EXCLUDED.obscene_score, EXCLUDED.threat_score,
+                           EXCLUDED.insult_score, EXCLUDED.identity_hate_score)
+                > GREATEST(harmful_text_queue.toxic_score, harmful_text_queue.obscene_score,
+                           harmful_text_queue.threat_score, harmful_text_queue.insult_score,
+                           harmful_text_queue.identity_hate_score)
             RETURNING *
             """,
             params={
@@ -293,7 +250,7 @@ def queue_harmful_text_scan(
         if row is None:
             logger(
                 "ADMIN",
-                f"Content already has a pending scan, skipped: {content_type} {content_id}",
+                f"Content already has a pending scan that is at least as severe, kept: {content_type} {content_id}",
                 level="INFO",
             )
         else:
@@ -304,17 +261,11 @@ def queue_harmful_text_scan(
             )
         return row
     except Exception as e:
-        logger("ADMIN", f"Failed to queue content scan: {e}", level="ERROR")
+        logger("ADMIN", f"Harmful scan failed, content left unmoderated: {content_type} {content_id} | {e}",
+               level="ERROR")
         return None
 
-
 def _auto_approve_expired():
-    """
-    Process pending moderation items whose 30-day window has closed.
-    A job post auto-closes when at least one individual label score clears
-    CONTENT_AUTO_CLOSE_THRESHOLD_JOB (status='approved'). One whose labels all stayed below
-    that bar is auto-dismissed as a false positive (status='rejected').
-    """
     expired = _rows(get_db().execute_query(
         """
         SELECT *
@@ -337,13 +288,6 @@ def _auto_approve_expired():
 
         new_status = "approved" if max_score >= CONTENT_AUTO_CLOSE_THRESHOLD_JOB else "rejected"
 
-        # If this would auto-close a job that has a freelancer engaged (filled position /
-        # live contract), the guard below can't close it -- only a human admin can. Leave the
-        # row 'pending' (don't claim it) so it stays in the queue with its is_engaged flag for
-        # manual review, instead of being silently marked approved while the job stays open.
-        # Covers 'active' and 'filled' jobs (both can carry live work); a draft/closed job in a
-        # deliberate terminal state falls through and resolves as before. Mirrors how
-        # _process_report_auto_actions leaves an engaged reported job for manual handling.
         if new_status == "approved":
             engaged = _row(get_db().execute_query(
                 f"""
@@ -360,11 +304,8 @@ def _auto_approve_expired():
                     f"Harmful flag on {ctype} {content_id} left pending: job has ongoing engagement, needs manual admin action",
                     level="INFO",
                 )
-                continue  # leave status = 'pending'
+                continue
 
-        # Claim the row first: only the run that actually flips it out of 'pending' acts on
-        # the content. Stops the background sweep loop and an admin opening the queue from
-        # double-closing and double-notifying the same job.
         claimed = _rows(get_db().execute_query(
             """
             UPDATE harmful_text_queue
@@ -375,13 +316,10 @@ def _auto_approve_expired():
             params={"status": new_status, "mid": mid},
         ))
         if not claimed:
-            continue  # another run already handled it
+            continue
 
-        if new_status == "approved":  # flag confirmed: harmful content actioned
+        if new_status == "approved":
             note = DEFAULT_CLOSURE_NOTE_CONTENT
-            # active jobs only: don't stomp a draft/filled/already-closed job (their status
-            # was set deliberately elsewhere). RETURNING tells us if a row actually closed so
-            # the "job closed" notify/log only fires when it really did.
             closed = _rows(get_db().execute_query(
                 f"""
                 UPDATE job_post
@@ -408,24 +346,24 @@ def _auto_approve_expired():
                 )
             else:
                 logger("ADMIN", f"Flag confirmed but {ctype} {content_id} not active or has ongoing engagement (skipped close)", level="INFO")
-        else:  # flag dismissed: false positive
+        else:
             logger("ADMIN", f"Auto-dismissed {ctype} {content_id}, max_label_score={max_score:.2f}", level="INFO")
 
 MODERATION_SWEEP_INTERVAL_SECONDS = int(os.getenv("MODERATION_SWEEP_INTERVAL_SECONDS", "3600"))
 
 async def moderation_sweep_loop() -> None:
-    """Periodically action moderation rows whose 30-day window has closed, so the deadline
-    is honoured on its own timeline instead of only when an admin happens to open the queue.
-    Launched via asyncio.create_task() in main.py's lifespan.
+    """
+    Expire both moderation queues on a timer.
 
-    Calls _auto_approve_expired() directly rather than via asyncio.to_thread: that function's
-    _notify_job_post_closed() schedules its notification with
-    asyncio.get_running_loop().create_task(...), which only finds a loop on the thread that's
-    actually running one. A worker thread spawned by asyncio.to_thread has none, so
-    notifications would silently never fire when the background loop (rather than an admin's
-    request) is what closes the job. Running it inline keeps it on this loop's own thread,
-    matching how the same function already runs synchronously inside admin route handlers
-    (list_moderation_queue, get_admin_dashboard_stats) without complaint."""
+    Scam flags used to be swept only when an admin opened the flag list or the dashboard,
+    which made auto_remove_at mean "30 days and someone happened to look" rather than a
+    deadline - a flagged job stayed live indefinitely on a quiet week. The lazy calls stay
+    where they are; this just stops them from being the only thing that runs.
+
+    Each sweep gets its own try so a failure in one cannot skip the other, and neither is
+    moved onto a worker thread: closure notifications go through _schedule_notification,
+    which drops them unless it is called with a running event loop.
+    """
     logger("ADMIN", f"Moderation sweep loop started | interval={MODERATION_SWEEP_INTERVAL_SECONDS}s", level="INFO")
     while True:
         await asyncio.sleep(MODERATION_SWEEP_INTERVAL_SECONDS)
@@ -433,10 +371,12 @@ async def moderation_sweep_loop() -> None:
             _auto_approve_expired()
         except Exception as e:
             logger("ADMIN", f"Moderation sweep loop unhandled error: {e}", level="ERROR")
-
+        try:
+            _process_auto_remove()
+        except Exception as e:
+            logger("ADMIN", f"Scam expiry sweep unhandled error: {e}", level="ERROR")
 
 def force_expire_moderation(moderation_ids: List[str]) -> None:
-    """Backdate auto_approve_at for specific items then immediately run the sweep (testing utility)."""
     if not moderation_ids:
         return
     placeholders = ", ".join(f":id_{i}" for i in range(len(moderation_ids)))
@@ -450,7 +390,6 @@ def force_expire_moderation(moderation_ids: List[str]) -> None:
         params=params,
     )
     _auto_approve_expired()
-
 
 def force_expire_scam_flags(flag_ids: List[str]) -> None:
     if not flag_ids:
@@ -467,7 +406,6 @@ def force_expire_scam_flags(flag_ids: List[str]) -> None:
     )
     _process_auto_remove()
 
-
 def list_moderation_queue(
     status: str = "pending",
     sort_by: str = "created_at",
@@ -476,13 +414,6 @@ def list_moderation_queue(
     page: int = 1,
     page_size: int = 20,
 ) -> List[Dict]:
-    """
-    min_severity filters on max_score (the highest of the 5 per-label scores), not any
-    single label - a per-label score like threat can be suppressed by co-occurring labels
-    (see ai_result/harmful_text_detection/known_limitations.md), so relying on one label's
-    score to decide what counts as severe misses content that's already scored high on a
-    different label. max_score >= min_severity catches it regardless of which label fired.
-    """
     _auto_approve_expired()
     offset    = (page - 1) * page_size
     sort_col  = _MOD_SORT_COLS.get(sort_by, "cmq.created_at")
@@ -522,19 +453,23 @@ def list_moderation_queue(
         },
     ))
 
-
 def action_moderation_item(
     moderation_id: str,
-    action: str,  # 'approve' | 'reject'
+    action: str,
     admin_user_id: str,
     admin_note: Optional[str] = None,
 ) -> Optional[Dict]:
     """
-    Approve or reject a pending moderation item.
-    Rejected job posts are closed; rejected profiles are not deleted
-    (admin may handle separately).
+    Record an admin verdict on a harmful-text flag.
+
+    action is 'uphold' (the flag was right - the content comes down) or 'dismiss' (the
+    flag was wrong - the content stays). The legacy spelling approve/reject is still
+    accepted: here 'approve' meant approving the FLAG, so it maps to uphold. Scam flags
+    used the opposite word for the same verdict, which is why both now speak
+    uphold/dismiss - see action_scam_flag.
     """
-    new_status = "approved" if action == "approve" else "rejected"
+    upheld     = action in ("uphold", "approve")
+    new_status = "approved" if upheld else "rejected"
     updated = _row(get_db().execute_query(
         """
         UPDATE harmful_text_queue
@@ -551,7 +486,7 @@ def action_moderation_item(
         },
     ))
 
-    if updated and new_status == "approved":  # approved = flag confirmed → take action
+    if updated and new_status == "approved":
         content_type = updated.get("content_type", "")
         content_id   = str(updated.get("content_id", ""))
         if content_type == "job_post":
@@ -585,15 +520,7 @@ def action_moderation_item(
 
     return updated
 
-
 def _notify_scam_closure(job_post_id: str) -> None:
-    """Client copy for a scam takedown, plus the engaged-freelancer copy every other closer
-    already sends via _notify_job_post_closed. Kept separate from that helper on purpose: this
-    runs from queue_scam_scan, which job_post_routes hands to asyncio.to_thread - a thread with
-    no running loop, where _schedule_notification would drop the notification instead of sending
-    it. The asyncio.run fallback below is what makes the auto-close path actually notify.
-    _notify_engaged_freelancers only matters on the manual/ban paths (auto-close skips engaged
-    jobs entirely), and those run inside async routes where the loop exists."""
     _notify_engaged_freelancers(job_post_id)
     row = _row(get_db().execute_query(
         """
@@ -623,7 +550,6 @@ def _notify_scam_closure(job_post_id: str) -> None:
         return
     loop.create_task(coro)
 
-
 def queue_scam_scan(
     job_post_id: str,
     client_id: str,
@@ -631,26 +557,29 @@ def queue_scam_scan(
     title: str = "",
     description: str = "",
 ) -> Optional[Dict]:
-    if title or description:
-        result = scan_for_scam_with_ml_fallback(title, description)
-    else:
-        result = scan_for_scam_with_ml_fallback("", text)
-
-    scan_method = result.get("scan_method", "unknown")
-    scam_score  = result["scam_score"]
-    is_hard     = result["is_flagged"]
-    is_soft     = not is_hard and result.get("needs_review", False)
-
-    if not is_hard and not is_soft:
-        logger(
-            "ADMIN",
-            f"Scam scan ({scan_method}): job {job_post_id} is clean, score={scam_score:.3f}",
-            level="INFO",
-        )
-        return None
-
-    auto_remove_at = datetime.utcnow() + timedelta(days=AUTO_REMOVE_DAYS)
+    # The whole body sits in the try because this runs as a fire-and-forget task: anything
+    # raised outside it would die with the task and leave the job unscanned silently.
+    # Same reason queue_harmful_text_scan is shaped this way.
     try:
+        if title or description:
+            result = scan_for_scam_with_ml_fallback(title, description)
+        else:
+            result = scan_for_scam_with_ml_fallback("", text)
+
+        scan_method = result.get("scan_method", "unknown")
+        scam_score  = result["scam_score"]
+        is_hard     = result["is_flagged"]
+        is_soft     = not is_hard and result.get("needs_review", False)
+
+        if not is_hard and not is_soft:
+            logger(
+                "ADMIN",
+                f"Scam scan ({scan_method}): job {job_post_id} is clean, score={scam_score:.3f}",
+                level="INFO",
+            )
+            return None
+
+        auto_remove_at = datetime.utcnow() + timedelta(days=AUTO_REMOVE_DAYS)
         closed = []
         if is_hard:
             closed = _rows(get_db().execute_query(
@@ -671,6 +600,12 @@ def queue_scam_scan(
                 },
             ))
 
+        # One pending flag per job. A re-scan (an edit, or an admin re-running the scan)
+        # overwrites it only when the new text scores higher, so the admin and the 30-day
+        # sweep judge the worst version that went live - editing the scam out after the
+        # applicants have already seen it does not clear the record. auto_remove_at is left
+        # alone so the deadline still runs from the first offence, and auto_closed is only
+        # ever raised, never dropped back to FALSE by a later scan.
         row = _row(get_db().execute_query(
             """
             INSERT INTO scam_job_flags (
@@ -680,6 +615,13 @@ def queue_scam_scan(
                 :job_post_id, :client_id, :scam_score,
                 CAST(:keywords AS JSONB), :text, :auto_remove_at, :auto_closed
             )
+            ON CONFLICT (job_post_id) WHERE status = 'pending'
+            DO UPDATE SET
+                scam_score        = EXCLUDED.scam_score,
+                detected_keywords = EXCLUDED.detected_keywords,
+                flagged_text      = EXCLUDED.flagged_text,
+                auto_closed       = scam_job_flags.auto_closed OR EXCLUDED.auto_closed
+            WHERE EXCLUDED.scam_score > scam_job_flags.scam_score
             RETURNING *
             """,
             params={
@@ -715,9 +657,9 @@ def queue_scam_scan(
             )
         return row
     except Exception as e:
-        logger("ADMIN", f"Failed to queue scam scan: {e}", level="ERROR")
+        logger("ADMIN", f"Scam scan failed, job left unmoderated: job_post {job_post_id} | {e}",
+               level="ERROR")
         return None
-
 
 def _flag_client_for_scam(client_id: str):
     get_db().execute_query(
@@ -760,7 +702,6 @@ def _flag_client_for_scam(client_id: str):
         )
         logger("ADMIN", f"Client {client_id} banned; 3+ confirmed scam jobs, active jobs closed", level="WARNING")
 
-
 def _process_auto_remove():
     from ai_related.job_scam_detection.scam_detector import get_thresholds
 
@@ -771,16 +712,42 @@ def _process_auto_remove():
         return
 
     expired = _rows(get_db().execute_query(
-        """
+        f"""
         UPDATE scam_job_flags
         SET status = 'removed', actioned_at = NOW()
         WHERE status = 'pending'
           AND auto_remove_at <= NOW()
           AND scam_score >= :threshold
+          AND NOT EXISTS (
+                SELECT 1 FROM job_post jp
+                WHERE jp.job_post_id = scam_job_flags.job_post_id
+                  AND jp.status IN ('active', 'filled')
+                  AND {_is_engaged_sql('jp.job_post_id')}
+              )
         RETURNING *
         """,
         params={"threshold": expire_close},
     ))
+    parked = _rows(get_db().execute_query(
+        f"""
+        SELECT sf.flag_id, sf.job_post_id
+        FROM scam_job_flags sf
+        JOIN job_post jp ON jp.job_post_id = sf.job_post_id
+        WHERE sf.status = 'pending'
+          AND sf.auto_remove_at <= NOW()
+          AND sf.scam_score >= :threshold
+          AND jp.status IN ('active', 'filled')
+          AND {_is_engaged_sql('jp.job_post_id')}
+        """,
+        params={"threshold": expire_close},
+    ))
+    for flag in parked:
+        logger(
+            "ADMIN",
+            f"Scam flag {flag['flag_id']} left pending: job {flag['job_post_id']} has ongoing "
+            f"engagement, needs manual admin action",
+            level="INFO",
+        )
     for flag in expired:
         job_post_id = str(flag["job_post_id"])
         closed = _rows(get_db().execute_query(
@@ -811,20 +778,11 @@ def _process_auto_remove():
         else:
             logger(
                 "ADMIN",
-                f"Scam flag {flag['flag_id']} expired unreviewed but job {job_post_id} not "
-                f"closed (not active or has ongoing engagement)",
+                f"Scam flag {flag['flag_id']} expired unreviewed but job {job_post_id} was "
+                f"not active (engaged jobs never get this far - they stay pending)",
                 level="INFO",
             )
 
-    # auto_closed flags are deliberately left out of this sweep. The timer firing means nobody
-    # reviewed the flag in 30 days - that is not the same verdict as an admin pressing 'safe',
-    # and it must not be allowed to put a job the model closed at its highest confidence back on
-    # the platform unattended. Dismissing without reopening is no better: the flag would leave
-    # the queue while the job stays down, so nothing could ever be reviewed again. Parking it as
-    # 'pending' keeps it in front of a human, the same way _auto_approve_expired parks an engaged
-    # harmful-text row. The client is not stuck meanwhile - a closed job post is appealable.
-    # (Reachable only when a retrain ships a higher expire_close than the score a pending flag
-    # was written with; under one fixed threshold set, auto_closed implies score >= auto_close.)
     dismissed = _rows(get_db().execute_query(
         """
         UPDATE scam_job_flags
@@ -843,7 +801,6 @@ def _process_auto_remove():
             f"{len(dismissed)} scam flag(s) expired below the {expire_close:.4f} cutoff, dismissed",
             level="INFO",
         )
-
 
 def list_scam_flags(
     status: str = "pending",
@@ -864,9 +821,7 @@ def list_scam_flags(
                u.email     AS client_email,
                csr.total_scam_confirmed,
                csr.is_banned,
-               -- a scam flag always targets a job post, so no content_type branch here
-               -- (unlike the moderation queue). Same flag the harmful-text queue exposes:
-               -- the UI warns before an admin actions a job with live work on it.
+               -- always a job post, so no content_type branch like the moderation queue has
                {_is_engaged_sql('sf.job_post_id')} AS is_engaged
         FROM scam_job_flags sf
         JOIN job_post jp ON jp.job_post_id = sf.job_post_id
@@ -880,14 +835,28 @@ def list_scam_flags(
         params={"status": status, "limit": page_size, "offset": offset},
     ))
 
-
 def action_scam_flag(
     flag_id: str,
-    action: str,  # 'approve' (mark safe) | 'remove'
+    action: str,
     admin_user_id: str,
     admin_note: Optional[str] = None,
 ) -> Optional[Dict]:
-    new_status = "safe" if action == "approve" else "removed"
+    """
+    Record an admin verdict on a scam flag.
+
+    action is 'uphold' (the flag was right - the job is closed and the client takes a
+    strike) or 'dismiss' (the flag was wrong - the job stays, and is reopened if the
+    scan had auto-closed it). 'remove' is the old spelling of uphold.
+
+    'approve' means uphold, matching action_moderation_item. It used to mean the exact
+    opposite here - approving the JOB rather than the flag - and nothing in the request
+    distinguishes a caller on the old meaning from one on the new, so an unmigrated
+    client closes the job it meant to clear. The HTTP layer logs every legacy /approve
+    as a WARNING for exactly this reason; that log is the only signal, not a guardrail.
+    Callers that mean "this job is fine" must say dismiss.
+    """
+    upheld     = action in ("uphold", "approve", "remove")
+    new_status = "removed" if upheld else "safe"
     updated = _row(get_db().execute_query(
         """
         UPDATE scam_job_flags
@@ -906,9 +875,6 @@ def action_scam_flag(
     if updated and new_status == "safe":
         if updated.get("auto_closed"):
             job_post_id = str(updated["job_post_id"])
-            # Staffing-aware restore, same as admin_reopen_job and the appeal path: a job whose
-            # roles are all filled comes back as 'filled'. Hardcoding 'active' would re-advertise
-            # slots that don't exist on a job that was only ever closed by a false positive.
             get_db().execute_query(
                 """
                 UPDATE job_post
@@ -929,11 +895,6 @@ def action_scam_flag(
         job_post_id = str(updated["job_post_id"])
         _flag_client_for_scam(str(updated["client_id"]))
         closure_note = admin_note or DEFAULT_CLOSURE_NOTE_SCAM
-        # Skips a job that's already closed, like action_moderation_item does: without the
-        # filter this stomps an earlier closure_reason (harmful_text / community_reports /
-        # admin_override / the client's own close) and restamps closed_at, which the admin
-        # date filters read. RETURNING so the log and the notification follow what really
-        # happened instead of announcing a close that never landed.
         closed = _rows(get_db().execute_query(
             """
             UPDATE job_post
@@ -962,21 +923,13 @@ def action_scam_flag(
             )
     return updated
 
-
 def get_client_scam_record(client_id: str) -> Optional[Dict]:
     return _row(get_db().execute_query(
         "SELECT * FROM client_scam_record WHERE client_id = :cid",
         params={"cid": client_id},
     ))
 
-
 def _process_report_auto_actions():
-    """
-    Auto-ban users / close job posts that have ≥10 reports
-    with the oldest report ≥30 days old.
-    Skips targets that already have a record in report_auto_actions.
-    """
-    # User targets
     user_targets = _rows(get_db().execute_query(
         """
         SELECT reported_user_id AS target_id, COUNT(*) AS report_count
@@ -1041,7 +994,6 @@ def _process_report_auto_actions():
         )
         logger("ADMIN", f"User {tid} report-banned ({t['report_count']} reports); active jobs closed", level="WARNING")
 
-    # Job post targets
     job_targets = _rows(get_db().execute_query(
         """
         SELECT job_post_id AS target_id, COUNT(*) AS report_count
@@ -1082,9 +1034,6 @@ def _process_report_auto_actions():
             },
         ))
         if not closed:
-            # Not active, or has a filled position / ongoing contract - leave it alone and
-            # don't record an auto-action, so it's re-evaluated on a later sweep once the
-            # engagement clears rather than being permanently marked handled.
             logger("ADMIN", f"Job post {tid} hit report threshold but not active or has ongoing engagement (skipped close)", level="INFO")
             continue
         get_db().execute_query(
@@ -1096,7 +1045,6 @@ def _process_report_auto_actions():
             params={"tid": tid, "cnt": int(t["report_count"])},
         )
         logger("ADMIN", f"Job post {tid} closed via report threshold ({t['report_count']} reports)", level="WARNING")
-
 
 def list_report_auto_actions(page: int = 1, page_size: int = 20) -> List[Dict]:
     offset = (page - 1) * page_size
@@ -1114,20 +1062,14 @@ def list_report_auto_actions(page: int = 1, page_size: int = 20) -> List[Dict]:
         params={"limit": page_size, "offset": offset},
     ))
 
-
 def list_report_targets(
-    target_type: str = "all",  # 'user' | 'job_post' | 'all'
+    target_type: str = "all",
     sort_by: str = "report_count",
     sort_dir: str = "desc",
     min_count: int = 1,
     page: int = 1,
     page_size: int = 20,
 ) -> List[Dict]:
-    """
-    Grouped view: one row per reported target (user or job post) with
-    aggregate report count, oldest/latest report date, and whether the
-    auto-action threshold has been met.
-    """
     offset    = (page - 1) * page_size
     sort_col  = _REPORT_TARGET_SORT_COLS.get(sort_by, "report_count")
     direction = "ASC" if sort_dir.lower() == "asc" else "DESC"
@@ -1174,9 +1116,7 @@ def list_report_targets(
         },
     ))
 
-
 def force_expire_reports(target_type: str, target_id: str) -> None:
-    """Backdate report created_at to simulate 30-day threshold crossing (testing utility)."""
     if target_type == "user":
         get_db().execute_query(
             """
@@ -1197,15 +1137,9 @@ def force_expire_reports(target_type: str, target_id: str) -> None:
         )
     _process_report_auto_actions()
 
-
 _MAX_APPEALS_PER_TARGET = 2
 
 def _validate_appeal_target(user_id: str, target_type: str, target_id: str) -> None:
-    """
-    Confirm the appealing user actually owns the target and that it's currently in a
-    restricted state -- neither was checked before, so any logged-in user could appeal any
-    job_post_id/user_id, closed or not, theirs or not. Raises HTTPException on any failure.
-    """
     if target_type == "job_post":
         row = _row(get_db().execute_query(
             """
@@ -1234,20 +1168,7 @@ def _validate_appeal_target(user_id: str, target_type: str, target_id: str) -> N
         if not row["is_report_banned"]:
             raise HTTPException(status_code=400, detail="Your account is not currently restricted, there is nothing to appeal")
 
-
 def submit_appeal(user_id: str, target_type: str, target_id: str, message: str) -> Optional[Dict]:
-    """
-    User submits an appeal against a ban or job-post closure.
-
-    Rules:
-      - Target must exist, be owned by the appealing user, and currently be in a
-        restricted state (job post closed / account restricted) -- see
-        _validate_appeal_target().
-      - Cannot appeal while a pending appeal already exists for the same target.
-      - Cannot appeal if the target was already approved (resolved positively).
-      - Maximum of _MAX_APPEALS_PER_TARGET (2) appeals per (user, target).
-        The second appeal is the user's one retry after a rejection.
-    """
     _validate_appeal_target(user_id, target_type, target_id)
 
     existing = _rows(get_db().execute_query(
@@ -1301,18 +1222,7 @@ def submit_appeal(user_id: str, target_type: str, target_id: str, message: str) 
         logger("ADMIN", f"Failed to submit appeal: {e}", level="ERROR")
         return None
 
-
 def get_appeal_status(user_id: str, target_type: str, target_id: str) -> Dict:
-    """
-    Return the current appeal eligibility and a frontend-ready message for a given target.
-
-    States:
-      never_appealed       → can appeal, 2 chances left
-      pending              → cannot appeal, waiting for review
-      rejected_can_retry   → can appeal, 1 chance left
-      rejected_final       → cannot appeal, exhausted
-      approved             → cannot appeal, already resolved positively.
-    """
     existing = _rows(get_db().execute_query(
         """
         SELECT status, admin_note, actioned_at, created_at
@@ -1329,7 +1239,6 @@ def get_appeal_status(user_id: str, target_type: str, target_id: str) -> Dict:
     total           = len(existing)
     appeals_remaining = max(0, _MAX_APPEALS_PER_TARGET - total)
 
-    # Fetch the restriction reason from the target itself
     restriction_reason = None
     if target_type == "user":
         row = _row(get_db().execute_query(
@@ -1382,7 +1291,6 @@ def get_appeal_status(user_id: str, target_type: str, target_id: str) -> Dict:
             "restriction_reason": restriction_reason,
         }
 
-    # rejection_count >= _MAX_APPEALS_PER_TARGET
     return {
         "can_appeal":        False,
         "appeals_remaining": 0,
@@ -1391,9 +1299,7 @@ def get_appeal_status(user_id: str, target_type: str, target_id: str) -> Dict:
         "restriction_reason": restriction_reason,
     }
 
-
 def get_user_appeals(user_id: str) -> List[Dict]:
-    """Return all appeals submitted by a user."""
     return _rows(get_db().execute_query(
         """
         SELECT a.*,
@@ -1406,7 +1312,6 @@ def get_user_appeals(user_id: str) -> List[Dict]:
         params={"uid": user_id},
     ))
 
-
 def list_appeals(
     status:         str = "pending",
     target_type:    Optional[str] = None,
@@ -1415,16 +1320,8 @@ def list_appeals(
     page:           int = 1,
     page_size:      int = 20,
 ) -> List[Dict]:
-    """
-    Admin: list appeals with optional filters.
-
-    appeal_attempt  1 = first appeal for that target, 2 = second/final attempt.
-    target_type     'user' | 'job_post'
-    search          partial match on submitter email.
-    """
     offset = (page - 1) * page_size
 
-    # ROW_NUMBER per (user, target) ordered by created_at gives the attempt number.
     rows = _rows(get_db().execute_query(
         """
         SELECT a.*,
@@ -1454,15 +1351,12 @@ def list_appeals(
         },
     ))
 
-    # Filter by appeal_attempt in Python (window func result not filterable in WHERE).
     if appeal_attempt is not None:
         rows = [r for r in rows if r.get("appeal_attempt") == appeal_attempt]
 
     return rows
 
-
 def get_appeal(appeal_id: str) -> Optional[Dict]:
-    """Fetch a single appeal by ID with submitter email and job title."""
     return _row(get_db().execute_query(
         """
         SELECT a.*,
@@ -1476,17 +1370,12 @@ def get_appeal(appeal_id: str) -> Optional[Dict]:
         params={"aid": appeal_id},
     ))
 
-
 def resolve_appeal(
     appeal_id: str,
-    action: str,  # 'approve' | 'reject'
+    action: str,
     admin_user_id: str,
     admin_note: Optional[str] = None,
 ) -> Optional[Dict]:
-    """
-    Approve → restore the target (reopen job post or unban user).
-    Reject  → keep the closure/ban, record decision.
-    """
     new_status = "approved" if action == "approve" else "rejected"
     updated = _row(get_db().execute_query(
         """
@@ -1507,9 +1396,6 @@ def resolve_appeal(
         target_type = updated.get("target_type")
         target_id   = str(updated.get("target_id"))
         if target_type == "job_post":
-            # Same shape as admin_reopen_job: guard on 'closed' so an approved appeal
-            # can't flip a draft/filled post, and clear closed_at so the admin browse
-            # filters (closed_from/closed_to) don't keep matching a reopened post.
             restored = _row(get_db().execute_query(
                 """
                 UPDATE job_post
@@ -1545,7 +1431,6 @@ def resolve_appeal(
             logger("ADMIN", f"User {target_id} restored via appeal {appeal_id}", level="INFO")
     return updated
 
-
 def create_report(
     reporter_id: str,
     reported_type: str,
@@ -1576,7 +1461,6 @@ def create_report(
     except Exception as e:
         logger("ADMIN", f"Failed to create report: {e}", level="ERROR")
         return None
-
 
 def list_reports(
     status: str = "pending",
@@ -1617,9 +1501,7 @@ def list_reports(
         },
     ))
 
-
 def get_report(report_id: str) -> Optional[Dict]:
-    """Fetch a single report by ID with reporter and reported entity details."""
     return _row(get_db().execute_query(
         f"""
         SELECT ur.*,
@@ -1639,9 +1521,7 @@ def get_report(report_id: str) -> Optional[Dict]:
         params={"rid": report_id},
     ))
 
-
 def get_admin_user_detail(user_id: str) -> Optional[Dict]:
-    """Fetch a single user with full profile details for admin review."""
     return _row(get_db().execute_query(
         """
         SELECT
@@ -1675,10 +1555,9 @@ def get_admin_user_detail(user_id: str) -> Optional[Dict]:
         params={"uid": user_id},
     ))
 
-
 def action_report(
     report_id: str,
-    action: str,  # 'accept' | 'dismiss'
+    action: str,
     admin_user_id: str,
     admin_note: Optional[str] = None,
 ) -> Optional[Dict]:
@@ -1699,12 +1578,6 @@ def action_report(
         },
     ))
 
-    # Accepting a report that targets a job post closes that job. This is a manual admin
-    # decision backed by a case file, so it closes even an engaged job (unlike the bare
-    # admin_close_job override, which refuses those outright) -- the FE
-    # warns via the report's is_engaged flag and confirms first. Reports that target a user are
-    # left as just 'accepted' here; the report-threshold sweep is what bans users. Skips a job
-    # already closed so an existing closure reason isn't stomped and the client isn't re-notified.
     if updated and new_status == "accepted" and updated.get("job_post_id"):
         job_post_id  = str(updated["job_post_id"])
         closure_note = admin_note or DEFAULT_CLOSURE_NOTE_REPORTS
@@ -1732,19 +1605,11 @@ def action_report(
 
     return updated
 
-
 def admin_close_job(
     job_post_id: str,
     admin_user_id: str,
     reason: Optional[str] = None,
 ) -> Optional[Dict]:
-    """Close any job post directly, bypassing reports and AI flags.
-
-    Refuses outright on an engaged job (live contract / filled position). This override is the
-    one close with no case file behind it - no flag, no report, nothing for the freelancer to
-    appeal against - so it stays off jobs with work in flight. To take one of those down, action
-    the flag or report it came from; those paths keep full power with a confirmation in the UI.
-    """
     if _job_is_engaged(job_post_id):
         raise HTTPException(
             status_code=409,
@@ -1777,17 +1642,7 @@ def admin_close_job(
         )
     return updated
 
-
 def _restore_status_for(job_post_id: str) -> str:
-    """
-    Status a closed job should go back to when reopened. A job whose roles are all
-    fully staffed returns to 'filled', not 'active' - reopening to 'active' would
-    advertise slots that don't exist. Same predicate contract_functions uses to set
-    'filled' in the first place, so the two can't drift.
-
-    A job with no roles at all reopens to 'active': NOT EXISTS over an empty set is
-    true, so "all filled" alone would wrongly call it filled. Hence the has_roles leg.
-    """
     row = _row(get_db().execute_query(
         """
         SELECT
@@ -1801,12 +1656,10 @@ def _restore_status_for(job_post_id: str) -> str:
     ))
     return "filled" if row and row.get("has_roles") and row.get("all_filled") else "active"
 
-
 def admin_reopen_job(
     job_post_id: str,
     admin_user_id: str,
 ) -> Optional[Dict]:
-    """Reopen a closed job post directly, without requiring a user appeal."""
     updated = _row(get_db().execute_query(
         """
         UPDATE job_post
@@ -1824,13 +1677,11 @@ def admin_reopen_job(
         logger("ADMIN", f"Job post {job_post_id} reopened by admin {admin_user_id}", level="INFO")
     return updated
 
-
 def admin_close_account(
     user_id: str,
     admin_user_id: str,
     reason: Optional[str] = None,
 ) -> Optional[Dict]:
-    """Restrict any user account directly, bypassing reports and AI flags."""
     ban_message = reason or DEFAULT_BAN_MESSAGE_ADMIN
     updated = _row(get_db().execute_query(
         """
@@ -1868,12 +1719,10 @@ def admin_close_account(
         logger("ADMIN", f"Account {user_id} force-closed by admin {admin_user_id}; active jobs closed", level="WARNING")
     return updated
 
-
 def admin_reopen_account(
     user_id: str,
     admin_user_id: str,
 ) -> Optional[Dict]:
-    """Restore a restricted user account directly, without requiring a user appeal."""
     updated = _row(get_db().execute_query(
         """
         UPDATE users
@@ -1891,9 +1740,7 @@ def admin_reopen_account(
         logger("ADMIN", f"Account {user_id} restored by admin {admin_user_id}", level="INFO")
     return updated
 
-
 def get_admin_dashboard_stats() -> Dict:
-    """Return aggregate counts for the admin overview panel."""
     _auto_approve_expired()
     _process_auto_remove()
     _process_report_auto_actions()
@@ -1939,7 +1786,6 @@ def get_admin_dashboard_stats() -> Dict:
         ),
     }
 
-
 _JOB_ADMIN_SORT_COLS = {
     "created_at":    "jp.created_at",
     "closed_at":     "jp.closed_at",
@@ -1958,12 +1804,10 @@ _USER_ADMIN_SORT_COLS = {
     "ban_reason":       "u.ban_reason",
 }
 
-
 def _csv(val: Optional[str]) -> List[str]:
     if not val:
         return []
     return [v.strip() for v in val.split(",") if v.strip()]
-
 
 def _in_filter(
     col: str,
@@ -1980,7 +1824,6 @@ def _in_filter(
     where.append(f"{col} {op} ({placeholders})")
     for i, v in enumerate(values):
         params[f"{prefix}_{i}"] = v
-
 
 def admin_list_jobs(
     status: Optional[str] = None,
@@ -2094,7 +1937,6 @@ def admin_list_jobs(
         "total_pages": math.ceil(total / page_size) if page_size > 0 else 0,
     }
 
-
 def admin_list_users(
     role: Optional[str] = None,
     exclude_role: Optional[str] = None,
@@ -2119,7 +1961,6 @@ def admin_list_users(
     where: List[str] = []
     params: Dict     = {}
 
-    # Role is derived from joined tables, so we build OR conditions manually.
     include_roles = _csv(role)
     if include_roles:
         role_conds = []
@@ -2224,9 +2065,6 @@ def admin_list_users(
         "total_pages": math.ceil(total / page_size) if page_size > 0 else 0,
     }
 
-
-# ── Review integrity (red flags + flagged/held-back reviews) ────────────────
-
 _RED_FLAG_SORT_COLS = {
     "triggered_at": "rfa.triggered_at",
     "severity":     "rfa.severity",
@@ -2236,10 +2074,9 @@ _FLAGGED_REVIEW_SORT_COLS = {
     "status":     "r.status",
 }
 
-
 def list_red_flag_alerts(
     is_resolved: Optional[bool] = None,
-    subject_type: str = "all",  # 'freelancer' | 'client' | 'all'
+    subject_type: str = "all",  
     sort_by: str = "triggered_at",
     sort_dir: str = "desc",
     page: int = 1,
@@ -2270,7 +2107,6 @@ def list_red_flag_alerts(
         params={"is_resolved": is_resolved, "subject_type": subject_type, "limit": page_size, "offset": offset},
     ))
 
-
 def resolve_red_flag_alert(alert_id: str, admin_user_id: str) -> Optional[Dict]:
     updated = _row(get_db().execute_query(
         """
@@ -2285,9 +2121,8 @@ def resolve_red_flag_alert(alert_id: str, admin_user_id: str) -> Optional[Dict]:
         logger("ADMIN", f"Red flag {alert_id} resolved by {admin_user_id}", level="INFO")
     return updated
 
-
 def list_flagged_reviews(
-    status: str = "all",  # 'flagged' | 'suppressed' | 'all'
+    status: str = "all",  
     sort_by: str = "created_at",
     sort_dir: str = "desc",
     page: int = 1,
@@ -2319,11 +2154,7 @@ def list_flagged_reviews(
         params={"status": status, "limit": page_size, "offset": offset},
     ))
 
-
 async def override_publish_review(review_id: str, admin_user_id: str) -> Optional[Dict]:
-    """Manually publish a held-back (flagged/suppressed) review after human
-    review, then recalculate the affected freelancer's trust score the same
-    way the normal pipeline does (see recalculate_and_persist_trust_score)."""
     updated = _row(get_db().execute_query(
         """
         UPDATE reviews
@@ -2360,15 +2191,13 @@ async def override_publish_review(review_id: str, admin_user_id: str) -> Optiona
     )
     return updated
 
-
 _FLAGGED_CLIENT_REVIEW_SORT_COLS = {
     "created_at": "cr.created_at",
     "status":     "cr.status",
 }
 
-
 def list_flagged_client_reviews(
-    status: str = "all",  # 'flagged' | 'suppressed' | 'all'
+    status: str = "all", 
     sort_by: str = "created_at",
     sort_dir: str = "desc",
     page: int = 1,
@@ -2399,11 +2228,7 @@ def list_flagged_client_reviews(
         params={"status": status, "limit": page_size, "offset": offset},
     ))
 
-
 async def override_publish_client_review(client_review_id: str, admin_user_id: str) -> Optional[Dict]:
-    """Manually publish a held-back client review after human review, then
-    recalculate the affected client's trust score - counterpart to
-    override_publish_review for the freelancer-reviews-client system."""
     updated = _row(get_db().execute_query(
         """
         UPDATE client_reviews

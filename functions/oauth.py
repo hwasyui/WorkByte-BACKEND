@@ -47,7 +47,7 @@ def verify_google_id_token(id_token: str) -> dict:
         logger("OAUTH", f"Google ID token verification error: {str(e)}", level="ERROR")
         raise HTTPException(status_code=502, detail="Failed to verify Google ID token")
 
-    # Verify the token was issued for our app (prevents tokens from other apps being accepted).
+    # Verify the token was issued for this app, so tokens from other apps are rejected.
     aud = info.get("aud", "")
     if aud != GOOGLE_CLIENT_ID:
         logger("OAUTH", f"Google ID token aud mismatch: got {aud}", level="WARNING")
@@ -133,9 +133,9 @@ def find_or_create_oauth_user(
     Resolve an OAuth identity to an app user and return a JWT.
 
     Priority:
-      1. provider_user_id already linked  → return existing user's token
-      2. email already in users           → link provider, return existing user's token
-      3. new email                        → create user (email_verified=True), link provider.
+      1. provider_user_id already linked to return existing user's token
+      2. email already in users to link provider, return existing user's token
+      3. new email to create user (email_verified=True), link provider.
     """
     from functions.db_manager import get_db
     from functions.authentication import (
@@ -176,7 +176,7 @@ def find_or_create_oauth_user(
     )
     if rows:
         user = _build_user_from_row(rows[0])
-        logger("OAUTH", f"Existing OAuth link used: {provider} → {user.email}", level="INFO")
+        logger("OAUTH", f"Existing OAuth link used: {provider} to {user.email}", level="INFO")
         return {**_token_pair(user.user_id, user.email), "is_new_user": False}
 
     # 2. Email already registered (manual or other provider)
@@ -214,7 +214,7 @@ def find_or_create_oauth_user(
                 "UPDATE users SET email_verified = TRUE, email_verified_at = NOW() WHERE user_id = :uid",
                 params={"uid": user.user_id},
             )
-        logger("OAUTH", f"OAuth linked to existing account: {provider} → {user.email}", level="INFO")
+        logger("OAUTH", f"OAuth linked to existing account: {provider} to {user.email}", level="INFO")
         return {**_token_pair(user.user_id, user.email), "is_new_user": False}
 
     # 3. Brand new user
@@ -247,7 +247,7 @@ def find_or_create_oauth_user(
         },
     )
 
-    logger("OAUTH", f"New user created via OAuth: {provider} → {email}", level="INFO")
+    logger("OAUTH", f"New user created via OAuth: {provider} to {email}", level="INFO")
     return {
         **_token_pair(user_id, email),
         "is_new_user": True,

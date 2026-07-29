@@ -16,7 +16,6 @@ from ai_related.job_engine.source_text_builder import (
     build_portfolio_source_text,
 )
 
-
 _THRESHOLD_FREELANCER  = 500
 _THRESHOLD_JOB         = 1000
 _THRESHOLD_CONTRACT    = 2000
@@ -372,7 +371,7 @@ async def upsert_contract_embedding(contract_id: str) -> dict:
     """
     Build source text for a completed contract, generate an embedding, and upsert
     into contract_embedding. freelancer_id is denormalised from the contract row
-    so we can do fast per-freelancer lookups.
+    for fast per-freelancer lookups.
     """
     logger("EMBEDDING_MANAGER", f"Upserting contract embedding | contract_id={contract_id}", level="INFO")
     try:
@@ -603,18 +602,3 @@ async def upsert_portfolio_embedding(portfolio_id: str) -> dict:
         raise
 
 
-# dev function - no callers.
-def delete_portfolio_embedding(portfolio_id: str) -> None:
-    """
-    Remove a portfolio embedding row when the source portfolio entry is deleted.
-    Safe to call on auto-generated rows (they have no embedding to begin with).
-    """
-    try:
-        db = get_db()
-        db.execute_query(
-            "DELETE FROM portfolio_embedding WHERE portfolio_id = :pid",
-            {"pid": portfolio_id},
-        )
-        logger("EMBEDDING_MANAGER", f"Portfolio embedding deleted | portfolio_id={portfolio_id}", level="DEBUG")
-    except Exception as e:
-        logger("EMBEDDING_MANAGER", f"Could not delete portfolio embedding | portfolio_id={portfolio_id} | error={e}", level="WARNING")

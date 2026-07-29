@@ -13,7 +13,6 @@ _model = None
 _tokenizer = None
 _device = None
 
-
 def _load_model():
     global _model, _tokenizer, _device
     if _model is None:
@@ -27,13 +26,7 @@ def _load_model():
         logger("CV_PARSER_ROBERTA", f"RoBERTa CV parser model loaded on {_device}", level="INFO")
     return _model, _tokenizer, _device
 
-
 def _extract_spans(words: List[str], word_labels: List[str]) -> List[Tuple[str, str]]:
-    """
-    Convert per-word BIO labels into (entity_type, text) spans.
-    B- always starts a new span. I- continues the current span if the type matches,
-    otherwise starts a new one.
-    """
     spans: List[Tuple[str, str]] = []
     current_type: Optional[str] = None
     current_words: List[str] = []
@@ -64,7 +57,6 @@ def _extract_spans(words: List[str], word_labels: List[str]) -> List[Tuple[str, 
 
     return spans
 
-
 _MONTH_MAP = {
     "january": "01", "jan": "01",
     "february": "02", "feb": "02",
@@ -81,9 +73,7 @@ _MONTH_MAP = {
 }
 _MONTH_PATTERN = "|".join(_MONTH_MAP)
 
-
 def _normalize_date(raw: Optional[str]) -> Optional[str]:
-    """Normalize a raw date string extracted by the model to YYYY-MM or YYYY."""
     if not raw:
         return None
     raw = raw.strip()
@@ -101,12 +91,10 @@ def _normalize_date(raw: Optional[str]) -> Optional[str]:
         return m.group(1)
     return None
 
-
 def _is_present(raw: Optional[str]) -> bool:
     if not raw:
         return False
     return bool(re.search(r"\b(present|current|now|sekarang|ongoing)\b", raw.lower()))
-
 
 _EXP_ANCHORS = {"EXP_JOB_TITLE", "EXP_COMPANY"}
 _EDU_ANCHORS = {"EDU_SCHOOL", "EDU_DEGREE"}
@@ -137,9 +125,7 @@ _PROJ_FIELD_MAP = {
     "PROJ_DATE": "date",
 }
 
-
 def _group_spans(spans: List[Tuple[str, str]]) -> Dict:
-    """Group flat entity spans into structured CV sections."""
     sections: Dict = {
         "about": [],
         "name": [],
@@ -187,7 +173,6 @@ def _group_spans(spans: List[Tuple[str, str]]) -> Dict:
 
     return sections
 
-
 def _build_work_experience(raw: Dict) -> Dict:
     raw_end = raw.get("end_date", "")
     is_current = _is_present(raw_end) or not raw_end
@@ -200,7 +185,6 @@ def _build_work_experience(raw: Dict) -> Dict:
         "is_current": is_current,
         "description": raw.get("description") or None,
     }
-
 
 def _build_education(raw: Dict) -> Dict:
     raw_end = raw.get("end_date", "")
@@ -215,12 +199,7 @@ def _build_education(raw: Dict) -> Dict:
         "grade": raw.get("grade") or None,
     }
 
-
 def parse_cv_with_roberta(cv_text: str) -> Dict:
-    """
-    Parse CV text using the local RoBERTa NER model.
-    Returns a dict with: suggested_bio, skills, languages, work_experience, education.
-    """
     model, tokenizer, device = _load_model()
     confidence_threshold = getattr(model.config, "confidence_threshold", 0.6)
 
@@ -265,7 +244,6 @@ def parse_cv_with_roberta(cv_text: str) -> Dict:
                 word_labels[global_idx] = model.config.id2label[pred_ids[token_idx]]
                 word_confs[global_idx] = conf
 
-    # Low-confidence predictions fall back to O
     for i in range(len(word_labels)):
         if word_labels[i] != "O" and word_confs[i] < confidence_threshold:
             word_labels[i] = "O"
@@ -275,23 +253,19 @@ def parse_cv_with_roberta(cv_text: str) -> Dict:
 
     sections = _group_spans(spans)
 
-    # Skills: split raw skills text on common delimiters
     raw_skills_text = " , ".join(sections["skills"])
     skills = [
         s.strip() for s in re.split(r"[,\n\r•‣◦|/\\]+", raw_skills_text)
         if s.strip() and 1 < len(s.strip()) < 60
     ]
 
-    # Bio: join all ABOUT spans
     suggested_bio = " ".join(sections["about"]).strip()
 
-    # Work experience: filter out empty records
     work_experience = [
         _build_work_experience(e) for e in sections["work_experience_raw"]
         if e.get("job_title") or e.get("company_name")
     ]
 
-    # Education: filter out empty records
     education = [
         _build_education(e) for e in sections["education_raw"]
         if e.get("institution_name") or e.get("degree")

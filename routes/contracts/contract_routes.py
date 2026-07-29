@@ -60,12 +60,8 @@ def _reject_contract_short_text_if_harmful(*fields: Optional[str]) -> Optional[D
     }
 
 
-# agreed_duration is not free prose - the frontend builds it from a free-typed number
-# TextField (keyboardType is a cosmetic hint only, not enforced) combined with a unit
-# dropdown locked to days/weeks/months (see generate_contract_screen.dart's own
-# _hydrateDuration, which parses this exact shape back on load). A value matching this
-# shape can't contain harmful text by construction, so this is a format check, not a
-# harmful-text scan - simpler and correct where the old keyword scan was overkill.
+# agreed_duration is a number plus a unit from a locked dropdown, not free prose.
+# A value in this shape can't carry harmful text, so a format check is enough.
 _DURATION_FORMAT_RE = re.compile(r"^\d+\s+(day|days|week|weeks|month|months)$", re.IGNORECASE)
 
 
@@ -95,19 +91,14 @@ def _render_notification(template: str, subs: dict) -> str:
 
     return template
 
-# Fields that feed contract_generation_functions.py's PDF render (see
-# build_generation_context / render_contract_pdf) - editing any of these after a PDF has
-# already been generated makes contract_pdf_url stale, so update_contract() below clears
-# it to force a regenerate before the next download.
+# Fields baked into the generated PDF. Editing one makes contract_pdf_url stale, so
+# update_contract() clears it to force a regenerate.
 _PDF_RELEVANT_FIELDS = {
     "contract_title", "role_title", "agreed_budget", "budget_currency",
     "payment_structure", "agreed_duration", "start_date", "end_date",
 }
 
-# A cancellation is otherwise terminal and un-appealable - this is how long the
-# party who did NOT initiate it has to dispute it (see raise_dispute below)
-# before it's considered final. Keeps the escape hatch without leaving
-# cancelled contracts disputable indefinitely.
+# How long the party who did not cancel has to dispute it before it's final.
 _CANCELLATION_DISPUTE_WINDOW = timedelta(hours=72)
 
 contract_router = APIRouter(prefix="/contracts", tags=["Contracts"])
@@ -289,12 +280,8 @@ async def create_contract(contract: ContractCreate, current_user: UserInDB = Dep
         else:
             return ResponseSchema.error("Only clients can create contracts", 403)
 
-        # A contract may only be finalized from a proposal the client has already
-        # accepted (via PATCH /proposals/{id}/status) - without this, a contract
-        # could be created from a still-pending or rejected proposal since this
-        # endpoint never used to look at it at all. Harmful proposals are already
-        # blocked at submission time (see proposal_routes.py's harm scan), so
-        # nothing further to check here.
+        # A contract can only be finalized from a proposal the client already accepted.
+        # Harmful proposals are blocked at submission time, so nothing more to check.
         proposal = ProposalFunctions.get_proposal_by_id(str(contract.proposal_id))
         if not proposal:
             return ResponseSchema.error(f"Proposal {contract.proposal_id} not found", 404)
@@ -343,9 +330,8 @@ async def create_contract(contract: ContractCreate, current_user: UserInDB = Dep
                 total_paid=contract.total_paid,
             )
         except IntegrityError:
-            # Race loser: another request already created a contract for this
-            # proposal between the existing_contract check above and this insert -
-            # the DB-level UNIQUE(proposal_id) constraint is what actually caught it.
+            # Another request created a contract for this proposal in between, caught
+            # by the UNIQUE(proposal_id) constraint.
             logger("CONTRACT", f"Duplicate contract insert blocked by UNIQUE(proposal_id) for proposal {contract.proposal_id}", "POST /contracts", "WARNING")
             return ResponseSchema.error("A contract already exists for this proposal", 409)
 
@@ -414,18 +400,13 @@ async def generate_contract_pdf(contract_id: str, generation_data: ContractGener
         if generation_data.dispute_resolution not in {"negotiation", "mediation", "arbitration"}:
             return ResponseSchema.error("Choose a dispute resolution method: negotiation, mediation, or arbitration.", 400)
 
-        # These end up baked into the generated PDF and persisted in contract_terms - a
-        # flagged clause here would ship inside an actual legal-document artifact shared
-        # with the other party, unlike the best-effort DM notification below, so this one
-        # rejects the whole request rather than degrading gracefully.
-        # governing_law is short free text (e.g. "California, USA") - keyword-only, same rule
-        # as contract_title/role_title; added 2026-07-11, missed by the original fix.
+        # governing_law is baked into the generated PDF, so a flagged clause rejects the
+        # whole request instead of degrading gracefully.
         rejection = _reject_contract_short_text_if_harmful(generation_data.governing_law)
         if rejection:
             return ResponseSchema.error(rejection["message"], 400, extra={"blocked_by": "harmful_text", "detected_labels": rejection["detected_labels"]})
-        # agreed_duration is re-editable at generate time (same TextField+dropdown the
-        # create/update endpoints validate) but this endpoint never checked it at all
-        # until now - found while replacing the harmful-text scan with format validation.
+        # agreed_duration is re-editable here, so it gets the same format check as
+        # the create and update endpoints.
         duration_error = _reject_contract_duration_if_invalid(generation_data.agreed_duration)
         if duration_error:
             return ResponseSchema.error(duration_error["message"], 400)
@@ -556,12 +537,8 @@ async def update_contract(contract_id: str, contract_update: ContractUpdate, bac
 
         update_data = contract_update.model_dump(exclude_unset=True)
 
-        # This generic endpoint must never be the place a status transition actually
-        # happens - both parties pass assert_current_user_is_contract_party above, so
-        # without this guard either side could force-complete or reopen any contract.
-        # The frontend does redundantly PUT the status it just set via the dedicated
-        # submission/approve endpoints (same value, harmless no-op) - only reject an
-        # attempt to change it to something DIFFERENT from the current value here.
+        # Status transitions belong to the dedicated endpoints, not here. Re-sending the
+        # current value is a harmless no-op, so only reject an actual change.
         new_status = update_data.get("status")
         if new_status and new_status != existing_contract.get("status"):
             return ResponseSchema.error(
@@ -672,14 +649,11 @@ async def raise_dispute(
     current_user: UserInDB = Depends(get_current_user),
 ):
     """
-    Either party raises a dispute while work is under review or being revised.
-    Also the recourse against a cancellation: the party who did NOT cancel a
-    contract can dispute that cancellation within _CANCELLATION_DISPUTE_WINDOW,
-    since cancelling is otherwise unilateral and immediately terminal - without
-    this, whoever didn't initiate it would have zero way to contest a
-    cancellation that happened after real work was already in progress.
-    Moves the contract to 'disputed' - only an admin can resolve it from there
-    (PUT /admin/contracts/{contract_id}/arbitrate).
+    Either party raises a dispute while work is under review or being revised. It is also
+    the recourse against a cancellation, which the other party can dispute within
+    _CANCELLATION_DISPUTE_WINDOW.
+
+    Moves the contract to 'disputed', which only an admin can resolve from there.
     """
     try:
         contract = ContractFunctions.get_contract_by_id(contract_id)
@@ -768,11 +742,8 @@ async def cancel_contract(
                 400,
             )
 
-        # Free to cancel with no reason while nothing has been delivered yet.
-        # Once real work exists (a submission has been made or is being revised),
-        # a reason becomes mandatory - it's the only accountability trail the
-        # other party gets, and it's also what a later dispute against this
-        # cancellation (see raise_dispute) would be responding to.
+        # No reason needed while nothing has been delivered. Once work exists a reason
+        # is mandatory, since it's what a later dispute responds to.
         if contract["status"] != "active" and not (payload.reason and payload.reason.strip()):
             return ResponseSchema.error(
                 "A reason is required to cancel a contract once work is in progress", 400,

@@ -14,22 +14,6 @@ from ai_related.job_engine.usage_limits import check_and_increment_daily_usage, 
 router = APIRouter(prefix="/ai/job-engine", tags=["Job Engine"])
 
 
-# dev function - no callers.
-def _serialize_rows(rows) -> list:
-    result = []
-    for row in rows:
-        d = dict(row)
-        for k, v in d.items():
-            if hasattr(v, "__class__"):
-                cls = v.__class__.__name__
-                if "UUID" in cls:
-                    d[k] = str(v)
-                elif cls == "Decimal":
-                    d[k] = float(v)
-        result.append(d)
-    return result
-
-
 @router.get("/analyse/role/{job_role_id}")
 async def analyse_role(
     job_role_id: str,
@@ -133,8 +117,8 @@ async def get_usage(
         return ResponseSchema.error("Error fetching usage. Please try again.", 500)
 
 
-# dev only — background worker (embedding_sweep_loop) already runs this on a timer;
-# this is just a manual "run it now" trigger for testing.
+# Dev only. embedding_sweep_loop already runs this on a timer, so this is just a
+# manual trigger for testing.
 @router.post("/sweep")
 async def trigger_sweep(current_user: UserInDB = Depends(get_current_user)):
     """Force a dirty-embedding sweep now instead of waiting for the loop."""

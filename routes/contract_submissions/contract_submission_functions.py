@@ -14,14 +14,10 @@ from routes.clients.client_functions import ClientFunctions
 
 REMINDER_DAYS = 3        # first nudge to the client
 FINAL_WARNING_DAYS = 6   # last warning before auto-approve
-AUTO_APPROVE_DAYS = 7    # auto-approve fires (business decision: protects freelancer
-                         # from an unresponsive client, without cutting the client's
-                         # ability to still act - a revision request or dispute any
-                         # time before day 7 takes the submission out of 'submitted'
-                         # and out of this sweep's query entirely, resetting the timer
-                         # for free without a dedicated "reset" column)
-AUTO_APPROVE_BAN_THRESHOLD = 3  # lifetime count of auto-approved contracts before the
-                                # client's account is closed directly (business decision)
+# Auto-approve protects the freelancer from a silent client. A revision request or
+# dispute before day 7 drops the submission out of this sweep and resets the timer.
+AUTO_APPROVE_DAYS = 7
+AUTO_APPROVE_BAN_THRESHOLD = 3  # lifetime auto-approvals before the client's account is closed
 
 def convert_uuids_to_str(data: Dict) -> Dict:
     """Convert all UUID objects in dict to strings."""
@@ -226,11 +222,9 @@ class ContractSubmissionFunctions:
 
     @staticmethod
     def count_revision_rounds(contract_id: str) -> int:
-        """Count how many times revision has already been requested on this
-        contract. Each round leaves exactly one submission behind with status
-        'revision_requested' (not yet resubmitted) or 'superseded' (resubmitted
-        since) - counting those gives the number of past rounds without needing
-        a dedicated counter column."""
+        """Count revision rounds already requested on this contract. Each round leaves
+        one submission at 'revision_requested' or 'superseded', so counting those
+        avoids a dedicated counter column."""
         try:
             db = get_db()
             rows = db.fetch_data(
@@ -276,12 +270,10 @@ class ContractSubmissionFunctions:
             client_rows = db.fetch_data("client", conditions=[("client_id", "=", str(contract["client_id"]))], limit=1)
             if not client_rows:
                 raise Exception("Client not found")
-            actor_user_id = str(client_rows[0]["user_id"])  # ← actual user_id, not client_id
+            actor_user_id = str(client_rows[0]["user_id"])  # actual user_id, not client_id
 
-            # revision_note/reviewed_at exist on this table but were never
-            # written anywhere - the note only ever reached the freelancer as
-            # an ephemeral DM system message below, with no structured record
-            # of what was said or when the client actually reviewed it.
+            # Persist the note and review time here so there's a structured record,
+            # not just the DM system message below.
             ContractSubmissionFunctions.update_submission(
                 submission_id,
                 {
@@ -335,7 +327,7 @@ class ContractSubmissionFunctions:
             client_rows = db.fetch_data("client", conditions=[("client_id", "=", str(contract["client_id"]))], limit=1)
             if not client_rows:
                 raise Exception("Client not found")
-            actor_user_id = str(client_rows[0]["user_id"])  # ← user_id, not client_id
+            actor_user_id = str(client_rows[0]["user_id"])  # user_id, not client_id
 
             ContractSubmissionFunctions.update_submission(
                 submission_id,
@@ -367,15 +359,11 @@ class ContractSubmissionFunctions:
 
     @staticmethod
     def run_autoapprove_sweep() -> int:
-        """Client-gone-silent protection (business decision): reminder at day 3, final
-        warning at day 6, auto-approve at day 7 - reusing approve_latest_submission so
-        rating/AI-review/portfolio side effects are identical to a manual approve.
+        """Protects the freelancer from a silent client: reminder at day 3, final warning
+        at day 6, auto-approve at day 7 through approve_latest_submission.
 
-        No 'reset' column needed: the moment a client requests a revision, the
-        submission's status leaves 'submitted' and the contract leaves 'under_review',
-        so the WHERE clause below stops matching that row on its own - same for a
-        dispute (contract.status becomes 'disputed'). Reminder dedup goes through the
-        existing `notifications` table instead of new columns."""
+        A revision request or dispute moves the row out of the WHERE clause below, so the
+        timer resets on its own. Reminder dedup goes through the notifications table."""
         try:
             rows = get_db().execute_query(
                 """
@@ -416,13 +404,9 @@ class ContractSubmissionFunctions:
                     except Exception:
                         pass
 
-                    # Penalty tracking (business decision): a client who lets contracts
-                    # auto-approve from silence 3+ times (lifetime) gets the account
-                    # closed directly, reusing the same admin_close_account primitive
-                    # any human-admin ban uses. Counted via the existing `notifications`
-                    # table (COUNT of this specific notif_type ever sent to this client)
-                    # instead of a new counter column. Count BEFORE sending so the
-                    # message tone can escalate with the strike this occurrence becomes.
+                    # Strikes are counted off the notifications table rather than a
+                    # counter column. Count before sending so the message matches the
+                    # strike this occurrence becomes.
                     strike_count = _count_notifications("contract_auto_approved", client_user_id) + 1
                     if strike_count >= AUTO_APPROVE_BAN_THRESHOLD:
                         strike_body = (

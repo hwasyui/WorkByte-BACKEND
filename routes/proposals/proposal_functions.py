@@ -117,8 +117,8 @@ class ProposalFunctions:
             logger("PROPOSAL_FUNCTIONS", f"Error fetching enriched proposals: {str(e)}", level="ERROR")
             raise
 
-    # Columns we sort a freelancer's proposal list by. Keys are the values the API
-    # accepts; values are the actual SQL columns (interpolated, so never user input).
+    # Sortable columns for a freelancer's proposal list. Keys are what the API accepts,
+    # values are the SQL columns (interpolated, so never user input).
     _SORT_COLUMNS = {
         "submitted_at": "p.submitted_at",
         "proposed_budget": "p.proposed_budget",
@@ -132,10 +132,9 @@ class ProposalFunctions:
         sort_by: str = "submitted_at",
         sort_order: str = "desc",
     ) -> List[Dict]:
-        """Fetch a freelancer's proposals, joined to the job post so the caller gets
-        the job's current status/title alongside each proposal. A proposal stays
-        'pending' even after its job post is closed/filled - the freelancer sees that
-        from job_post_status, not from the proposal status changing.
+        """Fetch a freelancer's proposals joined to the job post, so each one carries the
+        job's current status and title. A proposal stays 'pending' even after its post
+        closes, so the freelancer reads that from job_post_status instead.
 
         Optional filters: proposal_status, job_post_status. sort_by is one of
         _SORT_COLUMNS, sort_order is asc/desc (both whitelisted before interpolation)."""
@@ -291,15 +290,12 @@ class ProposalFunctions:
     @staticmethod
     def auto_reject_pending_proposals_for_filled_role(job_role_id: str, exclude_proposal_id: str) -> List[Dict]:
         """
-        Auto-rejects every other still-pending proposal for a role once its last
-        open position gets taken (by exclude_proposal_id's contract), so those
-        freelancers see 'rejected' instead of being left hanging on a role that's
-        already fully staffed. Returns each rejected proposal's freelancer user_id
-        and the role title for the caller to notify.
+        Auto-reject the remaining pending proposals once a role's last position is taken,
+        so those freelancers aren't left hanging. Returns each rejected proposal's
+        freelancer user_id and the role title for the caller to notify.
 
-        Two queries, not one WITH...UPDATE...RETURNING - Database.execute_query
-        only commits when the query text starts with INSERT/UPDATE/DELETE, and a
-        query starting with WITH would silently never commit the update.
+        Split into two queries because execute_query only commits when the text starts
+        with INSERT, UPDATE or DELETE, so a WITH would never commit.
         """
         try:
             db = get_db()
@@ -348,27 +344,3 @@ class ProposalFunctions:
             logger("PROPOSAL_FUNCTIONS", f"Error auto-rejecting proposals for role {job_role_id}: {str(e)}", level="ERROR")
             raise
 
-    # dev function - no callers.
-    @staticmethod
-    def delete_proposal(proposal_id: str) -> bool:
-        """Delete a proposal and sync proposal_count on the job post."""
-        try:
-            db = get_db()
-
-            # Fetch job_post_id before deleting to sync proposal_count.
-            existing = ProposalFunctions.get_proposal_by_id(proposal_id)
-            job_post_id = existing.get("job_post_id") if existing else None
-
-            conditions = [("proposal_id", "=", proposal_id)]
-            db.delete_data(table_name="proposal", conditions=conditions)
-            logger("PROPOSAL_FUNCTIONS", f"Proposal {proposal_id} deleted", level="INFO")
-
-            # Keep job_post.proposal_count in sync.
-            if job_post_id:
-                JobPostFunctions._sync_proposal_count(job_post_id)
-
-            return True
-
-        except Exception as e:
-            logger("PROPOSAL_FUNCTIONS", f"Error deleting proposal: {str(e)}", level="ERROR")
-            raise

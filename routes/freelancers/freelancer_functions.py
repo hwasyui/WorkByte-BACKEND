@@ -37,7 +37,7 @@ class EmbeddingFunctions:
             logger("EMBEDDING_FUNCTIONS", f"Error generating embedding: {str(e)}", level="ERROR")
             raise
 
-    # dev function - no callers. Superseded by mark_freelancer_dirty() + the sweep worker.
+    # dev function - no callers.
     @staticmethod
     def create_freelancer_embedding(freelancer_id: str, source_text: str) -> Dict:
         try:
@@ -97,7 +97,7 @@ class EmbeddingFunctions:
             logger("EMBEDDING_FUNCTIONS", f"Error deleting freelancer embedding: {str(e)}", level="ERROR")
             raise
 
-    # dev function - no callers. Superseded by mark_job_dirty() + the sweep worker.
+    # dev function - no callers.
     @staticmethod
     def create_job_embedding(job_role_id: str, job_post_id: str, source_text: str) -> Dict:
         try:
@@ -170,13 +170,13 @@ class FreelancerFunctions:
     "full_name":            "f.full_name",
     "estimated_rate":       "f.estimated_rate",
     "total_jobs":           "f.total_jobs",
-    "weighted_review_avg":  "fts.weighted_review_avg",  # ← new
+    "weighted_review_avg":  "fts.weighted_review_avg",
     "total_reviews":        "fts.total_reviews",
 }
 
     @staticmethod
     def browse_freelancers(
-        order_by: str = "weighted_review_avg",   # ← change default
+        order_by: str = "weighted_review_avg",
         order_dir: str = "desc",
         page: int = 1,
         page_size: int = 20,
@@ -458,9 +458,8 @@ def get_comprehensive_freelancer_profile(freelancer_id: str) -> Optional[Dict]:
         )
         portfolio = [dict(row) for row in portfolio_rows] if portfolio_rows else []
 
-        # Ratings now come from the review system (reviews + review_ratings + written
-        # content) and the aggregate freelancer_trust_scores. Both key on
-        # freelancer.freelancer_id, so they take the profile id directly.
+        # Ratings come from the review system and freelancer_trust_scores, both keyed
+        # on freelancer.freelancer_id, so pass the profile id directly.
         from functions.review_views import public_reviews
         from routes.reviews.review_functions import ReviewFunctions
 

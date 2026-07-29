@@ -56,47 +56,38 @@ admin_router   = APIRouter(prefix="/admin",   tags=["Admin"])
 reports_router = APIRouter(prefix="/reports", tags=["Reports"])
 appeals_router = APIRouter(prefix="/appeals", tags=["Appeals"])
 
-
 class AdminActionBody(BaseModel):
     admin_note: Optional[str] = None
-
 
 class ScamScanBody(BaseModel):
     job_post_id: str
     client_id:   str
     text:        str
 
-
 class ForceExpireBody(BaseModel):
     ids: List[str]
 
-
 class ReportCreateBody(BaseModel):
-    reported_type:    str                    # 'freelancer' | 'client' | 'job_post'
-    reported_user_id: Optional[str] = None  # required for freelancer / client reports
-    job_post_id:      Optional[str] = None  # required for job_post reports
-    reasons:          List[str] = []         # subset of VALID_REPORT_REASONS
+    reported_type:    str
+    reported_user_id: Optional[str] = None
+    job_post_id:      Optional[str] = None
+    reasons:          List[str] = []
     custom_reason:    Optional[str] = None
 
-
 class AppealSubmitBody(BaseModel):
-    target_type: str   # 'user' | 'job_post'
+    target_type: str
     target_id:   str
     message:     str
 
-
 class ForceExpireReportBody(BaseModel):
-    target_type: str   # 'user' | 'job_post'
+    target_type: str
     target_id:   str
 
-
 class AdminOverrideBody(BaseModel):
-    reason: Optional[str] = None  # shown to the affected user as closure_note / ban_message
-
+    reason: Optional[str] = None
 
 @admin_router.get("/dashboard")
 async def admin_dashboard(current_user: UserInDB = Depends(get_admin_user)):
-    """Summary counts for moderation, scam flags, reports, and bans."""
     try:
         stats = get_admin_dashboard_stats()
         logger("ADMIN", "Dashboard stats fetched", "GET /admin/dashboard", "INFO")
@@ -104,7 +95,6 @@ async def admin_dashboard(current_user: UserInDB = Depends(get_admin_user)):
     except Exception as e:
         logger("ADMIN", f"Dashboard error: {e}", "GET /admin/dashboard", "ERROR")
         return ResponseSchema.error("Failed to fetch dashboard stats. Please try again.", 500)
-
 
 @admin_router.get("/moderation")
 async def list_moderation(
@@ -120,7 +110,6 @@ async def list_moderation(
     page_size:    int = Query(default=20, ge=1, le=100),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """List harmful text detection queue items. Supports filtering by status/severity and sorting."""
     try:
         if status not in ("pending", "approved", "rejected", "all"):
             return ResponseSchema.error("Invalid status. Choose pending, approved, rejected, or all.", 400)
@@ -140,67 +129,80 @@ async def list_moderation(
         logger("ADMIN", f"Moderation list error: {e}", "GET /admin/moderation", "ERROR")
         return ResponseSchema.error("Failed to fetch moderation queue. Please try again.", 500)
 
+# A verdict is named for what happens to the FLAG, not to the content. The two queues
+# used to spell the same two verdicts with opposite words - /moderation/approve closed
+# the job, /scam-flags/approve kept it - so an admin UI wired by the wrong noun did the
+# reverse of what the button said. uphold/dismiss is the shared vocabulary; the old paths
+# stay as aliases so existing clients keep working.
+def _moderation_verdict(moderation_id: str, verdict: str, admin_user_id: str,
+                        admin_note: Optional[str], route: str):
+    try:
+        updated = action_moderation_item(
+            moderation_id=moderation_id,
+            action=verdict,
+            admin_user_id=admin_user_id,
+            admin_note=admin_note,
+        )
+        if not updated:
+            return ResponseSchema.error("Item not found or already actioned", 404)
+        outcome = "upheld, content closed" if verdict == "uphold" else "dismissed, content kept"
+        logger("ADMIN", f"Moderation {moderation_id} {outcome} by {admin_user_id}", route, "INFO")
+        return ResponseSchema.success(updated, 200)
+    except Exception as e:
+        logger("ADMIN", f"Moderation verdict error: {e}", route, "ERROR")
+        return ResponseSchema.error("Failed to action item. Please try again.", 500)
 
-@admin_router.post("/moderation/{moderation_id}/approve")
+@admin_router.post("/moderation/{moderation_id}/uphold")
+async def uphold_moderation(
+    moderation_id: str,
+    body: AdminActionBody = AdminActionBody(),
+    current_user: UserInDB = Depends(get_admin_user),
+):
+    """Flag was right: the content is harmful and the job post is closed."""
+    return _moderation_verdict(moderation_id, "uphold", current_user.user_id,
+                               body.admin_note, "POST /admin/moderation/uphold")
+
+@admin_router.post("/moderation/{moderation_id}/dismiss")
+async def dismiss_moderation(
+    moderation_id: str,
+    body: AdminActionBody = AdminActionBody(),
+    current_user: UserInDB = Depends(get_admin_user),
+):
+    """Flag was wrong: the content is fine and stays up."""
+    return _moderation_verdict(moderation_id, "dismiss", current_user.user_id,
+                               body.admin_note, "POST /admin/moderation/dismiss")
+
+@admin_router.post("/moderation/{moderation_id}/approve", deprecated=True)
 async def approve_moderation(
     moderation_id: str,
     body: AdminActionBody = AdminActionBody(),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Approve a flagged content item: confirms the AI flag and actions harmful content (job closed, etc.)."""
-    try:
-        updated = action_moderation_item(
-            moderation_id=moderation_id,
-            action="approve",
-            admin_user_id=current_user.user_id,
-            admin_note=body.admin_note,
-        )
-        if not updated:
-            return ResponseSchema.error("Item not found or already actioned", 404)
-        logger("ADMIN", f"Moderation {moderation_id} approved by {current_user.user_id}", "POST /admin/moderation/approve", "INFO")
-        return ResponseSchema.success(updated, 200)
-    except Exception as e:
-        logger("ADMIN", f"Approve moderation error: {e}", "POST /admin/moderation/approve", "ERROR")
-        return ResponseSchema.error("Failed to approve item. Please try again.", 500)
+    """Deprecated alias for /uphold - 'approve' here approved the flag, closing the job."""
+    return _moderation_verdict(moderation_id, "uphold", current_user.user_id,
+                               body.admin_note, "POST /admin/moderation/approve")
 
-
-@admin_router.post("/moderation/{moderation_id}/reject")
+@admin_router.post("/moderation/{moderation_id}/reject", deprecated=True)
 async def reject_moderation(
     moderation_id: str,
     body: AdminActionBody = AdminActionBody(),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Reject a flagged content item: dismisses the AI flag as a false positive; content is allowed to stay."""
-    try:
-        updated = action_moderation_item(
-            moderation_id=moderation_id,
-            action="reject",
-            admin_user_id=current_user.user_id,
-            admin_note=body.admin_note,
-        )
-        if not updated:
-            return ResponseSchema.error("Item not found or already actioned", 404)
-        logger("ADMIN", f"Moderation {moderation_id} rejected by {current_user.user_id}", "POST /admin/moderation/reject", "INFO")
-        return ResponseSchema.success(updated, 200)
-    except Exception as e:
-        logger("ADMIN", f"Reject moderation error: {e}", "POST /admin/moderation/reject", "ERROR")
-        return ResponseSchema.error("Failed to reject item. Please try again.", 500)
+    """Deprecated alias for /dismiss."""
+    return _moderation_verdict(moderation_id, "dismiss", current_user.user_id,
+                               body.admin_note, "POST /admin/moderation/reject")
 
-
-# dev/admin only - not called by the Flutter app
 @admin_router.post("/moderation/force-expire")
 async def force_expire_mod_items(
     body: ForceExpireBody,
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Backdate auto_approve_at and immediately trigger the auto-action sweep (testing utility)."""
     try:
         force_expire_moderation(body.ids)
         return ResponseSchema.success({"processed": len(body.ids)}, 200)
     except Exception as e:
         logger("ADMIN", f"Force expire mod error: {e}", "POST /admin/moderation/force-expire", "ERROR")
         return ResponseSchema.error("Force expire failed. Please try again.", 500)
-
 
 @admin_router.get("/scam-flags")
 async def list_scam(
@@ -211,7 +213,6 @@ async def list_scam(
     page_size: int = Query(default=20, ge=1, le=100),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """List scam-flagged job posts. Supports sorting by date or score."""
     try:
         if status not in ("pending", "safe", "removed", "all"):
             return ResponseSchema.error("Invalid status. Choose pending, safe, removed, or all.", 400)
@@ -226,62 +227,80 @@ async def list_scam(
         logger("ADMIN", f"Scam flags list error: {e}", "GET /admin/scam-flags", "ERROR")
         return ResponseSchema.error("Failed to fetch scam flags. Please try again.", 500)
 
+def _scam_verdict(flag_id: str, verdict: str, admin_user_id: str,
+                  admin_note: Optional[str], route: str):
+    try:
+        updated = action_scam_flag(
+            flag_id=flag_id,
+            action=verdict,
+            admin_user_id=admin_user_id,
+            admin_note=admin_note,
+        )
+        if not updated:
+            return ResponseSchema.error("Flag not found or already actioned", 404)
+        outcome = "upheld, job closed" if verdict == "uphold" else "dismissed, job kept"
+        logger("ADMIN", f"Scam flag {flag_id} {outcome} by {admin_user_id}", route, "INFO")
+        return ResponseSchema.success(updated, 200)
+    except Exception as e:
+        logger("ADMIN", f"Scam verdict error: {e}", route, "ERROR")
+        return ResponseSchema.error("Failed to action flag. Please try again.", 500)
 
-@admin_router.post("/scam-flags/{flag_id}/approve")
+@admin_router.post("/scam-flags/{flag_id}/uphold")
+async def uphold_scam_flag(
+    flag_id: str,
+    body: AdminActionBody = AdminActionBody(),
+    current_user: UserInDB = Depends(get_admin_user),
+):
+    """Flag was right: the job is a scam, it is closed and the client takes a strike."""
+    return _scam_verdict(flag_id, "uphold", current_user.user_id,
+                         body.admin_note, "POST /admin/scam-flags/uphold")
+
+@admin_router.post("/scam-flags/{flag_id}/dismiss")
+async def dismiss_scam_flag(
+    flag_id: str,
+    body: AdminActionBody = AdminActionBody(),
+    current_user: UserInDB = Depends(get_admin_user),
+):
+    """Flag was wrong: the job is legitimate, and is reopened if the scan auto-closed it."""
+    return _scam_verdict(flag_id, "dismiss", current_user.user_id,
+                         body.admin_note, "POST /admin/scam-flags/dismiss")
+
+@admin_router.post("/scam-flags/{flag_id}/approve", deprecated=True)
 async def approve_scam_flag(
     flag_id: str,
     body: AdminActionBody = AdminActionBody(),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Mark a scam-flagged job as safe (false positive)."""
-    try:
-        updated = action_scam_flag(
-            flag_id=flag_id,
-            action="approve",
-            admin_user_id=current_user.user_id,
-            admin_note=body.admin_note,
-        )
-        if not updated:
-            return ResponseSchema.error("Flag not found or already actioned", 404)
-        logger("ADMIN", f"Scam flag {flag_id} marked safe by {current_user.user_id}", "POST /admin/scam-flags/approve", "INFO")
-        return ResponseSchema.success(updated, 200)
-    except Exception as e:
-        logger("ADMIN", f"Approve scam flag error: {e}", "POST /admin/scam-flags/approve", "ERROR")
-        return ResponseSchema.error("Failed to approve flag. Please try again.", 500)
+    """
+    Deprecated alias for /uphold: approves the FLAG, so the job is closed.
 
+    This inverted - it used to clear the flag and keep the job live. A client still on
+    the old meaning is now closing jobs it means to clear, so every call is logged as a
+    WARNING to make a stale caller visible rather than silent.
+    """
+    logger("ADMIN",
+           f"Legacy /scam-flags/approve called by {current_user.user_id} on flag {flag_id} - "
+           f"this now UPHOLDS the flag and closes the job; caller may still expect the old "
+           f"meaning (use /dismiss to clear a flag)",
+           "POST /admin/scam-flags/approve", "WARNING")
+    return _scam_verdict(flag_id, "uphold", current_user.user_id,
+                         body.admin_note, "POST /admin/scam-flags/approve")
 
-@admin_router.post("/scam-flags/{flag_id}/remove")
+@admin_router.post("/scam-flags/{flag_id}/remove", deprecated=True)
 async def remove_scam_job(
     flag_id: str,
     body: AdminActionBody = AdminActionBody(),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """
-    Confirm scam and remove the job post. Closes the job and records a strike
-    against the client (3 strikes = banned).
-    """
-    try:
-        updated = action_scam_flag(
-            flag_id=flag_id,
-            action="remove",
-            admin_user_id=current_user.user_id,
-            admin_note=body.admin_note,
-        )
-        if not updated:
-            return ResponseSchema.error("Flag not found or already actioned", 404)
-        logger("ADMIN", f"Scam flag {flag_id} removed by {current_user.user_id}", "POST /admin/scam-flags/remove", "INFO")
-        return ResponseSchema.success(updated, 200)
-    except Exception as e:
-        logger("ADMIN", f"Remove scam job error: {e}", "POST /admin/scam-flags/remove", "ERROR")
-        return ResponseSchema.error("Failed to remove scam job. Please try again.", 500)
-
+    """Deprecated alias for /uphold."""
+    return _scam_verdict(flag_id, "uphold", current_user.user_id,
+                         body.admin_note, "POST /admin/scam-flags/remove")
 
 @admin_router.post("/scam-flags/force-expire")
 async def force_expire_scam_flag_items(
     body: ForceExpireBody,
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Backdate auto_remove_at and immediately trigger the auto-action sweep (testing utility)."""
     try:
         force_expire_scam_flags(body.ids)
         return ResponseSchema.success({"processed": len(body.ids)}, 200)
@@ -289,13 +308,11 @@ async def force_expire_scam_flag_items(
         logger("ADMIN", f"Force expire scam error: {e}", "POST /admin/scam-flags/force-expire", "ERROR")
         return ResponseSchema.error("Force expire failed. Please try again.", 500)
 
-
 @admin_router.post("/scam-flags/scan")
 async def trigger_scam_scan(
     body: ScamScanBody,
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Manually trigger a scam scan on a job post (admin utility)."""
     try:
         result = queue_scam_scan(
             job_post_id=body.job_post_id,
@@ -309,20 +326,17 @@ async def trigger_scam_scan(
         logger("ADMIN", f"Scam scan error: {e}", "POST /admin/scam-flags/scan", "ERROR")
         return ResponseSchema.error("Scam scan failed. Please try again.", 500)
 
-
 @admin_router.get("/scam-flags/client/{client_id}")
 async def get_client_scam_info(
     client_id: str,
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Retrieve a client's scam record (confirmed count, ban status)."""
     try:
         record = get_client_scam_record(client_id)
         return ResponseSchema.success(record or {"client_id": client_id, "total_scam_confirmed": 0, "is_banned": False}, 200)
     except Exception as e:
         logger("ADMIN", f"Client scam record error: {e}", "GET /admin/scam-flags/client", "ERROR")
         return ResponseSchema.error("Failed to fetch client scam record. Please try again.", 500)
-
 
 @admin_router.get("/reports")
 async def admin_list_reports(
@@ -334,7 +348,6 @@ async def admin_list_reports(
     page_size:     int = Query(default=20, ge=1, le=100),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """List individual user reports. Filter by status and reported_type; sort by date or type."""
     try:
         if status not in ("pending", "accepted", "dismissed", "all"):
             return ResponseSchema.error("Invalid status. Choose pending, accepted, dismissed, or all.", 400)
@@ -355,8 +368,6 @@ async def admin_list_reports(
         logger("ADMIN", f"Reports list error: {e}", "GET /admin/reports", "ERROR")
         return ResponseSchema.error("Failed to fetch reports. Please try again.", 500)
 
-
-# dev/admin only - not called by the Flutter app
 @admin_router.get("/reports/targets")
 async def admin_list_report_targets(
     target_type: str = Query(default="all",          description="user | job_post | all"),
@@ -367,11 +378,6 @@ async def admin_list_report_targets(
     page_size:   int = Query(default=20, ge=1, le=100),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """
-    Grouped report view: one row per target (user or job post) with report count,
-    oldest/latest report date, and whether the auto-action threshold is met.
-    Use min_count=10 to see all targets at or above the auto-ban threshold.
-    """
     try:
         if target_type not in ("user", "job_post", "all"):
             return ResponseSchema.error("Invalid target type. Choose user, job post, or all.", 400)
@@ -389,14 +395,12 @@ async def admin_list_report_targets(
         logger("ADMIN", f"Report targets error: {e}", "GET /admin/reports/targets", "ERROR")
         return ResponseSchema.error("Failed to fetch report targets. Please try again.", 500)
 
-
 @admin_router.post("/reports/{report_id}/accept")
 async def accept_report(
     report_id: str,
     body: AdminActionBody = AdminActionBody(),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Accept a user report (confirms the violation)."""
     try:
         updated = action_report(
             report_id=report_id,
@@ -412,15 +416,12 @@ async def accept_report(
         logger("ADMIN", f"Accept report error: {e}", "POST /admin/reports/accept", "ERROR")
         return ResponseSchema.error("Failed to accept report. Please try again.", 500)
 
-
-# dev/admin only - not called by the Flutter app
 @admin_router.get("/reports/auto-actions")
 async def list_auto_actions(
     page:      int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """List all auto-ban / auto-close actions triggered by the report threshold."""
     try:
         items = list_report_auto_actions(page=page, page_size=page_size)
         return ResponseSchema.success(items, 200)
@@ -428,14 +429,12 @@ async def list_auto_actions(
         logger("ADMIN", f"Auto-actions list error: {e}", "GET /admin/reports/auto-actions", "ERROR")
         return ResponseSchema.error("Failed to fetch auto-actions. Please try again.", 500)
 
-
 @admin_router.post("/reports/{report_id}/dismiss")
 async def dismiss_report(
     report_id: str,
     body: AdminActionBody = AdminActionBody(),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Dismiss a user report (no violation found)."""
     try:
         updated = action_report(
             report_id=report_id,
@@ -451,14 +450,11 @@ async def dismiss_report(
         logger("ADMIN", f"Dismiss report error: {e}", "POST /admin/reports/dismiss", "ERROR")
         return ResponseSchema.error("Failed to dismiss report. Please try again.", 500)
 
-
-# dev/admin only - not called by the Flutter app
 @admin_router.post("/reports/force-expire-target")
 async def force_expire_report_target(
     body: ForceExpireReportBody,
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Backdate report created_at for a target and immediately trigger auto-action sweep (testing utility)."""
     try:
         if body.target_type not in ("user", "job_post"):
             return ResponseSchema.error("Invalid target type. Choose user or job post.", 400)
@@ -468,14 +464,11 @@ async def force_expire_report_target(
         logger("ADMIN", f"Force expire reports error: {e}", "POST /admin/reports/force-expire-target", "ERROR")
         return ResponseSchema.error("Force expire failed. Please try again.", 500)
 
-
-# dev/admin only - not called by the Flutter app
 @admin_router.get("/reports/{report_id}")
 async def admin_get_report(
     report_id: str,
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Fetch a single report by ID with full reporter and target details."""
     try:
         item = get_report(report_id)
         if not item:
@@ -485,7 +478,6 @@ async def admin_get_report(
     except Exception as e:
         logger("ADMIN", f"Get report error: {e}", "GET /admin/reports/{report_id}", "ERROR")
         return ResponseSchema.error("Failed to fetch report. Please try again.", 500)
-
 
 @admin_router.get("/appeals")
 async def admin_list_appeals(
@@ -497,7 +489,6 @@ async def admin_list_appeals(
     page_size:      int           = Query(default=20, ge=1, le=100),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """List all user appeals with optional filters by status, target type, attempt number, and submitter email."""
     try:
         if status not in ("pending", "approved", "rejected", "all"):
             return ResponseSchema.error("Invalid status. Choose pending, approved, rejected, or all.", 400)
@@ -517,14 +508,11 @@ async def admin_list_appeals(
         logger("ADMIN", f"Appeals list error: {e}", "GET /admin/appeals", "ERROR")
         return ResponseSchema.error("Failed to fetch appeals. Please try again.", 500)
 
-
-# dev/admin only - not called by the Flutter app
 @admin_router.get("/appeals/{appeal_id}")
 async def admin_get_appeal(
     appeal_id: str,
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Fetch a single appeal by ID."""
     try:
         item = get_appeal(appeal_id)
         if not item:
@@ -535,14 +523,12 @@ async def admin_get_appeal(
         logger("ADMIN", f"Get appeal error: {e}", "GET /admin/appeals/{appeal_id}", "ERROR")
         return ResponseSchema.error("Failed to fetch appeal. Please try again.", 500)
 
-
 @admin_router.post("/appeals/{appeal_id}/approve")
 async def approve_appeal(
     appeal_id: str,
     body: AdminActionBody = AdminActionBody(),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Approve an appeal: restores the job post or removes the ban."""
     try:
         updated = resolve_appeal(
             appeal_id=appeal_id,
@@ -558,14 +544,12 @@ async def approve_appeal(
         logger("ADMIN", f"Approve appeal error: {e}", "POST /admin/appeals/approve", "ERROR")
         return ResponseSchema.error("Failed to approve appeal. Please try again.", 500)
 
-
 @admin_router.post("/appeals/{appeal_id}/reject")
 async def reject_appeal(
     appeal_id: str,
     body: AdminActionBody = AdminActionBody(),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Reject an appeal: closure/ban remains in effect."""
     try:
         updated = resolve_appeal(
             appeal_id=appeal_id,
@@ -581,14 +565,12 @@ async def reject_appeal(
         logger("ADMIN", f"Reject appeal error: {e}", "POST /admin/appeals/reject", "ERROR")
         return ResponseSchema.error("Failed to reject appeal. Please try again.", 500)
 
-
 @admin_router.post("/jobs/{job_post_id}/close")
 async def force_close_job(
     job_post_id: str,
     body: AdminOverrideBody = AdminOverrideBody(),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Force-close any job post regardless of report or AI flag status."""
     try:
         updated = admin_close_job(
             job_post_id=job_post_id,
@@ -600,21 +582,17 @@ async def force_close_job(
         logger("ADMIN", f"Job {job_post_id} force-closed by {current_user.user_id}", "POST /admin/jobs/close", "INFO")
         return ResponseSchema.success(updated, 200)
     except HTTPException as e:
-        # 409 from the engagement guard - static detail, safe to pass through
         logger("ADMIN", f"Force close job {job_post_id} refused: {e.detail}", "POST /admin/jobs/close", "INFO")
         return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
         logger("ADMIN", f"Force close job error: {e}", "POST /admin/jobs/close", "ERROR")
         return ResponseSchema.error("Failed to close job post. Please try again.", 500)
 
-
-# dev/admin only - not called by the Flutter app
 @admin_router.post("/jobs/{job_post_id}/reopen")
 async def force_reopen_job(
     job_post_id: str,
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Reopen a closed job post directly, without requiring a user appeal."""
     try:
         updated = admin_reopen_job(
             job_post_id=job_post_id,
@@ -628,14 +606,12 @@ async def force_reopen_job(
         logger("ADMIN", f"Force reopen job error: {e}", "POST /admin/jobs/reopen", "ERROR")
         return ResponseSchema.error("Failed to reopen job post. Please try again.", 500)
 
-
 @admin_router.post("/accounts/{user_id}/close")
 async def force_close_account(
     user_id: str,
     body: AdminOverrideBody = AdminOverrideBody(),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Restrict any user account regardless of report or AI flag status."""
     try:
         updated = admin_close_account(
             user_id=user_id,
@@ -650,14 +626,11 @@ async def force_close_account(
         logger("ADMIN", f"Force close account error: {e}", "POST /admin/accounts/close", "ERROR")
         return ResponseSchema.error("Failed to close account. Please try again.", 500)
 
-
-# dev/admin only - not called by the Flutter app
 @admin_router.post("/accounts/{user_id}/reopen")
 async def force_reopen_account(
     user_id: str,
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Restore a restricted user account directly, without requiring a user appeal."""
     try:
         updated = admin_reopen_account(
             user_id=user_id,
@@ -670,7 +643,6 @@ async def force_reopen_account(
     except Exception as e:
         logger("ADMIN", f"Force reopen account error: {e}", "POST /admin/accounts/reopen", "ERROR")
         return ResponseSchema.error("Failed to restore account. Please try again.", 500)
-
 
 @admin_router.get("/jobs")
 async def admin_browse_jobs(
@@ -698,7 +670,6 @@ async def admin_browse_jobs(
     page_size: int = Query(default=20, ge=1, le=100),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Browse all job posts with flexible include/exclude filters and sorting."""
     try:
         if sort_by not in ("created_at", "closed_at", "updated_at", "job_title", "status", "proposal_count", "view_count"):
             return ResponseSchema.error(
@@ -724,7 +695,6 @@ async def admin_browse_jobs(
         logger("ADMIN", f"Jobs browse error: {e}", "GET /admin/jobs", "ERROR")
         return ResponseSchema.error("Failed to list jobs. Please try again.", 500)
 
-
 @admin_router.get("/users")
 async def admin_browse_users(
     role:                 Optional[str]  = Query(None, description="Include roles (comma-sep): freelancer,client,admin"),
@@ -744,7 +714,6 @@ async def admin_browse_users(
     page_size: int = Query(default=20, ge=1, le=100),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Browse all user accounts with flexible include/exclude filters and sorting."""
     try:
         if sort_by not in ("created_at", "updated_at", "email", "report_banned_at", "ban_reason"):
             return ResponseSchema.error(
@@ -767,14 +736,11 @@ async def admin_browse_users(
         logger("ADMIN", f"Users browse error: {e}", "GET /admin/users", "ERROR")
         return ResponseSchema.error("Failed to list users. Please try again.", 500)
 
-
-# dev/admin only - not called by the Flutter app
 @admin_router.get("/users/{user_id}")
 async def admin_get_user(
     user_id: str,
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Fetch full details for a single user account."""
     try:
         item = get_admin_user_detail(user_id)
         if not item:
@@ -785,7 +751,6 @@ async def admin_get_user(
         logger("ADMIN", f"Get user detail error: {e}", "GET /admin/users/{user_id}", "ERROR")
         return ResponseSchema.error("Failed to fetch user. Please try again.", 500)
 
-
 @admin_router.get("/contracts/disputed")
 async def admin_list_disputed_contracts(
     search: Optional[str] = None,
@@ -793,16 +758,6 @@ async def admin_list_disputed_contracts(
     page_size: int = 20,
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """
-    List contracts currently in 'disputed' status, for admin arbitration.
-
-    raise_dispute() never got a dedicated reason/raised_at column (see
-    ContractFunctions.raise_dispute's docstring) - the reason only exists as a
-    DM system-event message on the contract's thread. This pulls the most
-    recent 'dispute_raised' event per contract (DISTINCT ON, in case a
-    contract has been disputed more than once) so the admin UI can show the
-    reason without a separate round trip per card.
-    """
     try:
         offset = (page - 1) * page_size
         where = ["c.status = 'disputed'"]
@@ -876,20 +831,12 @@ async def admin_list_disputed_contracts(
         logger("ADMIN", f"Failed to list disputed contracts: {e}", "GET /admin/contracts/disputed", "ERROR")
         return ResponseSchema.error("Failed to list disputed contracts. Please try again.", 500)
 
-
 @admin_router.put("/contracts/{contract_id}/arbitrate")
 async def admin_arbitrate_contract_dispute(
     contract_id: str,
     payload: ArbitrateDisputeRequest,
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """
-    Resolve a disputed contract (status must be 'disputed', set via
-    PUT /contracts/{contract_id}/dispute). Three outcomes:
-      - approve: force-complete, reusing the same completion path as a manual approve.
-      - cancel:  force-cancel, reusing the same path as a manual cancel.
-      - revise:  send back for another revision round with a new deadline.
-    """
     try:
         contract = ContractFunctions.get_contract_by_id(contract_id)
         if not contract:
@@ -939,19 +886,11 @@ async def admin_arbitrate_contract_dispute(
         logger("ADMIN", f"Failed to arbitrate dispute for contract {contract_id}: {e}", "PUT /admin/contracts/{contract_id}/arbitrate", "ERROR")
         return ResponseSchema.error("Failed to arbitrate dispute. Please try again.", 500)
 
-
 @admin_router.get("/clients/{client_id}/autoapprove-history")
 async def admin_get_client_autoapprove_history(
     client_id: str,
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """
-    Read-only audit trail for the 3-strike auto-approve penalty (monitoring only -
-    no action taken here; the ban itself already happens automatically at strike 3
-    without any admin input). Meant for reviewing a client's pattern before deciding
-    an appeal: which contracts triggered a strike, when, and the account's current
-    ban/reliability state - all derived from existing data, nothing new stored.
-    """
     try:
         client = ClientFunctions.get_client_by_id_or_user_id(client_id)
         if not client:
@@ -977,12 +916,9 @@ async def admin_get_client_autoapprove_history(
         logger("ADMIN", f"Failed to fetch autoapprove history for client {client_id}: {e}", "GET /admin/clients/{client_id}/autoapprove-history", "ERROR")
         return ResponseSchema.error("Failed to fetch autoapprove history. Please try again.", 500)
 
-
 @reports_router.get("/reasons")
 async def get_report_reasons(current_user: UserInDB = Depends(get_current_user)):
-    """Return the list of predefined report reasons."""
     return ResponseSchema.success({"reasons": VALID_REPORT_REASONS}, 200)
-
 
 @appeals_router.get("/status")
 async def user_get_appeal_status(
@@ -990,15 +926,6 @@ async def user_get_appeal_status(
     target_id: str,
     current_user: UserInDB = Depends(get_current_user),
 ):
-    """Check whether the current user can appeal a specific ban or job-post closure.
-
-    Args:
-        target_type: 'user' or 'job_post'.
-        target_id: UUID of the banned user or closed job post.
-
-    Returns:
-        can_appeal, appeals_remaining, state, message, and restriction_reason.
-    """
     try:
         if target_type not in ("user", "job_post"):
             return ResponseSchema.error("Choose what you're appealing: your account or a job post.", 400)
@@ -1008,19 +935,11 @@ async def user_get_appeal_status(
         logger("APPEAL", f"Appeal status check error: {e}", "GET /appeals/status", "ERROR")
         return ResponseSchema.error("Failed to check appeal status. Please try again.", 500)
 
-
 @appeals_router.post("")
 async def user_submit_appeal(
     body: AppealSubmitBody,
     current_user: UserInDB = Depends(get_current_user),
 ):
-    """Submit an appeal against a job-post closure or account restriction.
-
-    Args:
-        body.target_type: 'user' (account ban) or 'job_post' (post closure).
-        body.target_id: UUID of the target being appealed.
-        body.message: Appeal message text.
-    """
     try:
         if body.target_type not in ("user", "job_post"):
             return ResponseSchema.error("Choose what you're appealing: your account or a job post.", 400)
@@ -1042,10 +961,8 @@ async def user_submit_appeal(
         logger("APPEAL", f"Submit appeal error: {e}", "POST /appeals", "ERROR")
         return ResponseSchema.error("Failed to submit appeal. Please try again.", 500)
 
-
 @appeals_router.get("/mine")
 async def user_list_appeals(current_user: UserInDB = Depends(get_current_user)):
-    """Return the current user's appeals and their statuses."""
     try:
         items = get_user_appeals(current_user.user_id)
         return ResponseSchema.success(items, 200)
@@ -1053,16 +970,11 @@ async def user_list_appeals(current_user: UserInDB = Depends(get_current_user)):
         logger("APPEAL", f"List appeals error: {e}", "GET /appeals/mine", "ERROR")
         return ResponseSchema.error("Failed to fetch appeals. Please try again.", 500)
 
-
 @reports_router.post("")
 async def submit_report(
     body: ReportCreateBody,
     current_user: UserInDB = Depends(get_current_user),
 ):
-    """Submit a report against a freelancer, client profile, or job post.
-
-    At least one reason (predefined or custom) is required.
-    """
     try:
         if body.reported_type not in ("freelancer", "client", "job_post"):
             return ResponseSchema.error("Choose what you're reporting: a freelancer, a client, or a job post.", 400)
@@ -1129,7 +1041,6 @@ async def list_review_red_flags(
         logger("ADMIN", f"Review red flags list error: {e}", "GET /admin/reviews/red-flags", "ERROR")
         return ResponseSchema.error("Failed to fetch red flags. Please try again.", 500)
 
-
 @admin_router.post("/reviews/red-flags/{alert_id}/resolve")
 async def resolve_review_red_flag(
     alert_id: str,
@@ -1145,7 +1056,6 @@ async def resolve_review_red_flag(
     except Exception as e:
         logger("ADMIN", f"Resolve red flag error: {e}", "POST /admin/reviews/red-flags/resolve", "ERROR")
         return ResponseSchema.error("Failed to resolve red flag. Please try again.", 500)
-
 
 @admin_router.get("/reviews/flagged")
 async def list_review_flagged(
@@ -1171,7 +1081,6 @@ async def list_review_flagged(
         logger("ADMIN", f"Flagged reviews list error: {e}", "GET /admin/reviews/flagged", "ERROR")
         return ResponseSchema.error("Failed to fetch flagged reviews. Please try again.", 500)
 
-
 @admin_router.post("/reviews/{review_id}/override-publish")
 async def override_publish_review_route(
     review_id: str,
@@ -1187,7 +1096,6 @@ async def override_publish_review_route(
     except Exception as e:
         logger("ADMIN", f"Override publish review error: {e}", "POST /admin/reviews/override-publish", "ERROR")
         return ResponseSchema.error("Failed to override-publish review. Please try again.", 500)
-
 
 @admin_router.get("/client-reviews/flagged")
 async def list_client_review_flagged(
@@ -1213,7 +1121,6 @@ async def list_client_review_flagged(
         logger("ADMIN", f"Flagged client reviews list error: {e}", "GET /admin/client-reviews/flagged", "ERROR")
         return ResponseSchema.error("Failed to fetch flagged client reviews. Please try again.", 500)
 
-
 @admin_router.post("/client-reviews/{client_review_id}/override-publish")
 async def override_publish_client_review_route(
     client_review_id: str,
@@ -1229,4 +1136,3 @@ async def override_publish_client_review_route(
     except Exception as e:
         logger("ADMIN", f"Override publish client review error: {e}", "POST /admin/client-reviews/override-publish", "ERROR")
         return ResponseSchema.error("Failed to override-publish client review. Please try again.", 500)
-

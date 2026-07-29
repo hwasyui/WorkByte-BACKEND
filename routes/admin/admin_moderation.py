@@ -20,16 +20,10 @@ _SCAM_KEYWORDS: List[str] = _kw_data["scam_keywords"]
 SCAM_FLAG_THRESHOLD: float = 0.10
 SCAM_AUTO_REMOVE_THRESHOLD: float = 0.85
 
-
 def _normalize(text: str) -> str:
     return re.sub(r"\s+", " ", text.lower().strip())
 
-
-# Keywords that are deliberately truncated stems (match longer word forms too).
-# Everything else must match on a whole-word boundary, otherwise "dumb" hits
-# "dumbbell" and "cunt" hits "Scunthorpe".
 _PREFIX_KEYWORDS = set(_kw_data.get("prefix_keywords", []))
-
 
 def _keyword_hits(keywords: List[str], normalized_text: str) -> List[str]:
     hits = []
@@ -39,17 +33,7 @@ def _keyword_hits(keywords: List[str], normalized_text: str) -> List[str]:
             hits.append(kw)
     return hits
 
-
 def scan_harmful_text(text: str) -> Dict:
-    """
-    Deterministic keyword scan across 5 harm labels.
-    Scoring: score = min(hit_count × 0.35, 1.0)
-      - 1 keyword hit: 0.35 (flags for admin review)
-      - 2 hits: 0.70
-      - 3+ hits: 1.0
-    Used directly when called explicitly, or as fallback by
-    scan_harmful_text_with_ml_fallback() when the ML model is unavailable.
-    """
     normalized = _normalize(text)
     scores: Dict[str, float] = {}
     detected: List[str] = []
@@ -72,7 +56,6 @@ def scan_harmful_text(text: str) -> Dict:
         "scan_method":          "keyword",
     }
 
-
 def scan_for_scam(text: str) -> Dict:
     normalized = _normalize(text)
     matched = [kw for kw in _SCAM_KEYWORDS if kw in normalized]
@@ -84,7 +67,6 @@ def scan_for_scam(text: str) -> Dict:
         "needs_review":      score >= SCAM_FLAG_THRESHOLD,
         "scan_method":       "keyword",
     }
-
 
 def scan_for_scam_with_ml_fallback(title: str, description: str) -> Dict:
     combined = f"{title} {description}"
@@ -111,22 +93,7 @@ def scan_for_scam_with_ml_fallback(title: str, description: str) -> Dict:
         )
         return scan_for_scam(combined)
 
-
 def scan_harmful_text_with_ml_fallback(text: str) -> Dict:
-    """
-    Primary harmful text scan entry point.
-
-    1. Attempts inference with the trained BERT model, using its own tuned
-       per-label thresholds (toxicity 0.50, obscene 0.38, threat 0.58, insult 0.28,
-       identity_hate 0.38 -- from config.pkl, not a flat 0.5 for every label).
-       Model metrics on Jigsaw+ETHOS test set: F1=0.85, precision=0.79,
-       recall=0.93, hamming_loss=0.068.
-    2. On any failure (model files missing, CUDA OOM, etc.) logs a WARNING
-       and transparently falls back to keyword matching.
-
-    Return shape is identical to scan_harmful_text() plus a 'scan_method' key
-    ('ml' or 'keyword') so callers can log which path was taken.
-    """
     try:
         from ai_related.harmful_text_detection.model_inference import predict
 
@@ -150,3 +117,24 @@ def scan_harmful_text_with_ml_fallback(text: str) -> Dict:
             level="WARNING",
         )
         return scan_harmful_text(text)
+
+_SCORE_KEYS = ("toxic_score", "obscene_score", "threat_score",
+               "insult_score", "identity_hate_score")
+
+def scan_harmful_text_fields(*fields: str) -> Dict:
+    # Scan each field on its own and keep the highest score per label, the same pooling
+    # the chunked path already does across windows. Concatenating first lets a short
+    # neutral title drag a flagged description back under its threshold.
+    parts = [f for f in fields if f and f.strip()]
+    if not parts:
+        return scan_harmful_text_with_ml_fallback("")
+    if len(parts) == 1:
+        return scan_harmful_text_with_ml_fallback(parts[0])
+
+    results = [scan_harmful_text_with_ml_fallback(p) for p in parts]
+    merged = {k: max(r[k] for r in results) for k in _SCORE_KEYS}
+    merged["detected_labels"] = sorted({l for r in results for l in r["detected_labels"]})
+    merged["is_flagged"]      = any(r["is_flagged"] for r in results)
+    merged["scan_method"]     = ("keyword" if any(r["scan_method"] == "keyword" for r in results)
+                                 else results[0]["scan_method"])
+    return merged
