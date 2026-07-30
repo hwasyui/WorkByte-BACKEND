@@ -20,12 +20,12 @@ venv
 *.bin
 *.zip
 
-ai_related/harmful_text_detection/machine_learning/*.ipynb
-ai_related/harmful_text_detection/machine_learning/models/bert/
-ai_related/harmful_text_detection/machine_learning/models/roberta/
-ai_related/harmful_text_detection/machine_learning/models/distilbert/
-ai_related/harmful_text_detection/machine_learning/toxicity_augmented.csv
-ai_related/harmful_text_detection/machine_learning/models/*.png
+ai_related/harmful_text_detection/harmful_text/*.ipynb
+ai_related/harmful_text_detection/harmful_text/bert/
+ai_related/harmful_text_detection/harmful_text/roberta/
+ai_related/harmful_text_detection/harmful_text/distilbert/
+ai_related/harmful_text_detection/harmful_text/toxicity_augmented.csv
+ai_related/harmful_text_detection/harmful_text/*.png
 
 ai_related/job_matching/machine_learning/*.ipynb
 ai_related/job_matching/machine_learning/data/

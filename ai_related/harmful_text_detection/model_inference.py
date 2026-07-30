@@ -19,7 +19,7 @@ LABEL_SCHEMA = {
 }
 REVERSE_LABEL_SCHEMA = {v: k for k, v in LABEL_SCHEMA.items()}
 
-_MODEL_DIR = os.path.join(os.path.dirname(__file__), "machine_learning", "models")
+_MODEL_DIR = os.path.join(os.path.dirname(__file__), "harmful_text")
 _model = None
 _tokenizer = None
 _device = None
@@ -144,7 +144,7 @@ def load_model(model_type: str = "best") -> Tuple[torch.nn.Module, AutoTokenizer
             f"Model files missing at {model_path}. "
             f"Missing: {missing if missing else 'directory does not exist'}. "
             f"Download models_export.zip from your Colab training run, extract it, "
-            f"and copy the '{resolved_model}/' folder into machine_learning/models/."
+            f"and copy the '{resolved_model}/' folder into harmful_text/."
         )
 
     _device = _get_device()
