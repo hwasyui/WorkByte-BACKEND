@@ -20,6 +20,13 @@ client_review_router = APIRouter(prefix="/client-reviews", tags=["Client Reviews
 
 _REQUIRED_CATEGORIES = {"communication", "clarity_of_requirements", "responsiveness", "professionalism"}
 
+# client_review_ratings.category is VARCHAR(50) with no enum, so an unrecognised
+# category used to be stored silently and then averaged into avg_stars, which drives
+# the rating, the client trust score and the mismatch check. Mirrors
+# KNOWN_RATING_CATEGORIES on the freelancer side. No optional categories here:
+# `timeliness` is the freelancer's delivery, which a client review does not rate.
+_KNOWN_CATEGORIES = set(_REQUIRED_CATEGORIES)
+
 
 # INTERNAL HELPER: import and call this from contract_routes.py
 
@@ -108,7 +115,15 @@ async def submit_client_review(
         provided_categories = {r["category"] for r in ratings}
         missing = _REQUIRED_CATEGORIES - provided_categories
         if missing:
-            return ResponseSchema.error(f"Missing rating categories: {missing}", 400)
+            return ResponseSchema.error(f"Missing rating categories: {sorted(missing)}", 400)
+
+        unknown = provided_categories - _KNOWN_CATEGORIES
+        if unknown:
+            return ResponseSchema.error(
+                f"Unknown rating categories: {sorted(unknown)}. "
+                f"Allowed: {sorted(_KNOWN_CATEGORIES)}",
+                400,
+            )
 
         for r in ratings:
             if not (1.0 <= float(r["score"]) <= 5.0):

@@ -21,6 +21,39 @@ from ai_related.review_analysis.review_pipeline import (
 
 review_router = APIRouter(prefix="/reviews", tags=["Reviews"])
 
+# `timeliness` is required. It is the counterpart to on_time_score - the most
+# objective measurement the platform has, computed against original_end_date and
+# deliberately immune to dispute-granted extensions - and the only rating category
+# that maps onto contract telemetry at full weight in review_consistency.py. Without
+# it, a review claiming great delivery on a job that shipped nine days late is
+# undetectable, because none of the other four categories has a tight objective
+# counterpart.
+#
+# BREAKING for any client that does not send it: submission returns 400 until the
+# FRONTEND form ships the field. That was a deliberate call, not an oversight.
+#
+# Reviews submitted BEFORE this became required keep their four ratings. Nothing
+# backfills them, and the comparator simply skips the dimension it cannot find, so
+# they stay valid and their record-consistency check stays looser.
+REQUIRED_RATING_CATEGORIES = {
+    "communication",
+    "quality",
+    "professionalism",
+    "value_for_money",
+    "timeliness",
+}
+
+# Staging slot for a category the backend should accept and use before the form is
+# ready to send it. Empty now that timeliness has been promoted; put a new category
+# here first, then move it into REQUIRED once the frontend ships it.
+OPTIONAL_RATING_CATEGORIES: set[str] = set()
+
+# review_ratings.category is VARCHAR(50) with no enum and no whitelist, so a typo
+# used to be stored silently and then averaged into avg_stars - which drives the
+# review's rating, the trust score, and the mismatch check. uq_review_rating_category
+# does not catch it, because a misspelling is a distinct category.
+KNOWN_RATING_CATEGORIES = REQUIRED_RATING_CATEGORIES | OPTIONAL_RATING_CATEGORIES
+
 
 # INTERNAL HELPER: import and call this from contract_routes.py
 
@@ -94,12 +127,20 @@ async def submit_review(
         {"category": "communication",   "score": 4.5},
         {"category": "quality",         "score": 5.0},
         {"category": "professionalism", "score": 5.0},
-        {"category": "value_for_money", "score": 4.0}
+        {"category": "value_for_money", "score": 4.0},
+        {"category": "timeliness",      "score": 4.0}
       ],
       "client_answer":    "Yes, the code was very clean and well-documented.",
       "overall_comment":  "Great experience working with this freelancer.",
       "extra_skill_tags": ["Clean Code", "Fast Delivery"]
     }
+
+    All five categories are REQUIRED - `timeliness` included. It is the only rating
+    that maps directly onto an objective measurement (on_time_score), which is what
+    lets review_consistency.py check a delivery claim against the contract record.
+
+    Any category outside REQUIRED | OPTIONAL is rejected with 400, so a typo cannot
+    silently end up averaged into avg_stars.
     """
     try:
         review = ReviewFunctions.get_review_by_id(review_id)
@@ -112,13 +153,19 @@ async def submit_review(
         if not current_user.client_id or review["reviewer_id"] != str(current_user.client_id):
             return ResponseSchema.error("Only the client who owns this contract can submit a review.", 403)
 
-        # Validate all 4 rating categories are present
         ratings = payload.get("ratings", [])
-        required_categories = {"communication", "quality", "professionalism", "value_for_money"}
         provided_categories = {r["category"] for r in ratings}
-        missing = required_categories - provided_categories
+        missing = REQUIRED_RATING_CATEGORIES - provided_categories
         if missing:
-            return ResponseSchema.error(f"Missing rating categories: {missing}", 400)
+            return ResponseSchema.error(f"Missing rating categories: {sorted(missing)}", 400)
+
+        unknown = provided_categories - KNOWN_RATING_CATEGORIES
+        if unknown:
+            return ResponseSchema.error(
+                f"Unknown rating categories: {sorted(unknown)}. "
+                f"Allowed: {sorted(KNOWN_RATING_CATEGORIES)}",
+                400,
+            )
 
         # Validate score range
         for r in ratings:

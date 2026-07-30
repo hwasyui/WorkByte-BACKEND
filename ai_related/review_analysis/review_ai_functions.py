@@ -433,31 +433,37 @@ def compute_responsiveness_score(contract_id: str, freelancer_user_id: str) -> f
 def blend_communication_score(
     ai_quality_score: float,
     client_star_normalized: Optional[float],
-    responsiveness_score: Optional[float],
     sentiment_score: float,
 ) -> float:
     """
     Blends all available communication signals into a single 0–1 score.
 
     Signal weights:
-      45%: client's explicit communication star rating (1-5, normalized to 0-1)
-      30%: AI assessment of the message thread
-      20%: reply speed (computed from message timestamps)
-       5%: overall review sentiment (weakest, indirect signal)
+      56.25%: client's explicit communication star rating (1-5, normalized to 0-1)
+      37.5%:  AI assessment of the message thread
+      6.25%:  overall review sentiment (weakest, indirect signal)
+
+    responsiveness_score was REMOVED from this blend. It is already its own named
+    10% component of calculate_trust_score, and at 20% of this 10% component it
+    was being counted a second time - an effective 12% influence for a signal
+    documented as 10%. Correlated inputs quietly inflating each other is exactly
+    what the "every sub-score is a genuine, named, weighted input" rebalance was
+    meant to eliminate. The three weights above are the old 45/30/5 renormalised.
+
+    Known and accepted overlap: the client's communication star also contributes
+    to weighted_review_avg as one of the rating categories. That is diluted to a
+    few percent there, and a communication score that ignored the client's own
+    communication rating would be perverse, so it stays.
 
     Any signal that is None is dropped and its weight redistributed across the
-    rest, the same way calculate_trust_score handles missing components. The
-    caller used to substitute 0.8 for a missing responsiveness score, which meant
-    a contract with no message history was honestly reported as None to the trust
-    score but silently credited as reasonably responsive here.
+    rest, the same way calculate_trust_score handles missing components.
     """
     sentiment_component = max(0.0, min(1.0, 0.5 + sentiment_score / 2.0))
 
     components = [
-        (0.45, client_star_normalized),
-        (0.30, ai_quality_score),
-        (0.20, responsiveness_score),
-        (0.05, sentiment_component),
+        (0.5625, client_star_normalized),
+        (0.375, ai_quality_score),
+        (0.0625, sentiment_component),
     ]
 
     present = [(w, float(v)) for w, v in components if v is not None]
@@ -629,24 +635,60 @@ def calculate_trust_score(
     consistency_score: float,
     coerced_ratio: float,
     total_reviews: int = 0,
+    record_consistency: Optional[float] = None,
+    unfair_review_ratio: float = 0.0,
 ) -> float:
     """
     Trust score, rebalanced so every sub-score is a genuine, named, weighted
     input - not a hand-wavy formula and not an invisible pass/fail gate.
 
-    Weights (of 100):
-      30%  weighted_review_avg     - recency-weighted client star ratings
-      15%  on_time_score           - on-time delivery rate (previously computed,
-                                      never used anywhere in this formula)
+    Weights (of 100), grouped by how gameable the evidence is:
+
+      OBJECTIVE BEHAVIOUR - 40%, the largest share because it is measured, not
+      self-reported, and a freelancer cannot talk it into existence:
+      15%  on_time_score           - on-time delivery rate
       15%  revision_rate_score     - revision frequency (fewer = better)
       10%  responsiveness_score    - reply speed from message threads
-      10%  communication_sentiment - blended communication quality score
-      10%  authenticity_confidence - Model 1 (review_ml/authenticity_detector):
-                                      avg(1 - fake_probability) across this
-                                      freelancer's published reviews
-      10%  consistency_score       - Model 2 (review_ml/mismatch_detector):
-                                      inverse of avg mismatch_severity across
-                                      their reviews
+
+      CLIENT JUDGEMENT - 30%:
+      30%  weighted_review_avg     - recency-weighted client star ratings
+
+      COMMUNICATION - 10%:
+      10%  communication_sentiment - blended communication quality score.
+                                      responsiveness_score was removed from that
+                                      blend; it is its own component above and was
+                                      being counted twice.
+
+      REVIEW INTEGRITY - 20% collectively, deliberately split so no single model
+      dominates a reputation number - each of these is a model, and models are wrong:
+       8%  authenticity_confidence - Component 2 (authenticity_detector), averaging
+                                      (1 - LENGTH-CALIBRATED fake probability). The
+                                      raw score was 7.1x more likely to flag short
+                                      genuine reviews, which charged a freelancer for
+                                      how briefly their clients write.
+       6%  consistency_score       - Component 3 (mismatch_detector): text vs rating,
+                                      inverse of avg P(disagree).
+       6%  record_consistency      - Component 4 (review_consistency.py): star ratings
+                                      vs the objective contract record. Arithmetic,
+                                      not a model, so it is auditable and needs no
+                                      fairness audit. Catches the case no text model
+                                      can - a glowing review of an engagement that
+                                      was measurably late and heavily revised.
+
+    Deflation - a review HARSHER than the record - is deliberately absent from the
+    weighted components. That reflects on the reviewer, not the reviewed; penalising
+    someone for being unfairly reviewed inverts the intent. It is charged to whoever
+    wrote it, as a penalty on their own score:
+
+      -15  coerced_ratio            - proportional, capped
+       -8  unfair_review_ratio      - share of the CLIENT reviews this freelancer
+                                       wrote that are materially harsher than that
+                                       client's record. Capped lower than the client
+                                       side's 10 because the evidence is weaker: a
+                                       client's telemetry is a lifetime aggregate
+                                       rather than per contract, and holds only
+                                       responsiveness and revision churn. See
+                                       calculate_freelancer_review_fairness.
 
     All of on_time_score/revision_rate_score/responsiveness_score/
     communication_sentiment/authenticity_confidence/consistency_score must
@@ -678,8 +720,9 @@ def calculate_trust_score(
         (15.0, revision_rate_score),
         (10.0, responsiveness_score),
         (10.0, communication_sentiment),
-        (10.0, authenticity_confidence),
-        (10.0, consistency_score),
+        (8.0, authenticity_confidence),
+        (6.0, consistency_score),
+        (6.0, record_consistency),
     ]
 
     present = [(w, float(v)) for w, v in components if v is not None]
@@ -689,6 +732,7 @@ def calculate_trust_score(
 
     score = 100.0 * sum(w * v for w, v in present) / total_weight
     score -= min(15.0, coerced_ratio * 30)
+    score -= min(8.0, unfair_review_ratio * 16)
 
     return round(min(100.0, max(0.0, score)), 2)
 
@@ -706,18 +750,51 @@ def compute_repeat_weight(occurrence_index: int) -> float:
     return 1.0 / math.sqrt(k)
 
 
+# A review materially harsher than the objective contract record is down-weighted,
+# but only slightly and only past a threshold. Both numbers are deliberately timid.
+#
+# THE HAZARD, and why this is not more aggressive: the telemetry measures
+# timeliness, revision count and reply speed. It does NOT measure the quality of
+# the deliverable or how the freelancer behaved. A freelancer can be punctual,
+# responsive, revision-free and still produce poor work or be unpleasant to deal
+# with. For that client, a harsh review is accurate and the record will still make
+# it look "deflated". Down-weighting hard on this signal would let good telemetry
+# quietly suppress legitimate criticism - a worse integrity failure than the
+# unfair-review problem it is trying to solve.
+#
+# So: nothing happens below the threshold, and the maximum penalty is a 25% weight
+# reduction. Criticism stays audible. The stronger response to a genuinely unfair
+# reviewer is the penalty on THEIR trust score - see calculate_review_fairness.
+DEFLATION_WEIGHT_THRESHOLD = 0.4
+DEFLATION_MAX_REDUCTION = 0.25
+
+
+def _deflation_weight(deflation: Optional[float]) -> float:
+    """1.0 (no reduction) up to 1 - DEFLATION_MAX_REDUCTION at full deflation."""
+    if deflation is None or deflation <= DEFLATION_WEIGHT_THRESHOLD:
+        return 1.0
+    span = 1.0 - DEFLATION_WEIGHT_THRESHOLD
+    ramp = min(1.0, (deflation - DEFLATION_WEIGHT_THRESHOLD) / span)
+    return 1.0 - DEFLATION_MAX_REDUCTION * ramp
+
+
 def calculate_weighted_review_avg(freelancer_id: str) -> Tuple[float, int]:
     try:
+        from ai_related.review_analysis.review_consistency import compare_review_to_record
+
         db = get_db()
         rows = db.execute_query(
             """
-            SELECT rr.score, r.published_at, ra.authenticity_score,
+            SELECT r.id AS review_id, rr.category, rr.score, r.published_at,
+                   ra.authenticity_score,
+                   fps.on_time_score, fps.revision_rate_score, fps.responsiveness_score,
                    DENSE_RANK() OVER (
                        PARTITION BY r.reviewer_id ORDER BY r.published_at, r.id
                    ) AS pair_occurrence
             FROM review_ratings rr
             JOIN reviews r ON r.id = rr.review_id
             LEFT JOIN review_ai_analysis ra ON ra.review_id = r.id
+            LEFT JOIN freelancer_performance_scores fps ON fps.contract_id = r.contract_id
             WHERE r.freelancer_id = :fid AND r.status = 'published'
             """,
             {"fid": freelancer_id},
@@ -725,6 +802,25 @@ def calculate_weighted_review_avg(freelancer_id: str) -> Tuple[float, int]:
 
         if not rows:
             return 0.0, 0
+
+        # Deflation is a property of a whole review, not of one rating category, so
+        # it has to be computed per review before the per-rating loop below.
+        deflation_by_review = {}
+        ratings_by_review = {}
+        performance_by_review = {}
+        for row in rows:
+            rid = str(row["review_id"])
+            ratings_by_review.setdefault(rid, []).append(
+                {"category": row["category"], "score": row["score"]}
+            )
+            performance_by_review[rid] = {
+                "on_time_score": row["on_time_score"],
+                "revision_rate_score": row["revision_rate_score"],
+                "responsiveness_score": row["responsiveness_score"],
+            }
+        for rid, ratings in ratings_by_review.items():
+            result = compare_review_to_record(ratings, performance_by_review[rid])
+            deflation_by_review[rid] = result["deflation"]
 
         now = datetime.now(timezone.utc)
         weighted_sum = 0.0
@@ -743,7 +839,8 @@ def calculate_weighted_review_avg(freelancer_id: str) -> Tuple[float, int]:
             # authenticity only ever acting as a binary publish/suppress gate.
             authenticity_weight = float(row["authenticity_score"]) if row["authenticity_score"] is not None else 1.0
             repeat_weight = compute_repeat_weight(row["pair_occurrence"])
-            weight = recency_weight * authenticity_weight * repeat_weight
+            deflation_weight = _deflation_weight(deflation_by_review.get(str(row["review_id"])))
+            weight = recency_weight * authenticity_weight * repeat_weight * deflation_weight
 
             weighted_sum += float(row["score"]) * weight
             weight_total += weight
@@ -765,6 +862,77 @@ def calculate_weighted_review_avg(freelancer_id: str) -> Tuple[float, int]:
     except Exception as e:
         logger("REVIEW_AI", f"Error computing weighted avg: {str(e)}", level="ERROR")
         return 0.0, 0
+
+
+def calculate_review_fairness(client_id: str) -> float:
+    """
+    The fraction of reviews this client has WRITTEN that are materially harsher
+    than the objective contract record.
+
+    This is the other half of deflation handling. Down-weighting the review (see
+    _deflation_weight) protects the freelancer being reviewed; this makes the
+    behaviour cost the reviewer something, which is where the cost belongs. A
+    client who writes one harsh review of a genuinely bad engagement is not
+    penalised - a client who does it systematically is.
+
+    Note this measures reviews the client AUTHORED, unlike every other input to
+    calculate_client_trust_score, which measures reviews they received. It is a
+    judgement about their conduct as a reviewer, not their reputation as a client.
+
+    Returns 0.0 when there is nothing comparable, so it never penalises on absent
+    evidence.
+    """
+    try:
+        from ai_related.review_analysis.review_consistency import compare_review_to_record
+
+        db = get_db()
+        rows = db.execute_query(
+            """
+            SELECT r.id AS review_id, rr.category, rr.score,
+                   fps.on_time_score, fps.revision_rate_score, fps.responsiveness_score
+            FROM reviews r
+            JOIN review_ratings rr ON rr.review_id = r.id
+            LEFT JOIN freelancer_performance_scores fps ON fps.contract_id = r.contract_id
+            WHERE r.reviewer_id = :cid AND r.status = 'published'
+            """,
+            {"cid": client_id},
+        )
+        if not rows:
+            return 0.0
+
+        by_review = {}
+        for row in rows:
+            rid = str(row["review_id"])
+            entry = by_review.setdefault(
+                rid,
+                {
+                    "ratings": [],
+                    "performance": {
+                        "on_time_score": row["on_time_score"],
+                        "revision_rate_score": row["revision_rate_score"],
+                        "responsiveness_score": row["responsiveness_score"],
+                    },
+                },
+            )
+            entry["ratings"].append({"category": row["category"], "score": row["score"]})
+
+        comparable, unfair = 0, 0
+        for entry in by_review.values():
+            result = compare_review_to_record(entry["ratings"], entry["performance"])
+            if result["deflation"] is None:
+                continue
+            comparable += 1
+            if result["deflation"] >= DEFLATION_WEIGHT_THRESHOLD:
+                unfair += 1
+
+        if not comparable:
+            return 0.0
+        return round(unfair / comparable, 3)
+
+    except Exception as e:
+        logger("REVIEW_AI", f"Error computing review fairness for client {client_id}: {str(e)}",
+               level="ERROR")
+        return 0.0
 
 
 def calculate_aggregate_performance(freelancer_id: str) -> Dict:
@@ -851,17 +1019,98 @@ def calculate_aggregate_performance(freelancer_id: str) -> Dict:
         return empty
 
 
+def _calculate_record_consistency(freelancer_id: str) -> Dict:
+    """
+    Component 4: how far this freelancer's published reviews sit from the objective
+    contract record, averaged across their history.
+
+    Computed from source rows (review_ratings + freelancer_performance_scores)
+    rather than read from a stored column, so no schema change is needed and the
+    arithmetic stays auditable against the underlying data. See
+    review_consistency.py for why this is arithmetic rather than a model.
+
+    Returns {"record_consistency": float|None}. None means nothing was comparable - no telemetry, or no mappable rating
+    category - and calculate_trust_score drops None components rather than
+    crediting them.
+    """
+    from ai_related.review_analysis.review_consistency import (
+        compare_review_to_record,
+        record_consistency_score,
+    )
+
+    db = get_db()
+    rows = db.execute_query(
+        """
+        SELECT r.id AS review_id,
+               rr.category,
+               rr.score,
+               fps.on_time_score,
+               fps.revision_rate_score,
+               fps.responsiveness_score
+        FROM reviews r
+        JOIN review_ratings rr ON rr.review_id = r.id
+        LEFT JOIN freelancer_performance_scores fps ON fps.contract_id = r.contract_id
+        WHERE r.freelancer_id = :fid AND r.status = 'published'
+        """,
+        {"fid": freelancer_id},
+    )
+    if not rows:
+        return {"record_consistency": None}
+
+    per_review = {}
+    for row in rows:
+        entry = per_review.setdefault(
+            str(row["review_id"]),
+            {
+                "ratings": [],
+                "performance": {
+                    "on_time_score": row["on_time_score"],
+                    "revision_rate_score": row["revision_rate_score"],
+                    "responsiveness_score": row["responsiveness_score"],
+                },
+            },
+        )
+        entry["ratings"].append({"category": row["category"], "score": row["score"]})
+
+    inflations, comparable = [], 0
+    for entry in per_review.values():
+        result = compare_review_to_record(entry["ratings"], entry["performance"])
+        if result["inflation"] is None:
+            continue
+        comparable += 1
+        inflations.append(result["inflation"])
+
+    if not comparable:
+        return {"record_consistency": None}
+
+    # Only inflation. Deflation - a review harsher than the record - reflects on the
+    # REVIEWER, and is charged there instead: calculate_review_fairness aggregates it
+    # per client and calculate_client_trust_score applies it as a penalty. Charging
+    # it here as well would penalise a freelancer for being unfairly reviewed.
+    return {"record_consistency": record_consistency_score(sum(inflations) / len(inflations))}
+
+
 def calculate_ai_trust_components(freelancer_id: str) -> Dict:
     """
-    Averages this freelancer's own review_ml model outputs (authenticity,
-    mismatch severity) across all their published reviews, for use as named
-    trust-score inputs rather than a one-time publish/suppress gate.
+    Averages this freelancer's own model outputs across their published reviews,
+    for use as named trust-score inputs rather than a one-time publish/suppress
+    gate.
+
+    Three components:
+      authenticity_confidence - Component 2, length-calibrated
+      consistency_score       - Component 3, text vs rating
+      record_consistency      - Component 4, rating vs objective contract record
+
+    Deflation - a review harsher than the objective record - is deliberately absent.
+    It reflects on the reviewer, and is charged there: calculate_review_fairness
+    feeds calculate_client_trust_score as a penalty, and _deflation_weight reduces
+    such a review's weight in calculate_weighted_review_avg.
     """
     try:
         db = get_db()
         rows = db.execute_query(
             """
-            SELECT ra.authenticity_score, ra.mismatch_severity
+            SELECT ra.authenticity_score, ra.disagreement_probability
             FROM review_ai_analysis ra
             JOIN reviews r ON r.id = ra.review_id
             WHERE r.freelancer_id = :fid AND r.status = 'published'
@@ -869,23 +1118,50 @@ def calculate_ai_trust_components(freelancer_id: str) -> Dict:
             {"fid": freelancer_id},
         )
         if not rows:
-            return {"authenticity_confidence": 1.0, "consistency_score": 1.0}
+            return {
+                "authenticity_confidence": 1.0,
+                "consistency_score": 1.0,
+                "record_consistency": None,
+            }
 
         auth_scores = [float(r["authenticity_score"]) for r in rows if r["authenticity_score"] is not None]
         authenticity_confidence = round(sum(auth_scores) / len(auth_scores), 3) if auth_scores else 1.0
 
-        severities = [float(r["mismatch_severity"]) for r in rows if r["mismatch_severity"] is not None]
-        avg_severity = (sum(severities) / len(severities)) if severities else 0.0
-        # Max possible severity is 4.0 (a 1-star vs 5-star gap) -> normalize to 0-1 and invert.
-        consistency_score = round(max(0.0, 1.0 - (avg_severity / 4.0)), 3)
+        # disagreement_probability stores P(text and rating disagree) on a 0-1 scale
+        # from the disagreement classifier, so it inverts directly. It used to hold
+        # |predicted - actual| stars (0-4) from a regressor that has been removed:
+        # that residual was biased by rating level, handing 0.492 consistency to a
+        # freelancer whose clients rate honestly low against 0.874 for one rated
+        # high. The classifier's equivalent spread is -0.054.
+        #
+        # Rows analysed before the switch were nulled by the migration rather than
+        # converted - a star gap cannot be turned into this classifier's probability -
+        # so they are skipped here and repopulate when those reviews are re-analysed.
+        severities = [float(r["disagreement_probability"]) for r in rows
+                      if r["disagreement_probability"] is not None]
+        avg_disagreement = (sum(severities) / len(severities)) if severities else 0.0
+        consistency_score = round(max(0.0, 1.0 - avg_disagreement), 3)
+
+        try:
+            record = _calculate_record_consistency(freelancer_id)
+        except Exception as e:
+            # Component 4 is additive; a failure here must not take out the two
+            # components that were already working.
+            logger("REVIEW_AI", f"Record-consistency check failed: {str(e)}", level="WARNING")
+            record = {"record_consistency": None}
 
         return {
             "authenticity_confidence": authenticity_confidence,
             "consistency_score": consistency_score,
+            "record_consistency": record["record_consistency"],
         }
     except Exception as e:
         logger("REVIEW_AI", f"Error computing AI trust components: {str(e)}", level="ERROR")
-        return {"authenticity_confidence": 1.0, "consistency_score": 1.0}
+        return {
+            "authenticity_confidence": 1.0,
+            "consistency_score": 1.0,
+            "record_consistency": None,
+        }
 
 
 # Profile-level AI review summary

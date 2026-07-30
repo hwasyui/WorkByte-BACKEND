@@ -11,6 +11,16 @@ from functions.profile_ids import user_id_for_client, user_id_for_freelancer
 from routes.reviews.review_functions import ReviewFunctions
 from routes.dm.dm_functions import DMFunctions
 from routes.notifications.notification_functions import NotificationFunctions
+from ai_related.review_analysis.client_review_ai_functions import (
+    calculate_freelancer_review_fairness,
+)
+from ai_related.review_analysis.judgment_log import log_pipeline_judgment
+from ai_related.review_analysis.review_decision import (
+    blend_authenticity,
+    compute_overall_pass,
+    resolve_flags,
+    split_ml_inputs,
+)
 from ai_related.review_analysis.review_ai_functions import (
     generate_targeted_question,
     compute_on_time_score,
@@ -258,84 +268,76 @@ async def run_post_review_pipeline(review_id: str, is_retry: bool = False) -> No
             ai_question=written.get("ai_question") or "",
         )
 
-        # Step 6b: Three trained classical models (review_ml/) as independent
-        # signals alongside the LLM - authenticity, sentiment-rating mismatch,
-        # and sentiment. Kept as an ensemble rather than a replacement so the
-        # pipeline still works if the Groq API is rate-limited or down.
+        # Step 6b: Trained models (review_ml/) as independent signals alongside the
+        # LLM - authenticity, text-rating disagreement, and sentiment. Kept as an
+        # ensemble rather than a replacement so the pipeline still works if the Groq
+        # API is rate-limited or down.
         #
-        # Scored on overall_comment ONLY. client_answer used to be concatenated in,
-        # but the targeted question invites factual, problem-mentioning answers
-        # ("flagged a layout issue early"), and the sentiment model - trained on
-        # e-commerce review text - reads those as negative. Measured on a real
-        # review: comment alone +0.562 positive, concatenated -0.262 neutral, with
-        # mismatch_severity inflated 0.577 -> 1.399. The answer's signal is now
-        # carried by answer_groundedness below, which is what it is actually good for.
-        review_text_for_ml = (overall_comment or "").strip()
+        # Everything from here to overall_pass lives in review_decision.py, shared
+        # with client_review_pipeline.py. Those two used to hold identical copies of
+        # this logic, and keeping them in step cost real work every time it changed.
+        # The I/O around it stays per-pipeline, since the tables, field names and
+        # trust formulas genuinely differ.
+        review_text_for_ml, review_text_full = split_ml_inputs(overall_comment, client_answer)
+
         ml_authenticity = predict_authenticity(review_text_for_ml)
-        ml_mismatch = predict_mismatch(review_text_for_ml, avg_stars)
         ml_sentiment = predict_sentiment(review_text_for_ml)
+        ml_mismatch = predict_mismatch(review_text_full, avg_stars)
 
-        flag_reasons = list(analysis_result["flag_reasons"])
+        authenticity_score = blend_authenticity(
+            llm_authenticity_score=analysis_result["authenticity_score"],
+            ml_authenticity=ml_authenticity,
+            answer_groundedness=analysis_result.get("answer_groundedness"),
+            answer_text=client_answer,
+        )
 
-        # Authenticity blend. The groundedness term only participates when the client
-        # actually answered the question (it is optional at submit); otherwise this
-        # is the original two-way LLM/ML average.
-        ml_authenticity_score = 1.0 - ml_authenticity["fake_probability"]
-        groundedness = analysis_result.get("answer_groundedness")
-        if groundedness is not None and client_answer.strip():
-            authenticity_score = round(
-                0.4 * analysis_result["authenticity_score"]
-                + 0.4 * ml_authenticity_score
-                + 0.2 * groundedness,
-                3,
-            )
-        else:
-            authenticity_score = round((analysis_result["authenticity_score"] + ml_authenticity_score) / 2, 3)
+        is_flagged_fake, sentiment_mismatch, flag_reasons = resolve_flags(
+            llm_analysis=analysis_result,
+            ml_authenticity=ml_authenticity,
+            ml_mismatch=ml_mismatch,
+            avg_stars=avg_stars,
+            base_flag_reasons=analysis_result["flag_reasons"],
+        )
 
-        # Publication veto now requires BOTH models to agree. The ML classifier alone
-        # flagged 2 of 8 genuine sample reviews as fake - short warm praise is exactly
-        # what it was trained to call templated - and a single model's suspicion should
-        # lower the score, not block a real client's review. Disagreement is still
-        # recorded as a flag reason for admin context.
-        is_flagged_fake = analysis_result["is_flagged_fake"] and ml_authenticity["is_likely_fake"]
-        if ml_authenticity["is_likely_fake"] and not analysis_result["is_flagged_fake"]:
-            flag_reasons.append(
-                f"Statistical model flagged generic/templated language, LLM did not "
-                f"(fake_probability={ml_authenticity['fake_probability']})"
-            )
-        elif analysis_result["is_flagged_fake"] and not ml_authenticity["is_likely_fake"]:
-            flag_reasons.append("LLM flagged the review as fabricated, statistical model did not")
-
-        sentiment_mismatch = analysis_result["sentiment_mismatch"] or ml_mismatch["is_mismatched"]
-        if ml_mismatch["is_mismatched"] and not analysis_result["sentiment_mismatch"]:
-            flag_reasons.append(
-                f"Rating-text mismatch detected (text implies ~{ml_mismatch['predicted_rating']}★, "
-                f"actual rating {avg_stars}★)"
-            )
-
-        # Own trained classifier replaces the LLM's sentiment guess.
+        # Component 1 (Cardiff) replaces the LLM's sentiment guess.
         sentiment_score = ml_sentiment["sentiment_score"]
         sentiment_label = ml_sentiment["sentiment_label"]
 
         is_flagged_coerced = analysis_result["is_flagged_coerced"]
 
-        # is_flagged_fake and is_flagged_coerced are vetoes, not just contributing
-        # signals: authenticity_score is a blend of the LLM's own judgment and the ML
-        # classifier's, so a review either model specifically caught (e.g. "extremely
-        # short", "generic language", "reviewer indicates lack of choice in rating")
-        # could still average out above the 0.5 threshold and auto-publish. Since each
-        # flag already means at least one model concluded something is wrong, either
-        # should hold the review back regardless of what the blended score says.
-        overall_pass = (
-            not analysis_result.get("analysis_unavailable")
-            and authenticity_score >= 0.5
-            and not is_flagged_fake
-            and not is_flagged_coerced
-            and not (
-                sentiment_mismatch
-                and avg_stars == 5.0
-                and sentiment_label == "negative"
-            )
+        overall_pass = compute_overall_pass(
+            llm_analysis=analysis_result,
+            authenticity_score=authenticity_score,
+            is_flagged_fake=is_flagged_fake,
+            is_flagged_coerced=is_flagged_coerced,
+            sentiment_mismatch=sentiment_mismatch,
+            avg_stars=avg_stars,
+            sentiment_label=sentiment_label,
+        )
+
+        # Capture this judgment for future in-domain training data. Every model here
+        # is trained on Amazon product reviews; this is real freelance-review text
+        # with an LLM judgment attached, which is the raw material for replacing that
+        # corpus. See judgment_log.py. Non-fatal by construction.
+        log_pipeline_judgment(
+            review_id=review_id,
+            review_kind="freelancer_review",
+            review_text=review_text_for_ml,
+            answer_text=(client_answer or "").strip(),
+            ratings=[{"category": r.get("category"), "score": r.get("score")} for r in ratings],
+            avg_stars=avg_stars,
+            llm_analysis=analysis_result,
+            ml_authenticity=ml_authenticity,
+            ml_sentiment=ml_sentiment,
+            ml_mismatch=ml_mismatch,
+            outcome={
+                "overall_pass": overall_pass,
+                "authenticity_score": authenticity_score,
+                "is_flagged_fake": is_flagged_fake,
+                "is_flagged_coerced": is_flagged_coerced,
+                "sentiment_mismatch": sentiment_mismatch,
+                "flag_reasons": flag_reasons,
+            },
         )
 
         # Step 6: Persist AI analysis
@@ -344,7 +346,11 @@ async def run_post_review_pipeline(review_id: str, is_retry: bool = False) -> No
             sentiment_score=sentiment_score,
             sentiment_label=sentiment_label,
             sentiment_mismatch=sentiment_mismatch,
-            mismatch_severity=ml_mismatch["mismatch_severity"],
+            # P(text and rating disagree), 0-1, from the disagreement classifier.
+            # Replaced the old mismatch_severity column, which held a 0-4 star gap
+            # from a regressor that was measurably biased by rating level - see the
+            # migration note in the DATABASE repo's alter_table.sql.
+            disagreement_probability=ml_mismatch["disagreement_probability"],
             authenticity_score=authenticity_score,
             is_flagged_fake=is_flagged_fake,
             is_flagged_coerced=is_flagged_coerced,
@@ -361,10 +367,12 @@ async def run_post_review_pipeline(review_id: str, is_retry: bool = False) -> No
             if communication_star_rating is not None
             else None
         )
+        # responsiveness_score is deliberately NOT passed: it is already its own
+        # 10% component of calculate_trust_score, and including it here counted it
+        # twice. See blend_communication_score.
         communication_sentiment_score = blend_communication_score(
             ai_quality_score=analysis_result["communication_quality_score"],
             client_star_normalized=client_star_normalized,
-            responsiveness_score=responsiveness_score,
             sentiment_score=sentiment_score,
         )
         conflict_score = 1.0 if is_flagged_coerced else 0.0
@@ -472,7 +480,15 @@ async def recalculate_and_persist_trust_score(freelancer_id: str, category: Opti
         communication_sentiment=aggregate_perf["communication_sentiment_score"],
         authenticity_confidence=ai_trust["authenticity_confidence"],
         consistency_score=ai_trust["consistency_score"],
+        # None when nothing was comparable (no telemetry, or no mappable rating
+        # category yet - `timeliness` is still optional on the review form). Dropped
+        # with its weight redistributed rather than credited.
+        record_consistency=ai_trust.get("record_consistency"),
         coerced_ratio=aggregate_perf["coerced_ratio"],
+        # Conduct as a REVIEWER, not reputation as a freelancer: the share of client
+        # reviews this freelancer wrote that are materially harsher than that client's
+        # record. Symmetric with unfair_review_ratio on the client side.
+        unfair_review_ratio=calculate_freelancer_review_fairness(freelancer_id),
         total_reviews=total_reviews,
     )
 

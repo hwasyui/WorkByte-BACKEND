@@ -1131,12 +1131,15 @@ class FreelancerProfileComplete(BaseModel):
 # Reviews
 
 class ReviewRatingInput(BaseModel):
-    category: str  # communication | quality | professionalism | value_for_money
+    # communication | quality | professionalism | value_for_money | timeliness
+    # Validated against KNOWN_RATING_CATEGORIES in review_routes.py, which rejects
+    # anything outside that set - a typo used to be stored and averaged into avg_stars.
+    category: str
     score: float   # 1.0 to 5.0
 
 
 class SubmitReviewRequest(BaseModel):
-    ratings: List[ReviewRatingInput]        # must contain all 4 categories
+    ratings: List[ReviewRatingInput]        # must contain all 5 required categories
     client_answer: str                      # answer to the AI-generated targeted question
     overall_comment: str                    # free-form written review
     extra_skill_tags: Optional[List[str]] = []  # client can add extra tags manually

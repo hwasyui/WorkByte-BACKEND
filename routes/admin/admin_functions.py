@@ -11,6 +11,7 @@ from fastapi import HTTPException
 
 from functions.db_manager import get_db
 from functions.logger import logger
+from ai_related.review_analysis.judgment_log import log_admin_override
 from functions.profile_ids import user_id_for_client, user_id_for_freelancer
 from routes.admin.admin_moderation import (
     scan_harmful_text,
@@ -2143,7 +2144,7 @@ def list_flagged_reviews(
                r.inferred_category, r.created_at,
                f.full_name AS freelancer_name,
                wc.overall_comment,
-               ra.sentiment_score, ra.sentiment_label, ra.sentiment_mismatch, ra.mismatch_severity,
+               ra.sentiment_score, ra.sentiment_label, ra.sentiment_mismatch, ra.disagreement_probability,
                ra.authenticity_score, ra.is_flagged_fake, ra.is_flagged_coerced, ra.flag_reasons,
                ra.overall_pass
         FROM reviews r
@@ -2158,6 +2159,23 @@ def list_flagged_reviews(
     ))
 
 async def override_publish_review(review_id: str, admin_user_id: str) -> Optional[Dict]:
+    # Captured BEFORE the update: an override is a human saying the pipeline got this
+    # wrong, and the label only means something alongside the judgment being
+    # reversed. These are the only true labels available for the publish decision
+    # itself - every model in review_ml/ is otherwise trained on Amazon product
+    # reviews. See ai_related/review_analysis/judgment_log.py.
+    prior = _row(get_db().execute_query(
+        """
+        SELECT r.status, ra.sentiment_score, ra.sentiment_label, ra.sentiment_mismatch,
+               ra.disagreement_probability, ra.authenticity_score, ra.is_flagged_fake,
+               ra.is_flagged_coerced, ra.flag_reasons, ra.overall_pass
+        FROM reviews r
+        LEFT JOIN review_ai_analysis ra ON ra.review_id = r.id
+        WHERE r.id = :rid
+        """,
+        params={"rid": review_id},
+    ))
+
     updated = _row(get_db().execute_query(
         """
         UPDATE reviews
@@ -2171,6 +2189,15 @@ async def override_publish_review(review_id: str, admin_user_id: str) -> Optiona
         return None
 
     logger("ADMIN", f"Review {review_id} override-published by {admin_user_id}", level="INFO")
+
+    log_admin_override(
+        review_id=review_id,
+        review_kind="freelancer_review",
+        admin_user_id=admin_user_id,
+        action="override_publish",
+        prior_status=(prior or {}).get("status"),
+        prior_analysis={k: v for k, v in (prior or {}).items() if k != "status"},
+    )
 
     freelancer_name = "the freelancer"
     freelancer_rows = get_db().execute_query(
@@ -2217,7 +2244,7 @@ def list_flagged_client_reviews(
         SELECT cr.id, cr.contract_id, cr.reviewer_id, cr.client_id, cr.status, cr.created_at,
                c.full_name AS client_name,
                wc.overall_comment,
-               cra.sentiment_score, cra.sentiment_label, cra.sentiment_mismatch, cra.mismatch_severity,
+               cra.sentiment_score, cra.sentiment_label, cra.sentiment_mismatch, cra.disagreement_probability,
                cra.authenticity_score, cra.is_flagged_fake, cra.is_flagged_coerced, cra.flag_reasons,
                cra.overall_pass
         FROM client_reviews cr
@@ -2232,6 +2259,19 @@ def list_flagged_client_reviews(
     ))
 
 async def override_publish_client_review(client_review_id: str, admin_user_id: str) -> Optional[Dict]:
+    # Captured before the update - see override_publish_review.
+    prior = _row(get_db().execute_query(
+        """
+        SELECT cr.status, cra.sentiment_score, cra.sentiment_label, cra.sentiment_mismatch,
+               cra.disagreement_probability, cra.authenticity_score, cra.is_flagged_fake,
+               cra.is_flagged_coerced, cra.flag_reasons, cra.overall_pass
+        FROM client_reviews cr
+        LEFT JOIN client_review_ai_analysis cra ON cra.client_review_id = cr.id
+        WHERE cr.id = :rid
+        """,
+        params={"rid": client_review_id},
+    ))
+
     updated = _row(get_db().execute_query(
         """
         UPDATE client_reviews
@@ -2245,6 +2285,15 @@ async def override_publish_client_review(client_review_id: str, admin_user_id: s
         return None
 
     logger("ADMIN", f"Client review {client_review_id} override-published by {admin_user_id}", level="INFO")
+
+    log_admin_override(
+        review_id=client_review_id,
+        review_kind="client_review",
+        admin_user_id=admin_user_id,
+        action="override_publish",
+        prior_status=(prior or {}).get("status"),
+        prior_analysis={k: v for k, v in (prior or {}).items() if k != "status"},
+    )
 
     client_name = "the client"
     client_rows = get_db().execute_query(

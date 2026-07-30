@@ -14,7 +14,7 @@ The stored review/trust rows carry two kinds of field mixed together:
   * things the subject earned - star ratings, on-time delivery, revision rate
   * things the moderation pipeline concluded about the REVIEW and its author -
     authenticity_score, is_flagged_fake, is_flagged_coerced, flag_reasons,
-    mismatch_severity, and the aggregates derived from them
+    disagreement_probability, and the aggregates derived from them
 
 Only the first kind belongs on a profile. The second is telemetry about a third
 party: a viewer cannot act on it, publishing it invites gaming of the detectors,
@@ -76,7 +76,7 @@ def public_review(review: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
     summarises the tone of text the viewer can already read, so it reveals nothing
     they could not work out themselves. Everything else in that object -
     authenticity_score, is_flagged_fake, is_flagged_coerced, flag_reasons,
-    mismatch_severity, sentiment_mismatch - is a judgement about the reviewer, and
+    disagreement_probability, sentiment_mismatch - is a judgement about the reviewer, and
     stays server-side.
 
     Lifted to a flat `sentiment` key rather than left nested, so no future field

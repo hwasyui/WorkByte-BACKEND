@@ -23,7 +23,7 @@ from sklearn.preprocessing import StandardScaler
 from xgboost import XGBClassifier
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from shared_features import SBERT_ENCODER_NAME, build_feature_matrix_cached
+from shared_features import SBERT_ENCODER_NAME, build_feature_matrix_with_sentiment_cached
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(_HERE, "machine_learning", "fake_reviews_dataset.csv")
@@ -51,7 +51,7 @@ def main():
     texts = df["text_"].astype(str).tolist()
 
     print(f"Building/loading feature matrix for {len(texts)} rows...")
-    X_full = build_feature_matrix_cached(texts, cache_key="or_subset")
+    X_full = build_feature_matrix_with_sentiment_cached(texts, cache_key="or_subset")
 
     X_train, X_test, y_train, y_test = train_test_split(
         X_full, y, test_size=0.2, random_state=42, stratify=y,

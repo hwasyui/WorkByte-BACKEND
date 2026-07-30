@@ -1,11 +1,30 @@
 """
-Trains a regressor that predicts the star rating implied by review TEXT
-ALONE, trained only on genuine (label == 'OR') reviews so it learns what
-rating authentic sentiment implies (not fake reviews' often-exaggerated
-rating/text pairing). At inference, the gap between this predicted rating
-and the rating actually given is the sentiment-rating mismatch signal.
+RETIRED - kept for the record, not part of the pipeline. Nothing loads the
+artifact this produces, and model_artifacts/mismatch/ has been deleted.
 
-Usage: python train_mismatch_model.py
+Trains a regressor predicting the star rating implied by review TEXT ALONE.
+The pipeline used to threshold |predicted - actual| as its mismatch signal.
+That was replaced by train_disagreement_model.py, which classifies the
+(text, rating) pair directly.
+
+Why it was retired, both measured on held-out data:
+
+  * As a DETECTOR it is structurally wrong. |f(text) - rating| >= 1.5 cannot
+    condition on the rating, because the rating is not available when f runs,
+    so it cannot learn "harsh text with 1 star is fine, harsh text with 5
+    stars is suspicious." A scathing review rated 1 star produced a 1.7-star
+    residual and was flagged.
+  * As a TRUST INPUT it is biased. On agreeing pairs, mean severity ran 2.034
+    stars at 1 star against 0.502 at 5 stars - 60% of the training corpus is
+    5-star, so it reverts to the mean. That handed consistency_score 0.492 to
+    freelancers rated honestly low and 0.874 to those rated high.
+
+Final metrics before retirement, after adding the VADER features and
+stratifying the split: MAE 0.6447, RMSE 0.8873, r2 0.4017 (from MAE 0.6861 /
+r2 0.3492). The features accounted for roughly 73% of that gain and the split
+fix the rest - but the bias above is not a metrics problem, which is the point.
+
+Usage (if ever revived): python train_mismatch_model.py
 """
 import os
 import sys
@@ -22,7 +41,7 @@ from sklearn.preprocessing import StandardScaler
 from xgboost import XGBRegressor
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from shared_features import SBERT_ENCODER_NAME, build_feature_matrix_cached
+from shared_features import SBERT_ENCODER_NAME, build_feature_matrix_with_sentiment_cached
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(_HERE, "machine_learning", "fake_reviews_dataset.csv")
@@ -40,10 +59,13 @@ def main():
     texts = df["text_"].astype(str).tolist()
 
     print(f"Building/loading feature matrix for {len(texts)} rows...")
-    X_full = build_feature_matrix_cached(texts, cache_key="or_subset")
+    X_full = build_feature_matrix_with_sentiment_cached(texts, cache_key="or_subset")
 
+    # Stratify on the star value itself. 60% of this corpus is 5-star, so an
+    # unstratified split leaves the rare low ratings unevenly distributed and
+    # makes the held-out MAE noisy between runs.
     X_train, X_test, y_train, y_test = train_test_split(
-        X_full, y, test_size=0.2, random_state=42,
+        X_full, y, test_size=0.2, random_state=42, stratify=y,
     )
 
     scaler = StandardScaler()

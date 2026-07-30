@@ -322,7 +322,7 @@ class ReviewFunctions:
         is_flagged_coerced: bool,
         flag_reasons: List[str],
         overall_pass: bool,
-        mismatch_severity: Optional[float] = None,
+        disagreement_probability: Optional[float] = None,
     ) -> None:
         try:
             db = get_db()
@@ -335,18 +335,18 @@ class ReviewFunctions:
                 """
                 INSERT INTO review_ai_analysis (
                     id, review_id, sentiment_score, sentiment_label, sentiment_mismatch,
-                    mismatch_severity, authenticity_score, is_flagged_fake,
+                    disagreement_probability, authenticity_score, is_flagged_fake,
                     is_flagged_coerced, flag_reasons, overall_pass, analyzed_at
                 ) VALUES (
                     :id, :review_id, :sentiment_score, :sentiment_label, :sentiment_mismatch,
-                    :mismatch_severity, :authenticity_score, :is_flagged_fake,
+                    :disagreement_probability, :authenticity_score, :is_flagged_fake,
                     :is_flagged_coerced, CAST(:flag_reasons AS jsonb), :overall_pass, NOW()
                 )
                 ON CONFLICT (review_id) DO UPDATE SET
                     sentiment_score    = EXCLUDED.sentiment_score,
                     sentiment_label    = EXCLUDED.sentiment_label,
                     sentiment_mismatch = EXCLUDED.sentiment_mismatch,
-                    mismatch_severity  = EXCLUDED.mismatch_severity,
+                    disagreement_probability = EXCLUDED.disagreement_probability,
                     authenticity_score = EXCLUDED.authenticity_score,
                     is_flagged_fake    = EXCLUDED.is_flagged_fake,
                     is_flagged_coerced = EXCLUDED.is_flagged_coerced,
@@ -360,7 +360,7 @@ class ReviewFunctions:
                     "sentiment_score": sentiment_score,
                     "sentiment_label": sentiment_label,
                     "sentiment_mismatch": sentiment_mismatch,
-                    "mismatch_severity": mismatch_severity,
+                    "disagreement_probability": disagreement_probability,
                     "authenticity_score": authenticity_score,
                     "is_flagged_fake": is_flagged_fake,
                     "is_flagged_coerced": is_flagged_coerced,
