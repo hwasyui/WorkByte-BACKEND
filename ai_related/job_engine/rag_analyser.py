@@ -9,30 +9,13 @@ import httpx
 
 from functions.logger import logger
 
-_LLM_TIMEOUT = 90.0   # user-triggered, so a longer timeout is fine
-
-# Evidence gating: at most EVIDENCE_CAP items (contracts + portfolio combined) are
-# shown to the LLM, regardless of how many exist. A past contract only counts as
-# relevant evidence if its cosine similarity to the role clears RELEVANCE_THRESHOLD;
-# contracts retrieved via the recency fallback carry no similarity score at all and
-# are treated as automatically relevant, since there's nothing to gate on.
+_LLM_TIMEOUT = 90.0  
 EVIDENCE_CAP = 3
 RELEVANCE_THRESHOLD = 0.3
 
 
 def _retrieve_role_context(db, job_role_id: str) -> dict:
-    """
-    Retrieve a single job role with its parent job post context and its own
-    required/preferred skills from the DB.
-
-    Args:
-        db: Active database connection.
-        job_role_id: UUID string of the job role to retrieve.
-
-    Returns:
-        Dict with role fields, the parent job post's fields, and a ``skills`` list.
-        Returns an empty dict if the role is not found.
-    """
+    """Role, its parent job post, and its required/preferred skills. Empty dict if not found."""
     logger("RAG_ANALYSER", f"Retrieving role context | job_role_id={job_role_id}", level="DEBUG")
 
     rows = db.execute_query(
@@ -78,25 +61,10 @@ def _retrieve_role_context(db, job_role_id: str) -> dict:
 
 
 def _retrieve_freelancer_context(db, freelancer_id: str, job_role_id: str | None = None) -> dict:
-    """
-    Retrieve a freelancer's full profile including skills, portfolio items,
-    and recent work experience.
+    """Profile plus skills, portfolio (3) and work experience (3).
 
-    Portfolio items are ranked by cosine similarity to the target role when both
-    portfolio_embedding vectors and the role's embedding are available. This surfaces
-    the most *relevant* external projects rather than just the most recent ones.
-    Falls back to recency order when embeddings are not yet ready.
-
-    Args:
-        db: Active database connection.
-        freelancer_id: UUID string of the freelancer.
-        job_role_id: UUID of the role being analysed. When provided, portfolio
-            items are ranked by relevance to that role instead of by recency.
-
-    Returns:
-        Dict with profile fields plus ``skills``, ``portfolio`` (up to 3),
-        ``portfolio_retrieval_method``, and ``work_experience`` (up to 3) lists.
-        Returns an empty dict if the freelancer is not found.
+    Portfolio is ranked by similarity to job_role_id when the embeddings are ready,
+    by recency otherwise. Empty dict if the freelancer is not found.
     """
     logger("RAG_ANALYSER", f"Retrieving freelancer context | freelancer_id={freelancer_id}", level="DEBUG")
 
@@ -114,7 +82,6 @@ def _retrieve_freelancer_context(db, freelancer_id: str, job_role_id: str | None
         return {}
     fc = dict(f_rows[0])
 
-    # Skills with proficiency
     skills = db.execute_query(
         """
         SELECT s.skill_name, s.skill_category, fs.proficiency_level
@@ -127,11 +94,6 @@ def _retrieve_freelancer_context(db, freelancer_id: str, job_role_id: str | None
     )
     fc["skills"] = [dict(s) for s in skills]
 
-    # Portfolio ranked by cosine similarity to the target role when embeddings
-    # are ready; otherwise fall back to most-recent-first.
-    # portfolio_embedding contains manually-entered external projects (self-reported).
-    # Contracts (auto-generated once a job completes on-platform) are retrieved
-    # separately in _retrieve_past_contracts and carry higher credibility.
     portfolio_method = "recency_fallback"
     if job_role_id:
         portfolio_embed_check = db.execute_query(
@@ -205,7 +167,6 @@ def _retrieve_freelancer_context(db, freelancer_id: str, job_role_id: str | None
     fc["portfolio"] = [dict(p) for p in portfolio_rows]
     fc["portfolio_retrieval_method"] = portfolio_method
 
-    # Work experience (most recent 3)
     work_exp = db.execute_query(
         """
         SELECT job_title, company_name, description
@@ -267,6 +228,7 @@ def _retrieve_past_contracts(db, freelancer_id: str, job_role_id: str) -> list[d
             """
             SELECT jp.job_title,
                    jp.job_description,
+                   c.role_title,
                    c.status                        AS contract_status,
                    ROUND(AVG(rr.score), 1)         AS overall_rating,
                    rwc.overall_comment             AS review_text,
@@ -281,7 +243,7 @@ def _retrieve_past_contracts(db, freelancer_id: str, job_role_id: str) -> list[d
             WHERE ce.freelancer_id = :fid
               AND ce.embedding_vector IS NOT NULL
               AND c.status = 'completed'
-            GROUP BY jp.job_title, jp.job_description, c.status, rwc.overall_comment,
+            GROUP BY jp.job_title, jp.job_description, c.role_title, c.status, rwc.overall_comment,
                      ce.embedding_vector, jre.embedding_vector
             ORDER BY ce.embedding_vector <=> jre.embedding_vector
             LIMIT 5
@@ -300,6 +262,7 @@ def _retrieve_past_contracts(db, freelancer_id: str, job_role_id: str) -> list[d
             """
             SELECT jp.job_title,
                    jp.job_description,
+                   c.role_title,
                    c.status                AS contract_status,
                    ROUND(AVG(rr.score), 1) AS overall_rating,
                    rwc.overall_comment     AS review_text
@@ -310,7 +273,7 @@ def _retrieve_past_contracts(db, freelancer_id: str, job_role_id: str) -> list[d
             LEFT JOIN review_ratings rr ON rr.review_id = rv.id
             WHERE c.freelancer_id = :fid
               AND c.status = 'completed'
-            GROUP BY jp.job_title, jp.job_description, c.status, rwc.overall_comment, c.end_date
+            GROUP BY jp.job_title, jp.job_description, c.role_title, c.status, rwc.overall_comment, c.end_date
             ORDER BY c.end_date DESC NULLS LAST
             LIMIT 5
             """,
@@ -336,18 +299,11 @@ def _retrieve_past_contracts(db, freelancer_id: str, job_role_id: str) -> list[d
 
 
 def _build_evidence_list(past_contracts: list[dict], portfolio_items: list[dict]) -> tuple[list[dict], list[dict], str]:
-    """
-    Merge past contracts and portfolio items into one evidence pool for the prompt,
-    capped at EVIDENCE_CAP combined.
+    """Pick the evidence the prompt gets, EVIDENCE_CAP items total.
 
-    A contract ranked by vector similarity must clear RELEVANCE_THRESHOLD to count;
-    a contract from the recency fallback (no similarity score) is treated as
-    automatically relevant, since there's nothing to gate on. Relevant contracts
-    fill slots first (highest similarity first, already the query's own order),
-    portfolio items fill whatever's left.
-
-    Returns (used_contracts, used_portfolio, evidence_path), where evidence_path is
-    'contract_only', 'portfolio_only', 'mixed', or 'none'.
+    Contracts go first and must clear RELEVANCE_THRESHOLD, unless they came from the
+    recency fallback and carry no similarity score. Portfolio fills the rest.
+    Returns (used_contracts, used_portfolio, evidence_path).
     """
     relevant_contracts = [
         c for c in past_contracts
@@ -377,14 +333,8 @@ def _build_evidence_list(past_contracts: list[dict], portfolio_items: list[dict]
 
 
 def _build_prompt(role: dict, fc: dict, used_contracts: list[dict], used_portfolio: list[dict]) -> str:
-    """
-    Build the grounded LLM prompt for ONE role from role, freelancer, and gated
-    evidence context.
-
-    No server-side skill matching: the freelancer's skills and the role's
-    required/preferred skills are both shown to the LLM, which judges coverage
-    (including related tools and adjacent skills) itself.
-    """
+    """Prompt for one role. Both skill lists go in raw - the LLM judges coverage,
+    nothing is matched server-side."""
     skills_list = role.get("skills") or []
     required, preferred = [], []
     for skill_str in skills_list:
@@ -394,13 +344,10 @@ def _build_prompt(role: dict, fc: dict, used_contracts: list[dict], used_portfol
         else:
             preferred.append(name)
 
-    # Build context
     lines = []
 
     lines.append("JOB POST (background context)")
     lines.append(f"Title:       {role.get('job_title', '')}")
-    # project_type/project_scope left out: none of the five scoring criteria below mention
-    # them. Add a criterion first if that changes.
     lines.append(f"Duration:    {role.get('estimated_duration', 'N/A')}")
     lines.append(f"Description: {(role.get('job_description') or '')[:400]}")
 
@@ -447,14 +394,13 @@ def _build_prompt(role: dict, fc: dict, used_contracts: list[dict], used_portfol
         for c in used_contracts:
             rating_str = f"Rating: {c['overall_rating']}/5" if c.get("overall_rating") else "Not yet rated"
             review = (c.get("review_text") or "")[:180]
-            lines.append(f"  - {c['job_title']} | {rating_str}")
+            role_part = f" — {c['role_title']}" if c.get("role_title") else ""
+            lines.append(f"  - {c['job_title']}{role_part} | {rating_str}")
             if review:
                 lines.append(f"    Review: \"{review}\"")
     elif used_portfolio:
-        # unverified portfolio shown above, but nothing verified on-platform
         lines.append("\nPAST CONTRACTS\nNone on-platform yet — only the unverified portfolio above is available as evidence.")
     else:
-        # no evidence at all, verified or unverified
         lines.append(
             "\nPAST PROJECT EVIDENCE\n"
             "None available — this freelancer has no verified past contracts and no "
@@ -517,24 +463,11 @@ Return ONLY the JSON."""
 
 
 def _parse_llm_json(raw: str, source: str) -> dict:
-    """
-    Extract and parse a JSON object from the LLM response.
-
-    Handles:
-    - Plain JSON responses
-    - Markdown fenced blocks (```json ... ```)
-    - Responses with preamble/postamble text (finds the first {...} block)
-
-    Args:
-        raw: Raw string returned by the LLM.
-        source: Label of the LLM source (e.g. "groq") used in debug logging.
-
-    Returns:
-        Parsed JSON as a dict. Raises ``json.JSONDecodeError`` if no valid JSON is found.
-    """
+    """Pull the JSON object out of an LLM reply - plain, fenced, or buried in prose.
+    Raises json.JSONDecodeError if there isn't one."""
     raw = raw.strip()
 
-    # 1. Try markdown fences first
+    # Try markdown fences first
     if "```" in raw:
         logger("RAG_ANALYSER", f"Stripping markdown fences from {source} response", level="DEBUG")
         parts = raw.split("```")
@@ -547,19 +480,19 @@ def _parse_llm_json(raw: str, source: str) -> dict:
         except json.JSONDecodeError:
             pass  # fall through to brace extraction
 
-    # 2. Try to parse as-is
+    # Try to parse as-is
     try:
         return json.loads(raw)
     except json.JSONDecodeError:
         pass
 
-    # 3. Extract the first complete {...} block (handles preamble/postamble)
+    # Extract the first complete {...} block (handles preamble/postamble)
     brace_match = re.search(r'\{.*\}', raw, re.DOTALL)
     if brace_match:
         logger("RAG_ANALYSER", f"Extracted JSON block from {source} preamble response", level="DEBUG")
         return json.loads(brace_match.group(0))
 
-    # 4. Nothing worked, let it raise
+    # Nothing worked, let it raise
     return json.loads(raw)
 
 
@@ -568,7 +501,6 @@ _GROQ_RAG_MODELS = [
     "openai/gpt-oss-120b",      # primary
     "llama-3.3-70b-versatile",  # fallback: separate rate-limit bucket
 ]
-
 
 async def _call_groq_rag(prompt: str) -> str:
     """Call GROQ LLM for RAG analysis; returns raw JSON-mode response text."""
@@ -651,12 +583,10 @@ async def _call_llm(prompt: str) -> dict:
 
 
 async def analyse_role_match(db, freelancer_id: str, job_role_id: str) -> dict:
-    """
-    Full RAG pipeline for ONE role: retrieve role + freelancer context + gated
-    evidence from the DB, build a grounded prompt, call the LLM, and return the
-    structured JSON result (match_score, strengths, gaps, recommendation,
-    skill_tips). Returns {"error": "..."} on failure -- never a partial dict with
-    bookkeeping fields attached, so callers can rely on "error" in result alone.
+    """Full RAG pipeline for one role: retrieve, build the prompt, call the LLM.
+
+    Returns match_score, strengths, gaps, recommendation and skill_tips, or
+    {"error": "..."} alone on failure - never a half-filled dict.
     """
     t_start = time.perf_counter()
     logger(
@@ -702,10 +632,6 @@ async def analyse_role_match(db, freelancer_id: str, job_role_id: str) -> dict:
     result = await _call_llm(prompt)
 
     if "error" not in result:
-        # No server-side scoring: match_score and recommendation are whatever the LLM
-        # returned in its JSON, untouched.
-
-        # Guarantee all fields the frontend expects are always present
         result.setdefault("match_score", 0)
         result.setdefault("recommendation", "skip")
         result.setdefault("recommendation_reason", "")

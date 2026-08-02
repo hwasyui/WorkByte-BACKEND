@@ -89,7 +89,7 @@ async def search_clients(
 async def get_client_reliability(client_id: str, current_user: UserInDB = Depends(get_current_user)):
     """
     Qualitative signal for freelancers deciding whether to work with a client -
-    'Kurang Responsif' once a client has let 2+ contracts auto-approve from
+    'Less Responsive' once a client has let 2+ contracts auto-approve from
     inactivity (one strike away from the account being closed automatically).
     """
     try:

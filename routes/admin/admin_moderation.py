@@ -122,9 +122,6 @@ _SCORE_KEYS = ("toxic_score", "obscene_score", "threat_score",
                "insult_score", "identity_hate_score")
 
 def scan_harmful_text_fields(*fields: str) -> Dict:
-    # Scan each field on its own and keep the highest score per label, the same pooling
-    # the chunked path already does across windows. Concatenating first lets a short
-    # neutral title drag a flagged description back under its threshold.
     parts = [f for f in fields if f and f.strip()]
     if not parts:
         return scan_harmful_text_with_ml_fallback("")

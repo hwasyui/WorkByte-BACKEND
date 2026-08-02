@@ -7,19 +7,11 @@ DAILY_JOB_FIT_ANALYSIS_LIMIT = int(os.getenv("JOB_FIT_ANALYSIS_DAILY_LIMIT", "10
 
 
 def check_and_increment_daily_usage(db, freelancer_id: str) -> Dict:
-    """
-    Atomically increment today's usage count for a freelancer and report whether
-    the limit is still open. Runs before analyse_role_match() is even
-    called, so a freelancer who's already over the limit never triggers an LLM call.
+    """Bump today's count and say whether the freelancer is still under the limit.
 
-    The insert/increment happens unconditionally -- a request that later fails
-    (role not found, LLM error) still counts against the limit, since the shared
-    Groq key pool was still spent finding that out. There's no second write to
-    "give back" a failed attempt; this is a deliberate simplicity tradeoff, not
-    an oversight.
-
-    Returns:
-        {"allowed": bool, "usage_today": int, "usage_limit": int, "remaining_today": int}
+    Runs before the LLM call. A request that fails later still counts - the key pool
+    was spent either way, and nothing hands the attempt back.
+    Returns {allowed, usage_today, usage_limit, remaining_today}.
     """
     row = db.execute_query(
         """

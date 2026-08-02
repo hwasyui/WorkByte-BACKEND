@@ -5,15 +5,7 @@ class TextPreprocessor:
 
     @staticmethod
     def clean_text(text: str) -> str:
-        """
-        Clean and normalize text.
-
-        Args:
-            text: Raw text input
-
-        Returns:
-            Cleaned text.
-        """
+        """Clean and normalize text."""
         if not isinstance(text, str):
             return ""
 

@@ -33,10 +33,8 @@ _MODEL_FOLDERS = {
     "distilbert": "distilbert",
 }
 _DEFAULT_MODEL_TYPE = "bert"
-_DEFAULT_FLAT_THRESHOLD = 0.5  # fallback when config.pkl's tuned thresholds aren't available
+_DEFAULT_FLAT_THRESHOLD = 0.5  
 
-# Matches the training-time window. Truncating would silently drop anything past this many
-# tokens, so every overlapping window is scored and each label max-pooled instead.
 _CHUNK_MAX_LENGTH = 128
 _CHUNK_STRIDE = 20
 
@@ -66,8 +64,7 @@ def _model_path_for(model_type: str) -> str:
 def _load_thresholds(model_path: str) -> Dict[str, float]:
     """
     Load this model's per-label tuned thresholds from config.pkl's best_thresholds.
-    Falls back to a flat _DEFAULT_FLAT_THRESHOLD for every label if config.pkl is
-    missing or malformed, so a model folder without it still serves rather than failing.
+    Falls back to a flat _DEFAULT_FLAT_THRESHOLD.
     """
     config_path = os.path.join(model_path, "config.pkl")
     if not os.path.exists(config_path):
@@ -83,7 +80,6 @@ def _load_thresholds(model_path: str) -> Dict[str, float]:
     except Exception:
         return {label: _DEFAULT_FLAT_THRESHOLD for label in LABEL_SCHEMA}
 
-
 def get_available_models() -> List[Dict[str, object]]:
     """Get uploaded model folders that can be loaded for inference."""
     available_models = []
@@ -94,40 +90,24 @@ def get_available_models() -> List[Dict[str, object]]:
             os.path.exists(os.path.join(model_path, filename))
             for filename in required_files
         )
-
         info: Dict[str, object] = {
             "type": model_type,
             "folder": folder,
             "available": is_available,
             "default": model_type == _DEFAULT_MODEL_TYPE,
         }
-
         metrics_path = os.path.join(model_path, "metrics.json")
         if os.path.exists(metrics_path):
             with open(metrics_path, "r", encoding="utf-8") as metrics_file:
                 metrics = json.load(metrics_file)
             info["model_name"] = metrics.get("model_name")
             info["test_metrics"] = metrics.get("test_metrics")
-
         available_models.append(info)
-
     return available_models
 
-
 def load_model(model_type: str = "best") -> Tuple[torch.nn.Module, AutoTokenizer, torch.device, str]:
-    """
-    Load a trained harmful text detection model.
-
-    Args:
-        model_type: Type of model ('bert', 'roberta', 'distilbert', or 'best')
-                    'best' loads BERT
-
-    Returns:
-        Tuple of (model, tokenizer, device, resolved_model_type)
-
-    Raises:
-        FileNotFoundError: If model not found.
-    """
+    """Load a trained model; 'best' resolves to BERT. Returns
+    (model, tokenizer, device, resolved_type). Raises FileNotFoundError if it is missing."""
     global _model, _tokenizer, _device, _model_name, _thresholds
 
     resolved_model = _normalize_model_type(model_type)
@@ -136,7 +116,7 @@ def load_model(model_type: str = "best") -> Tuple[torch.nn.Module, AutoTokenizer
         return _model, _tokenizer, _device, resolved_model
 
     model_path = _model_path_for(resolved_model)
-
+    
     required_files = ["config.json", "model.safetensors", "tokenizer.json"]
     missing = [f for f in required_files if not os.path.exists(os.path.join(model_path, f))]
     if not os.path.isdir(model_path) or missing:
@@ -146,7 +126,6 @@ def load_model(model_type: str = "best") -> Tuple[torch.nn.Module, AutoTokenizer
             f"Download models_export.zip from your Colab training run, extract it, "
             f"and copy the '{resolved_model}/' folder into harmful_text/."
         )
-
     _device = _get_device()
     _tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
     _model = AutoModelForSequenceClassification.from_pretrained(
@@ -159,45 +138,15 @@ def load_model(model_type: str = "best") -> Tuple[torch.nn.Module, AutoTokenizer
 
     return _model, _tokenizer, _device, resolved_model
 
-
 def predict(text: str, model_type: str = "best", threshold: Optional[float] = None) -> dict:
-    """
-    Predict harmful content labels for text.
-
-    Args:
-        text: Input text to classify
-        model_type: Type of model to use
-        threshold: Flat override applied to all 5 labels. Leave as None (the default)
-                    to use this model's own tuned per-label thresholds instead.
-
-    Returns:
-        Dictionary with:
-        - text: Input text
-        - labels: List of detected harmful labels
-        - scores: Dictionary of label -> confidence score
-        - is_harmful: Boolean indicating if any harmful content detected.
-    """
+    """Score one text: {text, labels, scores, is_harmful}. threshold overrides all 5
+    labels at once; leave it None for the model's tuned per-label ones."""
     return batch_predict([text], model_type=model_type, threshold=threshold)[0]
 
 
 def batch_predict(texts: list, model_type: str = "best", threshold: Optional[float] = None) -> list:
-    """
-    Predict labels for multiple texts.
-
-    Long texts are split into overlapping _CHUNK_MAX_LENGTH-token windows (stride
-    _CHUNK_STRIDE) rather than truncated, and each label's probability is max-pooled
-    across every chunk of a text, so a harmful phrase anywhere in a long passage is
-    still caught.
-
-    Args:
-        texts: List of input texts
-        model_type: Type of model to use
-        threshold: Flat override applied to all 5 labels. Leave as None (the default)
-                    to use this model's own tuned per-label thresholds instead.
-
-    Returns:
-        List of prediction dictionaries.
-    """
+    """Score many texts. Anything over _CHUNK_MAX_LENGTH tokens is split into
+    overlapping windows and max-pooled per label instead of truncated."""
     model, tokenizer, device, resolved_model = load_model(model_type)
 
     cleaned_texts = [_preprocessor.clean_text(text) for text in texts]
@@ -236,8 +185,6 @@ def batch_predict(texts: list, model_type: str = "best", threshold: Optional[flo
         outputs = model(**model_inputs)
         chunk_probabilities = torch.sigmoid(outputs.logits).cpu().numpy()
 
-    # Max-pool each label's probability across every chunk belonging to the same text --
-    # if any window looks harmful, the whole text is harmful.
     pooled: Dict[int, np.ndarray] = {}
     for chunk_idx, sample_idx in enumerate(sample_mapping):
         sample_idx = int(sample_idx)

@@ -19,18 +19,9 @@ async def analyse_role(
     job_role_id: str,
     current_user: UserInDB = Depends(get_freelancer_user),
 ):
-    """
-    RAG + LLM analysis of the freelancer's fit for one specific job role.
-    Retrieves role requirements, the freelancer's profile, and relevant past
-    contracts from the DB, then asks the LLM for a structured JSON response
-    with match_score, strengths, gaps, recommendation, and skill_tips.
-    LLM calls can take 5-30s; this is user-triggered so the latency is acceptable.
-
-    Capped at DAILY_JOB_FIT_ANALYSIS_LIMIT analyses per freelancer per day
-    (default 10) against the shared Groq key pool -- the usage check runs
-    before analyse_role_match(), so a freelancer already over the limit never
-    triggers an LLM call at all.
-    """
+    """RAG + LLM fit analysis for one role, returning match_score, strengths, gaps,
+    recommendation and skill_tips. Takes 5-30s. Capped at DAILY_JOB_FIT_ANALYSIS_LIMIT
+    per freelancer per day, checked before the LLM call."""
     t_request = time.perf_counter()
     try:
         freelancer = get_freelancer_profile_for_user(current_user)
@@ -117,11 +108,10 @@ async def get_usage(
         return ResponseSchema.error("Error fetching usage. Please try again.", 500)
 
 
-# Dev only. embedding_sweep_loop already runs this on a timer, so this is just a
-# manual trigger for testing.
+# dev only
 @router.post("/sweep")
 async def trigger_sweep(current_user: UserInDB = Depends(get_current_user)):
-    """Force a dirty-embedding sweep now instead of waiting for the loop."""
+    """Force a dirty-embedding sweep."""
     try:
         result = await run_sweep_once()
         logger("JOB_ENGINE", "Manual sweep complete", level="INFO")

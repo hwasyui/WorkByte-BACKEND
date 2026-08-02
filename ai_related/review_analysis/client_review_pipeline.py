@@ -221,7 +221,7 @@ async def run_client_review_post_submission_pipeline(client_review_id: str, is_r
 
         # In-domain training data capture, same reasoning as the freelancer side.
         log_pipeline_judgment(
-            review_id=review_id,
+            review_id=client_review_id,
             review_kind="client_review",
             review_text=review_text,
             answer_text=(freelancer_answer or "").strip(),

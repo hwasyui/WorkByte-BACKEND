@@ -436,6 +436,24 @@ class DMFunctions:
         return dict(rows[0]) if rows else {}
 
     @staticmethod
+    def _get_contract_party_user_ids(contract_id: str) -> Optional[tuple]:
+        """(client_user_id, freelancer_user_id) for a contract. Queried directly rather
+        than through ContractFunctions to keep dm_functions free of that import cycle."""
+        rows = get_db().execute_query(
+            """
+            SELECT cl.user_id AS client_user_id, fl.user_id AS freelancer_user_id
+            FROM contract c
+            JOIN client     cl ON cl.client_id     = c.client_id
+            JOIN freelancer fl ON fl.freelancer_id = c.freelancer_id
+            WHERE c.contract_id = :cid
+            """,
+            {"cid": contract_id},
+        )
+        if not rows:
+            return None
+        return _to_str(rows[0]["client_user_id"]), _to_str(rows[0]["freelancer_user_id"])
+
+    @staticmethod
     def send_system_event(
         contract_id: str,
         actor_id: str,
@@ -443,11 +461,28 @@ class DMFunctions:
         event_type: str,
         metadata: Optional[Dict] = None,
     ) -> Optional[Dict]:
-        """Send a system-event message to the thread linked to a contract. No-op if no thread exists."""
+        """Send a system-event message to the thread linked to a contract.
+
+        dm_thread.contract_id is claimed by the FIRST contract between a pair of users
+        (activate_or_create_thread COALESCEs it), so a repeat pairing has no thread under
+        its own contract_id. Falling back to the parties' shared thread keeps later
+        contracts' events - a dispute reason among them - from being dropped on the floor.
+        contract_id always goes into the metadata so readers can tell which contract an
+        event belongs to without trusting the thread's own column.
+        """
         thread = DMFunctions.get_thread_by_contract_id(contract_id)
         if not thread:
+            parties = DMFunctions._get_contract_party_user_ids(contract_id)
+            if parties:
+                thread = DMFunctions.get_thread_by_users(*parties)
+        if not thread:
+            logger(
+                "DM",
+                f"System event '{event_type}' for contract {contract_id} dropped: no thread found",
+                level="WARNING",
+            )
             return None
-        meta = {"type": event_type}
+        meta = {"type": event_type, "contract_id": str(contract_id)}
         if metadata:
             meta.update(metadata)
         return DMFunctions._insert_message(

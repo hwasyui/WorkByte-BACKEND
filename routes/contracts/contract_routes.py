@@ -38,14 +38,14 @@ from routes.freelancers.freelancer_functions import FreelancerFunctions
 from routes.proposals.proposal_functions import ProposalFunctions
 from routes.dm.dm_functions import DMFunctions, _contract_accepted_default
 from routes.notifications.notification_functions import NotificationFunctions
+from routes.admin.admin_moderation import scan_harmful_text, scan_harmful_text_with_ml_fallback
 from ai_related.job_engine.embedding_manager import mark_contract_dirty
-from routes.admin.admin_moderation import scan_harmful_text
 
 
 def _reject_contract_short_text_if_harmful(*fields: Optional[str]) -> Optional[Dict]:
-    """contract_title/role_title carry no context (1-4 words) - keyword only, same
-    rule as every other short field in the system. Synchronous since scan_harmful_text
-    never awaits anything."""
+    """contract_title/role_title take the keyword scan, the same rule every other short
+    field in the system follows. Synchronous since scan_harmful_text never awaits
+    anything."""
     combined = " ".join(f for f in fields if f)
     if not combined.strip():
         return None
@@ -58,6 +58,79 @@ def _reject_contract_short_text_if_harmful(*fields: Optional[str]) -> Optional[D
         "message": "This contract couldn't be saved. It was flagged by Harmful Text Detection.",
         "detected_labels": detected_labels,
     }
+
+
+_MAX_REASON_LENGTH = 2000
+
+
+def _reject_reason_if_invalid(reason: Optional[str], action: str) -> Optional[Dict]:
+    """Cancellation and dispute reasons are free prose that gets persisted to the DM
+    thread and surfaced in the admin arbitration queue, so they take the same ML-backed
+    scan as every other prose field (DMs, cover letters) rather than the keyword-only
+    path the short title fields use."""
+    if not reason or not reason.strip():
+        return None
+    if len(reason) > _MAX_REASON_LENGTH:
+        return {"message": f"Your {action} reason is too long. Keep it under {_MAX_REASON_LENGTH:,} characters."}
+    harm_result = scan_harmful_text_with_ml_fallback(reason)
+    if not harm_result["is_flagged"]:
+        return None
+    detected_labels = harm_result.get("detected_labels", [])
+    logger("CONTRACT", f"Blocked {action} reason, labels={detected_labels}", level="WARNING")
+    return {
+        "message": f"Your {action} reason was not accepted. It was flagged by Harmful Text Detection.",
+        "detected_labels": detected_labels,
+    }
+
+
+def _harmful_extra(rejection: Dict) -> Optional[Dict]:
+    """Only a harmful-text rejection carries labels; a length rejection has none."""
+    if "detected_labels" not in rejection:
+        return None
+    return {"blocked_by": "harmful_text", "detected_labels": rejection["detected_labels"]}
+
+
+def _cancellation_was_by_a_party(contract: Dict) -> bool:
+    """cancelled_by is a bare user_id with no role attached. An admin resolving a dispute
+    with outcome='cancel' writes their own id into it, and checking the id against the two
+    parties is the only way to tell that apart from a party cancelling on their own."""
+    cancelled_by = str(contract.get("cancelled_by") or "")
+    if not cancelled_by:
+        return False
+    try:
+        cl = ClientFunctions.get_client_by_id(str(contract["client_id"]))
+        fl = FreelancerFunctions.get_freelancer_by_id(str(contract["freelancer_id"]))
+    except Exception as e:
+        # Can't resolve the parties - let the dispute through rather than trap someone
+        # behind a lookup failure. An admin still reviews it.
+        logger("CONTRACT", f"Could not resolve contract parties for cancellation check: {e}", level="WARNING")
+        return True
+    if not cl or not fl:
+        # A missing profile would shrink the set below and make a party's own cancellation
+        # look like an admin's, permanently blocking the other party's dispute. Fail open.
+        logger("CONTRACT", f"Contract {contract.get('contract_id')} has an unresolvable party; allowing dispute", level="WARNING")
+        return True
+    return cancelled_by in {str(cl["user_id"]), str(fl["user_id"])}
+
+
+# A contract in front of an admin. Field edits and deletes are refused in this state so
+# the record can't move under an arbitration in progress.
+_ARBITRATION_LOCKED_STATUSES = {"disputed"}
+
+
+def _cancellation_dispute_window_open(contract_id: str, contract: Dict) -> bool:
+    """Whether the party who did not cancel can still dispute. Anchored on the
+    cancellation system event rather than contract.updated_at, which a trigger moves on
+    every later write to the row and which would silently restart the 72h clock. Open by
+    default when neither timestamp resolves - an admin reviews the dispute either way."""
+    cancelled_at = ContractFunctions.get_cancelled_at(contract_id) or contract.get("updated_at")
+    if isinstance(cancelled_at, str):
+        cancelled_at = datetime.fromisoformat(cancelled_at)
+    if not cancelled_at:
+        return True
+    if cancelled_at.tzinfo is None:
+        cancelled_at = cancelled_at.replace(tzinfo=timezone.utc)
+    return datetime.now(timezone.utc) - cancelled_at <= _CANCELLATION_DISPUTE_WINDOW
 
 
 # agreed_duration is a number plus a unit from a locked dropdown, not free prose.
@@ -85,28 +158,21 @@ _DEFAULT_CONTRACT_NOTIFICATION = (
 def _render_notification(template: str, subs: dict) -> str:
     for key, val in subs.items():
         template = template.replace(f"{{{key}}}", str(val) if val else "")
-
-    # Remove leftover pdf_url placeholder if an old saved template still has it
     template = template.replace("{pdf_url}", "").strip()
 
     return template
 
-# Fields baked into the generated PDF. Editing one makes contract_pdf_url stale, so
-# update_contract() clears it to force a regenerate.
 _PDF_RELEVANT_FIELDS = {
     "contract_title", "role_title", "agreed_budget", "budget_currency",
     "payment_structure", "agreed_duration", "start_date", "end_date",
 }
 
-# How long the party who did not cancel has to dispute it before it's final.
 _CANCELLATION_DISPUTE_WINDOW = timedelta(hours=72)
 
 contract_router = APIRouter(prefix="/contracts", tags=["Contracts"])
 
 
 # GET /contracts
-
-
 @contract_router.get("", response_model=None)
 async def get_all_contracts(limit: Optional[int] = None, current_user: UserInDB = Depends(get_current_user)):
     """Return all contracts visible to the current user."""
@@ -131,8 +197,6 @@ async def get_all_contracts(limit: Optional[int] = None, current_user: UserInDB 
 
 
 # Specific sub-paths BEFORE /{contract_id} so they are not shadowed
-
-
 @contract_router.get("/freelancer/{freelancer_id}", response_model=None)
 async def get_contracts_by_freelancer(freelancer_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Return all contracts for a given freelancer."""
@@ -242,8 +306,6 @@ async def download_contract_pdf(contract_id: str, current_user: UserInDB = Depen
 
 
 # Generic /{contract_id} GET, must come AFTER all literal sub-paths
-
-
 @contract_router.get("/{contract_id}", response_model=None)
 async def get_contract(contract_id: str, current_user: UserInDB = Depends(get_current_user)):
     """Return a single contract by ID."""
@@ -264,8 +326,6 @@ async def get_contract(contract_id: str, current_user: UserInDB = Depends(get_cu
 
 
 # Mutations
-
-
 @contract_router.post("", response_model=None, status_code=201)
 async def create_contract(contract: ContractCreate, current_user: UserInDB = Depends(get_current_user)):
     """Create a new contract."""
@@ -394,19 +454,20 @@ async def generate_contract_pdf(contract_id: str, generation_data: ContractGener
         if not contract:
             return ResponseSchema.error(f"Contract {contract_id} not found", 404)
         assert_current_user_is_contract_party(current_user, contract)
+        if contract.get("status") in _ARBITRATION_LOCKED_STATUSES:
+            return ResponseSchema.error(
+                "This contract is under dispute and its terms cannot be changed until an admin resolves it",
+                409,
+            )
 
         if generation_data.termination_notice not in {7, 14, 30}:
             return ResponseSchema.error("Termination notice must be 7, 14, or 30 days.", 400)
         if generation_data.dispute_resolution not in {"negotiation", "mediation", "arbitration"}:
             return ResponseSchema.error("Choose a dispute resolution method: negotiation, mediation, or arbitration.", 400)
 
-        # governing_law is baked into the generated PDF, so a flagged clause rejects the
-        # whole request instead of degrading gracefully.
         rejection = _reject_contract_short_text_if_harmful(generation_data.governing_law)
         if rejection:
             return ResponseSchema.error(rejection["message"], 400, extra={"blocked_by": "harmful_text", "detected_labels": rejection["detected_labels"]})
-        # agreed_duration is re-editable here, so it gets the same format check as
-        # the create and update endpoints.
         duration_error = _reject_contract_duration_if_invalid(generation_data.agreed_duration)
         if duration_error:
             return ResponseSchema.error(duration_error["message"], 400)
@@ -536,9 +597,12 @@ async def update_contract(contract_id: str, contract_update: ContractUpdate, bac
         assert_current_user_is_contract_party(current_user, existing_contract)
 
         update_data = contract_update.model_dump(exclude_unset=True)
+        if existing_contract.get("status") in _ARBITRATION_LOCKED_STATUSES:
+            return ResponseSchema.error(
+                "This contract is under dispute and cannot be edited until an admin resolves it",
+                409,
+            )
 
-        # Status transitions belong to the dedicated endpoints, not here. Re-sending the
-        # current value is a harmless no-op, so only reject an actual change.
         new_status = update_data.get("status")
         if new_status and new_status != existing_contract.get("status"):
             return ResponseSchema.error(
@@ -667,20 +731,34 @@ async def raise_dispute(
             if str(contract.get("cancelled_by")) == str(current_user.user_id):
                 return ResponseSchema.error("You cannot dispute your own cancellation.", 403)
 
-            cancelled_at = contract.get("updated_at")
-            if isinstance(cancelled_at, str):
-                cancelled_at = datetime.fromisoformat(cancelled_at)
-            if cancelled_at:
-                if cancelled_at.tzinfo is None:
-                    cancelled_at = cancelled_at.replace(tzinfo=timezone.utc)
-                if datetime.now(timezone.utc) - cancelled_at > _CANCELLATION_DISPUTE_WINDOW:
-                    return ResponseSchema.error(
-                        "The window to dispute this cancellation has passed.", 400,
-                    )
+            # An admin who cancels as the outcome of an arbitration is not a party, so
+            # neither party matches the check above and both could re-dispute the ruling,
+            # bouncing the contract between 'cancelled' and 'disputed' indefinitely.
+            if contract.get("cancelled_by") and not _cancellation_was_by_a_party(contract):
+                return ResponseSchema.error(
+                    "This contract was cancelled by an admin resolving a dispute. That decision is final.",
+                    403,
+                )
+
+            if not _cancellation_dispute_window_open(contract_id, contract):
+                return ResponseSchema.error(
+                    "The window to dispute this cancellation has passed.", 400,
+                )
         elif contract["status"] not in disputable_statuses:
             return ResponseSchema.error(
                 f"Cannot raise a dispute on a contract with status '{contract['status']}'", 400,
             )
+
+        # After the status checks: the reason scan is an ML call, no point spending it on
+        # a request that was never going to be accepted. The reason is the whole record of
+        # why this dispute exists - there is no dispute_reason column, only the system
+        # event - so an empty one is refused.
+        if not payload.reason or not payload.reason.strip():
+            return ResponseSchema.error("A reason is required to raise a dispute.", 400)
+
+        rejection = _reject_reason_if_invalid(payload.reason, "dispute")
+        if rejection:
+            return ResponseSchema.error(rejection["message"], 400, extra=_harmful_extra(rejection))
 
         updated_contract = ContractFunctions.raise_dispute(
             contract_id=contract_id,
@@ -706,6 +784,11 @@ async def raise_dispute(
 
         logger("CONTRACT", f"Contract {contract_id} disputed by {current_user.user_id}", "PUT /contracts/{contract_id}/dispute", "INFO")
         return ResponseSchema.success(updated_contract, 200)
+    except ValueError as e:
+        # Lost the race against a concurrent status change - the message is written for
+        # the user, so it goes through as-is rather than as a generic failure.
+        logger("CONTRACT", f"Dispute rejected: {e}", "PUT /contracts/{contract_id}/dispute", "WARNING")
+        return ResponseSchema.error(str(e), 409)
     except HTTPException as e:
         logger("CONTRACT", f"HTTP {e.status_code}: {e.detail}", "PUT /contracts/{contract_id}/dispute", "WARNING")
         return ResponseSchema.error(e.detail, e.status_code)
@@ -749,6 +832,10 @@ async def cancel_contract(
                 "A reason is required to cancel a contract once work is in progress", 400,
             )
 
+        rejection = _reject_reason_if_invalid(payload.reason, "cancellation")
+        if rejection:
+            return ResponseSchema.error(rejection["message"], 400, extra=_harmful_extra(rejection))
+
         cancelled_contract = ContractFunctions.cancel_contract(
             contract_id=contract_id,
             cancelled_by=str(current_user.user_id),
@@ -775,6 +862,11 @@ async def cancel_contract(
         logger("CONTRACT", f"Contract {contract_id} cancelled by user {current_user.user_id}", "PUT /contracts/{contract_id}/cancel", "INFO")
         return ResponseSchema.success(cancelled_contract, 200)
 
+    except ValueError as e:
+        # Lost the race against a concurrent status change - the message is written for
+        # the user, so it goes through as-is rather than as a generic failure.
+        logger("CONTRACT", f"Cancel rejected: {e}", "PUT /contracts/{contract_id}/cancel", "WARNING")
+        return ResponseSchema.error(str(e), 409)
     except HTTPException as e:
         logger("CONTRACT", f"HTTP {e.status_code}: {e.detail}", "PUT /contracts/{contract_id}/cancel", "WARNING")
         return ResponseSchema.error(e.detail, e.status_code)
@@ -794,6 +886,24 @@ async def delete_contract(contract_id: str, current_user: UserInDB = Depends(get
         if not existing_contract:
             return ResponseSchema.error(f"Contract {contract_id} not found", 404)
         assert_current_user_is_contract_party(current_user, existing_contract)
+
+        # Deleting a disputed contract would destroy the record an admin is arbitrating,
+        # so a party can't use it as an exit from a ruling that is going against them.
+        if existing_contract.get("status") in _ARBITRATION_LOCKED_STATUSES:
+            return ResponseSchema.error(
+                "This contract is under dispute and cannot be deleted until an admin resolves it",
+                409,
+            )
+
+        # Same reasoning for a fresh cancellation: deleting it inside the dispute window
+        # takes away the other party's only recourse against the cancellation.
+        if (existing_contract.get("status") == "cancelled"
+                and _cancellation_dispute_window_open(contract_id, existing_contract)):
+            return ResponseSchema.error(
+                "This contract was cancelled recently and cannot be deleted while the other "
+                "party can still dispute the cancellation",
+                409,
+            )
 
         ContractFunctions.delete_contract(contract_id)
 

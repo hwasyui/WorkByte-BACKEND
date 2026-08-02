@@ -19,10 +19,10 @@ from ai_related.job_engine.source_text_builder import (
 _THRESHOLD_FREELANCER  = 500
 _THRESHOLD_JOB         = 1000
 _THRESHOLD_CONTRACT    = 2000
-_THRESHOLD_TTL_SECONDS = 7200  # re-check every 2 hours
+_THRESHOLD_TTL_SECONDS = 7200  
 
 _cached_immediate: bool | None = None
-_cache_loaded_at: float = 0.0  # epoch seconds; 0 means never loaded
+_cache_loaded_at: float = 0.0  
 
 
 def _should_embed_immediately() -> bool:
@@ -368,11 +368,7 @@ async def upsert_job_role_embedding(job_role_id: str) -> dict:
 
 
 async def upsert_contract_embedding(contract_id: str) -> dict:
-    """
-    Build source text for a completed contract, generate an embedding, and upsert
-    into contract_embedding. freelancer_id is denormalised from the contract row
-    for fast per-freelancer lookups.
-    """
+    """Build source text for a completed contract, generate an embedding, and upsert into contract_embedding. """
     logger("EMBEDDING_MANAGER", f"Upserting contract embedding | contract_id={contract_id}", level="INFO")
     try:
         source_text = build_contract_source_text(contract_id)
@@ -449,11 +445,7 @@ async def upsert_contract_embedding(contract_id: str) -> dict:
 
 
 def _is_manual_portfolio(portfolio_id: str) -> bool:
-    """
-    Return True only when the portfolio row exists and is_auto_generated = FALSE.
-    Auto-generated rows mirror contract data; they are NOT embedded here, they
-    are covered by contract_embedding. Returns False if the row is missing.
-    """
+    """Return True only when the portfolio row exists and is_auto_generated = FALSE."""
     try:
         db = get_db()
         rows = db.execute_query(
@@ -469,13 +461,7 @@ def _is_manual_portfolio(portfolio_id: str) -> bool:
 
 
 def mark_portfolio_dirty(portfolio_id: str) -> None:
-    """
-    Flag a manual portfolio entry's embedding as stale, or embed immediately
-    if below the size threshold. Auto-generated rows are skipped silently;
-    their semantic content lives in contract_embedding.
-    Always upserts the dirty row so the sweep can recover even if the immediate embed fails.
-    Swallows exceptions so a dirty-flag failure never breaks the calling mutation.
-    """
+    """Flag a manual portfolio entry's embedding as stale, or embed immediately if below the size threshold. """
     try:
         if not _is_manual_portfolio(portfolio_id):
             logger(
@@ -519,10 +505,7 @@ def mark_portfolio_dirty(portfolio_id: str) -> None:
 
 
 async def upsert_portfolio_embedding(portfolio_id: str) -> dict:
-    """
-    Build source text for a manual portfolio entry, generate an embedding, and
-    upsert into portfolio_embedding. Skips auto-generated rows.
-    """
+    """Build source text for a manual portfolio entry, generate an embedding, and upsert into portfolio_embedding. Skips auto-generated rows."""
     logger("EMBEDDING_MANAGER", f"Upserting portfolio embedding | portfolio_id={portfolio_id}", level="INFO")
     try:
         if not _is_manual_portfolio(portfolio_id):

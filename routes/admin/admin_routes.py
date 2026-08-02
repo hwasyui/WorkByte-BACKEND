@@ -4,7 +4,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import Dict, List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from functions.schema_model import UserInDB, ArbitrateDisputeRequest
 from functions.authentication import get_current_user, get_admin_user
@@ -31,6 +31,9 @@ from routes.admin.admin_functions import (
     get_admin_dashboard_stats,
     get_admin_user_detail,
     get_client_scam_record,
+    get_client_review_moderation_detail,
+    get_red_flag_detail,
+    get_review_moderation_detail,
     get_appeal,
     get_appeal_status,
     get_user_appeals,
@@ -50,6 +53,8 @@ from routes.admin.admin_functions import (
     resolve_appeal,
     resolve_red_flag_alert,
     submit_appeal,
+    uphold_client_review,
+    uphold_review,
 )
 
 admin_router   = APIRouter(prefix="/admin",   tags=["Admin"])
@@ -58,6 +63,16 @@ appeals_router = APIRouter(prefix="/appeals", tags=["Appeals"])
 
 class AdminActionBody(BaseModel):
     admin_note: Optional[str] = None
+
+class ReviewRulingBody(BaseModel):
+    """Justification for a moderation ruling.
+
+    Required, not optional. The status change records what was decided and never
+    why, and these rulings are the only human-labelled data the review pipeline
+    will ever get - an unexplained one is close to useless as a training example.
+    See ai_related/review_analysis/judgment_log.py.
+    """
+    reason: str = Field(min_length=10, max_length=1000)
 
 class ScamScanBody(BaseModel):
     job_post_id: str
@@ -754,8 +769,8 @@ async def admin_get_user(
 @admin_router.get("/contracts/disputed")
 async def admin_list_disputed_contracts(
     search: Optional[str] = None,
-    page: int = 1,
-    page_size: int = 20,
+    page:      int = Query(default=1,  ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
     current_user: UserInDB = Depends(get_admin_user),
 ):
     try:
@@ -773,13 +788,24 @@ async def admin_list_disputed_contracts(
 
         rows = get_db().execute_query(
             f"""
-            WITH latest_dispute AS (
-                SELECT DISTINCT ON (dt.contract_id)
-                    dt.contract_id, dm.message_text, dm.metadata, dm.sent_at
+            WITH dispute_events AS (
+                -- A thread is shared by every contract between the same two users and its
+                -- contract_id only ever names the first one, so the event's own metadata is
+                -- the authoritative link. The thread column is the fallback for events
+                -- written before send_system_event started stamping contract_id.
+                SELECT
+                    COALESCE(dm.metadata::jsonb->>'contract_id', dt.contract_id::text) AS contract_id,
+                    dm.message_text, dm.metadata, dm.sent_at
                 FROM dm_message dm
                 JOIN dm_thread dt ON dt.thread_id = dm.thread_id
                 WHERE dm.metadata::jsonb->>'type' = 'dispute_raised'
-                ORDER BY dt.contract_id, dm.sent_at DESC
+            ),
+            latest_dispute AS (
+                SELECT DISTINCT ON (contract_id)
+                    contract_id, message_text, metadata, sent_at
+                FROM dispute_events
+                WHERE contract_id IS NOT NULL
+                ORDER BY contract_id, sent_at DESC
             )
             SELECT
                 c.contract_id, c.contract_title, c.agreed_budget, c.budget_currency,
@@ -793,7 +819,7 @@ async def admin_list_disputed_contracts(
             LEFT JOIN users      cl_u ON cl_u.user_id      = cl.user_id
             LEFT JOIN freelancer fl   ON fl.freelancer_id  = c.freelancer_id
             LEFT JOIN users      fl_u ON fl_u.user_id      = fl.user_id
-            LEFT JOIN latest_dispute ld ON ld.contract_id  = c.contract_id
+            LEFT JOIN latest_dispute ld ON ld.contract_id  = c.contract_id::text
             {where_sql}
             ORDER BY ld.sent_at DESC NULLS LAST, c.updated_at DESC
             LIMIT :limit OFFSET :offset
@@ -1026,7 +1052,13 @@ async def list_review_red_flags(
     page_size:    int = Query(default=20, ge=1, le=100),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Admin-wide red flag alert listing (trust score drops), across freelancers and/or clients."""
+    """Admin-wide red flag alert listing (trust score drops), across freelancers and/or clients.
+
+    Returns a paged envelope: {items, total, page, page_size, total_pages}.
+    Rows carry `current_trust_score`, `age_hours` and `open_held_reviews` for
+    triage; the diagnosis for one alert comes from
+    GET /admin/reviews/red-flags/{alert_id}.
+    """
     try:
         if subject_type not in ("freelancer", "client", "all"):
             return ResponseSchema.error("Invalid subject type. Choose freelancer, client, or all.", 400)
@@ -1041,14 +1073,51 @@ async def list_review_red_flags(
         logger("ADMIN", f"Review red flags list error: {e}", "GET /admin/reviews/red-flags", "ERROR")
         return ResponseSchema.error("Failed to fetch red flags. Please try again.", 500)
 
-@admin_router.post("/reviews/red-flags/{alert_id}/resolve")
-async def resolve_review_red_flag(
+@admin_router.get("/reviews/red-flags/{alert_id}")
+async def get_review_red_flag(
     alert_id: str,
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Mark a red flag alert as resolved."""
+    """Full diagnosis for one red flag alert.
+
+    The alert row only reports a symptom - a trust score fell by N points. This
+    returns what caused it: the score trajectory, the current per-component
+    breakdown so the admin can see WHICH input dropped, the reviews that landed
+    in the window, and - separately - any of those reviews that are themselves
+    held for moderation. That last list is the one that changes the recommended
+    action: a drop driven by a review the pipeline already distrusts should be
+    handled by ruling on that review, not by clearing the alert.
+    """
     try:
-        updated = resolve_red_flag_alert(alert_id=alert_id, admin_user_id=current_user.user_id)
+        detail = get_red_flag_detail(alert_id)
+        if not detail:
+            return ResponseSchema.error(f"Red flag alert {alert_id} not found", 404)
+        logger("ADMIN", f"Red flag detail fetched for {alert_id}", "GET /admin/reviews/red-flags/{alert_id}", "INFO")
+        return ResponseSchema.success(detail, 200)
+    except Exception as e:
+        logger("ADMIN", f"Red flag detail error: {e}", "GET /admin/reviews/red-flags/{alert_id}", "ERROR")
+        return ResponseSchema.error("Failed to fetch red flag detail. Please try again.", 500)
+
+@admin_router.post("/reviews/red-flags/{alert_id}/resolve")
+async def resolve_review_red_flag(
+    alert_id: str,
+    body: ReviewRulingBody,
+    current_user: UserInDB = Depends(get_admin_user),
+):
+    """Close a red flag alert, recording who closed it and why.
+
+    The note is required. "Investigated, the decline is genuine" and "cleared, the
+    drop came from one retaliatory review that has since been suppressed" are
+    opposite conclusions, and without a stated reason a resolved alert cannot
+    distinguish them - or show that anyone looked at all.
+
+    Persisting attribution needs red_flag_alerts.resolved_by and
+    .resolution_note. Against a database without them the alert still resolves
+    and the response carries resolution_recorded=false.
+    """
+    try:
+        updated = resolve_red_flag_alert(
+            alert_id=alert_id, admin_user_id=current_user.user_id, note=body.reason)
         if not updated:
             return ResponseSchema.error("Alert not found or already resolved", 404)
         logger("ADMIN", f"Red flag {alert_id} resolved by {current_user.user_id}", "POST /admin/reviews/red-flags/resolve", "INFO")
@@ -1066,12 +1135,18 @@ async def list_review_flagged(
     page_size: int = Query(default=20, ge=1, le=100),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """List reviews held back from publishing (overall_pass=false), with the AI analysis that caused the hold."""
+    """Triage list of reviews held back from publishing (overall_pass=false).
+
+    Returns a paged envelope: {items, total, page, page_size, total_pages}.
+    Each row carries only what the queue needs to sort and prioritise - the full
+    moderation record for one review comes from GET /admin/reviews/{id}/moderation.
+    """
     try:
         if status not in ("flagged", "suppressed", "all"):
             return ResponseSchema.error("Invalid status. Choose flagged, suppressed, or all.", 400)
-        if sort_by not in ("created_at", "status"):
-            return ResponseSchema.error("Invalid sort option. Choose created_at or status.", 400)
+        if sort_by not in ("created_at", "status", "authenticity", "disagreement"):
+            return ResponseSchema.error(
+                "Invalid sort option. Choose created_at, status, authenticity, or disagreement.", 400)
         if sort_dir not in ("asc", "desc"):
             return ResponseSchema.error("Invalid sort direction. Choose asc or desc.", 400)
         reviews = list_flagged_reviews(status=status, sort_by=sort_by, sort_dir=sort_dir, page=page, page_size=page_size)
@@ -1081,14 +1156,41 @@ async def list_review_flagged(
         logger("ADMIN", f"Flagged reviews list error: {e}", "GET /admin/reviews/flagged", "ERROR")
         return ResponseSchema.error("Failed to fetch flagged reviews. Please try again.", 500)
 
-@admin_router.post("/reviews/{review_id}/override-publish")
-async def override_publish_review_route(
+@admin_router.get("/reviews/{review_id}/moderation")
+async def get_review_moderation_route(
     review_id: str,
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Manually publish a held-back (flagged/suppressed) review after human review."""
+    """Full moderation record for one review: star ratings, the targeted question
+    and its answer, the objective contract telemetry the flag reasons cite, the
+    per-model breakdown (LLM vs each classifier, and where they disagree), the
+    reviewer's history, and the DM thread.
+
+    `components` is null when no judgment-log record exists for this review -
+    reviews analysed before judgment logging shipped have none. Every other
+    section is always present; individual fields may be null where the platform
+    never recorded the data.
+    """
     try:
-        updated = await override_publish_review(review_id=review_id, admin_user_id=current_user.user_id)
+        detail = get_review_moderation_detail(review_id)
+        if not detail:
+            return ResponseSchema.error(f"Review {review_id} not found", 404)
+        logger("ADMIN", f"Moderation detail fetched for review {review_id}", "GET /admin/reviews/{review_id}/moderation", "INFO")
+        return ResponseSchema.success(detail, 200)
+    except Exception as e:
+        logger("ADMIN", f"Review moderation detail error: {e}", "GET /admin/reviews/{review_id}/moderation", "ERROR")
+        return ResponseSchema.error("Failed to fetch review moderation detail. Please try again.", 500)
+
+@admin_router.post("/reviews/{review_id}/override-publish")
+async def override_publish_review_route(
+    review_id: str,
+    body: ReviewRulingBody,
+    current_user: UserInDB = Depends(get_admin_user),
+):
+    """Publish a held-back (flagged/suppressed) review - the human overruling the pipeline."""
+    try:
+        updated = await override_publish_review(
+            review_id=review_id, admin_user_id=current_user.user_id, reason=body.reason)
         if not updated:
             return ResponseSchema.error("Review not found or not currently flagged/suppressed", 404)
         logger("ADMIN", f"Review {review_id} override-published by {current_user.user_id}", "POST /admin/reviews/override-publish", "INFO")
@@ -1096,6 +1198,30 @@ async def override_publish_review_route(
     except Exception as e:
         logger("ADMIN", f"Override publish review error: {e}", "POST /admin/reviews/override-publish", "ERROR")
         return ResponseSchema.error("Failed to override-publish review. Please try again.", 500)
+
+@admin_router.post("/reviews/{review_id}/uphold")
+async def uphold_review_route(
+    review_id: str,
+    body: ReviewRulingBody,
+    current_user: UserInDB = Depends(get_admin_user),
+):
+    """Confirm the hold - the human agreeing with the pipeline.
+
+    Moves 'flagged' to 'suppressed' so the review leaves the pending queue as a
+    settled decision. Logged with the same weight as an override: an agreement is
+    a training label too, and capturing only reversals would produce a dataset of
+    nothing but pipeline mistakes.
+    """
+    try:
+        updated = await uphold_review(
+            review_id=review_id, admin_user_id=current_user.user_id, reason=body.reason)
+        if not updated:
+            return ResponseSchema.error("Review not found or not currently flagged/suppressed", 404)
+        logger("ADMIN", f"Review {review_id} hold upheld by {current_user.user_id}", "POST /admin/reviews/uphold", "INFO")
+        return ResponseSchema.success(updated, 200)
+    except Exception as e:
+        logger("ADMIN", f"Uphold review error: {e}", "POST /admin/reviews/uphold", "ERROR")
+        return ResponseSchema.error("Failed to uphold review hold. Please try again.", 500)
 
 @admin_router.get("/client-reviews/flagged")
 async def list_client_review_flagged(
@@ -1106,12 +1232,16 @@ async def list_client_review_flagged(
     page_size: int = Query(default=20, ge=1, le=100),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """List client reviews (written by freelancers) held back from publishing."""
+    """Triage list of client reviews (written by freelancers) held back from publishing.
+
+    Same paged envelope and same triage-only contract as GET /admin/reviews/flagged.
+    """
     try:
         if status not in ("flagged", "suppressed", "all"):
             return ResponseSchema.error("Invalid status. Choose flagged, suppressed, or all.", 400)
-        if sort_by not in ("created_at", "status"):
-            return ResponseSchema.error("Invalid sort option. Choose created_at or status.", 400)
+        if sort_by not in ("created_at", "status", "authenticity", "disagreement"):
+            return ResponseSchema.error(
+                "Invalid sort option. Choose created_at, status, authenticity, or disagreement.", 400)
         if sort_dir not in ("asc", "desc"):
             return ResponseSchema.error("Invalid sort direction. Choose asc or desc.", 400)
         reviews = list_flagged_client_reviews(status=status, sort_by=sort_by, sort_dir=sort_dir, page=page, page_size=page_size)
@@ -1121,14 +1251,39 @@ async def list_client_review_flagged(
         logger("ADMIN", f"Flagged client reviews list error: {e}", "GET /admin/client-reviews/flagged", "ERROR")
         return ResponseSchema.error("Failed to fetch flagged client reviews. Please try again.", 500)
 
-@admin_router.post("/client-reviews/{client_review_id}/override-publish")
-async def override_publish_client_review_route(
+@admin_router.get("/client-reviews/{client_review_id}/moderation")
+async def get_client_review_moderation_route(
     client_review_id: str,
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Manually publish a held-back client review after human review."""
+    """Full moderation record for one client review.
+
+    Note two differences from the freelancer side that the UI must handle: there
+    are four rating categories rather than five (no `timeliness`), and the
+    objective counterpart is `subject_lifetime_scores` - the client's aggregate
+    trust components - because the client-side measurements are lifetime figures
+    rather than per-contract. `telemetry` is engagement context only.
+    """
     try:
-        updated = await override_publish_client_review(client_review_id=client_review_id, admin_user_id=current_user.user_id)
+        detail = get_client_review_moderation_detail(client_review_id)
+        if not detail:
+            return ResponseSchema.error(f"Client review {client_review_id} not found", 404)
+        logger("ADMIN", f"Moderation detail fetched for client review {client_review_id}", "GET /admin/client-reviews/{id}/moderation", "INFO")
+        return ResponseSchema.success(detail, 200)
+    except Exception as e:
+        logger("ADMIN", f"Client review moderation detail error: {e}", "GET /admin/client-reviews/{id}/moderation", "ERROR")
+        return ResponseSchema.error("Failed to fetch client review moderation detail. Please try again.", 500)
+
+@admin_router.post("/client-reviews/{client_review_id}/override-publish")
+async def override_publish_client_review_route(
+    client_review_id: str,
+    body: ReviewRulingBody,
+    current_user: UserInDB = Depends(get_admin_user),
+):
+    """Publish a held-back client review - the human overruling the pipeline."""
+    try:
+        updated = await override_publish_client_review(
+            client_review_id=client_review_id, admin_user_id=current_user.user_id, reason=body.reason)
         if not updated:
             return ResponseSchema.error("Client review not found or not currently flagged/suppressed", 404)
         logger("ADMIN", f"Client review {client_review_id} override-published by {current_user.user_id}", "POST /admin/client-reviews/override-publish", "INFO")
@@ -1136,3 +1291,21 @@ async def override_publish_client_review_route(
     except Exception as e:
         logger("ADMIN", f"Override publish client review error: {e}", "POST /admin/client-reviews/override-publish", "ERROR")
         return ResponseSchema.error("Failed to override-publish client review. Please try again.", 500)
+
+@admin_router.post("/client-reviews/{client_review_id}/uphold")
+async def uphold_client_review_route(
+    client_review_id: str,
+    body: ReviewRulingBody,
+    current_user: UserInDB = Depends(get_admin_user),
+):
+    """Confirm the hold on a client review - see POST /admin/reviews/{id}/uphold."""
+    try:
+        updated = await uphold_client_review(
+            client_review_id=client_review_id, admin_user_id=current_user.user_id, reason=body.reason)
+        if not updated:
+            return ResponseSchema.error("Client review not found or not currently flagged/suppressed", 404)
+        logger("ADMIN", f"Client review {client_review_id} hold upheld by {current_user.user_id}", "POST /admin/client-reviews/uphold", "INFO")
+        return ResponseSchema.success(updated, 200)
+    except Exception as e:
+        logger("ADMIN", f"Uphold client review error: {e}", "POST /admin/client-reviews/uphold", "ERROR")
+        return ResponseSchema.error("Failed to uphold client review hold. Please try again.", 500)

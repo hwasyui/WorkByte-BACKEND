@@ -9,20 +9,11 @@ from ai_related.job_engine.embedding_manager import (
     upsert_portfolio_embedding,
 )
 
-SWEEP_INTERVAL_SECONDS = 300   # 5 minutes
-BATCH_SIZE = 100               # max records processed per sweep cycle
-
-# A row that keeps failing (e.g. a schema mismatch) gets retried with
-# exponential backoff instead of every single cycle forever, and only its
-# first failure gets a full ERROR/traceback - later attempts while backed
-# off are skipped without logging, so one broken row can't spam the log
-# indefinitely.
+SWEEP_INTERVAL_SECONDS = 300   
+BATCH_SIZE = 100            
 BACKOFF_BASE_SECONDS = SWEEP_INTERVAL_SECONDS
 BACKOFF_MAX_SECONDS = 3600
 
-# entity_name -> {row_id: {"failures": int, "retry_after": float}}
-# In-memory only: resets on process restart, which is fine since a restart
-# is a reasonable point to give a previously-quarantined row a fresh try.
 _failure_state: dict[str, dict[str, dict]] = {}
 
 
@@ -45,13 +36,7 @@ def _clear_failure(entity_name: str, row_id: str) -> None:
 
 
 async def _sweep_entity(entity_name: str, table: str, id_column: str, upsert_fn) -> dict:
-    """
-    Re-embed all dirty rows for one embedding table.
-
-    Rows currently in a failure backoff window are skipped (and not
-    re-logged) so a persistently broken row doesn't get retried, and
-    re-logged, every single cycle forever.
-    """
+    """Re-embed all dirty rows for one embedding table."""
     db = get_db()
     rows = db.execute_query(
         f"""SELECT {id_column} FROM {table}
@@ -104,14 +89,8 @@ async def _sweep_entity(entity_name: str, table: str, id_column: str, upsert_fn)
 
 
 async def run_sweep_once() -> dict:
-    """
-    Run one full sweep cycle across freelancer, job, contract, and portfolio
-    embedding tables.
-
-    Returns:
-        Dict with freelancers_refreshed, jobs_refreshed, contracts_refreshed,
-        portfolios_refreshed, total, and total_failed.
-    """
+    """One sweep across all four embedding tables. Returns the per-entity refreshed
+    counts plus total and total_failed."""
     logger("SWEEP_WORKER", "Sweep cycle started", level="INFO")
 
     freelancers = await _sweep_entity("freelancer", "freelancer_embedding", "freelancer_id", upsert_freelancer_embedding)

@@ -173,8 +173,6 @@ def build_contract_source_text(contract_id: str) -> Optional[str]:
         parts.append(f"Completed Role: {row['role_title']}")
         parts.append(f"Job: {row['job_title']}")
 
-        # Completion date gives the embedding a recency signal so semantic
-        # queries like "recent ETL work" can rank fresh contracts above stale ones.
         completion = row.get("actual_completion_date") or row.get("end_date")
         if completion:
             parts.append(f"Completed: {completion}")
@@ -206,16 +204,10 @@ def build_contract_source_text(contract_id: str) -> Optional[str]:
 
 
 def build_portfolio_source_text(portfolio_id: str) -> Optional[str]:
-    """
-    Build source text for a manual portfolio embedding.
+    """Source text for a user-curated portfolio item.
 
-    Only meant for user-curated showcase items (`is_auto_generated = FALSE`).
-    Auto-generated portfolio rows mirror contract data and are already covered
-    by `contract_embedding`; embedding them again would duplicate vectors and
-    create a sync problem when the contract's rating updates later. Callers
-    must check `is_auto_generated` before invoking this.
-
-    Returns None if the portfolio row does not exist or is auto-generated.
+    Auto-generated rows are already covered by contract_embedding, so callers check
+    is_auto_generated first. Returns None if the row is missing or auto-generated.
     """
     logger("SOURCE_TEXT_BUILDER", f"Building portfolio source text | portfolio_id={portfolio_id}", level="INFO")
     try:
@@ -269,16 +261,8 @@ def build_portfolio_source_text(portfolio_id: str) -> Optional[str]:
 
 
 def build_job_role_source_text(job_role_id: str) -> Optional[str]:
-    """
-    Build source text for a single job role.
-
-    Includes parent job post context (title + description + meta) so the vector
-    captures the project's overall intent, then adds the role-specific title,
-    description, budget and skills. This keeps each role's vector precise while
-    still encoding shared project context.
-
-    Returns None if the role does not exist.
-    """
+    """Source text for one job role: parent job post context first, then the role's own
+    title, description, budget and skills. None if the role does not exist."""
     logger("SOURCE_TEXT_BUILDER", f"Building job role source text | job_role_id={job_role_id}", level="INFO")
     try:
         db = get_db()
@@ -308,8 +292,6 @@ def build_job_role_source_text(job_role_id: str) -> Optional[str]:
         parts.append(f"Job Title: {r['job_title']}")
         parts.append(f"Role: {r['role_title']}")
 
-        # Skills lead immediately after title/role so they dominate the embedding.
-        # Descriptions are long and would dilute skill signal if placed first.
         skill_rows = db.execute_query(
             """SELECT s.skill_name, jrs.is_required, jrs.importance_level
                FROM job_role_skill jrs
@@ -346,9 +328,6 @@ def build_job_role_source_text(job_role_id: str) -> Optional[str]:
         if r.get("role_description"):
             parts.append(f"Role Description: {r['role_description']}")
 
-        # project_type/project_scope left out: this is matched against a freelancer profile
-        # by cosine, and no profile states the team size or project scale it wants. Browse
-        # filters still use both.
         meta: list[str] = []
         if r.get("estimated_duration"):
             meta.append(f"Duration: {r['estimated_duration']}")

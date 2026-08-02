@@ -5,13 +5,14 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from functools import lru_cache
 from typing import Dict, List, Optional
 from fastapi import HTTPException
 
 from functions.db_manager import get_db
 from functions.logger import logger
-from ai_related.review_analysis.judgment_log import log_admin_override
+from ai_related.review_analysis.judgment_log import log_admin_override, read_latest_judgment
 from functions.profile_ids import user_id_for_client, user_id_for_freelancer
 from routes.admin.admin_moderation import (
     scan_harmful_text,
@@ -2085,80 +2086,753 @@ def list_red_flag_alerts(
     sort_dir: str = "desc",
     page: int = 1,
     page_size: int = 20,
-) -> List[Dict]:
+) -> Dict:
     """Admin-wide (not per-subject) red flag alert listing, mirroring list_scam_flags.
     Exactly one of rfa.freelancer_id / rfa.client_id is set (enforced by
     red_flag_alerts_one_subject_check), so both sides can be LEFT JOINed
-    unconditionally and coalesced - no subject_type predicate in the join."""
+    unconditionally and coalesced - no subject_type predicate in the join.
+
+    Triage payload; the diagnosis for one alert comes from get_red_flag_detail().
+    Each row does carry `open_held_reviews` - how many of that subject's reviews
+    are currently held for moderation - because an alert on a subject with a held
+    review usually needs that review ruled on first, and the queue should be able
+    to show that without opening every alert.
+
+    Returns a _paged envelope, NOT a bare list.
+    """
     offset    = (page - 1) * page_size
     sort_col  = _RED_FLAG_SORT_COLS.get(sort_by, "rfa.triggered_at")
     direction = "ASC" if sort_dir.lower() == "asc" else "DESC"
-    return _rows(get_db().execute_query(
+    filters = """
+        WHERE (:is_resolved IS NULL OR rfa.is_resolved = :is_resolved)
+          AND (:subject_type = 'all' OR rfa.subject_type = :subject_type)
+    """
+    base_params = {"is_resolved": is_resolved, "subject_type": subject_type}
+
+    total_row = _row(get_db().execute_query(
+        f"SELECT COUNT(*) AS total FROM red_flag_alerts rfa {filters}",
+        params=base_params,
+    )) or {"total": 0}
+
+    items = _rows(get_db().execute_query(
         f"""
         SELECT rfa.*,
-               COALESCE(f.full_name, c.full_name) AS subject_name,
-               COALESCE(fu.email, cu.email)       AS subject_email
+               COALESCE(f.full_name, c.full_name)   AS subject_name,
+               COALESCE(fu.email, cu.email)         AS subject_email,
+               COALESCE(fts.overall_score, cts.trust_score) AS current_trust_score,
+               COALESCE(fts.total_reviews, cts.total_reviews_received) AS subject_total_reviews,
+               COALESCE(hr.held, hcr.held, 0)       AS open_held_reviews
         FROM red_flag_alerts rfa
         LEFT JOIN freelancer f  ON f.freelancer_id = rfa.freelancer_id
         LEFT JOIN users      fu ON fu.user_id      = f.user_id
         LEFT JOIN client     c  ON c.client_id     = rfa.client_id
         LEFT JOIN users      cu ON cu.user_id      = c.user_id
-        WHERE (:is_resolved IS NULL OR rfa.is_resolved = :is_resolved)
-          AND (:subject_type = 'all' OR rfa.subject_type = :subject_type)
+        LEFT JOIN freelancer_trust_scores fts ON fts.freelancer_id = rfa.freelancer_id
+        LEFT JOIN client_trust_score      cts ON cts.client_id     = rfa.client_id
+        LEFT JOIN LATERAL (
+            SELECT COUNT(*) AS held FROM reviews r
+            WHERE r.freelancer_id = rfa.freelancer_id
+              AND r.status IN ('flagged', 'suppressed')
+        ) hr ON rfa.freelancer_id IS NOT NULL
+        -- Client subjects are held in a different table entirely; without this the
+        -- triage badge read 0 for every client alert while the detail view found
+        -- held reviews, which is worse than showing nothing.
+        LEFT JOIN LATERAL (
+            SELECT COUNT(*) AS held FROM client_reviews cr2
+            WHERE cr2.client_id = rfa.client_id
+              AND cr2.status IN ('flagged', 'suppressed')
+        ) hcr ON rfa.client_id IS NOT NULL
+        {filters}
         ORDER BY {sort_col} {direction}
         LIMIT :limit OFFSET :offset
         """,
-        params={"is_resolved": is_resolved, "subject_type": subject_type, "limit": page_size, "offset": offset},
+        params={**base_params, "limit": page_size, "offset": offset},
     ))
 
-def resolve_red_flag_alert(alert_id: str, admin_user_id: str) -> Optional[Dict]:
-    updated = _row(get_db().execute_query(
+    now = datetime.now(timezone.utc)
+    for item in items:
+        triggered = item.get("triggered_at")
+        # Age matters for triage: an unresolved reputation alert sitting for days
+        # is a different priority from one raised minutes ago.
+        item["age_hours"] = (
+            round((now - triggered).total_seconds() / 3600, 1)
+            if isinstance(triggered, datetime) and triggered.tzinfo else None
+        )
+
+    return _paged(items, int(total_row["total"]), page, page_size)
+
+@lru_cache(maxsize=32)
+def _has_column(table: str, column: str) -> bool:
+    """Whether a column exists, cached for the process lifetime.
+
+    The schema lives in a separate DATABASE repo, so a checkout of this backend
+    can legitimately be newer than the database it is pointed at. red_flag_alerts
+    gained resolved_by/resolution_note after this code shipped; without this guard
+    a teammate who has not run the migration gets a 500 on every resolve instead
+    of a working endpoint that simply does not record the note.
+    """
+    row = _row(get_db().execute_query(
         """
-        UPDATE red_flag_alerts
-        SET is_resolved = TRUE
-        WHERE id = :aid AND is_resolved = FALSE
-        RETURNING *
+        SELECT 1 AS present FROM information_schema.columns
+        WHERE table_name = :t AND column_name = :c
         """,
-        params={"aid": alert_id},
+        params={"t": table, "c": column},
     ))
+    return bool(row)
+
+
+def resolve_red_flag_alert(alert_id: str, admin_user_id: str,
+                           note: Optional[str] = None) -> Optional[Dict]:
+    """Close an alert, recording who closed it and why.
+
+    A red flag is a claim that something went wrong with a person's reputation.
+    Closing one without a stated reason leaves no way to tell "investigated, the
+    drop is legitimate" apart from "clicked to clear the badge", which are
+    opposite conclusions about the same subject.
+    """
+    records_resolution = (_has_column("red_flag_alerts", "resolved_by")
+                          and _has_column("red_flag_alerts", "resolution_note"))
+
+    if records_resolution:
+        sql = """
+            UPDATE red_flag_alerts
+            SET is_resolved = TRUE, resolved_at = NOW(),
+                resolved_by = :admin, resolution_note = :note
+            WHERE id = :aid AND is_resolved = FALSE
+            RETURNING *
+        """
+        params = {"aid": alert_id, "admin": admin_user_id, "note": note}
+    else:
+        # Pre-migration database: still resolve, but say so rather than pretending
+        # the note was stored.
+        logger("ADMIN", "red_flag_alerts is missing resolved_by/resolution_note - "
+                        "resolution recorded without attribution. Run the migration.",
+               level="WARNING")
+        sql = """
+            UPDATE red_flag_alerts
+            SET is_resolved = TRUE, resolved_at = NOW()
+            WHERE id = :aid AND is_resolved = FALSE
+            RETURNING *
+        """
+        params = {"aid": alert_id}
+
+    updated = _row(get_db().execute_query(sql, params=params))
     if updated:
+        updated["resolution_recorded"] = records_resolution
         logger("ADMIN", f"Red flag {alert_id} resolved by {admin_user_id}", level="INFO")
     return updated
 
+
+def get_red_flag_detail(alert_id: str) -> Optional[Dict]:
+    """Everything needed to act on one red flag alert.
+
+    The alert row itself only says a trust score fell - "dropped by 12.7 points
+    (from 82.2 to 69.5)". That is a symptom with no diagnosis attached: it names
+    no component, no cause, and no reviews. An admin reading only the message
+    cannot tell a genuine decline from a single retaliatory review, which are the
+    two cases the alert exists to separate.
+
+    So this assembles the diagnosis:
+      * the trust-score trajectory, not just the two endpoints
+      * the CURRENT component breakdown, so the admin can see which input fell
+      * the reviews that landed in the drop window - the actual cause
+      * whether any of those reviews are themselves held for moderation, which is
+        the case that matters most: a trust drop driven by a review the pipeline
+        already distrusts should usually be resolved by ruling on that review
+        first, not by clearing the flag.
+    """
+    alert = _row(get_db().execute_query(
+        """
+        SELECT rfa.*,
+               COALESCE(f.full_name, c.full_name) AS subject_name,
+               COALESCE(fu.email, cu.email)       AS subject_email,
+               COALESCE(fu.user_id, cu.user_id)   AS subject_user_id,
+               au.email                           AS resolved_by_email
+        FROM red_flag_alerts rfa
+        LEFT JOIN freelancer f  ON f.freelancer_id = rfa.freelancer_id
+        LEFT JOIN users      fu ON fu.user_id      = f.user_id
+        LEFT JOIN client     c  ON c.client_id     = rfa.client_id
+        LEFT JOIN users      cu ON cu.user_id      = c.user_id
+        LEFT JOIN users      au ON au.user_id      = rfa.resolved_by
+        WHERE rfa.id = :aid
+        """
+        if _has_column("red_flag_alerts", "resolved_by") else
+        """
+        SELECT rfa.*,
+               COALESCE(f.full_name, c.full_name) AS subject_name,
+               COALESCE(fu.email, cu.email)       AS subject_email,
+               COALESCE(fu.user_id, cu.user_id)   AS subject_user_id
+        FROM red_flag_alerts rfa
+        LEFT JOIN freelancer f  ON f.freelancer_id = rfa.freelancer_id
+        LEFT JOIN users      fu ON fu.user_id      = f.user_id
+        LEFT JOIN client     c  ON c.client_id     = rfa.client_id
+        LEFT JOIN users      cu ON cu.user_id      = c.user_id
+        WHERE rfa.id = :aid
+        """,
+        params={"aid": alert_id},
+    ))
+    if not alert:
+        return None
+
+    is_freelancer = alert.get("subject_type") == "freelancer"
+    subject_id = str(alert["freelancer_id"] if is_freelancer else alert["client_id"])
+    triggered_at = alert["triggered_at"]
+
+    if is_freelancer:
+        components = _row(get_db().execute_query(
+            """
+            SELECT overall_score, weighted_review_avg, effective_review_avg, display_star_avg,
+                   on_time_score, revision_rate_score, responsiveness_score,
+                   communication_sentiment, authenticity_confidence, consistency_score,
+                   total_reviews, category, category_rank_pct, last_updated
+            FROM freelancer_trust_scores WHERE freelancer_id = :sid
+            """,
+            params={"sid": subject_id},
+        ))
+        history = _rows(get_db().execute_query(
+            """
+            SELECT overall_score AS score, snapshot_reason, recorded_at
+            FROM trust_score_history WHERE freelancer_id = :sid
+            ORDER BY recorded_at DESC LIMIT 12
+            """,
+            params={"sid": subject_id},
+        ))[::-1]
+        # Reviews ABOUT this freelancer that landed in the drop window. The window
+        # opens at the previous snapshot, because that is the interval the alert
+        # compared - anything older was already priced into the earlier score.
+        window = _rows(get_db().execute_query(
+            """
+            SELECT r.id, r.status, r.created_at, r.published_at,
+                   cl.full_name AS reviewer_name,
+                   wc.overall_comment,
+                   ra.authenticity_score, ra.sentiment_label, ra.sentiment_mismatch,
+                   ra.disagreement_probability, ra.is_flagged_fake, ra.is_flagged_coerced,
+                   ra.overall_pass,
+                   rt.avg_stars
+            FROM reviews r
+            LEFT JOIN client cl ON cl.client_id = r.reviewer_id
+            LEFT JOIN review_written_content wc ON wc.review_id = r.id
+            LEFT JOIN review_ai_analysis     ra ON ra.review_id = r.id
+            LEFT JOIN LATERAL (
+                SELECT ROUND(AVG(score), 3) AS avg_stars
+                FROM review_ratings WHERE review_id = r.id
+            ) rt ON TRUE
+            WHERE r.freelancer_id = :sid
+              AND r.created_at <= :triggered
+            ORDER BY r.created_at DESC
+            LIMIT 10
+            """,
+            params={"sid": subject_id, "triggered": triggered_at},
+        ))
+    else:
+        components = _row(get_db().execute_query(
+            """
+            SELECT trust_score AS overall_score, weighted_review_avg_received,
+                   effective_review_avg_received, responsiveness_score,
+                   communication_sentiment, authenticity_confidence, consistency_score,
+                   dispute_fairness_score, total_reviews_received, updated_at AS last_updated
+            FROM client_trust_score WHERE client_id = :sid
+            """,
+            params={"sid": subject_id},
+        ))
+        history = _rows(get_db().execute_query(
+            """
+            SELECT trust_score AS score, snapshot_reason, recorded_at
+            FROM client_trust_score_history WHERE client_id = :sid
+            ORDER BY recorded_at DESC LIMIT 12
+            """,
+            params={"sid": subject_id},
+        ))[::-1]
+        window = _rows(get_db().execute_query(
+            """
+            SELECT cr.id, cr.status, cr.created_at, cr.published_at,
+                   fr.full_name AS reviewer_name,
+                   wc.overall_comment,
+                   cra.authenticity_score, cra.sentiment_label, cra.sentiment_mismatch,
+                   cra.disagreement_probability, cra.is_flagged_fake, cra.is_flagged_coerced,
+                   cra.overall_pass,
+                   rt.avg_stars
+            FROM client_reviews cr
+            LEFT JOIN freelancer fr ON fr.freelancer_id = cr.reviewer_id
+            LEFT JOIN client_review_written_content wc ON wc.client_review_id = cr.id
+            LEFT JOIN client_review_ai_analysis     cra ON cra.client_review_id = cr.id
+            LEFT JOIN LATERAL (
+                SELECT ROUND(AVG(score), 3) AS avg_stars
+                FROM client_review_ratings WHERE client_review_id = cr.id
+            ) rt ON TRUE
+            WHERE cr.client_id = :sid
+              AND cr.created_at <= :triggered
+            ORDER BY cr.created_at DESC
+            LIMIT 10
+            """,
+            params={"sid": subject_id, "triggered": triggered_at},
+        ))
+
+    held = [r for r in window if r.get("status") in ("flagged", "suppressed")]
+    # Published despite failing the gate: the signature of an admin override, since
+    # the pipeline never publishes overall_pass=false on its own. These are the most
+    # likely cause of a trust drop that looks inexplicable from the score alone -
+    # a human let a review through and it moved the subject's reputation.
+    overridden = [r for r in window
+                  if r.get("status") == "published" and r.get("overall_pass") is False]
+
+    # The two endpoints the alert message quotes, recovered from the history so the
+    # UI can plot the drop rather than re-parsing prose out of `message`.
+    drop = None
+    if len(history) >= 2:
+        previous, latest = history[-2], history[-1]
+        try:
+            drop = {
+                "from": float(previous["score"]),
+                "to": float(latest["score"]),
+                "delta": round(float(latest["score"]) - float(previous["score"]), 2),
+                "from_recorded_at": previous["recorded_at"],
+                "to_recorded_at": latest["recorded_at"],
+            }
+        except (TypeError, ValueError):
+            drop = None
+
+    return {
+        "alert": alert,
+        "subject": {
+            "subject_type": alert.get("subject_type"),
+            "subject_id": subject_id,
+            "name": alert.get("subject_name"),
+            "email": alert.get("subject_email"),
+            "user_id": alert.get("subject_user_id"),
+        },
+        "current_components": components,
+        "score_history": history,
+        "drop": drop,
+        "recent_reviews": window,
+        # Surfaced separately because it changes the recommended action: rule on
+        # the held review before deciding whether the trust drop is real.
+        "held_reviews_in_window": held,
+        "held_review_count": len(held),
+        "overridden_reviews_in_window": overridden,
+        "overridden_review_count": len(overridden),
+        "other_open_alerts": _rows(get_db().execute_query(
+            """
+            SELECT id, alert_type, severity, message, triggered_at
+            FROM red_flag_alerts
+            WHERE is_resolved = FALSE AND id <> :aid
+              AND ((:is_fl AND freelancer_id = :sid) OR (NOT :is_fl AND client_id = :sid))
+            ORDER BY triggered_at DESC
+            """,
+            params={"aid": alert_id, "sid": subject_id, "is_fl": is_freelancer},
+        )),
+    }
+
+_MODERATION_SORT_COLS = {
+    "created_at":   "r.created_at",
+    "status":       "r.status",
+    "authenticity": "ra.authenticity_score",
+    "disagreement": "ra.disagreement_probability",
+}
+
+# Held reviews carrying this reason were never actually judged - the LLM was
+# unreachable and analyse failed closed. The admin view has to say so, because a
+# scorecard of nulls otherwise reads as "every model scored this badly".
+_ANALYSIS_UNAVAILABLE_MARKER = "Automated analysis unavailable"
+
+
+def _paged(items: List[Dict], total: int, page: int, page_size: int) -> Dict:
+    """Envelope for admin lists. A bare array cannot express how many rows the
+    filter matched, so the UI could never render 'page 1 of n' or an accurate
+    queue badge."""
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": max(1, math.ceil(total / page_size)) if total else 0,
+    }
+
+
+def _analysis_unavailable(flag_reasons) -> bool:
+    reasons = flag_reasons or []
+    if isinstance(reasons, str):
+        try:
+            reasons = json.loads(reasons)
+        except json.JSONDecodeError:
+            return _ANALYSIS_UNAVAILABLE_MARKER.lower() in reasons.lower()
+    return any(_ANALYSIS_UNAVAILABLE_MARKER.lower() in str(r).lower() for r in reasons)
+
+
+def _ratings_for(table: str, id_column: str, record_id: str) -> Dict:
+    """Per-category stars plus their average.
+
+    The star rating is the single most decision-relevant fact for a held review -
+    most holds ARE a rating-vs-text contradiction - and it lived in a separate
+    table that the admin queue never joined. The flag reason would say "star
+    rating of 5 contradicts clearly negative review text" while the payload
+    carried no rating at all, leaving the admin to take the model's word for the
+    one thing they were meant to check.
+    """
+    rows = _rows(get_db().execute_query(
+        f"SELECT category, score FROM {table} WHERE {id_column} = :rid ORDER BY category",
+        params={"rid": record_id},
+    ))
+    scores = [float(r["score"]) for r in rows if r.get("score") is not None]
+    return {
+        "categories": [{"category": r["category"], "score": float(r["score"])} for r in rows],
+        "average": round(sum(scores) / len(scores), 3) if scores else None,
+        "count": len(scores),
+    }
+
+
+def _component_breakdown(review_id: str) -> Optional[Dict]:
+    """Per-model verdicts from the judgment log.
+
+    review_ai_analysis persists the BLENDED authenticity score (0.4 LLM + 0.4
+    classifier + 0.2 answer groundedness) and nothing about its inputs, so from
+    the database alone an admin cannot tell which component objected - or whether
+    the two disagreed, which is exactly the adjudication being asked of them.
+    Optional by construction: returns None when no record exists.
+    """
+    record = read_latest_judgment(review_id)
+    if not record:
+        return None
+
+    llm = record.get("llm") or {}
+    ml = record.get("ml") or {}
+    authenticity = ml.get("authenticity") or {}
+    sentiment = ml.get("sentiment") or {}
+    mismatch = ml.get("mismatch") or {}
+
+    llm_fake = llm.get("is_flagged_fake")
+    ml_fake = authenticity.get("is_likely_fake")
+    llm_mismatch = llm.get("sentiment_mismatch")
+    ml_mismatch = mismatch.get("is_mismatched")
+
+    return {
+        "llm": {
+            "authenticity_score": llm.get("authenticity_score"),
+            "is_flagged_fake": llm_fake,
+            "is_flagged_coerced": llm.get("is_flagged_coerced"),
+            "sentiment_mismatch": llm_mismatch,
+            "answer_groundedness": llm.get("answer_groundedness"),
+            "communication_quality_score": llm.get("communication_quality_score"),
+            "analysis_unavailable": llm.get("analysis_unavailable"),
+        },
+        "sentiment_model": {
+            "label": sentiment.get("sentiment_label"),
+            "score": sentiment.get("sentiment_score"),
+            # "cardiff_roberta" is the pretrained primary; an "sbert_" prefix means
+            # it fell back to the weaker retired model and the score is less trustworthy.
+            "model_used": sentiment.get("model_used"),
+        },
+        "authenticity_model": {
+            "fake_probability": authenticity.get("fake_probability"),
+            # Length-neutral. The raw score penalises short reviews ~7x more often,
+            # so the calibrated figure is the fair one to read.
+            "fake_probability_calibrated": authenticity.get("fake_probability_calibrated"),
+            "is_likely_fake": ml_fake,
+            "threshold": 0.75,
+            "model_used": authenticity.get("model_used"),
+        },
+        "disagreement_model": {
+            "disagreement_probability": mismatch.get("disagreement_probability"),
+            "is_mismatched": ml_mismatch,
+            "threshold": 0.5,
+            "model_used": mismatch.get("model_used"),
+        },
+        # Surfaced as structured fields rather than left buried in flag_reasons
+        # prose, because "which of the two objected" is the whole question.
+        "disagreements": {
+            "fake": (llm_fake is not None and ml_fake is not None and llm_fake != ml_fake),
+            "mismatch": (llm_mismatch is not None and ml_mismatch is not None
+                         and llm_mismatch != ml_mismatch),
+        },
+        "logged_at": record.get("logged_at"),
+    }
+
+
+def _contract_telemetry(contract_id: str) -> Optional[Dict]:
+    """Objective contract record for the engagement under review.
+
+    Half the LLM's flag reasons cite these numbers ("platform metrics show
+    on-time delivery but reviewer describes missed deadlines"), and without them
+    in the payload the admin cannot check whether the claim is true - a real
+    failure mode, since the LLM has been observed asserting prompt communication
+    on a contract whose measured responsiveness was 0.062.
+
+    None-valued fields mean the data was never recorded, NOT zero. calculate_trust_score
+    drops those components and renormalises; the UI must render them as
+    "not measured" rather than as an empty bar.
+    """
+    row = _row(get_db().execute_query(
+        """
+        SELECT fps.on_time_score, fps.revision_count, fps.revision_rate_score,
+               fps.responsiveness_score, fps.communication_sentiment_score,
+               fps.conflict_score, fps.communication_summary,
+               c.start_date, c.end_date, c.original_end_date, c.actual_completion_date,
+               c.contract_title, c.status AS contract_status
+        FROM contract c
+        LEFT JOIN freelancer_performance_scores fps ON fps.contract_id = c.contract_id
+        WHERE c.contract_id = :cid
+        """,
+        params={"cid": contract_id},
+    ))
+    if not row:
+        return None
+    row["on_time_measurable"] = bool(
+        row.get("actual_completion_date") and (row.get("original_end_date") or row.get("end_date"))
+    )
+    return row
+
+
+def _dm_excerpt(contract_id: str, limit: int = 20) -> List[Dict]:
+    """Tail of the contract's DM thread.
+
+    The LLM reads this thread to score communication quality and cites it in flag
+    reasons; the admin had no way to see it. Returns [] when no thread is bound -
+    which happens legitimately for a repeat client/freelancer pair, since
+    dm_thread is UNIQUE per user pair and stays bound to the first contract.
+    """
+    return _rows(get_db().execute_query(
+        """
+        SELECT m.sender_id, m.message_text, m.sent_at
+        FROM dm_message m
+        JOIN dm_thread t ON t.thread_id = m.thread_id
+        WHERE t.contract_id = :cid
+        ORDER BY m.sent_at DESC
+        LIMIT :limit
+        """,
+        params={"cid": contract_id, "limit": limit},
+    ))[::-1]
+
+
+def _client_reviewer_context(client_id: str, exclude_review_id: str) -> Dict:
+    """History of the client writing this review.
+
+    Coercion and retaliation are patterns across a reviewer's history, not
+    properties of a single review, so one review in isolation cannot show them.
+    """
+    counts = _row(get_db().execute_query(
+        """
+        SELECT COUNT(*) AS total,
+               COUNT(*) FILTER (WHERE status IN ('flagged', 'suppressed')) AS held,
+               COUNT(*) FILTER (WHERE status = 'published') AS published
+        FROM reviews WHERE reviewer_id = :cid AND id <> :rid
+        """,
+        params={"cid": client_id, "rid": exclude_review_id},
+    )) or {}
+    profile = _row(get_db().execute_query(
+        """
+        SELECT c.full_name, u.email, cts.trust_score, cts.total_reviews_received
+        FROM client c
+        LEFT JOIN users u ON u.user_id = c.user_id
+        LEFT JOIN client_trust_score cts ON cts.client_id = c.client_id
+        WHERE c.client_id = :cid
+        """,
+        params={"cid": client_id},
+    )) or {}
+    return {**profile, "prior_reviews_written": counts}
+
+
+def _freelancer_reviewer_context(freelancer_id: str, exclude_review_id: str) -> Dict:
+    """History of the freelancer writing this client review."""
+    counts = _row(get_db().execute_query(
+        """
+        SELECT COUNT(*) AS total,
+               COUNT(*) FILTER (WHERE status IN ('flagged', 'suppressed')) AS held,
+               COUNT(*) FILTER (WHERE status = 'published') AS published
+        FROM client_reviews WHERE reviewer_id = :fid AND id <> :rid
+        """,
+        params={"fid": freelancer_id, "rid": exclude_review_id},
+    )) or {}
+    profile = _row(get_db().execute_query(
+        """
+        SELECT f.full_name, u.email, fts.overall_score AS trust_score, fts.total_reviews
+        FROM freelancer f
+        LEFT JOIN users u ON u.user_id = f.user_id
+        LEFT JOIN freelancer_trust_scores fts ON fts.freelancer_id = f.freelancer_id
+        WHERE f.freelancer_id = :fid
+        """,
+        params={"fid": freelancer_id},
+    )) or {}
+    return {**profile, "prior_reviews_written": counts}
+
+
 def list_flagged_reviews(
-    status: str = "all",  
+    status: str = "all",
     sort_by: str = "created_at",
     sort_dir: str = "desc",
     page: int = 1,
     page_size: int = 20,
-) -> List[Dict]:
+) -> Dict:
     """Reviews held back from publishing (overall_pass=false), with the AI
-    analysis that caused the hold, for manual admin review."""
+    analysis that caused the hold, for manual admin review.
+
+    Triage payload only - enough to sort and prioritise the queue. The full
+    moderation record for a single review comes from
+    get_review_moderation_detail(); loading telemetry, DM threads and per-model
+    breakdowns for every row would make the queue expensive to no purpose.
+
+    Returns a _paged envelope, NOT a bare list.
+    """
     offset       = (page - 1) * page_size
-    sort_col     = _FLAGGED_REVIEW_SORT_COLS.get(sort_by, "r.created_at")
+    sort_col     = _MODERATION_SORT_COLS.get(sort_by, "r.created_at")
     direction    = "ASC" if sort_dir.lower() == "asc" else "DESC"
     status_filter = "r.status IN ('flagged', 'suppressed')" if status == "all" else "r.status = :status"
-    return _rows(get_db().execute_query(
+
+    total_row = _row(get_db().execute_query(
+        f"SELECT COUNT(*) AS total FROM reviews r WHERE {status_filter}",
+        params={"status": status},
+    )) or {"total": 0}
+
+    items = _rows(get_db().execute_query(
         f"""
         SELECT r.id, r.contract_id, r.freelancer_id, r.reviewer_id, r.status,
                r.inferred_category, r.created_at,
                f.full_name AS freelancer_name,
+               cl.full_name AS reviewer_name,
                wc.overall_comment,
                ra.sentiment_score, ra.sentiment_label, ra.sentiment_mismatch, ra.disagreement_probability,
                ra.authenticity_score, ra.is_flagged_fake, ra.is_flagged_coerced, ra.flag_reasons,
-               ra.overall_pass
+               ra.overall_pass, ra.analyzed_at,
+               rt.avg_stars, rt.rating_count
         FROM reviews r
         JOIN freelancer f ON f.freelancer_id = r.freelancer_id
+        LEFT JOIN client cl ON cl.client_id = r.reviewer_id
         LEFT JOIN review_written_content wc ON wc.review_id = r.id
         LEFT JOIN review_ai_analysis     ra ON ra.review_id = r.id
+        LEFT JOIN LATERAL (
+            SELECT ROUND(AVG(score), 3) AS avg_stars, COUNT(*) AS rating_count
+            FROM review_ratings WHERE review_id = r.id
+        ) rt ON TRUE
         WHERE {status_filter}
-        ORDER BY {sort_col} {direction}
+        ORDER BY {sort_col} {direction} NULLS LAST
         LIMIT :limit OFFSET :offset
         """,
         params={"status": status, "limit": page_size, "offset": offset},
     ))
 
-async def override_publish_review(review_id: str, admin_user_id: str) -> Optional[Dict]:
+    for item in items:
+        reasons = item.get("flag_reasons") or []
+        if isinstance(reasons, str):
+            try:
+                reasons = json.loads(reasons)
+            except json.JSONDecodeError:
+                reasons = [reasons]
+        item["flag_reason_count"] = len(reasons)
+        item["analysis_unavailable"] = _analysis_unavailable(reasons)
+        # 'suppressed' is the pipeline's high-confidence verdict, 'flagged' means
+        # it wanted a human. Different severities, so the queue must not mix them.
+        item["hold_level"] = item.get("status")
+
+    return _paged(items, int(total_row["total"]), page, page_size)
+
+
+def get_review_moderation_detail(review_id: str) -> Optional[Dict]:
+    """Everything an admin needs to rule on one held freelancer review.
+
+    Assembles what the queue deliberately leaves out: the star ratings the hold
+    usually turns on, the targeted question with its answer (answer_groundedness
+    is 20% of the blended authenticity score and unreadable without both), the
+    objective contract record the LLM's reasons cite, the per-model breakdown,
+    the reviewer's history, and the DM thread.
+    """
+    review = _row(get_db().execute_query(
+        """
+        SELECT r.id, r.contract_id, r.reviewer_id, r.freelancer_id, r.status,
+               r.inferred_category, r.is_anonymous, r.created_at, r.published_at,
+               f.full_name AS freelancer_name,
+               wc.ai_question, wc.client_answer, wc.overall_comment,
+               ra.sentiment_score, ra.sentiment_label, ra.sentiment_mismatch,
+               ra.disagreement_probability, ra.authenticity_score, ra.is_flagged_fake,
+               ra.is_flagged_coerced, ra.flag_reasons, ra.overall_pass, ra.analyzed_at
+        FROM reviews r
+        JOIN freelancer f ON f.freelancer_id = r.freelancer_id
+        LEFT JOIN review_written_content wc ON wc.review_id = r.id
+        LEFT JOIN review_ai_analysis     ra ON ra.review_id = r.id
+        WHERE r.id = :rid
+        """,
+        params={"rid": review_id},
+    ))
+    if not review:
+        return None
+
+    return {
+        "review_kind": "freelancer_review",
+        "review": review,
+        "hold_level": review.get("status"),
+        "analysis_unavailable": _analysis_unavailable(review.get("flag_reasons")),
+        "ratings": _ratings_for("review_ratings", "review_id", review_id),
+        "components": _component_breakdown(review_id),
+        "blend_weights": {"llm": 0.4, "authenticity_model": 0.4, "answer_groundedness": 0.2},
+        "telemetry": _contract_telemetry(str(review["contract_id"])),
+        "reviewer": _client_reviewer_context(str(review["reviewer_id"]), review_id),
+        "dm_thread": _dm_excerpt(str(review["contract_id"])),
+        "skill_tags": _rows(get_db().execute_query(
+            "SELECT skill_tag, is_ai_suggested FROM review_skill_tags WHERE review_id = :rid",
+            params={"rid": review_id},
+        )),
+    }
+
+def _prior_review_snapshot(review_id: str) -> Optional[Dict]:
+    return _row(get_db().execute_query(
+        """
+        SELECT r.status, ra.sentiment_score, ra.sentiment_label, ra.sentiment_mismatch,
+               ra.disagreement_probability, ra.authenticity_score, ra.is_flagged_fake,
+               ra.is_flagged_coerced, ra.flag_reasons, ra.overall_pass
+        FROM reviews r
+        LEFT JOIN review_ai_analysis ra ON ra.review_id = r.id
+        WHERE r.id = :rid
+        """,
+        params={"rid": review_id},
+    ))
+
+
+async def uphold_review(review_id: str, admin_user_id: str,
+                        reason: Optional[str] = None) -> Optional[Dict]:
+    """Confirm the pipeline was right to hold this review.
+
+    Moves 'flagged' to 'suppressed': the hold stops being a request for a human
+    and becomes a final decision, which also clears it out of the pending queue
+    without needing a new column. An already-suppressed review stays suppressed -
+    the status does not change, but the ruling is still logged, because the label
+    is the point.
+
+    Deliberately symmetric with override_publish_review. An admin agreeing with
+    the pipeline is as useful a training label as one reversing it, and capturing
+    only reversals would build a dataset consisting entirely of pipeline errors.
+    """
+    prior = _prior_review_snapshot(review_id)
+    if not prior:
+        return None
+
+    updated = _row(get_db().execute_query(
+        """
+        UPDATE reviews
+        SET status = 'suppressed'
+        WHERE id = :rid AND status IN ('flagged', 'suppressed')
+        RETURNING *
+        """,
+        params={"rid": review_id},
+    ))
+    if not updated:
+        return None
+
+    logger("ADMIN", f"Review {review_id} hold upheld by {admin_user_id}", level="INFO")
+    log_admin_override(
+        review_id=review_id,
+        review_kind="freelancer_review",
+        admin_user_id=admin_user_id,
+        action="uphold",
+        prior_status=prior.get("status"),
+        prior_analysis={k: v for k, v in prior.items() if k != "status"},
+        reason=reason,
+    )
+    # No trust-score recalculation and no reviewer notification: nothing was
+    # published, so no reputation input changed, and the reviewer was already told
+    # the review was held when the pipeline held it.
+    return updated
+
+
+async def override_publish_review(review_id: str, admin_user_id: str,
+                                  reason: Optional[str] = None) -> Optional[Dict]:
     # Captured BEFORE the update: an override is a human saying the pipeline got this
     # wrong, and the label only means something alongside the judgment being
     # reversed. These are the only true labels available for the publish decision
@@ -2197,6 +2871,7 @@ async def override_publish_review(review_id: str, admin_user_id: str) -> Optiona
         action="override_publish",
         prior_status=(prior or {}).get("status"),
         prior_analysis={k: v for k, v in (prior or {}).items() if k != "status"},
+        reason=reason,
     )
 
     freelancer_name = "the freelancer"
@@ -2226,39 +2901,178 @@ _FLAGGED_CLIENT_REVIEW_SORT_COLS = {
     "status":     "cr.status",
 }
 
+_CLIENT_MODERATION_SORT_COLS = {
+    "created_at":   "cr.created_at",
+    "status":       "cr.status",
+    "authenticity": "cra.authenticity_score",
+    "disagreement": "cra.disagreement_probability",
+}
+
+
 def list_flagged_client_reviews(
-    status: str = "all", 
+    status: str = "all",
     sort_by: str = "created_at",
     sort_dir: str = "desc",
     page: int = 1,
     page_size: int = 20,
-) -> List[Dict]:
+) -> Dict:
     """Client reviews (written by freelancers) held back from publishing -
-    counterpart to list_flagged_reviews for the freelancer-reviews-client system."""
+    counterpart to list_flagged_reviews for the freelancer-reviews-client system.
+
+    Same triage-only contract and same _paged envelope; full record comes from
+    get_client_review_moderation_detail().
+    """
     offset        = (page - 1) * page_size
-    sort_col      = _FLAGGED_CLIENT_REVIEW_SORT_COLS.get(sort_by, "cr.created_at")
+    sort_col      = _CLIENT_MODERATION_SORT_COLS.get(sort_by, "cr.created_at")
     direction     = "ASC" if sort_dir.lower() == "asc" else "DESC"
     status_filter = "cr.status IN ('flagged', 'suppressed')" if status == "all" else "cr.status = :status"
-    return _rows(get_db().execute_query(
+
+    total_row = _row(get_db().execute_query(
+        f"SELECT COUNT(*) AS total FROM client_reviews cr WHERE {status_filter}",
+        params={"status": status},
+    )) or {"total": 0}
+
+    items = _rows(get_db().execute_query(
         f"""
         SELECT cr.id, cr.contract_id, cr.reviewer_id, cr.client_id, cr.status, cr.created_at,
                c.full_name AS client_name,
+               fr.full_name AS reviewer_name,
                wc.overall_comment,
                cra.sentiment_score, cra.sentiment_label, cra.sentiment_mismatch, cra.disagreement_probability,
                cra.authenticity_score, cra.is_flagged_fake, cra.is_flagged_coerced, cra.flag_reasons,
-               cra.overall_pass
+               cra.overall_pass, cra.analyzed_at,
+               rt.avg_stars, rt.rating_count
         FROM client_reviews cr
         JOIN client c ON c.client_id = cr.client_id
+        LEFT JOIN freelancer fr ON fr.freelancer_id = cr.reviewer_id
         LEFT JOIN client_review_written_content wc ON wc.client_review_id = cr.id
         LEFT JOIN client_review_ai_analysis     cra ON cra.client_review_id = cr.id
+        LEFT JOIN LATERAL (
+            SELECT ROUND(AVG(score), 3) AS avg_stars, COUNT(*) AS rating_count
+            FROM client_review_ratings WHERE client_review_id = cr.id
+        ) rt ON TRUE
         WHERE {status_filter}
-        ORDER BY {sort_col} {direction}
+        ORDER BY {sort_col} {direction} NULLS LAST
         LIMIT :limit OFFSET :offset
         """,
         params={"status": status, "limit": page_size, "offset": offset},
     ))
 
-async def override_publish_client_review(client_review_id: str, admin_user_id: str) -> Optional[Dict]:
+    for item in items:
+        reasons = item.get("flag_reasons") or []
+        if isinstance(reasons, str):
+            try:
+                reasons = json.loads(reasons)
+            except json.JSONDecodeError:
+                reasons = [reasons]
+        item["flag_reason_count"] = len(reasons)
+        item["analysis_unavailable"] = _analysis_unavailable(reasons)
+        item["hold_level"] = item.get("status")
+
+    return _paged(items, int(total_row["total"]), page, page_size)
+
+
+def get_client_review_moderation_detail(client_review_id: str) -> Optional[Dict]:
+    """Everything an admin needs to rule on one held client review.
+
+    Differs from the freelancer side in two ways the UI has to respect:
+      * four rating categories, not five - a client review does not rate
+        `timeliness`, because that is the freelancer's own delivery.
+      * the objective counterpart is the CLIENT's lifetime trust components, not
+        this contract's telemetry, because compute_client_responsiveness_score
+        aggregates across all of that client's contracts. Both are returned, and
+        `subject_lifetime_scores` is the one the ratings should be read against;
+        `telemetry` is engagement context only.
+    """
+    review = _row(get_db().execute_query(
+        """
+        SELECT cr.id, cr.contract_id, cr.reviewer_id, cr.client_id, cr.status,
+               cr.is_anonymous, cr.created_at, cr.published_at,
+               c.full_name AS client_name,
+               wc.ai_question, wc.freelancer_answer, wc.overall_comment,
+               cra.sentiment_score, cra.sentiment_label, cra.sentiment_mismatch,
+               cra.disagreement_probability, cra.authenticity_score, cra.is_flagged_fake,
+               cra.is_flagged_coerced, cra.flag_reasons, cra.overall_pass, cra.analyzed_at
+        FROM client_reviews cr
+        JOIN client c ON c.client_id = cr.client_id
+        LEFT JOIN client_review_written_content wc ON wc.client_review_id = cr.id
+        LEFT JOIN client_review_ai_analysis     cra ON cra.client_review_id = cr.id
+        WHERE cr.id = :rid
+        """,
+        params={"rid": client_review_id},
+    ))
+    if not review:
+        return None
+
+    subject = _row(get_db().execute_query(
+        """
+        SELECT trust_score, responsiveness_score, communication_sentiment,
+               authenticity_confidence, consistency_score, dispute_fairness_score,
+               total_reviews_received
+        FROM client_trust_score WHERE client_id = :cid
+        """,
+        params={"cid": str(review["client_id"])},
+    ))
+
+    return {
+        "review_kind": "client_review",
+        "review": review,
+        "hold_level": review.get("status"),
+        "analysis_unavailable": _analysis_unavailable(review.get("flag_reasons")),
+        "ratings": _ratings_for("client_review_ratings", "client_review_id", client_review_id),
+        "components": _component_breakdown(client_review_id),
+        "blend_weights": {"llm": 0.4, "authenticity_model": 0.4, "answer_groundedness": 0.2},
+        "telemetry": _contract_telemetry(str(review["contract_id"])),
+        "subject_lifetime_scores": subject,
+        "reviewer": _freelancer_reviewer_context(str(review["reviewer_id"]), client_review_id),
+        "dm_thread": _dm_excerpt(str(review["contract_id"])),
+    }
+
+
+async def uphold_client_review(client_review_id: str, admin_user_id: str,
+                               reason: Optional[str] = None) -> Optional[Dict]:
+    """Confirm the pipeline was right to hold this client review - see uphold_review."""
+    prior = _row(get_db().execute_query(
+        """
+        SELECT cr.status, cra.sentiment_score, cra.sentiment_label, cra.sentiment_mismatch,
+               cra.disagreement_probability, cra.authenticity_score, cra.is_flagged_fake,
+               cra.is_flagged_coerced, cra.flag_reasons, cra.overall_pass
+        FROM client_reviews cr
+        LEFT JOIN client_review_ai_analysis cra ON cra.client_review_id = cr.id
+        WHERE cr.id = :rid
+        """,
+        params={"rid": client_review_id},
+    ))
+    if not prior:
+        return None
+
+    updated = _row(get_db().execute_query(
+        """
+        UPDATE client_reviews
+        SET status = 'suppressed'
+        WHERE id = :rid AND status IN ('flagged', 'suppressed')
+        RETURNING *
+        """,
+        params={"rid": client_review_id},
+    ))
+    if not updated:
+        return None
+
+    logger("ADMIN", f"Client review {client_review_id} hold upheld by {admin_user_id}", level="INFO")
+    log_admin_override(
+        review_id=client_review_id,
+        review_kind="client_review",
+        admin_user_id=admin_user_id,
+        action="uphold",
+        prior_status=prior.get("status"),
+        prior_analysis={k: v for k, v in prior.items() if k != "status"},
+        reason=reason,
+    )
+    return updated
+
+
+async def override_publish_client_review(client_review_id: str, admin_user_id: str,
+                                         reason: Optional[str] = None) -> Optional[Dict]:
     # Captured before the update - see override_publish_review.
     prior = _row(get_db().execute_query(
         """
@@ -2293,6 +3107,7 @@ async def override_publish_client_review(client_review_id: str, admin_user_id: s
         action="override_publish",
         prior_status=(prior or {}).get("status"),
         prior_analysis={k: v for k, v in (prior or {}).items() if k != "status"},
+        reason=reason,
     )
 
     client_name = "the client"

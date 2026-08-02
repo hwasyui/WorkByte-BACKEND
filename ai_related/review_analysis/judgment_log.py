@@ -121,12 +121,23 @@ def log_admin_override(
     action: str,
     prior_status: Optional[str] = None,
     prior_analysis: Optional[Dict[str, Any]] = None,
+    reason: Optional[str] = None,
 ) -> None:
     """
-    A human correcting the pipeline. `prior_analysis` should carry the stored
-    analysis row as it was BEFORE the override, since that is what the label
-    attaches to - without it the record says a decision was reversed but not what
-    was reversed.
+    A human ruling on the pipeline's decision. `prior_analysis` should carry the
+    stored analysis row as it was BEFORE the action, since that is what the label
+    attaches to - without it the record says a decision was ruled on but not what
+    was ruled on.
+
+    `action` is "override_publish" when the human reversed the hold and
+    "uphold" when they confirmed it. BOTH are labels. An agreement is as
+    informative for training as a reversal - it says the pipeline was right on a
+    case it was unsure enough about to hold - and logging only reversals would
+    build a set of nothing but pipeline errors.
+
+    `reason` is the admin's free-text justification. It is the only place the
+    human's actual reasoning is recorded; the status change alone says what was
+    decided but never why.
     """
     _append({
         "event": "admin_override",
@@ -136,4 +147,47 @@ def log_admin_override(
         "action": action,
         "prior_status": prior_status,
         "prior_analysis": prior_analysis,
+        "reason": reason,
     })
+
+
+def read_latest_judgment(review_id: str) -> Optional[Dict[str, Any]]:
+    """
+    The most recent pipeline_judgment record for a review, or None.
+
+    This is the ONLY source of the per-component breakdown. review_ai_analysis
+    stores the blended authenticity_score but not its three inputs, nor the raw
+    vs length-calibrated P(fake), nor which model objected - so an admin looking
+    at a held review cannot otherwise tell whether the LLM or the classifier
+    raised the objection they are being asked to adjudicate.
+
+    Reads the whole file and keeps the last match rather than stopping at the
+    first: the log is append-only and the reconcile sweep re-runs interrupted
+    analyses, so a review can hold several records and the last one is the one
+    that produced the stored verdict.
+
+    Returns None when the log is missing, unreadable, or has no record for this
+    review - all of which are normal (logs/ is gitignored and reviews analysed
+    before judgment logging existed have no entry). Callers must treat the
+    breakdown as optional rather than failing the admin view without it.
+    """
+    if not os.path.exists(JUDGMENT_LOG_PATH):
+        return None
+    target = str(review_id)
+    latest = None
+    try:
+        with open(JUDGMENT_LOG_PATH, encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line or target not in line:
+                    continue
+                try:
+                    record = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if record.get("event") == "pipeline_judgment" and record.get("review_id") == target:
+                    latest = record
+    except Exception as e:
+        logger("JUDGMENT_LOG", f"Could not read judgment log: {str(e)[:200]}", level="WARNING")
+        return None
+    return latest

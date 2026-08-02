@@ -14,7 +14,7 @@ from routes.proposals.proposal_functions import ProposalFunctions
 from routes.notifications.notification_functions import NotificationFunctions
 from routes.freelancers.freelancer_functions import FreelancerFunctions
 from routes.clients.client_functions import ClientFunctions
-
+from ai_related.job_engine.embedding_manager import mark_contract_dirty
 
 def _fire_notification(coro) -> None:
     """Schedule a notify() coroutine from sync code, whether this runs on the
@@ -259,10 +259,6 @@ class ContractFunctions:
         try:
             db = get_db()
             contract_id = contract_id or str(uuid.uuid4())
-
-            # Hiring is tracked per role, so a team project keeps other roles open.
-            # Claim the slot in one atomic UPDATE before the contract exists, so two
-            # concurrent creations can't both take the last position.
             role_fill_rows = db.execute_query(
                 """
                 UPDATE job_role
@@ -299,8 +295,6 @@ class ContractFunctions:
             try:
                 db.insert_data(table_name="contract", data=contract_data)
             except Exception:
-                # Contract row failed after the slot was already claimed - give
-                # the slot back so it isn't stuck reserved for nothing.
                 db.execute_query(
                     "UPDATE job_role SET positions_filled = GREATEST(positions_filled - 1, 0) WHERE job_role_id = :jrid",
                     {"jrid": job_role_id},
@@ -322,8 +316,6 @@ class ContractFunctions:
                         data={"job_role_id": job_role_id},
                     ))
 
-                # This role just filled, so mark the post 'filled' if every other role
-                # is full too. Only touches an active post.
                 all_roles_filled = db.execute_query(
                     """
                     SELECT NOT EXISTS (
@@ -340,7 +332,6 @@ class ContractFunctions:
                     )
                     logger("CONTRACT_FUNCTIONS", f"Job post {job_post_id} auto-marked 'filled' - all roles fully staffed", level="INFO")
 
-            # Resolve actual user_id from client profile
             client_rows = db.fetch_data(
                 table_name="client",
                 conditions=[("client_id", "=", client_id)],
@@ -418,13 +409,11 @@ class ContractFunctions:
                             data={"total_jobs": current_total + 1},
                             conditions=[("freelancer_id", "=", freelancer_id)],
                         )
-
-                # Auto-create a portfolio entry linking back to the contract. Left out
-                # of portfolio_embedding since contract_embedding already covers it.
                 ContractFunctions._create_auto_portfolio_entry(
                     contract_id=contract_id,
                     contract=existing_contract,
                 )
+                mark_contract_dirty(contract_id)
 
             logger("CONTRACT_FUNCTIONS", f"Contract {contract_id} updated", level="INFO")
             return ContractFunctions.get_contract_by_id(contract_id)
@@ -588,6 +577,11 @@ class ContractFunctions:
             logger("CONTRACT_FUNCTIONS", f"Error deleting contract: {str(e)}", level="ERROR")
             raise
 
+    # Cancellable from the route, plus 'disputed' so arbitration can cancel. The write
+    # below is conditional on these, which is what makes the check in the route safe:
+    # the autoapprove sweep can complete a contract between that check and this write.
+    _CANCELLABLE_FROM = ("active", "under_review", "revision_requested", "disputed")
+
     @staticmethod
     def cancel_contract(
         contract_id: str,
@@ -600,14 +594,32 @@ class ContractFunctions:
             if not contract:
                 raise Exception("Contract not found")
 
-            update_data = {
-                "status": "cancelled",
-                "end_date": datetime.now(timezone.utc).date(),
-                "cancelled_by": cancelled_by,
-            }
-            if reason:
-                update_data["cancellation_reason"] = reason
-            updated_contract = ContractFunctions.update_contract(contract_id, update_data)
+            rows = get_db().execute_query(
+                """
+                UPDATE contract
+                SET status              = 'cancelled',
+                    end_date            = :end_date,
+                    cancelled_by        = :cancelled_by,
+                    cancellation_reason = COALESCE(:reason, cancellation_reason)
+                WHERE contract_id = :cid
+                  AND status::text = ANY(:statuses)
+                RETURNING contract_id
+                """,
+                {
+                    "cid": contract_id,
+                    "end_date": datetime.now(timezone.utc).date(),
+                    "cancelled_by": cancelled_by,
+                    "reason": reason or None,
+                    "statuses": list(ContractFunctions._CANCELLABLE_FROM),
+                },
+            )
+            if not rows:
+                current = ContractFunctions.get_contract_by_id(contract_id)
+                raise ValueError(
+                    f"This contract is no longer in a cancellable state "
+                    f"(it is now '{(current or {}).get('status')}')."
+                )
+            updated_contract = ContractFunctions.get_contract_by_id(contract_id)
 
             if contract.get("proposal_id"):
                 ContractFunctions._revert_proposal_on_contract_removal(
@@ -632,6 +644,71 @@ class ContractFunctions:
             raise
 
     @staticmethod
+    def get_cancelled_at(contract_id: str) -> Optional[datetime]:
+        """When the contract was actually cancelled, read off the cancellation system
+        event. contract.updated_at is not a stand-in for this: every later write to the
+        row moves it, which would silently restart the dispute window. Returns None when
+        no cancellation event exists, so callers keep their own fallback."""
+        try:
+            rows = get_db().execute_query(
+                """
+                SELECT dm.sent_at
+                FROM dm_message dm
+                JOIN dm_thread dt ON dt.thread_id = dm.thread_id
+                WHERE dm.metadata::jsonb->>'type' = 'contract_cancelled'
+                  AND COALESCE(dm.metadata::jsonb->>'contract_id', dt.contract_id::text) = :cid
+                ORDER BY dm.sent_at DESC
+                LIMIT 1
+                """,
+                {"cid": str(contract_id)},
+            )
+            return rows[0]["sent_at"] if rows else None
+        except Exception as e:
+            logger("CONTRACT_FUNCTIONS", f"Failed to resolve cancellation time for {contract_id}: {e}", level="WARNING")
+            return None
+
+    @staticmethod
+    def _restore_proposal_on_contract_reinstated(proposal_id: str, job_role_id: Optional[str] = None) -> None:
+        """Inverse of _revert_proposal_on_contract_removal, for a cancellation that
+        arbitration overturned. Only acts on a proposal still sitting at 'rejected', so
+        it stays a no-op when the contract was never cancelled. Non-fatal."""
+        try:
+            proposal = ProposalFunctions.get_proposal_by_id(str(proposal_id))
+            if not proposal or proposal.get("status") != "rejected":
+                return
+            ProposalFunctions.update_proposal(str(proposal_id), {"status": "accepted"})
+            logger(
+                "CONTRACT_FUNCTIONS",
+                f"Proposal {proposal_id} restored to 'accepted' after its cancellation was overturned",
+                level="INFO",
+            )
+            if job_role_id:
+                role_rows = get_db().execute_query(
+                    """
+                    UPDATE job_role
+                    SET positions_filled = LEAST(positions_filled + 1, positions_available)
+                    WHERE job_role_id = :jrid
+                    RETURNING job_post_id, positions_filled, positions_available
+                    """,
+                    {"jrid": job_role_id},
+                )
+                if role_rows and role_rows[0]["positions_filled"] >= role_rows[0]["positions_available"]:
+                    get_db().execute_query(
+                        "UPDATE job_post SET status = 'filled' WHERE job_post_id = :jpid AND status = 'active'",
+                        {"jpid": role_rows[0]["job_post_id"]},
+                    )
+        except Exception as e:
+            logger(
+                "CONTRACT_FUNCTIONS",
+                f"Failed to restore proposal {proposal_id} after reinstating contract (non-fatal): {e}",
+                level="WARNING",
+            )
+
+    # Statuses a dispute can be raised from. 'cancelled' is the recourse against a
+    # cancellation; the route decides whether that window is still open.
+    _DISPUTABLE_FROM = ("under_review", "revision_requested", "cancelled")
+
+    @staticmethod
     def raise_dispute(contract_id: str, raised_by: str, reason: str) -> Optional[Dict]:
         """Flip a contract into 'disputed' (status/value both already exist in the
         contract_status enum - see create_table.sql). The reason and every subsequent
@@ -642,7 +719,22 @@ class ContractFunctions:
             if not contract:
                 raise Exception("Contract not found")
 
-            updated_contract = ContractFunctions.update_contract(contract_id, {"status": "disputed"})
+            rows = get_db().execute_query(
+                """
+                UPDATE contract SET status = 'disputed'
+                WHERE contract_id = :cid
+                  AND status::text = ANY(:statuses)
+                RETURNING contract_id
+                """,
+                {"cid": contract_id, "statuses": list(ContractFunctions._DISPUTABLE_FROM)},
+            )
+            if not rows:
+                current = ContractFunctions.get_contract_by_id(contract_id)
+                raise ValueError(
+                    f"This contract can no longer be disputed "
+                    f"(it is now '{(current or {}).get('status')}')."
+                )
+            updated_contract = ContractFunctions.get_contract_by_id(contract_id)
 
             try:
                 DMFunctions.send_system_event(
@@ -679,6 +771,12 @@ class ContractFunctions:
             if not contract:
                 raise Exception("Contract not found")
 
+            overturns_cancellation = (
+                outcome in {"approve", "revise"}
+                and contract.get("cancelled_by")
+                and contract.get("proposal_id")
+            )
+
             if outcome == "approve":
                 latest_submission = ContractSubmissionFunctions.get_latest_submission_by_contract_id(contract_id)
                 if latest_submission and latest_submission.get("status") == "submitted":
@@ -692,10 +790,20 @@ class ContractFunctions:
             elif outcome == "revise":
                 if not new_deadline:
                     raise ValueError("new_deadline is required when outcome='revise'")
-                ContractSubmissionFunctions.request_revision_for_latest_submission(contract_id, note=note)
+                revised = ContractSubmissionFunctions.request_revision_for_latest_submission(contract_id, note=note)
+                if not revised:
+                    raise ValueError(
+                        "Cannot resolve as 'revise': this contract has no submitted work to send back. "
+                        "Use 'approve' or 'cancel' instead."
+                    )
                 ContractFunctions.update_contract(contract_id, {"end_date": new_deadline})
             else:
                 raise ValueError(f"Invalid outcome: {outcome}")
+
+            if overturns_cancellation:
+                ContractFunctions._restore_proposal_on_contract_reinstated(
+                    contract["proposal_id"], contract.get("job_role_id")
+                )
 
             try:
                 DMFunctions.send_system_event(
@@ -764,8 +872,6 @@ class ContractFunctions:
             logger("CONTRACT_FUNCTIONS", f"Error in overdue contract sweep: {str(e)}", level="ERROR")
             return 0
 
-    # One strike below AUTO_APPROVE_BAN_THRESHOLD. Flips the label below so freelancers
-    # get a warning without seeing the raw strike count.
     _RELIABILITY_WARNING_THRESHOLD = 2
 
     @staticmethod
@@ -775,8 +881,8 @@ class ContractFunctions:
         for the ban penalty, no separate storage needed."""
         count = _count_notifications("contract_auto_approved", client_user_id)
         if count >= ContractFunctions._RELIABILITY_WARNING_THRESHOLD:
-            return "Kurang Responsif"
-        return "Responsif"
+            return "Less Responsive"
+        return "Responsive"
 
     @staticmethod
     def get_client_autoapprove_history(client_user_id: str) -> List[Dict]:

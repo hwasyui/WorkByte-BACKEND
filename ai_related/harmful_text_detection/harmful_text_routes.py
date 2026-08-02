@@ -18,19 +18,13 @@ from ai_related.harmful_text_detection.model_inference import (
 )
 
 # dev only routes.
-# The app scans server-side via scan_harmful_text_with_ml_fallback(), so these are only
-# for manual testing. detect and detect-batch are auth-gated since they run real
-# inference; labels and models are static metadata and stay open.
 harmful_text_router = APIRouter(prefix="/harmful-text", tags=["Harmful Text Detection"])
-
 
 class TextInput(BaseModel):
     text: str
 
-
 class BatchTextInput(BaseModel):
     texts: List[str]
-
 
 # dev only
 @harmful_text_router.post("/detect", response_model=None)
@@ -57,7 +51,6 @@ async def detect_harmful_text(
     except Exception as e:
         logger("HARMFUL_TEXT", f"Detection failed: {str(e)}", level="ERROR")
         raise HTTPException(status_code=500, detail="Harmful text detection failed. Please try again.")
-
 
 # dev only
 @harmful_text_router.post("/detect-batch", response_model=None)
@@ -97,7 +90,6 @@ async def detect_harmful_text_batch(
         logger("HARMFUL_TEXT", f"Batch detection failed: {str(e)}", level="ERROR")
         raise HTTPException(status_code=500, detail="Harmful text batch detection failed. Please try again.")
 
-
 # dev only
 @harmful_text_router.get("/labels", response_model=None)
 async def get_labels() -> Dict[str, Any]:
@@ -111,9 +103,7 @@ async def get_labels() -> Dict[str, Any]:
     }
     return ResponseSchema.success(labels_info)
 
-
-# dev/admin only - reports which trained model folders exist on the server, which is
-# infrastructure detail, so it's admin-gated rather than open.
+# dev only
 @harmful_text_router.get("/models", response_model=None)
 async def get_available_models(
     current_user: UserInDB = Depends(get_admin_user),
