@@ -16,21 +16,15 @@ from ai_related.job_engine.source_text_builder import (
     build_portfolio_source_text,
 )
 
-_THRESHOLD_FREELANCER  = 500
-_THRESHOLD_JOB         = 1000
-_THRESHOLD_CONTRACT    = 2000
-_THRESHOLD_TTL_SECONDS = 7200  
+_IMMEDIATE_MAX_RECORDS = 600
+_THRESHOLD_TTL_SECONDS = 7200
 
 _cached_immediate: bool | None = None
 _cache_loaded_at: float = 0.0  
 
 
 def _should_embed_immediately() -> bool:
-    """
-    Return True when all entity counts are below their thresholds.
-    Result is cached for 2 hours so the DB is queried at most once per TTL window,
-    starting from the first call after backend startup.
-    """
+    """Return True while every embeddable entity still fits in one sweep interval."""
     global _cached_immediate, _cache_loaded_at
 
     now = time.monotonic()
@@ -41,28 +35,30 @@ def _should_embed_immediately() -> bool:
         db = get_db()
         result = db.execute_query(
             """SELECT
-                 (SELECT COUNT(*) FROM freelancer) AS freelancer_count,
-                 (SELECT COUNT(*) FROM job_post)   AS job_count,
-                 (SELECT COUNT(*) FROM contract)   AS contract_count"""
+                 (SELECT COUNT(*) FROM freelancer)                            AS freelancer_count,
+                 (SELECT COUNT(*) FROM job_role)                              AS job_role_count,
+                 (SELECT COUNT(*) FROM contract WHERE status = 'completed')   AS contract_count,
+                 (SELECT COUNT(*) FROM portfolio WHERE is_auto_generated IS NOT TRUE) AS portfolio_count"""
         )
         if not result:
             _cached_immediate = False
             _cache_loaded_at = now
             return False
         row = result[0]
-        below = (
-            int(row["freelancer_count"]) < _THRESHOLD_FREELANCER
-            and int(row["job_count"]) < _THRESHOLD_JOB
-            and int(row["contract_count"]) < _THRESHOLD_CONTRACT
-        )
+        counts = {
+            "freelancers": int(row["freelancer_count"]),
+            "job_roles":   int(row["job_role_count"]),
+            "contracts":   int(row["contract_count"]),
+            "portfolios":  int(row["portfolio_count"]),
+        }
+        below = all(c < _IMMEDIATE_MAX_RECORDS for c in counts.values())
         _cached_immediate = below
         _cache_loaded_at = now
         logger(
             "EMBEDDING_MANAGER",
-            f"Threshold cache refreshed | freelancers={row['freelancer_count']}/{_THRESHOLD_FREELANCER} "
-            f"| jobs={row['job_count']}/{_THRESHOLD_JOB} "
-            f"| contracts={row['contract_count']}/{_THRESHOLD_CONTRACT} "
-            f"| mode={'immediate' if below else 'sweep'} | next_check_in=2h",
+            "Threshold cache refreshed | "
+            + " | ".join(f"{k}={v}/{_IMMEDIATE_MAX_RECORDS}" for k, v in counts.items())
+            + f" | mode={'immediate' if below else 'sweep'} | next_check_in=2h",
             level="INFO",
         )
         return below
@@ -82,11 +78,7 @@ def _schedule_immediate(coro) -> None:
 
 
 def mark_freelancer_dirty(freelancer_id: str) -> None:
-    """
-    Flag a freelancer's embedding as stale, or embed immediately if below the size threshold.
-    Always upserts the dirty row so the sweep can recover even if the immediate embed fails.
-    Swallows exceptions so a dirty-flag failure never breaks the calling mutation.
-    """
+    """Flag a freelancer's embedding as stale, or embed immediately if below the size threshold."""
     try:
         db = get_db()
         existing = db.execute_query(
@@ -133,11 +125,7 @@ def _upsert_role_dirty_row(db, job_role_id: str, job_post_id: str) -> None:
 
 
 def mark_job_dirty(job_post_id: str) -> None:
-    """
-    Flag all role embeddings for a job post as stale, creating dirty rows for any
-    roles that don't have an embedding row yet. Embeds immediately if below threshold.
-    Swallows exceptions so a dirty-flag failure never breaks the calling mutation.
-    """
+    """Flag all role embeddings for a job post as stale, creating dirty rows for any roles that don't have an embedding row yet."""
     try:
         db = get_db()
         role_rows = db.execute_query(
@@ -161,11 +149,7 @@ def mark_job_dirty(job_post_id: str) -> None:
 
 
 def mark_job_dirty_by_role(job_role_id: str) -> None:
-    """
-    Flag a single role embedding as stale, or embed it immediately if below threshold.
-    Creates a dirty row if the role has no embedding row yet.
-    Swallows exceptions.
-    """
+    """Flag a single role embedding as stale, or embed it immediately if below threshold."""
     try:
         db = get_db()
         role_rows = db.execute_query(
@@ -188,12 +172,7 @@ def mark_job_dirty_by_role(job_role_id: str) -> None:
 
 
 def mark_contract_dirty(contract_id: str) -> None:
-    """
-    Flag a contract's embedding as stale, or embed immediately if below the size threshold.
-    Called when a contract is completed or when a rating is added/updated.
-    Always upserts the dirty row so the sweep can recover even if the immediate embed fails.
-    Swallows exceptions.
-    """
+    """Flag a contract's embedding as stale, or embed immediately if below the size threshold."""
     try:
         db = get_db()
         existing = db.execute_query(

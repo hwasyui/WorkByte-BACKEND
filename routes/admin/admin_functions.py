@@ -92,11 +92,11 @@ def _job_is_engaged(job_post_id: str) -> bool:
     return bool(row and row["engaged"])
 
 _MOD_SORT_COLS = {
-    "created_at":   "cmq.created_at",
-    "total_score":  "(cmq.toxic_score + cmq.obscene_score + cmq.threat_score + cmq.insult_score + cmq.identity_hate_score)",
-    "max_score":    "GREATEST(cmq.toxic_score, cmq.obscene_score, cmq.threat_score, cmq.insult_score, cmq.identity_hate_score)",
-    "content_type": "cmq.content_type",
-    "status":       "cmq.status",
+    "created_at":   "htq.created_at",
+    "total_score":  "(htq.toxic_score + htq.obscene_score + htq.threat_score + htq.insult_score + htq.identity_hate_score)",
+    "max_score":    "GREATEST(htq.toxic_score, htq.obscene_score, htq.threat_score, htq.insult_score, htq.identity_hate_score)",
+    "content_type": "htq.content_type",
+    "status":       "htq.status",
 }
 _SCAM_SORT_COLS = {
     "created_at": "sf.created_at",
@@ -418,34 +418,34 @@ def list_moderation_queue(
 ) -> List[Dict]:
     _auto_approve_expired()
     offset    = (page - 1) * page_size
-    sort_col  = _MOD_SORT_COLS.get(sort_by, "cmq.created_at")
+    sort_col  = _MOD_SORT_COLS.get(sort_by, "htq.created_at")
     direction = "ASC" if sort_dir.lower() == "asc" else "DESC"
     return _rows(get_db().execute_query(
         f"""
-        SELECT cmq.*,
-               (cmq.toxic_score + cmq.obscene_score +
-                cmq.threat_score + cmq.insult_score + cmq.identity_hate_score) AS total_score,
-               GREATEST(cmq.toxic_score, cmq.obscene_score, cmq.threat_score,
-                        cmq.insult_score, cmq.identity_hate_score) AS max_score,
+        SELECT htq.*,
+               (htq.toxic_score + htq.obscene_score +
+                htq.threat_score + htq.insult_score + htq.identity_hate_score) AS total_score,
+               GREATEST(htq.toxic_score, htq.obscene_score, htq.threat_score,
+                        htq.insult_score, htq.identity_hate_score) AS max_score,
                u.email AS user_email,
                c.client_id,
                c.full_name AS client_name,
-               CASE WHEN cmq.content_type = 'job_post'
-                    THEN {_is_engaged_sql('cmq.content_id')}
+               CASE WHEN htq.content_type = 'job_post'
+                    THEN {_is_engaged_sql('htq.content_id')}
                     ELSE FALSE
                END AS is_engaged,
                jp.job_title AS job_title
-        FROM harmful_text_queue cmq
-        JOIN users u ON u.user_id = cmq.user_id
-        JOIN client c ON c.user_id = cmq.user_id
+        FROM harmful_text_queue htq
+        JOIN users u ON u.user_id = htq.user_id
+        JOIN client c ON c.user_id = htq.user_id
         LEFT JOIN job_post jp
-               ON cmq.content_type = 'job_post'
-              AND jp.job_post_id = cmq.content_id
-        WHERE (:status = 'all' OR cmq.status = :status)
+               ON htq.content_type = 'job_post'
+              AND jp.job_post_id = htq.content_id
+        WHERE (:status = 'all' OR htq.status = :status)
           AND (
                 :min_severity IS NULL
-                OR GREATEST(cmq.toxic_score, cmq.obscene_score, cmq.threat_score,
-                            cmq.insult_score, cmq.identity_hate_score) >= :min_severity
+                OR GREATEST(htq.toxic_score, htq.obscene_score, htq.threat_score,
+                            htq.insult_score, htq.identity_hate_score) >= :min_severity
               )
         ORDER BY {sort_col} {direction}
         LIMIT :limit OFFSET :offset
