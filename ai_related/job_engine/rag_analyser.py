@@ -11,8 +11,7 @@ from functions.logger import logger
 
 _LLM_TIMEOUT = 90.0  
 EVIDENCE_CAP = 3
-RELEVANCE_THRESHOLD = 0.3
-
+RELEVANCE_THRESHOLD = 0.63
 
 def _retrieve_role_context(db, job_role_id: str) -> dict:
     """Role, its parent job post, and its required/preferred skills. Empty dict if not found."""
@@ -229,22 +228,15 @@ def _retrieve_past_contracts(db, freelancer_id: str, job_role_id: str) -> list[d
             SELECT jp.job_title,
                    jp.job_description,
                    c.role_title,
-                   c.status                        AS contract_status,
-                   ROUND(AVG(rr.score), 1)         AS overall_rating,
-                   rwc.overall_comment             AS review_text,
+                   c.status AS contract_status,
                    1 - (ce.embedding_vector <=> jre.embedding_vector) AS similarity
             FROM contract_embedding ce
             JOIN contract c  ON c.contract_id   = ce.contract_id
             JOIN job_post jp ON jp.job_post_id  = c.job_post_id
             JOIN job_role_embedding jre ON jre.job_role_id = :jrid AND jre.embedding_vector IS NOT NULL
-            LEFT JOIN reviews rv  ON rv.contract_id = c.contract_id AND rv.status = 'published'
-            LEFT JOIN review_written_content rwc ON rwc.review_id = rv.id
-            LEFT JOIN review_ratings rr ON rr.review_id = rv.id
             WHERE ce.freelancer_id = :fid
               AND ce.embedding_vector IS NOT NULL
               AND c.status = 'completed'
-            GROUP BY jp.job_title, jp.job_description, c.role_title, c.status, rwc.overall_comment,
-                     ce.embedding_vector, jre.embedding_vector
             ORDER BY ce.embedding_vector <=> jre.embedding_vector
             LIMIT 5
             """,
@@ -263,17 +255,11 @@ def _retrieve_past_contracts(db, freelancer_id: str, job_role_id: str) -> list[d
             SELECT jp.job_title,
                    jp.job_description,
                    c.role_title,
-                   c.status                AS contract_status,
-                   ROUND(AVG(rr.score), 1) AS overall_rating,
-                   rwc.overall_comment     AS review_text
+                   c.status AS contract_status
             FROM contract c
             JOIN job_post jp ON jp.job_post_id = c.job_post_id
-            LEFT JOIN reviews rv  ON rv.contract_id = c.contract_id AND rv.status = 'published'
-            LEFT JOIN review_written_content rwc ON rwc.review_id = rv.id
-            LEFT JOIN review_ratings rr ON rr.review_id = rv.id
             WHERE c.freelancer_id = :fid
               AND c.status = 'completed'
-            GROUP BY jp.job_title, jp.job_description, c.role_title, c.status, rwc.overall_comment, c.end_date
             ORDER BY c.end_date DESC NULLS LAST
             LIMIT 5
             """,
@@ -282,17 +268,10 @@ def _retrieve_past_contracts(db, freelancer_id: str, job_role_id: str) -> list[d
         retrieval_method = "recency_fallback"
 
     contracts = [dict(r) for r in rows]
-    rated = sum(1 for c in contracts if c.get("overall_rating") is not None)
-    avg_rating = (
-        sum(float(c["overall_rating"]) for c in contracts if c.get("overall_rating"))
-        / rated if rated > 0 else None
-    )
     logger(
         "RAG_ANALYSER",
         f"Past contracts retrieved | freelancer_id={freelancer_id} "
-        f"| count={len(contracts)} | rated={rated} "
-        f"| avg_rating={f'{avg_rating:.2f}' if avg_rating else 'N/A'} "
-        f"| method={retrieval_method}",
+        f"| count={len(contracts)} | method={retrieval_method}",
         level="DEBUG",
     )
     return contracts
@@ -392,14 +371,27 @@ def _build_prompt(role: dict, fc: dict, used_contracts: list[dict], used_portfol
     if used_contracts:
         lines.append("\nPAST COMPLETED CONTRACTS (verified in-app work, primary evidence, prioritise over portfolio)")
         for c in used_contracts:
-            rating_str = f"Rating: {c['overall_rating']}/5" if c.get("overall_rating") else "Not yet rated"
-            review = (c.get("review_text") or "")[:180]
             role_part = f" — {c['role_title']}" if c.get("role_title") else ""
-            lines.append(f"  - {c['job_title']}{role_part} | {rating_str}")
-            if review:
-                lines.append(f"    Review: \"{review}\"")
+            lines.append(f"  - {c['job_title']}{role_part}")
+            work = (c.get("job_description") or "")[:180]
+            if work:
+                lines.append(f"    Work: {work}")
     elif used_portfolio:
-        lines.append("\nPAST CONTRACTS\nNone on-platform yet — only the unverified portfolio above is available as evidence.")
+        if fc.get("total_jobs"):
+            lines.append(
+                "\nPAST CONTRACTS\nCompleted on-platform, but none related closely enough to this "
+                "role to be shown. Treat that as a lack of directly relevant experience, not as a "
+                "lack of experience. Only the unverified portfolio above is available as evidence."
+            )
+        else:
+            lines.append("\nPAST CONTRACTS\nNone on-platform yet — only the unverified portfolio above is available as evidence.")
+    elif fc.get("total_jobs"):
+        lines.append(
+            "\nPAST PROJECT EVIDENCE\n"
+            "This freelancer has completed contracts on-platform, but none related closely enough "
+            "to this role to be shown, and there are no portfolio projects. Judge fit from skills "
+            "and work experience only; do not invent, assume, or reference any past projects."
+        )
     else:
         lines.append(
             "\nPAST PROJECT EVIDENCE\n"
@@ -426,7 +418,8 @@ Score this role holistically (0-100) considering:
   1. How well your skills cover the role's required and preferred skills — count closely related
      tools and adjacent skills as coverage, not only exact-name matches
   2. Proficiency levels of the skills that match
-  3. Directly relevant past contracts (as evidence of experience, not platform credibility)
+  3. Directly relevant past contracts — judge relevance from the work described, not from how
+     many there are
   4. Portfolio items that demonstrate the role's core skills
   5. Work experience relevance to this role
 
@@ -447,7 +440,7 @@ Respond ONLY with valid JSON (no markdown, no explanation before or after):
   "matching_skills": ["<role required/preferred skills you judge the freelancer has, by the exact skill name shown above; include a required skill if a closely related tool covers it>"],
   "missing_required_skills": ["<required skills the freelancer lacks and has no closely related equivalent for, by exact name>"],
   "strengths": ["<3-5 detailed items in second person, specific to this role. For each, explain WHY it matters and reference concrete evidence (e.g. specific past contract name, portfolio project name, your proficiency level, your work experience). Do not write generic statements.>"],
-  "gaps": ["<2-4 items in second person about MISSING SKILLS or EXPERIENCE only, do NOT mention metrics, ratings, or success rates. For each: (a) what skill/experience you are missing, (b) why it matters for this role, (c) how significant it is. Write [] if there are truly no skill/experience gaps.>"],
+  "gaps": ["<2-4 items in second person about MISSING SKILLS or EXPERIENCE only, do NOT mention or invent metrics, ratings, or success rates — none are provided to you. For each: (a) what skill/experience you are missing, (b) why it matters for this role, (c) how significant it is. Write [] if there are truly no skill/experience gaps.>"],
   "skill_tips": ["<2-3 specific, actionable tips addressed directly to you. Name exact technologies, certifications, or project types to pursue to close each gap. Be concrete, not generic.>"]
 }}
 

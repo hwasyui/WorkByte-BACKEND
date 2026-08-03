@@ -367,6 +367,30 @@ async def upsert_job_role_embedding(job_role_id: str) -> dict:
         raise
 
 
+def _contract_role_skills(db, contract_id: str) -> dict:
+    """Skills of the role this contract was signed for, split required/preferred."""
+    rows = db.execute_query(
+        """SELECT s.skill_name, jrs.is_required, jrs.importance_level
+           FROM contract c
+           JOIN job_role_skill jrs ON jrs.job_role_id = c.job_role_id
+           JOIN skill s ON s.skill_id = jrs.skill_id
+           WHERE c.contract_id = :cid
+           ORDER BY jrs.is_required DESC,
+             CASE jrs.importance_level
+               WHEN 'required'     THEN 1
+               WHEN 'preferred'    THEN 2
+               WHEN 'nice_to_have' THEN 3
+               ELSE 4
+             END, s.skill_name ASC""",
+        {"cid": contract_id},
+    )
+    return {
+        "required":  [r["skill_name"] for r in rows if r["is_required"]],
+        "preferred": [f"{r['skill_name']} ({r['importance_level']})"
+                      for r in rows if not r["is_required"]],
+    }
+
+
 async def upsert_contract_embedding(contract_id: str) -> dict:
     """Build source text for a completed contract, generate an embedding, and upsert into contract_embedding. """
     logger("EMBEDDING_MANAGER", f"Upserting contract embedding | contract_id={contract_id}", level="INFO")
@@ -389,13 +413,17 @@ async def upsert_contract_embedding(contract_id: str) -> dict:
         logger("EMBEDDING_MANAGER", f"Requesting embedding vector | contract_id={contract_id} | source_chars={len(source_text)}", level="DEBUG")
         vector = await get_query_embedding(source_text)
         vector_pg = _vector_to_pg(vector)
-        metadata = json.dumps({"dim": len(vector)})
         logger("EMBEDDING_MANAGER", f"Embedding vector received | contract_id={contract_id} | dim={len(vector)}", level="DEBUG")
 
         existing = db.execute_query(
             "SELECT embedding_id FROM contract_embedding WHERE contract_id = :cid",
             {"cid": contract_id},
         )
+
+        metadata = json.dumps({
+            "dim": len(vector),
+            "skills": _contract_role_skills(db, contract_id),
+        })
 
         if existing:
             logger("EMBEDDING_MANAGER", f"Updating existing embedding record | contract_id={contract_id}", level="DEBUG")

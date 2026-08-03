@@ -123,7 +123,7 @@ async def update_job_role(job_role_id: str, job_role_update: JobRoleUpdate, curr
         update_data = job_role_update.model_dump(exclude_unset=True)
         updated_job_role = JobRoleFunctions.update_job_role(job_role_id, update_data)
         
-        mark_job_dirty(str(existing_job_role["job_post_id"]))
+        mark_job_dirty_by_role(job_role_id)
         success_msg = f"Updated job role {job_role_id}"
         logger("JOB_ROLE", success_msg, "PUT /job-roles/{job_role_id}", "INFO")
         return ResponseSchema.success(updated_job_role, 200)

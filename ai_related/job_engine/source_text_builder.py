@@ -127,12 +127,7 @@ def build_freelancer_source_text(freelancer_id: str) -> Optional[str]:
 
 
 def build_contract_source_text(contract_id: str) -> Optional[str]:
-    """
-    Build source text for a completed contract embedding.
-    Aggregates role title, job title, completion date, job description, and the
-    client's review text so the vector captures what work was done, when, and
-    how it was received. Returns None if the contract does not exist.
-    """
+    """Build source text for a completed contract embedding."""
     logger("SOURCE_TEXT_BUILDER", f"Building contract source text | contract_id={contract_id}", level="INFO")
     try:
         db = get_db()
@@ -140,20 +135,14 @@ def build_contract_source_text(contract_id: str) -> Optional[str]:
         rows = db.execute_query(
             """
             SELECT c.role_title,
-                   c.actual_completion_date,
-                   c.end_date,
+                   c.job_role_id,
                    jp.job_title,
                    jp.job_description,
-                   ROUND(AVG(rr.score), 1) AS overall_rating,
-                   rwc.overall_comment     AS review_text
+                   jr.role_description
             FROM contract c
             JOIN job_post jp ON jp.job_post_id = c.job_post_id
-            LEFT JOIN reviews rv  ON rv.contract_id = c.contract_id AND rv.status = 'published'
-            LEFT JOIN review_written_content rwc ON rwc.review_id = rv.id
-            LEFT JOIN review_ratings rr ON rr.review_id = rv.id
+            JOIN job_role jr ON jr.job_role_id = c.job_role_id
             WHERE c.contract_id = :cid
-            GROUP BY c.role_title, c.actual_completion_date, c.end_date,
-                     jp.job_title, jp.job_description, rwc.overall_comment
             """,
             {"cid": contract_id},
         )
@@ -164,8 +153,32 @@ def build_contract_source_text(contract_id: str) -> Optional[str]:
         row = dict(rows[0])
         logger(
             "SOURCE_TEXT_BUILDER",
-            f"Contract record loaded | role='{row.get('role_title')}' | job='{row.get('job_title')}' "
-            f"| rated={row.get('overall_rating') is not None}",
+            f"Contract record loaded | role='{row.get('role_title')}' | job='{row.get('job_title')}'",
+            level="DEBUG",
+        )
+
+        skill_rows = db.execute_query(
+            """SELECT s.skill_name, jrs.is_required, jrs.importance_level
+               FROM job_role_skill jrs
+               JOIN skill s ON s.skill_id = jrs.skill_id
+               WHERE jrs.job_role_id = :jrid
+               ORDER BY jrs.is_required DESC,
+                 CASE jrs.importance_level
+                   WHEN 'required'     THEN 1
+                   WHEN 'preferred'    THEN 2
+                   WHEN 'nice_to_have' THEN 3
+                   ELSE 4
+                 END, s.skill_name ASC""",
+            {"jrid": row["job_role_id"]},
+        )
+        required  = [s["skill_name"] for s in skill_rows if s["is_required"]]
+        preferred = [
+            f"{s['skill_name']} ({s['importance_level']})"
+            for s in skill_rows if not s["is_required"]
+        ]
+        logger(
+            "SOURCE_TEXT_BUILDER",
+            f"  Skills: {len(required)} required + {len(preferred)} preferred",
             level="DEBUG",
         )
 
@@ -173,18 +186,17 @@ def build_contract_source_text(contract_id: str) -> Optional[str]:
         parts.append(f"Completed Role: {row['role_title']}")
         parts.append(f"Job: {row['job_title']}")
 
-        completion = row.get("actual_completion_date") or row.get("end_date")
-        if completion:
-            parts.append(f"Completed: {completion}")
+        if required:
+            parts.append(f"Required Skills: {', '.join(required)}")
+
+        if preferred:
+            parts.append(f"Preferred Skills: {', '.join(preferred)}")
 
         if row.get("job_description"):
             parts.append(f"Description: {row['job_description'][:600]}")
 
-        if row.get("overall_rating") is not None:
-            parts.append(f"Client Rating: {row['overall_rating']}/5")
-
-        if row.get("review_text"):
-            parts.append(f"Client Review: {row['review_text']}")
+        if row.get("role_description"):
+            parts.append(f"Role Description: {row['role_description']}")
 
         source_text = "\n".join(parts)
         logger(
@@ -303,7 +315,7 @@ def build_job_role_source_text(job_role_id: str) -> Optional[str]:
                    WHEN 'preferred'    THEN 2
                    WHEN 'nice_to_have' THEN 3
                    ELSE 4
-                 END""",
+                 END, s.skill_name ASC""",
             {"jrid": job_role_id},
         )
         if skill_rows:
