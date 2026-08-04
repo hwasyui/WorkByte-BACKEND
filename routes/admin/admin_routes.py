@@ -834,9 +834,15 @@ async def admin_list_disputed_contracts(
         offset = (page - 1) * page_size
         where = ["c.status = 'disputed'"]
         params: Dict = {}
-        # The contract's own creation date - the dispute has no timestamp of its
-        # own beyond the DM that raised it.
-        where.extend(_range_conditions("c.created_at", date_range))
+        # Scoped by when the dispute was RAISED, not when the contract was signed -
+        # the two can be weeks apart, and this queue is about disputes. That is the
+        # same timestamp the ORDER BY below sorts on, so filter and sort agree.
+        # COALESCE keeps contracts whose dispute predates the dispute_raised DM
+        # event; without it the LEFT JOIN would silently drop them. sent_at is
+        # timestamptz while everything else here is naive UTC, hence the cast.
+        where.extend(_range_conditions(
+            "COALESCE(ld.sent_at AT TIME ZONE 'UTC', c.updated_at)", date_range
+        ))
         params.update(_range_params(date_range))
         if search:
             where.append(
@@ -847,8 +853,9 @@ async def admin_list_disputed_contracts(
             params["search"] = f"%{search}%"
         where_sql = "WHERE " + " AND ".join(where)
 
-        rows = get_db().execute_query(
-            f"""
+        # Both the page and the count resolve ld, because the date filter is on the
+        # dispute timestamp and would otherwise be an undefined table in the count.
+        dispute_cte = """
             WITH dispute_events AS (
                 -- A thread is shared by every contract between the same two users and its
                 -- contract_id only ever names the first one, so the event's own metadata is
@@ -868,6 +875,11 @@ async def admin_list_disputed_contracts(
                 WHERE contract_id IS NOT NULL
                 ORDER BY contract_id, sent_at DESC
             )
+        """
+
+        rows = get_db().execute_query(
+            f"""
+            {dispute_cte}
             SELECT
                 c.contract_id, c.contract_title, c.agreed_budget, c.budget_currency,
                 c.client_id, c.freelancer_id,
@@ -890,12 +902,14 @@ async def admin_list_disputed_contracts(
 
         total_row = get_db().execute_query(
             f"""
+            {dispute_cte}
             SELECT COUNT(*) AS cnt
             FROM contract c
             LEFT JOIN client     cl   ON cl.client_id     = c.client_id
             LEFT JOIN users      cl_u ON cl_u.user_id      = cl.user_id
             LEFT JOIN freelancer fl   ON fl.freelancer_id  = c.freelancer_id
             LEFT JOIN users      fl_u ON fl_u.user_id      = fl.user_id
+            LEFT JOIN latest_dispute ld ON ld.contract_id  = c.contract_id::text
             {where_sql}
             """,
             params,
