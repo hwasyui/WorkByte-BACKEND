@@ -484,11 +484,13 @@ def list_moderation_queue(
     min_severity: Optional[float] = None,
     page: int = 1,
     page_size: int = 20,
+    date_range: Optional[Dict] = None,
 ) -> List[Dict]:
     _auto_approve_expired()
     offset    = (page - 1) * page_size
     sort_col  = _MOD_SORT_COLS.get(sort_by, "htq.created_at")
     direction = "ASC" if sort_dir.lower() == "asc" else "DESC"
+    range_sql = _range_clause("htq.created_at", date_range)
     rows = _rows(get_db().execute_query(
         f"""
         SELECT htq.*,
@@ -515,7 +517,7 @@ def list_moderation_queue(
                 :min_severity IS NULL
                 OR GREATEST(htq.toxic_score, htq.obscene_score, htq.threat_score,
                             htq.insult_score, htq.identity_hate_score) >= :min_severity
-              )
+              ){range_sql}
         ORDER BY {sort_col} {direction}
         LIMIT :limit OFFSET :offset
         """,
@@ -524,6 +526,7 @@ def list_moderation_queue(
             "min_severity": min_severity,
             "limit":        page_size,
             "offset":       offset,
+            **_range_params(date_range),
         },
     ))
     for row in rows:
@@ -869,11 +872,13 @@ def list_scam_flags(
     sort_dir: str = "desc",
     page: int = 1,
     page_size: int = 20,
+    date_range: Optional[Dict] = None,
 ) -> List[Dict]:
     _process_auto_remove()
     offset    = (page - 1) * page_size
     sort_col  = _SCAM_SORT_COLS.get(sort_by, "sf.created_at")
     direction = "ASC" if sort_dir.lower() == "asc" else "DESC"
+    range_sql = _range_clause("sf.created_at", date_range)
     return _rows(get_db().execute_query(
         f"""
         SELECT sf.*,
@@ -889,11 +894,14 @@ def list_scam_flags(
         JOIN client   c  ON c.client_id    = sf.client_id
         JOIN users    u  ON u.user_id      = c.user_id
         LEFT JOIN client_scam_record csr ON csr.client_id = sf.client_id
-        WHERE (:status = 'all' OR sf.status = :status)
+        WHERE (:status = 'all' OR sf.status = :status){range_sql}
         ORDER BY {sort_col} {direction}
         LIMIT :limit OFFSET :offset
         """,
-        params={"status": status, "limit": page_size, "offset": offset},
+        params={
+            "status": status, "limit": page_size, "offset": offset,
+            **_range_params(date_range),
+        },
     ))
 
 def action_scam_flag(
@@ -1107,20 +1115,26 @@ def _process_report_auto_actions():
         )
         logger("ADMIN", f"Job post {tid} closed via report threshold ({t['report_count']} reports)", level="WARNING")
 
-def list_report_auto_actions(page: int = 1, page_size: int = 20) -> List[Dict]:
+def list_report_auto_actions(
+    page: int = 1,
+    page_size: int = 20,
+    date_range: Optional[Dict] = None,
+) -> List[Dict]:
     offset = (page - 1) * page_size
+    range_sql = _range_clause("raa.created_at", date_range)
     return _rows(get_db().execute_query(
-        """
+        f"""
         SELECT raa.*,
                u.email           AS user_email,
                jp.job_title      AS job_title
         FROM report_auto_actions raa
         LEFT JOIN users    u  ON raa.target_type = 'user'     AND u.user_id       = raa.target_id
         LEFT JOIN job_post jp ON raa.target_type = 'job_post' AND jp.job_post_id  = raa.target_id
+        WHERE TRUE{range_sql}
         ORDER BY raa.created_at DESC
         LIMIT :limit OFFSET :offset
         """,
-        params={"limit": page_size, "offset": offset},
+        params={"limit": page_size, "offset": offset, **_range_params(date_range)},
     ))
 
 def list_report_targets(
@@ -1130,10 +1144,14 @@ def list_report_targets(
     min_count: int = 1,
     page: int = 1,
     page_size: int = 20,
+    date_range: Optional[Dict] = None,
 ) -> List[Dict]:
     offset    = (page - 1) * page_size
     sort_col  = _REPORT_TARGET_SORT_COLS.get(sort_by, "report_count")
     direction = "ASC" if sort_dir.lower() == "asc" else "DESC"
+    # Filters the reports being aggregated, so report_count, oldest/latest_report
+    # and threshold_met all describe the window rather than the target's history.
+    range_sql = _range_clause("ur.created_at", date_range)
     return _rows(get_db().execute_query(
         f"""
         SELECT
@@ -1161,7 +1179,7 @@ def list_report_targets(
             :target_type = 'all'
             OR (:target_type = 'user'     AND ur.reported_user_id IS NOT NULL)
             OR (:target_type = 'job_post' AND ur.job_post_id      IS NOT NULL)
-          )
+          ){range_sql}
         GROUP BY ur.reported_user_id, ur.job_post_id, u.email, jp.job_title, ur.reported_type
         HAVING COUNT(*) >= :min_count
         ORDER BY {sort_col} {direction}
@@ -1174,6 +1192,7 @@ def list_report_targets(
             "min_count":      min_count,
             "limit":          page_size,
             "offset":         offset,
+            **_range_params(date_range),
         },
     ))
 
@@ -1380,11 +1399,13 @@ def list_appeals(
     search:         Optional[str] = None,
     page:           int = 1,
     page_size:      int = 20,
+    date_range:     Optional[Dict] = None,
 ) -> List[Dict]:
     offset = (page - 1) * page_size
+    range_sql = _range_clause("a.created_at", date_range)
 
     rows = _rows(get_db().execute_query(
-        """
+        f"""
         SELECT a.*,
                u.email      AS user_email,
                jp.job_title AS job_title,
@@ -1398,7 +1419,7 @@ def list_appeals(
                               AND a.target_type   = 'job_post'
         WHERE (:status      = 'all'  OR a.status      = :status)
           AND (:target_type IS NULL  OR a.target_type = :target_type)
-          AND (:search       IS NULL OR u.email ILIKE :search_pat)
+          AND (:search       IS NULL OR u.email ILIKE :search_pat){range_sql}
         ORDER BY a.created_at DESC
         LIMIT :limit OFFSET :offset
         """,
@@ -1409,6 +1430,7 @@ def list_appeals(
             "search_pat":  f"%{search}%" if search else None,
             "limit":       page_size,
             "offset":      offset,
+            **_range_params(date_range),
         },
     ))
 
@@ -1530,11 +1552,13 @@ def list_reports(
     sort_dir: str = "desc",
     page: int = 1,
     page_size: int = 20,
+    date_range: Optional[Dict] = None,
 ) -> List[Dict]:
     _process_report_auto_actions()
     offset    = (page - 1) * page_size
     sort_col  = _REPORT_SORT_COLS.get(sort_by, "ur.created_at")
     direction = "ASC" if sort_dir.lower() == "asc" else "DESC"
+    range_sql = _range_clause("ur.created_at", date_range)
     return _rows(get_db().execute_query(
         f"""
         SELECT ur.*,
@@ -1550,7 +1574,7 @@ def list_reports(
         LEFT JOIN users    reported ON reported.user_id  = ur.reported_user_id
         LEFT JOIN job_post jp       ON jp.job_post_id    = ur.job_post_id
         WHERE (:status = 'all' OR ur.status = :status)
-          AND (:reported_type = 'all' OR ur.reported_type = :reported_type)
+          AND (:reported_type = 'all' OR ur.reported_type = :reported_type){range_sql}
         ORDER BY {sort_col} {direction}
         LIMIT :limit OFFSET :offset
         """,
@@ -1559,6 +1583,7 @@ def list_reports(
             "reported_type": reported_type,
             "limit":         page_size,
             "offset":        offset,
+            **_range_params(date_range),
         },
     ))
 
@@ -1801,7 +1826,7 @@ def admin_reopen_account(
         logger("ADMIN", f"Account {user_id} restored by admin {admin_user_id}", level="INFO")
     return updated
 
-DASHBOARD_RANGE_PRESETS = {
+ADMIN_RANGE_PRESETS = {
     "all": None,
     "24h": timedelta(hours=24),
     "7d":  timedelta(days=7),
@@ -1822,7 +1847,7 @@ def _parse_range_bound(raw: str, label: str) -> datetime:
         parsed = parsed.astimezone(timezone.utc).replace(tzinfo=None)
     return parsed
 
-def resolve_dashboard_range(
+def resolve_admin_range(
     start_date: Optional[str] = None,
     end_date:   Optional[str] = None,
     preset:     Optional[str] = None,
@@ -1843,12 +1868,12 @@ def resolve_dashboard_range(
 
     if start is None and end is None and preset:
         key = preset.strip().lower()
-        if key not in DASHBOARD_RANGE_PRESETS:
+        if key not in ADMIN_RANGE_PRESETS:
             raise ValueError(
                 f"Invalid range '{preset}'. "
-                f"Valid values: {', '.join(DASHBOARD_RANGE_PRESETS)}"
+                f"Valid values: {', '.join(ADMIN_RANGE_PRESETS)}"
             )
-        window = DASHBOARD_RANGE_PRESETS[key]
+        window = ADMIN_RANGE_PRESETS[key]
         if window:
             end   = datetime.utcnow()
             start = end - window
@@ -1858,17 +1883,24 @@ def resolve_dashboard_range(
 
     return {"start": start, "end": end, "applied": bool(start or end)}
 
-def _range_clause(column: str, date_range: Optional[Dict]) -> str:
-    """SQL to AND onto a WHERE clause. Rows with a NULL timestamp drop out, which
-    is what we want: an un-actioned item did not happen inside the window."""
+def _range_conditions(column: str, date_range: Optional[Dict]) -> List[str]:
+    """Bare predicates, for the listings that assemble a WHERE from a list.
+
+    Rows with a NULL timestamp drop out, which is what we want: an un-actioned
+    item did not happen inside the window.
+    """
     if not date_range or not date_range["applied"]:
-        return ""
-    clause = ""
+        return []
+    conditions = []
     if date_range["start"]:
-        clause += f" AND {column} >= :range_start"
+        conditions.append(f"{column} >= :range_start")
     if date_range["end"]:
-        clause += f" AND {column} < :range_end"
-    return clause
+        conditions.append(f"{column} < :range_end")
+    return conditions
+
+def _range_clause(column: str, date_range: Optional[Dict]) -> str:
+    """Same predicates pre-joined, for queries with a hardcoded WHERE to AND onto."""
+    return "".join(f" AND {cond}" for cond in _range_conditions(column, date_range))
 
 def _range_params(date_range: Optional[Dict]) -> Dict:
     if not date_range or not date_range["applied"]:
@@ -2059,6 +2091,36 @@ def get_admin_dashboard_stats(date_range: Optional[Dict] = None) -> Dict:
             "dismissed": reports_dismissed,
             "total":     reports_pending + reports_accepted + reports_dismissed,
         },
+        # Review integrity: held-back reviews and the red flag alerts raised
+        # against a subject. Held reviews are scoped by when they were written,
+        # published ones by when they went live, and alerts by when they fired
+        # or were cleared - so a window never counts the same item at both ends.
+        "review_integrity": {
+            "flagged_reviews": _count(
+                "SELECT COUNT(*) AS cnt FROM reviews "
+                f"WHERE status IN ('flagged', 'suppressed'){created_at_range}"
+            ),
+            "flagged_client_reviews": _count(
+                "SELECT COUNT(*) AS cnt FROM client_reviews "
+                f"WHERE status IN ('flagged', 'suppressed'){created_at_range}"
+            ),
+            "published_reviews": _count(
+                "SELECT COUNT(*) AS cnt FROM reviews "
+                f"WHERE status = 'published'{_range_clause('published_at', date_range)}"
+            ),
+            "published_client_reviews": _count(
+                "SELECT COUNT(*) AS cnt FROM client_reviews "
+                f"WHERE status = 'published'{_range_clause('published_at', date_range)}"
+            ),
+            "open_red_flag_alerts": _count(
+                "SELECT COUNT(*) AS cnt FROM red_flag_alerts "
+                f"WHERE is_resolved = FALSE{_range_clause('triggered_at', date_range)}"
+            ),
+            "resolved_red_flag_alerts": _count(
+                "SELECT COUNT(*) AS cnt FROM red_flag_alerts "
+                f"WHERE is_resolved = TRUE{_range_clause('resolved_at', date_range)}"
+            ),
+        },
         "series": _growth_series(series_start, series_end, granularity),
 
         # Flat aliases for the keys the Flutter overview page already reads, so
@@ -2180,6 +2242,7 @@ def admin_list_jobs(
     sort_dir: str = "desc",
     page: int = 1,
     page_size: int = 20,
+    date_range: Optional[Dict] = None,
 ) -> Dict:
     offset    = (page - 1) * page_size
     sort_col  = _JOB_ADMIN_SORT_COLS.get(sort_by, "jp.created_at")
@@ -2187,6 +2250,11 @@ def admin_list_jobs(
 
     where: List[str] = []
     params: Dict     = {}
+
+    # Composes with the older created_from/created_to below rather than
+    # replacing them, so existing callers keep working.
+    where.extend(_range_conditions("jp.created_at", date_range))
+    params.update(_range_params(date_range))
 
     _in_filter("jp.status",           _csv(status),                   "st",  where, params)
     _in_filter("jp.status",           _csv(exclude_status),           "xst", where, params, exclude=True)
@@ -2285,6 +2353,7 @@ def admin_list_users(
     sort_dir: str = "desc",
     page: int = 1,
     page_size: int = 20,
+    date_range: Optional[Dict] = None,
 ) -> Dict:
     offset    = (page - 1) * page_size
     sort_col  = _USER_ADMIN_SORT_COLS.get(sort_by, "u.created_at")
@@ -2292,6 +2361,9 @@ def admin_list_users(
 
     where: List[str] = []
     params: Dict     = {}
+
+    where.extend(_range_conditions("u.created_at", date_range))
+    params.update(_range_params(date_range))
 
     include_roles = _csv(role)
     if include_roles:
@@ -2413,6 +2485,7 @@ def list_red_flag_alerts(
     sort_dir: str = "desc",
     page: int = 1,
     page_size: int = 20,
+    date_range: Optional[Dict] = None,
 ) -> Dict:
     """Admin-wide (not per-subject) red flag alert listing, mirroring list_scam_flags.
     Exactly one of rfa.freelancer_id / rfa.client_id is set (enforced by
@@ -2430,11 +2503,17 @@ def list_red_flag_alerts(
     offset    = (page - 1) * page_size
     sort_col  = _RED_FLAG_SORT_COLS.get(sort_by, "rfa.triggered_at")
     direction = "ASC" if sort_dir.lower() == "asc" else "DESC"
-    filters = """
+    # Scoped by when the alert fired, not when it was cleared - the queue is
+    # about what the detector raised inside the window.
+    filters = f"""
         WHERE (:is_resolved IS NULL OR rfa.is_resolved = :is_resolved)
           AND (:subject_type = 'all' OR rfa.subject_type = :subject_type)
+          {_range_clause("rfa.triggered_at", date_range)}
     """
-    base_params = {"is_resolved": is_resolved, "subject_type": subject_type}
+    base_params = {
+        "is_resolved": is_resolved, "subject_type": subject_type,
+        **_range_params(date_range),
+    }
 
     total_row = _row(get_db().execute_query(
         f"SELECT COUNT(*) AS total FROM red_flag_alerts rfa {filters}",
@@ -2988,6 +3067,7 @@ def list_flagged_reviews(
     sort_dir: str = "desc",
     page: int = 1,
     page_size: int = 20,
+    date_range: Optional[Dict] = None,
 ) -> Dict:
     """Reviews held back from publishing (overall_pass=false), with the AI
     analysis that caused the hold, for manual admin review.
@@ -3003,10 +3083,13 @@ def list_flagged_reviews(
     sort_col     = _MODERATION_SORT_COLS.get(sort_by, "r.created_at")
     direction    = "ASC" if sort_dir.lower() == "asc" else "DESC"
     status_filter = "r.status IN ('flagged', 'suppressed')" if status == "all" else "r.status = :status"
+    # Folded into status_filter so the count and the page agree on the window.
+    status_filter += _range_clause("r.created_at", date_range)
+    range_params = _range_params(date_range)
 
     total_row = _row(get_db().execute_query(
         f"SELECT COUNT(*) AS total FROM reviews r WHERE {status_filter}",
-        params={"status": status},
+        params={"status": status, **range_params},
     )) or {"total": 0}
 
     items = _rows(get_db().execute_query(
@@ -3033,7 +3116,7 @@ def list_flagged_reviews(
         ORDER BY {sort_col} {direction} NULLS LAST
         LIMIT :limit OFFSET :offset
         """,
-        params={"status": status, "limit": page_size, "offset": offset},
+        params={"status": status, "limit": page_size, "offset": offset, **range_params},
     ))
 
     for item in items:
@@ -3242,6 +3325,7 @@ def list_flagged_client_reviews(
     sort_dir: str = "desc",
     page: int = 1,
     page_size: int = 20,
+    date_range: Optional[Dict] = None,
 ) -> Dict:
     """Client reviews (written by freelancers) held back from publishing -
     counterpart to list_flagged_reviews for the freelancer-reviews-client system.
@@ -3253,10 +3337,12 @@ def list_flagged_client_reviews(
     sort_col      = _CLIENT_MODERATION_SORT_COLS.get(sort_by, "cr.created_at")
     direction     = "ASC" if sort_dir.lower() == "asc" else "DESC"
     status_filter = "cr.status IN ('flagged', 'suppressed')" if status == "all" else "cr.status = :status"
+    status_filter += _range_clause("cr.created_at", date_range)
+    range_params = _range_params(date_range)
 
     total_row = _row(get_db().execute_query(
         f"SELECT COUNT(*) AS total FROM client_reviews cr WHERE {status_filter}",
-        params={"status": status},
+        params={"status": status, **range_params},
     )) or {"total": 0}
 
     items = _rows(get_db().execute_query(
@@ -3282,7 +3368,7 @@ def list_flagged_client_reviews(
         ORDER BY {sort_col} {direction} NULLS LAST
         LIMIT :limit OFFSET :offset
         """,
-        params={"status": status, "limit": page_size, "offset": offset},
+        params={"status": status, "limit": page_size, "offset": offset, **range_params},
     ))
 
     for item in items:

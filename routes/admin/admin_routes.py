@@ -14,7 +14,7 @@ from functions.db_manager import get_db
 from routes.contracts.contract_functions import ContractFunctions
 from routes.clients.client_functions import ClientFunctions
 from routes.admin.admin_functions import (
-    DASHBOARD_RANGE_PRESETS,
+    ADMIN_RANGE_PRESETS,
     VALID_REPORT_REASONS,
     action_moderation_item,
     action_report,
@@ -52,7 +52,9 @@ from routes.admin.admin_functions import (
     override_publish_review,
     queue_scam_scan,
     resolve_appeal,
-    resolve_dashboard_range,
+    resolve_admin_range,
+    _range_conditions,
+    _range_params,
     resolve_red_flag_alert,
     submit_appeal,
     uphold_client_review,
@@ -103,8 +105,7 @@ class ForceExpireReportBody(BaseModel):
 class AdminOverrideBody(BaseModel):
     reason: Optional[str] = None
 
-@admin_router.get("/dashboard")
-async def admin_dashboard(
+def admin_range(
     start_date: Optional[str] = Query(
         default=None,
         description="Inclusive start of the window. YYYY-MM-DD or an ISO-8601 timestamp.",
@@ -117,8 +118,23 @@ async def admin_dashboard(
         default="all",
         alias="range",
         description=f"Preset window, used only when start_date and end_date are both omitted. "
-                    f"One of: {', '.join(DASHBOARD_RANGE_PRESETS)}",
+                    f"One of: {', '.join(ADMIN_RANGE_PRESETS)}",
     ),
+) -> Dict:
+    """Shared date-range filter for every admin listing.
+
+    One dependency so all admin endpoints take the same three query params and
+    reject bad input identically, instead of each route re-deriving the rules.
+    Each endpoint decides which timestamp column the window applies to.
+    """
+    try:
+        return resolve_admin_range(start_date, end_date, range_preset)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@admin_router.get("/dashboard")
+async def admin_dashboard(
+    date_range: Dict = Depends(admin_range),
     current_user: UserInDB = Depends(get_admin_user),
 ):
     """Admin dashboard counters, optionally scoped to a time range.
@@ -128,11 +144,6 @@ async def admin_dashboard(
     banned clients by when the ban landed. The two _last_24h counters ignore the
     range - see get_admin_dashboard_stats.
     """
-    try:
-        date_range = resolve_dashboard_range(start_date, end_date, range_preset)
-    except ValueError as e:
-        return ResponseSchema.error(str(e), 400)
-
     try:
         stats = get_admin_dashboard_stats(date_range)
         logger("ADMIN", "Dashboard stats fetched", "GET /admin/dashboard", "INFO")
@@ -153,6 +164,7 @@ async def list_moderation(
                                                         "(e.g. insult) dominates the same text"),
     page:         int = Query(default=1, ge=1),
     page_size:    int = Query(default=20, ge=1, le=100),
+    date_range: Dict = Depends(admin_range),
     current_user: UserInDB = Depends(get_admin_user),
 ):
     try:
@@ -167,6 +179,7 @@ async def list_moderation(
             sort_by=sort_by, sort_dir=sort_dir,
             min_severity=min_severity,
             page=page, page_size=page_size,
+            date_range=date_range,
         )
         logger("ADMIN", f"Moderation queue fetched: status={status} sort={sort_by} {sort_dir} min_severity={min_severity}", "GET /admin/moderation", "INFO")
         return ResponseSchema.success(items, 200)
@@ -256,6 +269,7 @@ async def list_scam(
     sort_dir:  str = Query(default="desc",       description="asc | desc"),
     page:      int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
+    date_range: Dict = Depends(admin_range),
     current_user: UserInDB = Depends(get_admin_user),
 ):
     try:
@@ -265,7 +279,8 @@ async def list_scam(
             return ResponseSchema.error("Invalid sort option. Choose created_at or scam_score.", 400)
         if sort_dir not in ("asc", "desc"):
             return ResponseSchema.error("Invalid sort direction. Choose asc or desc.", 400)
-        flags = list_scam_flags(status=status, sort_by=sort_by, sort_dir=sort_dir, page=page, page_size=page_size)
+        flags = list_scam_flags(status=status, sort_by=sort_by, sort_dir=sort_dir, page=page, page_size=page_size,
+                                date_range=date_range)
         logger("ADMIN", f"Scam flags fetched: status={status} sort={sort_by} {sort_dir}", "GET /admin/scam-flags", "INFO")
         return ResponseSchema.success(flags, 200)
     except Exception as e:
@@ -391,6 +406,7 @@ async def admin_list_reports(
     sort_dir:      str = Query(default="desc",       description="asc | desc"),
     page:          int = Query(default=1, ge=1),
     page_size:     int = Query(default=20, ge=1, le=100),
+    date_range: Dict = Depends(admin_range),
     current_user: UserInDB = Depends(get_admin_user),
 ):
     try:
@@ -406,6 +422,7 @@ async def admin_list_reports(
             status=status, reported_type=reported_type,
             sort_by=sort_by, sort_dir=sort_dir,
             page=page, page_size=page_size,
+            date_range=date_range,
         )
         logger("ADMIN", f"Reports fetched: status={status} type={reported_type} sort={sort_by} {sort_dir}", "GET /admin/reports", "INFO")
         return ResponseSchema.success(items, 200)
@@ -421,6 +438,7 @@ async def admin_list_report_targets(
     min_count:   int = Query(default=1, ge=1,        description="Only show targets with at least this many reports"),
     page:        int = Query(default=1, ge=1),
     page_size:   int = Query(default=20, ge=1, le=100),
+    date_range: Dict = Depends(admin_range),
     current_user: UserInDB = Depends(get_admin_user),
 ):
     try:
@@ -433,6 +451,7 @@ async def admin_list_report_targets(
         items = list_report_targets(
             target_type=target_type, sort_by=sort_by, sort_dir=sort_dir,
             min_count=min_count, page=page, page_size=page_size,
+            date_range=date_range,
         )
         logger("ADMIN", f"Report targets fetched: type={target_type} min={min_count} sort={sort_by} {sort_dir}", "GET /admin/reports/targets", "INFO")
         return ResponseSchema.success(items, 200)
@@ -465,10 +484,11 @@ async def accept_report(
 async def list_auto_actions(
     page:      int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
+    date_range: Dict = Depends(admin_range),
     current_user: UserInDB = Depends(get_admin_user),
 ):
     try:
-        items = list_report_auto_actions(page=page, page_size=page_size)
+        items = list_report_auto_actions(page=page, page_size=page_size, date_range=date_range)
         return ResponseSchema.success(items, 200)
     except Exception as e:
         logger("ADMIN", f"Auto-actions list error: {e}", "GET /admin/reports/auto-actions", "ERROR")
@@ -532,6 +552,7 @@ async def admin_list_appeals(
     search:         Optional[str] = Query(default=None,      description="Partial match on submitter email"),
     page:           int           = Query(default=1, ge=1),
     page_size:      int           = Query(default=20, ge=1, le=100),
+    date_range: Dict = Depends(admin_range),
     current_user: UserInDB = Depends(get_admin_user),
 ):
     try:
@@ -546,6 +567,7 @@ async def admin_list_appeals(
             search=search,
             page=page,
             page_size=page_size,
+            date_range=date_range,
         )
         logger("ADMIN", f"Appeals fetched: status={status} target_type={target_type} attempt={appeal_attempt} page={page}", "GET /admin/appeals", "INFO")
         return ResponseSchema.success(items, 200)
@@ -713,6 +735,7 @@ async def admin_browse_jobs(
     sort_dir:  str = Query(default="desc",        description="asc | desc"),
     page:      int = Query(default=1,  ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
+    date_range: Dict = Depends(admin_range),
     current_user: UserInDB = Depends(get_admin_user),
 ):
     try:
@@ -733,6 +756,7 @@ async def admin_browse_jobs(
             closed_from=closed_from,             closed_to=closed_to,
             sort_by=sort_by,                     sort_dir=sort_dir,
             page=page,                           page_size=page_size,
+            date_range=date_range,
         )
         logger("ADMIN", f"Jobs browse: page={page} status={status!r} search={search!r}", "GET /admin/jobs", "INFO")
         return ResponseSchema.success(result, 200)
@@ -757,6 +781,7 @@ async def admin_browse_users(
     sort_dir:  str = Query(default="desc",         description="asc | desc"),
     page:      int = Query(default=1,  ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
+    date_range: Dict = Depends(admin_range),
     current_user: UserInDB = Depends(get_admin_user),
 ):
     try:
@@ -774,6 +799,7 @@ async def admin_browse_users(
             banned_from=banned_from,    banned_to=banned_to,
             sort_by=sort_by,            sort_dir=sort_dir,
             page=page,                  page_size=page_size,
+            date_range=date_range,
         )
         logger("ADMIN", f"Users browse: page={page} role={role!r} is_banned={is_banned} search={search!r}", "GET /admin/users", "INFO")
         return ResponseSchema.success(result, 200)
@@ -801,12 +827,17 @@ async def admin_list_disputed_contracts(
     search: Optional[str] = None,
     page:      int = Query(default=1,  ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
+    date_range: Dict = Depends(admin_range),
     current_user: UserInDB = Depends(get_admin_user),
 ):
     try:
         offset = (page - 1) * page_size
         where = ["c.status = 'disputed'"]
         params: Dict = {}
+        # The contract's own creation date - the dispute has no timestamp of its
+        # own beyond the DM that raised it.
+        where.extend(_range_conditions("c.created_at", date_range))
+        params.update(_range_params(date_range))
         if search:
             where.append(
                 "(c.contract_title ILIKE :search OR cl_u.email ILIKE :search "
@@ -1080,6 +1111,7 @@ async def list_review_red_flags(
     sort_dir:     str = Query(default="desc",         description="asc | desc"),
     page:         int = Query(default=1, ge=1),
     page_size:    int = Query(default=20, ge=1, le=100),
+    date_range: Dict = Depends(admin_range),
     current_user: UserInDB = Depends(get_admin_user),
 ):
     """Admin-wide red flag alert listing (trust score drops), across freelancers and/or clients.
@@ -1096,7 +1128,8 @@ async def list_review_red_flags(
             return ResponseSchema.error("Invalid sort option. Choose triggered_at or severity.", 400)
         if sort_dir not in ("asc", "desc"):
             return ResponseSchema.error("Invalid sort direction. Choose asc or desc.", 400)
-        flags = list_red_flag_alerts(is_resolved=is_resolved, subject_type=subject_type, sort_by=sort_by, sort_dir=sort_dir, page=page, page_size=page_size)
+        flags = list_red_flag_alerts(is_resolved=is_resolved, subject_type=subject_type, sort_by=sort_by, sort_dir=sort_dir, page=page, page_size=page_size,
+                                     date_range=date_range)
         logger("ADMIN", f"Review red flags fetched: is_resolved={is_resolved} subject_type={subject_type} sort={sort_by} {sort_dir}", "GET /admin/reviews/red-flags", "INFO")
         return ResponseSchema.success(flags, 200)
     except Exception as e:
@@ -1163,6 +1196,7 @@ async def list_review_flagged(
     sort_dir:  str = Query(default="desc",       description="asc | desc"),
     page:      int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
+    date_range: Dict = Depends(admin_range),
     current_user: UserInDB = Depends(get_admin_user),
 ):
     """Triage list of reviews held back from publishing (overall_pass=false).
@@ -1179,7 +1213,8 @@ async def list_review_flagged(
                 "Invalid sort option. Choose created_at, status, authenticity, or disagreement.", 400)
         if sort_dir not in ("asc", "desc"):
             return ResponseSchema.error("Invalid sort direction. Choose asc or desc.", 400)
-        reviews = list_flagged_reviews(status=status, sort_by=sort_by, sort_dir=sort_dir, page=page, page_size=page_size)
+        reviews = list_flagged_reviews(status=status, sort_by=sort_by, sort_dir=sort_dir, page=page, page_size=page_size,
+                                       date_range=date_range)
         logger("ADMIN", f"Flagged reviews fetched: status={status} sort={sort_by} {sort_dir}", "GET /admin/reviews/flagged", "INFO")
         return ResponseSchema.success(reviews, 200)
     except Exception as e:
@@ -1260,6 +1295,7 @@ async def list_client_review_flagged(
     sort_dir:  str = Query(default="desc",       description="asc | desc"),
     page:      int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
+    date_range: Dict = Depends(admin_range),
     current_user: UserInDB = Depends(get_admin_user),
 ):
     """Triage list of client reviews (written by freelancers) held back from publishing.
@@ -1274,7 +1310,8 @@ async def list_client_review_flagged(
                 "Invalid sort option. Choose created_at, status, authenticity, or disagreement.", 400)
         if sort_dir not in ("asc", "desc"):
             return ResponseSchema.error("Invalid sort direction. Choose asc or desc.", 400)
-        reviews = list_flagged_client_reviews(status=status, sort_by=sort_by, sort_dir=sort_dir, page=page, page_size=page_size)
+        reviews = list_flagged_client_reviews(status=status, sort_by=sort_by, sort_dir=sort_dir, page=page, page_size=page_size,
+                                              date_range=date_range)
         logger("ADMIN", f"Flagged client reviews fetched: status={status} sort={sort_by} {sort_dir}", "GET /admin/client-reviews/flagged", "INFO")
         return ResponseSchema.success(reviews, 200)
     except Exception as e:
