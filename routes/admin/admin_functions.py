@@ -313,7 +313,7 @@ def queue_job_post_harmful_scan(job_post_id: str, user_id: str) -> Optional[Dict
                 continue
            
             labelled.append((
-                f"[ROLE] {role_title} —" if role_title else "[ROLE] —",
+                f"[ROLE] {role_title} -" if role_title else "[ROLE] -",
                 f"Role: {role_title}. {role_desc}".strip(),
             ))
 
