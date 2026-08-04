@@ -3,6 +3,7 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
+from datetime import datetime
 from typing import Optional, Dict, List
 from functions.db_manager import get_db
 from functions.logger import logger
@@ -16,13 +17,6 @@ from routes.proposals.proposal_functions import ProposalFunctions
 from routes.contracts.contract_pdf_generator import generate_contract_pdf
 
 CONTRACT_BUCKET = "contract-assets"
-
-
-# dev function - no callers.
-def _convert_rows_to_dicts(rows):
-    if not rows:
-        return []
-    return [dict(row) if not isinstance(row, dict) else row for row in rows]
 
 
 class ContractGenerationFunctions:
@@ -45,9 +39,15 @@ class ContractGenerationFunctions:
             raise
 
     @staticmethod
-    def upsert_contract_terms(contract_id: str, terms: Dict) -> Dict:
+    def upsert_contract_terms(contract_id: str, terms: Dict, db=None) -> Dict:
+        """Write a contract's terms, inserting or replacing them wholesale.
+
+        Pass `db` an open Transaction to make this part of a larger unit of work -
+        contract creation does, so the contract and the terms it was generated from
+        can never exist apart from one another.
+        """
         try:
-            db = get_db()
+            db = db or get_db()
             query = """
                 INSERT INTO contract_terms (
                     contract_terms_id, contract_id, termination_notice, governing_law,
@@ -93,13 +93,25 @@ class ContractGenerationFunctions:
             raise
 
     @staticmethod
-    def build_generation_context(contract_id: str) -> Dict:
+    def build_generation_context(
+        contract_id: str, contract: Optional[Dict] = None, contract_terms: Optional[Dict] = None
+    ) -> Dict:
+        """Gather everything the PDF is rendered from.
+
+        `contract` and `contract_terms` can be supplied instead of read, which is what
+        lets a contract be rendered before it is inserted: creation renders the PDF
+        first and writes the row last, so that a failure leaves nothing behind. Every
+        other entity the document needs - the proposal, job post, role, freelancer and
+        client - already exists by then and is still read from the database.
+        """
         try:
-            contract = ContractFunctions.get_contract_by_id(contract_id)
+            if contract is None:
+                contract = ContractFunctions.get_contract_by_id(contract_id)
             if not contract:
                 return None
 
-            contract_terms = ContractGenerationFunctions.get_contract_terms(contract_id) or {}
+            if contract_terms is None:
+                contract_terms = ContractGenerationFunctions.get_contract_terms(contract_id) or {}
             proposal = ProposalFunctions.get_proposal_by_id(contract["proposal_id"]) or {}
             job_post = JobPostFunctions.get_job_post_by_id(contract["job_post_id"]) or {}
             job_role = JobRoleFunctions.get_job_role_by_id(contract["job_role_id"]) or {}
@@ -114,30 +126,9 @@ class ContractGenerationFunctions:
                 "job_role": job_role,
                 "freelancer": freelancer,
                 "client": client,
-                "milestones": [],
             }
         except Exception as e:
             logger("CONTRACT_GENERATION", f"Error building generation context: {str(e)}", level="ERROR")
-            raise
-
-    @staticmethod
-    def save_generation_data(contract_id: str, update_data: Dict, terms: Dict) -> Dict:
-        try:
-            db = get_db()
-            contract = ContractFunctions.get_contract_by_id(contract_id)
-            if not contract:
-                raise ValueError("Contract not found")
-
-            update_fields = {k: v for k, v in update_data.items() if v is not None}
-            if update_fields:
-                conditions = [("contract_id", "=", contract_id)]
-                db.update_data(table_name="contract", data=update_fields, conditions=conditions)
-
-            ContractGenerationFunctions.upsert_contract_terms(contract_id, terms)
-
-            return ContractFunctions.get_contract_by_id(contract_id)
-        except Exception as e:
-            logger("CONTRACT_GENERATION", f"Error saving generation data: {str(e)}", level="ERROR")
             raise
 
     @staticmethod
@@ -159,8 +150,25 @@ class ContractGenerationFunctions:
             raise
 
     @staticmethod
-    def render_contract_pdf(contract_id: str) -> bytes:
-        context = ContractGenerationFunctions.build_generation_context(contract_id)
+    def render_contract_pdf(
+        contract_id: str,
+        generated_at: Optional[datetime] = None,
+        contract: Optional[Dict] = None,
+        contract_terms: Optional[Dict] = None,
+    ) -> bytes:
+        """Render the contract PDF.
+
+        Reads the persisted row by default. Creation passes `contract` and
+        `contract_terms` directly, because at that point neither has been written yet -
+        see build_generation_context.
+
+        Pass the same `generated_at` that gets written to contract.contract_pdf_generated_at
+        so the date on the document matches the column. Defaults to now for callers that
+        only want the bytes.
+        """
+        context = ContractGenerationFunctions.build_generation_context(
+            contract_id, contract=contract, contract_terms=contract_terms
+        )
         if context is None:
             raise ValueError("Contract not found")
 
@@ -169,13 +177,16 @@ class ContractGenerationFunctions:
             {
                 "contract_id": contract.get("contract_id"),
                 "contract_title": contract.get("contract_title"),
+                # The contract's own role_title, not the job role's: the two are separate
+                # columns, and this one is what an edit to the contract changes.
+                "role_title": contract.get("role_title"),
                 "agreed_budget": contract.get("agreed_budget"),
                 "budget_currency": contract.get("budget_currency"),
                 "payment_structure": contract.get("payment_structure"),
                 "start_date": contract.get("start_date"),
                 "end_date": contract.get("end_date"),
                 "agreed_duration": contract.get("agreed_duration"),
-                "generated_at": contract.get("updated_at") or "",
+                "generated_at": (generated_at or datetime.utcnow()).strftime("%Y-%m-%d %H:%M UTC"),
                 "job_post": context["job_post"],
                 "job_role": context["job_role"],
                 "freelancer": context["freelancer"],

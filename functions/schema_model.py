@@ -751,6 +751,40 @@ class ProposalFileResponse(BaseModel):
         from_attributes = True
 
 
+# Contract generation
+class PaymentScheduleItem(BaseModel):
+    phase: str
+    description: Optional[str] = None
+    amount: Optional[float] = None
+    percentage: Optional[float] = None
+    due_date: Optional[date] = None
+
+
+class ContractGenerateRequest(BaseModel):
+    end_date: Optional[date] = None
+    agreed_duration: Optional[str] = None
+    termination_notice: Optional[int] = 30
+    governing_law: Optional[str] = None
+    confidentiality: Optional[bool] = False
+    confidentiality_text: Optional[str] = None
+    late_payment_penalty: Optional[float] = None
+    dispute_resolution: Optional[str] = "negotiation"
+    revision_rounds: Optional[int] = 0
+    additional_clauses: Optional[str] = None
+    payment_schedule: Optional[str] = None
+    # Accepted for backwards compatibility but ignored. Delivering the contract to the
+    # freelancer is POST /contracts/{id}/send, a separate action from creating it.
+    send_notification: bool = True
+    notification_message: Optional[str] = None
+    save_message_as_template: bool = False
+
+
+class ContractSendRequest(BaseModel):
+    """Deliver an already-generated contract to the freelancer."""
+    notification_message: Optional[str] = None
+    save_message_as_template: bool = False
+
+
 # Contracts
 class ContractCreate(BaseModel):
     contract_id: Optional[str] = None
@@ -762,15 +796,48 @@ class ContractCreate(BaseModel):
     contract_title: str
     role_title: Optional[str] = None
     agreed_budget: float
-    budget_currency: Optional[str] = "USD"
-    payment_structure: str  # full_payment, milestone_based
+    budget_currency: Optional[str] = None
+    payment_structure: Literal["full_payment", "milestone_based"]
     agreed_duration: Optional[str] = None
-    status: str  # active, completed, cancelled, disputed
+    # Accepted for backwards compatibility but ignored: a contract is always created
+    # 'active', because it is only ever created complete.
+    status: Optional[str] = None
     start_date: date
     end_date: Optional[date] = None
     actual_completion_date: Optional[date] = None
     total_hours_worked: Optional[float] = None
     total_paid: Optional[float] = 0
+    # Required: a contract is created together with the terms it was generated from,
+    # in one transaction, so there is no moment at which one exists without the other.
+    terms: ContractGenerateRequest
+
+    @field_validator('contract_title', 'role_title')
+    @classmethod
+    def validate_title_length(cls, v):
+        # contract.contract_title / role_title are varchar(255); without this the
+        # overflow surfaces as a database error and a 500 instead of a 400.
+        if v is not None and len(v) > 255:
+            raise ValueError("Title must be 255 characters or fewer")
+        return v
+
+    @field_validator('agreed_budget')
+    @classmethod
+    def validate_agreed_budget(cls, v):
+        # agreed_budget is numeric(12,2), so anything from 10^10 up overflows.
+        if v <= 0:
+            raise ValueError("Agreed budget must be greater than zero")
+        if v >= 10_000_000_000:
+            raise ValueError("Agreed budget is too large")
+        return v
+
+    @field_validator('budget_currency')
+    @classmethod
+    def validate_budget_currency(cls, v):
+        # Format check only. The real constraint is equality with the job role's
+        # currency, enforced in the route where the role is loaded.
+        if v is not None and not re.fullmatch(r'[A-Z]{3}', v):
+            raise ValueError("Currency must be a 3-letter code, e.g. USD or IDR")
+        return v
 
 class ContractUpdate(BaseModel):
     contract_title: Optional[str] = None
@@ -816,31 +883,6 @@ class ContractResponse(BaseModel):
         from_attributes = True
 
 
-# Contract generation
-class PaymentScheduleItem(BaseModel):
-    phase: str
-    description: Optional[str] = None
-    amount: Optional[float] = None
-    percentage: Optional[float] = None
-    due_date: Optional[date] = None
-
-
-class ContractGenerateRequest(BaseModel):
-    end_date: Optional[date] = None
-    agreed_duration: Optional[str] = None
-    termination_notice: Optional[int] = 30
-    governing_law: Optional[str] = None
-    confidentiality: Optional[bool] = False
-    confidentiality_text: Optional[str] = None
-    late_payment_penalty: Optional[float] = None
-    dispute_resolution: Optional[str] = "negotiation"
-    revision_rounds: Optional[int] = 0
-    additional_clauses: Optional[str] = None
-    payment_schedule: Optional[str] = None
-    # Notification fields
-    send_notification: bool = True
-    notification_message: Optional[str] = None
-    save_message_as_template: bool = False
 
 # Contract submissions
 class ContractSubmissionFileResponse(BaseModel):

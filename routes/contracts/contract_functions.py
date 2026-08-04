@@ -65,54 +65,8 @@ def convert_uuids_to_str(data: Dict) -> Dict:
     return result
 
 
-# dev function - no callers.
-def _format_contract_created_text(data: dict) -> str:
-    budget = data.get("agreed_budget") or 0
-    currency = data.get("budget_currency") or "USD"
-    payment = (data.get("payment_structure") or "").replace("_", " ").title()
-    duration = data.get("agreed_duration") or "Not specified"
-    start = data.get("start_date") or "Not specified"
-    role = data.get("role_title") or "Not specified"
-    status = (data.get("status") or "").title()
-    return (
-        f"Contract started\n\n"
-        f"Title         : {data.get('contract_title')}\n"
-        f"Role          : {role}\n"
-        f"Budget        : {currency} {budget:,.2f}\n"
-        f"Payment type  : {payment}\n"
-        f"Start date    : {start}\n"
-        f"Duration      : {duration}\n"
-        f"Status        : {status}"
-    )
-
-
 class ContractFunctions:
     """Handle all contract-related database operations."""
-
-    # dev function - no callers.
-    @staticmethod
-    def get_all_contracts(limit: Optional[int] = None) -> List[Dict]:
-        """Fetch all contracts."""
-        try:
-            db = get_db()
-            rows = db.fetch_data(
-                table_name="contract",
-                columns=[
-                    "contract_id", "job_post_id", "job_role_id", "proposal_id",
-                    "freelancer_id", "client_id", "contract_title", "role_title",
-                    "agreed_budget", "budget_currency", "payment_structure",
-                    "agreed_duration", "status", "start_date", "end_date",
-                    "actual_completion_date", "total_hours_worked", "total_paid",
-                    "contract_pdf_url", "contract_pdf_generated_at", "created_at", "updated_at",
-                ],
-                order_by="created_at DESC",
-                limit=limit,
-            )
-            logger("CONTRACT_FUNCTIONS", f"Fetched {len(rows)} contracts", level="INFO")
-            return [convert_uuids_to_str(dict(row)) for row in rows]
-        except Exception as e:
-            logger("CONTRACT_FUNCTIONS", f"Error fetching contracts: {str(e)}", level="ERROR")
-            raise
 
     @staticmethod
     def attach_job_closure(contracts: List[Dict]) -> List[Dict]:
@@ -161,32 +115,6 @@ class ContractFunctions:
             return None
         except Exception as e:
             logger("CONTRACT_FUNCTIONS", f"Error fetching contract: {str(e)}", level="ERROR")
-            raise
-
-    # dev function - no callers.
-    @staticmethod
-    def get_contracts_by_job_post_id(job_post_id: str) -> List[Dict]:
-        """Fetch all contracts under a job post, any status - used to pre-check
-        deletability, since contract.job_post_id is ON DELETE RESTRICT."""
-        try:
-            db = get_db()
-            rows = db.fetch_data(table_name="contract", conditions=[("job_post_id", "=", job_post_id)])
-            return [convert_uuids_to_str(dict(row)) for row in rows]
-        except Exception as e:
-            logger("CONTRACT_FUNCTIONS", f"Error fetching contracts for job post: {str(e)}", level="ERROR")
-            raise
-
-    # dev function - no callers.
-    @staticmethod
-    def get_contracts_by_job_role_id(job_role_id: str) -> List[Dict]:
-        """Fetch all contracts under a job role, any status - used to pre-check
-        deletability, since contract.job_role_id is ON DELETE RESTRICT."""
-        try:
-            db = get_db()
-            rows = db.fetch_data(table_name="contract", conditions=[("job_role_id", "=", job_role_id)])
-            return [convert_uuids_to_str(dict(row)) for row in rows]
-        except Exception as e:
-            logger("CONTRACT_FUNCTIONS", f"Error fetching contracts for job role: {str(e)}", level="ERROR")
             raise
 
     @staticmethod
@@ -246,104 +174,140 @@ class ContractFunctions:
         agreed_budget: float,
         payment_structure: str,
         start_date,
+        terms: Dict,
         contract_id: Optional[str] = None,
         role_title: Optional[str] = None,
         budget_currency: Optional[str] = "USD",
         agreed_duration: Optional[str] = None,
-        status: Optional[str] = "active",
         end_date=None,
         actual_completion_date=None,
         total_hours_worked: Optional[float] = None,
         total_paid: Optional[float] = 0,
+        contract_pdf_url: Optional[str] = None,
+        contract_pdf_generated_at=None,
     ) -> Dict:
+        """Create a contract and everything that follows from the hire, atomically.
+
+        A contract is only ever created whole. The row, the terms it was generated
+        from, the job_role seat it fills, the rejection of the proposals it beat and
+        the closing of a fully staffed job post are one unit of work: all of it
+        commits or none of it does. There is no in-between state for anything else to
+        observe, which is why no status like 'draft' is needed to describe one.
+
+        The PDF is rendered and uploaded by the caller BEFORE this runs, and its
+        storage path passed in. That ordering is deliberate. Object storage cannot
+        take part in a database transaction, so the only way to avoid a contract that
+        exists without its document is to produce the document first and let the
+        database be the last thing that happens. A failure here leaves an unreferenced
+        file in the bucket, which costs nothing; the reverse would leave a live
+        contract nobody can read.
+
+        Returns the stored row plus the proposals that were auto-rejected, so the
+        caller can notify those freelancers once the work has actually committed.
+        """
+        # Imported here rather than at module scope: contract_generation_functions
+        # imports this module, so a top-level import either way is circular.
+        from routes.contracts.contract_generation_functions import ContractGenerationFunctions
+
         try:
-            db = get_db()
             contract_id = contract_id or str(uuid.uuid4())
-            role_fill_rows = db.execute_query(
-                """
-                UPDATE job_role
-                SET positions_filled = positions_filled + 1
-                WHERE job_role_id = :jrid AND positions_filled < positions_available
-                RETURNING positions_filled, positions_available
-                """,
-                {"jrid": job_role_id},
-            )
-            if not role_fill_rows:
-                raise ValueError("This role has already been fully staffed - no remaining positions to contract.")
+            rejected: List[Dict] = []
 
-            contract_data = {
-                "contract_id": contract_id,
-                "job_post_id": job_post_id,
-                "job_role_id": job_role_id,
-                "proposal_id": proposal_id,
-                "freelancer_id": freelancer_id,
-                "client_id": client_id,
-                "contract_title": contract_title,
-                "role_title": role_title,
-                "agreed_budget": agreed_budget,
-                "budget_currency": budget_currency,
-                "payment_structure": payment_structure,
-                "agreed_duration": agreed_duration,
-                "status": status,
-                "start_date": start_date,
-                "end_date": end_date,
-                "actual_completion_date": actual_completion_date,
-                "total_hours_worked": total_hours_worked,
-                "total_paid": total_paid,
-            }
+            with get_db().transaction() as tx:
+                rows = tx.execute_query(
+                    """
+                    INSERT INTO contract (
+                        contract_id, job_post_id, job_role_id, proposal_id, freelancer_id,
+                        client_id, contract_title, role_title, agreed_budget, budget_currency,
+                        payment_structure, agreed_duration, status, start_date, end_date,
+                        actual_completion_date, total_hours_worked, total_paid,
+                        contract_pdf_url, contract_pdf_generated_at
+                    ) VALUES (
+                        :contract_id, :job_post_id, :job_role_id, :proposal_id, :freelancer_id,
+                        :client_id, :contract_title, :role_title, :agreed_budget, :budget_currency,
+                        :payment_structure, :agreed_duration, 'active', :start_date, :end_date,
+                        :actual_completion_date, :total_hours_worked, :total_paid,
+                        :contract_pdf_url, :contract_pdf_generated_at
+                    )
+                    RETURNING *
+                    """,
+                    {
+                        "contract_id": contract_id,
+                        "job_post_id": job_post_id,
+                        "job_role_id": job_role_id,
+                        "proposal_id": proposal_id,
+                        "freelancer_id": freelancer_id,
+                        "client_id": client_id,
+                        "contract_title": contract_title,
+                        "role_title": role_title,
+                        "agreed_budget": agreed_budget,
+                        "budget_currency": budget_currency,
+                        "payment_structure": payment_structure,
+                        "agreed_duration": agreed_duration,
+                        "start_date": start_date,
+                        "end_date": end_date,
+                        "actual_completion_date": actual_completion_date,
+                        "total_hours_worked": total_hours_worked,
+                        "total_paid": total_paid,
+                        "contract_pdf_url": contract_pdf_url,
+                        "contract_pdf_generated_at": contract_pdf_generated_at,
+                    },
+                )
 
-            try:
-                db.insert_data(table_name="contract", data=contract_data)
-            except Exception:
-                db.execute_query(
-                    "UPDATE job_role SET positions_filled = GREATEST(positions_filled - 1, 0) WHERE job_role_id = :jrid",
+                # After the insert, so that a second contract for the same proposal fails
+                # on UNIQUE(proposal_id) and is reported as the duplicate it is, rather
+                # than as a staffing problem when the role happens to be full.
+                role_fill_rows = tx.execute_query(
+                    """
+                    UPDATE job_role
+                    SET positions_filled = positions_filled + 1
+                    WHERE job_role_id = :jrid AND positions_filled < positions_available
+                    RETURNING positions_filled, positions_available
+                    """,
                     {"jrid": job_role_id},
                 )
-                raise
+                if not role_fill_rows:
+                    raise ValueError("This role has already been fully staffed - no remaining positions to contract.")
 
-            filled, available = role_fill_rows[0]["positions_filled"], role_fill_rows[0]["positions_available"]
-            logger("CONTRACT_FUNCTIONS", f"Role {job_role_id} now {filled}/{available} positions filled", level="INFO")
-            if filled >= available:
-                rejected = ProposalFunctions.auto_reject_pending_proposals_for_filled_role(
-                    job_role_id, exclude_proposal_id=proposal_id
-                )
-                for row in rejected:
-                    _fire_notification(NotificationFunctions.notify(
-                        recipient_user_id=str(row["freelancer_user_id"]),
-                        notif_type="role_filled",
-                        title="Position filled",
-                        body=f"The \"{row['role_title']}\" position you applied for has been filled by another freelancer.",
-                        data={"job_role_id": job_role_id},
-                    ))
+                ContractGenerationFunctions.upsert_contract_terms(contract_id, terms or {}, db=tx)
 
-                all_roles_filled = db.execute_query(
-                    """
-                    SELECT NOT EXISTS (
-                        SELECT 1 FROM job_role
-                        WHERE job_post_id = :jpid AND positions_filled < positions_available
-                    ) AS all_filled
-                    """,
-                    {"jpid": job_post_id},
-                )[0]["all_filled"]
-                if all_roles_filled:
-                    db.execute_query(
-                        "UPDATE job_post SET status = 'filled' WHERE job_post_id = :jpid AND status = 'active'",
-                        {"jpid": job_post_id},
+                filled = role_fill_rows[0]["positions_filled"]
+                available = role_fill_rows[0]["positions_available"]
+                logger("CONTRACT_FUNCTIONS", f"Role {job_role_id} now {filled}/{available} positions filled", level="INFO")
+
+                if filled >= available:
+                    rejected = ProposalFunctions.auto_reject_pending_proposals_for_filled_role(
+                        job_role_id, exclude_proposal_id=proposal_id, db=tx
                     )
-                    logger("CONTRACT_FUNCTIONS", f"Job post {job_post_id} auto-marked 'filled' - all roles fully staffed", level="INFO")
+                    all_roles_filled = tx.execute_query(
+                        """
+                        SELECT NOT EXISTS (
+                            SELECT 1 FROM job_role
+                            WHERE job_post_id = :jpid AND positions_filled < positions_available
+                        ) AS all_filled
+                        """,
+                        {"jpid": job_post_id},
+                    )[0]["all_filled"]
+                    if all_roles_filled:
+                        tx.execute_query(
+                            "UPDATE job_post SET status = 'filled' WHERE job_post_id = :jpid AND status = 'active'",
+                            {"jpid": job_post_id},
+                        )
+                        logger("CONTRACT_FUNCTIONS", f"Job post {job_post_id} auto-marked 'filled' - all roles fully staffed", level="INFO")
 
-            client_rows = db.fetch_data(
-                table_name="client",
-                conditions=[("client_id", "=", client_id)],
-                limit=1,
-            )
-            if not client_rows:
-                raise Exception(f"Client profile not found for client_id: {client_id}")
+                created = convert_uuids_to_str(dict(rows[0]))
 
-            actor_user_id = str(client_rows[0]["user_id"])
+            for row in rejected:
+                _fire_notification(NotificationFunctions.notify(
+                    recipient_user_id=str(row["freelancer_user_id"]),
+                    notif_type="role_filled",
+                    title="Position Filled",
+                    body=f"The \"{row['role_title']}\" position you applied for has been filled by another freelancer.",
+                    data={"job_role_id": job_role_id},
+                ))
 
             logger("CONTRACT_FUNCTIONS", f"Contract {contract_id} created", level="INFO")
-            return convert_uuids_to_str(contract_data)
+            return {"contract": created, "rejected": rejected}
         except Exception as e:
             logger("CONTRACT_FUNCTIONS", f"Error creating contract: {str(e)}", level="ERROR")
             raise
@@ -515,10 +479,15 @@ class ContractFunctions:
             logger("CONTRACT_FUNCTIONS", f"Failed to notify role-reopened for {job_role_id} (non-fatal): {e}", level="WARNING")
 
     @staticmethod
-    def _revert_proposal_on_contract_removal(proposal_id: str, job_role_id: Optional[str] = None) -> None:
+    def _revert_proposal_on_contract_removal(
+        proposal_id: str, job_role_id: Optional[str] = None, release_seat: bool = True
+    ) -> None:
         """Flip a proposal back to 'rejected' once its contract is gone, since 'accepted'
         should only mean there's a live contract behind it. Also frees the role's filled
-        slot so it can be rehired. Non-fatal, never breaks the cancel or delete."""
+        slot so it can be rehired. Non-fatal, never breaks the cancel or delete.
+
+        Pass release_seat=False for a draft: it never reached activation, so it holds no
+        slot, and decrementing here would hand away a position belonging to a real hire."""
         try:
             proposal = ProposalFunctions.get_proposal_by_id(str(proposal_id))
             # Slot release rides on the accepted to rejected flip so it runs once per
@@ -531,7 +500,7 @@ class ContractFunctions:
                 f"Proposal {proposal_id} reverted to 'rejected' after its contract was removed",
                 level="INFO",
             )
-            if job_role_id:
+            if job_role_id and release_seat:
                 role_rows = get_db().execute_query(
                     """
                     UPDATE job_role
@@ -569,7 +538,9 @@ class ContractFunctions:
 
             if contract and contract.get("proposal_id"):
                 ContractFunctions._revert_proposal_on_contract_removal(
-                    contract["proposal_id"], contract.get("job_role_id")
+                    contract["proposal_id"],
+                    contract.get("job_role_id"),
+                    release_seat=contract.get("status") != "draft",
                 )
 
             return True

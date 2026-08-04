@@ -3,6 +3,8 @@ import os
 import re
 import sys
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
+from dateutil.relativedelta import relativedelta
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 import json
@@ -18,7 +20,7 @@ from routes.reviews.review_routes import trigger_review_pipeline_on_completion
 from routes.client_reviews.client_review_routes import trigger_client_review_pipeline_on_completion
 from typing import Dict, List, Optional
 import uuid
-from functions.schema_model import CancelContractRequest, ContractCreate, ContractUpdate, ContractResponse, ContractGenerateRequest, RaiseDisputeRequest
+from functions.schema_model import CancelContractRequest, ContractCreate, ContractUpdate, ContractResponse, ContractSendRequest, RaiseDisputeRequest
 from functions.schema_model import UserInDB
 from functions.authentication import get_current_user
 from functions.access_control import (
@@ -32,10 +34,11 @@ from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from functions.db_manager import get_db
 from routes.contracts.contract_functions import ContractFunctions
-from routes.contracts.contract_generation_functions import ContractGenerationFunctions
+from routes.contracts.contract_generation_functions import ContractGenerationFunctions, CONTRACT_BUCKET
 from routes.clients.client_functions import ClientFunctions
 from routes.freelancers.freelancer_functions import FreelancerFunctions
 from routes.proposals.proposal_functions import ProposalFunctions
+from routes.job_roles.job_role_functions import JobRoleFunctions
 from routes.dm.dm_functions import DMFunctions, _contract_accepted_default
 from routes.notifications.notification_functions import NotificationFunctions
 from routes.admin.admin_moderation import scan_harmful_text, scan_harmful_text_with_ml_fallback
@@ -146,6 +149,47 @@ def _reject_contract_duration_if_invalid(agreed_duration: Optional[str]) -> Opti
     return {"message": "agreed_duration must look like '<number> days|weeks|months' (e.g. '3 months')."}
 
 
+def _reject_generation_terms_if_invalid(terms) -> Optional[str]:
+    """Validate the terms block a contract is generated from."""
+    if terms.termination_notice not in {7, 14, 30}:
+        return "Termination notice must be 7, 14, or 30 days."
+    if terms.dispute_resolution not in {"negotiation", "mediation", "arbitration"}:
+        return "Choose a dispute resolution method: negotiation, mediation, or arbitration."
+    return None
+
+
+def _derive_end_date(start_date, agreed_duration: Optional[str]):
+    """The end date is the start date plus the agreed duration, not a separate answer.
+
+    agreed_duration is fixed by the accepted proposal, so letting the client also
+    pick an end date allowed a contract to state "3 weeks" beside a date three
+    months out - and both are printed on the PDF. Deriving it removes the
+    contradiction rather than adding a check for it.
+
+    "3 weeks from the 5th" is read as the deadline, so the result is start + the
+    full duration: work delivered on that date is on time. Months are added
+    calendrically, not as 30-day blocks, so a month-long contract starting on the
+    31st ends on the last day of the next month rather than slipping into the one
+    after.
+
+    Returns None when either input is missing or the duration is malformed; the
+    caller then keeps whatever end date it already had.
+    """
+    if not start_date or not agreed_duration:
+        return None
+    match = _DURATION_FORMAT_RE.match(agreed_duration.strip())
+    if not match:
+        return None
+
+    amount = int(agreed_duration.strip().split()[0])
+    unit = match.group(1).lower().rstrip("s")
+    if unit == "day":
+        return start_date + timedelta(days=amount)
+    if unit == "week":
+        return start_date + timedelta(weeks=amount)
+    return start_date + relativedelta(months=amount)
+
+
 _DEFAULT_CONTRACT_NOTIFICATION = (
     "Hello {freelancer_name},\n\n"
     'The contract for "{contract_title}" ({role_title}) has been finalized '
@@ -162,12 +206,118 @@ def _render_notification(template: str, subs: dict) -> str:
 
     return template
 
-_PDF_RELEVANT_FIELDS = {
+# Printed on the contract PDF, which is rendered once at creation and never again, so
+# these can no longer change. end_date is excluded on purpose: extensions move it while
+# the document keeps the originally agreed deadline, preserved in original_end_date.
+_PDF_FROZEN_FIELDS = {
     "contract_title", "role_title", "agreed_budget", "budget_currency",
-    "payment_structure", "agreed_duration", "start_date", "end_date",
+    "payment_structure", "agreed_duration", "start_date",
 }
 
 _CANCELLATION_DISPUTE_WINDOW = timedelta(hours=72)
+
+_CENTS = Decimal("0.01")
+
+
+async def _announce_contract_started(contract: Dict) -> None:
+    """Open the DM thread and tell the freelancer the contract has begun.
+
+    Runs only after the creating transaction has committed, so the contract the
+    freelancer is being told about is complete and readable. Non-fatal by design: a
+    contract that is live in the database should not be reported as failed because a
+    notification could not be delivered.
+    """
+    contract_id = str(contract["contract_id"])
+    try:
+        cl_row = ClientFunctions.get_client_by_id(str(contract["client_id"]))
+        fl_row = FreelancerFunctions.get_freelancer_by_id(str(contract["freelancer_id"]))
+        if not (cl_row and fl_row):
+            return
+        client_user_id = str(cl_row["user_id"])
+        freelancer_user_id = str(fl_row["user_id"])
+        default_msg = _contract_accepted_default(
+            role_title=contract.get("role_title", ""),
+            contract_title=contract.get("contract_title", ""),
+        )
+        DMFunctions.activate_or_create_thread(
+            client_user_id=client_user_id,
+            freelancer_user_id=freelancer_user_id,
+            message_text=default_msg,
+            sender_id=client_user_id,
+            job_post_id=str(contract["job_post_id"]) if contract.get("job_post_id") else None,
+            job_role_id=str(contract["job_role_id"]) if contract.get("job_role_id") else None,
+            contract_id=contract_id,
+            role_title=contract.get("role_title"),
+            contract_title=contract.get("contract_title"),
+        )
+        logger("CONTRACT", f"DM thread activated for contract {contract_id}", "POST /contracts/{contract_id}/generate", "INFO")
+
+        await NotificationFunctions.notify(
+            recipient_user_id=freelancer_user_id,
+            notif_type="contract_started",
+            title="Contract started",
+            body=f"A new contract \"{contract.get('contract_title')}\" has begun",
+            data={"contract_id": contract_id},
+        )
+    except Exception as dm_err:
+        logger("CONTRACT", f"DM/notification on activation failed (non-fatal): {dm_err}", "POST /contracts/{contract_id}/generate", "WARNING")
+
+
+# What the freelancer bid on is not the client's to rewrite afterwards. The role's
+# title and currency come from the job role, the money and the duration from the
+# proposal; the contract only records them. Everything else on the setup screen
+# (contract_title, payment_structure, start_date, the legal terms) stays editable.
+def _locked_field_error(field: str, submitted, expected) -> Dict:
+    return {
+        "message": (
+            f"{field} is fixed by the accepted proposal and cannot be changed "
+            f"(expected {expected!r}, got {submitted!r})."
+        ),
+        "field": field,
+        "expected": expected,
+        "submitted": submitted,
+    }
+
+
+def _budgets_differ(submitted: Optional[float], expected) -> bool:
+    """Compare against a numeric(12,2) column, so only two decimals are significant."""
+    if submitted is None or expected is None:
+        return False
+    return Decimal(str(submitted)).quantize(_CENTS) != Decimal(str(expected)).quantize(_CENTS)
+
+
+def _check_terms_against_proposal(
+    proposal: Dict,
+    job_role: Optional[Dict],
+    role_title: Optional[str] = None,
+    agreed_budget: Optional[float] = None,
+    budget_currency: Optional[str] = None,
+    agreed_duration: Optional[str] = None,
+) -> Optional[Dict]:
+    """Reject any submitted value that contradicts the proposal or the job role.
+
+    A None argument means "not submitted" and is left to be filled in server-side.
+    agreed_duration is only checked when the proposal actually carried one - a
+    freelancer may bid without proposing a duration, and the client sets it at
+    creation time in that case.
+
+    Only creation calls this. Afterwards these fields are frozen outright, since they
+    are printed on a PDF that is never re-rendered - see _PDF_FROZEN_FIELDS.
+    """
+    if role_title is not None and job_role and role_title != job_role.get("role_title"):
+        return _locked_field_error("role_title", role_title, job_role.get("role_title"))
+
+    if budget_currency is not None and job_role and budget_currency != job_role.get("budget_currency"):
+        return _locked_field_error("budget_currency", budget_currency, job_role.get("budget_currency"))
+
+    if _budgets_differ(agreed_budget, proposal.get("proposed_budget")):
+        return _locked_field_error("agreed_budget", agreed_budget, float(proposal["proposed_budget"]))
+
+    proposed_duration = proposal.get("proposed_duration")
+    if agreed_duration is not None and proposed_duration and agreed_duration != proposed_duration:
+        return _locked_field_error("agreed_duration", agreed_duration, proposed_duration)
+
+    return None
 
 contract_router = APIRouter(prefix="/contracts", tags=["Contracts"])
 
@@ -227,6 +377,29 @@ async def get_contracts_by_client(client_id: str, current_user: UserInDB = Depen
     except Exception as e:
         logger("CONTRACT", f"Failed to fetch contracts for client {client_id}: {str(e)}", "GET /contracts/client/{client_id}", "ERROR")
         return ResponseSchema.error("Failed to fetch contracts for client. Please try again.", 500)
+
+
+@contract_router.get("/proposal/{proposal_id}", response_model=None)
+async def get_contract_by_proposal(proposal_id: str, current_user: UserInDB = Depends(get_current_user)):
+    """Return the contract created from a proposal, or 404 if it has none yet.
+
+    Answers "does this accepted bid already have a contract?" directly, so the client
+    app does not have to pull its whole contract list and filter. Returns drafts too:
+    the client needs to find its own unfinished setup and resume it.
+    """
+    try:
+        contract = ContractFunctions.get_contract_by_proposal_id(proposal_id)
+        if not contract:
+            return ResponseSchema.error(f"No contract exists for proposal {proposal_id}", 404)
+        assert_current_user_is_contract_party(current_user, contract)
+        logger("CONTRACT", f"Found contract {contract['contract_id']} for proposal {proposal_id}", "GET /contracts/proposal/{proposal_id}", "INFO")
+        return ResponseSchema.success(contract, 200)
+    except HTTPException as e:
+        logger("CONTRACT", f"HTTP {e.status_code}: {e.detail}", "GET /contracts/proposal/{proposal_id}", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
+    except Exception as e:
+        logger("CONTRACT", f"Failed to fetch contract for proposal {proposal_id}: {str(e)}", "GET /contracts/proposal/{proposal_id}", "ERROR")
+        return ResponseSchema.error("Failed to fetch contract for proposal. Please try again.", 500)
 
 
 @contract_router.get("/{contract_id}/generation-data")
@@ -361,15 +534,88 @@ async def create_contract(contract: ContractCreate, current_user: UserInDB = Dep
         if proposal.get("job_role_id") and str(proposal["job_role_id"]) != str(contract.job_role_id):
             return ResponseSchema.error("Contract job role does not match the proposal's job role", 400)
 
-        rejection = _reject_contract_short_text_if_harmful(contract.contract_title, contract.role_title)
+        terms_in = contract.terms
+        rejection = _reject_contract_short_text_if_harmful(
+            contract.contract_title, contract.role_title, terms_in.governing_law
+        )
         if rejection:
             return ResponseSchema.error(rejection["message"], 400, extra={"blocked_by": "harmful_text", "detected_labels": rejection["detected_labels"]})
-        duration_error = _reject_contract_duration_if_invalid(contract.agreed_duration)
+        duration_error = _reject_contract_duration_if_invalid(terms_in.agreed_duration or contract.agreed_duration)
         if duration_error:
             return ResponseSchema.error(duration_error["message"], 400)
+        terms_error = _reject_generation_terms_if_invalid(terms_in)
+        if terms_error:
+            return ResponseSchema.error(terms_error, 400)
+
+        # The setup screen prefills these from the proposal and the role, so a correct
+        # client sends them back unchanged. A mismatch means the form let them be edited.
+        job_role = JobRoleFunctions.get_job_role_by_id(str(contract.job_role_id))
+        if not job_role:
+            return ResponseSchema.error(f"Job role {contract.job_role_id} not found", 404)
+        locked = _check_terms_against_proposal(
+            proposal,
+            job_role,
+            role_title=contract.role_title,
+            agreed_budget=contract.agreed_budget,
+            budget_currency=contract.budget_currency,
+            agreed_duration=terms_in.agreed_duration or contract.agreed_duration,
+        )
+        if locked:
+            logger("CONTRACT", f"Rejected create: {locked['field']} does not match the accepted proposal", "POST /contracts", "WARNING")
+            return ResponseSchema.error(locked["message"], 400, extra={"blocked_by": "locked_field", "field": locked["field"], "expected": locked["expected"]})
+
+        # Fall back to the authoritative source when the client omits these, rather
+        # than to the schema default.
+        agreed_duration = terms_in.agreed_duration or contract.agreed_duration or proposal.get("proposed_duration")
+        role_title = contract.role_title or job_role.get("role_title")
+        budget_currency = contract.budget_currency or job_role.get("budget_currency")
+
+        # end_date is computed, not collected. A submitted one is accepted and
+        # ignored the same way status is, and only stands in when there is no
+        # duration to compute from.
+        end_date = _derive_end_date(contract.start_date, agreed_duration) or terms_in.end_date
+
+        terms = {
+            "termination_notice": terms_in.termination_notice,
+            "governing_law": terms_in.governing_law,
+            "confidentiality": terms_in.confidentiality,
+            "confidentiality_text": terms_in.confidentiality_text,
+            "late_payment_penalty": terms_in.late_payment_penalty,
+            "dispute_resolution": terms_in.dispute_resolution,
+            "revision_rounds": terms_in.revision_rounds,
+            "additional_clauses": terms_in.additional_clauses,
+            "payment_schedule": terms_in.payment_schedule,
+        }
+
+        # Render and upload BEFORE writing anything. Object storage cannot join a
+        # database transaction, so the document is produced first and the database is
+        # the last thing to happen: a failure from here on leaves an unreferenced file
+        # in the bucket and nothing else. Doing it the other way round would risk a
+        # live contract with no document behind it.
+        generated_at = datetime.utcnow()
+        pending_contract = {
+            "contract_id": contract_id,
+            "job_post_id": str(contract.job_post_id),
+            "job_role_id": str(contract.job_role_id),
+            "proposal_id": str(contract.proposal_id),
+            "freelancer_id": str(contract.freelancer_id),
+            "client_id": str(contract.client_id),
+            "contract_title": contract.contract_title,
+            "role_title": role_title,
+            "agreed_budget": contract.agreed_budget,
+            "budget_currency": budget_currency,
+            "payment_structure": contract.payment_structure,
+            "agreed_duration": agreed_duration,
+            "start_date": contract.start_date,
+            "end_date": end_date,
+        }
+        pdf_bytes = ContractGenerationFunctions.render_contract_pdf(
+            contract_id, generated_at=generated_at, contract=pending_contract, contract_terms=terms
+        )
+        storage_path = ContractGenerationFunctions.upload_contract_pdf(contract_id, pdf_bytes)
 
         try:
-            new_contract = ContractFunctions.create_contract(
+            created = ContractFunctions.create_contract(
                 contract_id=contract_id,
                 job_post_id=contract.job_post_id,
                 job_role_id=contract.job_role_id,
@@ -380,14 +626,16 @@ async def create_contract(contract: ContractCreate, current_user: UserInDB = Dep
                 agreed_budget=contract.agreed_budget,
                 payment_structure=contract.payment_structure,
                 start_date=contract.start_date,
-                role_title=contract.role_title,
-                budget_currency=contract.budget_currency,
-                agreed_duration=contract.agreed_duration,
-                status=contract.status,
-                end_date=contract.end_date,
+                terms=terms,
+                role_title=role_title,
+                budget_currency=budget_currency,
+                agreed_duration=agreed_duration,
+                end_date=end_date,
                 actual_completion_date=contract.actual_completion_date,
                 total_hours_worked=contract.total_hours_worked,
                 total_paid=contract.total_paid,
+                contract_pdf_url=storage_path,
+                contract_pdf_generated_at=generated_at,
             )
         except IntegrityError:
             # Another request created a contract for this proposal in between, caught
@@ -395,42 +643,12 @@ async def create_contract(contract: ContractCreate, current_user: UserInDB = Dep
             logger("CONTRACT", f"Duplicate contract insert blocked by UNIQUE(proposal_id) for proposal {contract.proposal_id}", "POST /contracts", "WARNING")
             return ResponseSchema.error("A contract already exists for this proposal", 409)
 
+        new_contract = created["contract"]
         logger("CONTRACT", f"Created contract {contract_id}", "POST /contracts", "INFO")
 
-        # Auto-activate DM thread + notify freelancer
-        try:
-            cl_row = ClientFunctions.get_client_by_id(str(new_contract["client_id"]))
-            fl_row = FreelancerFunctions.get_freelancer_by_id(str(new_contract["freelancer_id"]))
-            if cl_row and fl_row:
-                client_user_id = str(cl_row["user_id"])
-                freelancer_user_id = str(fl_row["user_id"])
-                default_msg = _contract_accepted_default(
-                    role_title=new_contract.get("role_title", ""),
-                    contract_title=new_contract.get("contract_title", ""),
-                )
-                DMFunctions.activate_or_create_thread(
-                    client_user_id=client_user_id,
-                    freelancer_user_id=freelancer_user_id,
-                    message_text=default_msg,
-                    sender_id=client_user_id,
-                    job_post_id=str(new_contract["job_post_id"]) if new_contract.get("job_post_id") else None,
-                    job_role_id=str(new_contract["job_role_id"]) if new_contract.get("job_role_id") else None,
-                    contract_id=contract_id,
-                    role_title=new_contract.get("role_title"),
-                    contract_title=new_contract.get("contract_title"),
-                )
-                logger("CONTRACT", f"DM thread activated for contract {contract_id}", "POST /contracts", "INFO")
-
-                # Notify freelancer
-                await NotificationFunctions.notify(
-                    recipient_user_id=freelancer_user_id,
-                    notif_type="contract_started",
-                    title="Contract started",
-                    body=f"A new contract \"{new_contract.get('contract_title')}\" has begun",
-                    data={"contract_id": contract_id},
-                )
-        except Exception as dm_err:
-            logger("CONTRACT", f"DM/notification post-create failed (non-fatal): {dm_err}", "POST /contracts", "WARNING")
+        # The contract is committed and whole by this point, so telling the freelancer
+        # about it cannot be premature.
+        await _announce_contract_started(new_contract)
 
         return ResponseSchema.success(new_contract, 201)
     except ValueError as e:
@@ -446,145 +664,119 @@ async def create_contract(contract: ContractCreate, current_user: UserInDB = Dep
         return ResponseSchema.error("Failed to create contract. Please try again.", 500)
 
 
-@contract_router.post("/{contract_id}/generate", response_model=None)
-async def generate_contract_pdf(contract_id: str, generation_data: ContractGenerateRequest, current_user: UserInDB = Depends(get_current_user)):
-    """Generate a contract PDF and persist the contract terms and storage path."""
+@contract_router.post("/{contract_id}/send", response_model=None)
+async def send_contract_to_freelancer(contract_id: str, payload: ContractSendRequest, current_user: UserInDB = Depends(get_current_user)):
+    """Deliver an already-generated contract to the freelancer.
+
+    A contract's PDF is rendered once, inside the transaction that creates it, and is
+    never re-rendered - so this only delivers what already exists. The stored document
+    is fetched back from object storage and attached to a DM, which keeps what the
+    freelancer receives identical to what was generated rather than a fresh render that
+    could differ.
+
+    Safe to call more than once: sending again posts another message with the same
+    document, which is what a client re-sending a contract means.
+    """
     try:
         contract = ContractFunctions.get_contract_by_id(contract_id)
         if not contract:
             return ResponseSchema.error(f"Contract {contract_id} not found", 404)
-        assert_current_user_is_contract_party(current_user, contract)
-        if contract.get("status") in _ARBITRATION_LOCKED_STATUSES:
-            return ResponseSchema.error(
-                "This contract is under dispute and its terms cannot be changed until an admin resolves it",
-                409,
+
+        # The client sends their own contract; the freelancer is the recipient.
+        client_profile = get_client_profile_for_user(current_user) if current_user.client_id else None
+        if not client_profile or str(client_profile["client_id"]) != str(contract["client_id"]):
+            return ResponseSchema.error("Only the contract's client can send it to the freelancer", 403)
+
+        pdf_path = contract.get("contract_pdf_url")
+        if not pdf_path:
+            return ResponseSchema.error("This contract has no generated PDF to send", 409)
+
+        freelancer = FreelancerFunctions.get_freelancer_by_id(str(contract["freelancer_id"]))
+        freelancer_user_id = str((freelancer or {}).get("user_id", ""))
+        if not freelancer_user_id:
+            return ResponseSchema.error("Could not resolve the freelancer for this contract", 404)
+
+        thread = DMFunctions.get_thread_by_contract_id(contract_id)
+        if not thread:
+            # The thread is opened when the contract is created, so its absence means
+            # that step failed. Recreate it rather than refuse to send.
+            DMFunctions.activate_or_create_thread(
+                client_user_id=str(current_user.user_id),
+                freelancer_user_id=freelancer_user_id,
+                message_text=_contract_accepted_default(
+                    role_title=contract.get("role_title", ""),
+                    contract_title=contract.get("contract_title", ""),
+                ),
+                sender_id=str(current_user.user_id),
+                job_post_id=str(contract["job_post_id"]) if contract.get("job_post_id") else None,
+                job_role_id=str(contract["job_role_id"]) if contract.get("job_role_id") else None,
+                contract_id=contract_id,
+                role_title=contract.get("role_title"),
+                contract_title=contract.get("contract_title"),
+            )
+            thread = DMFunctions.get_thread_by_contract_id(contract_id)
+            if not thread:
+                return ResponseSchema.error("Could not open a message thread for this contract", 500)
+
+        custom_msg = payload.notification_message
+        raw_template = custom_msg or client_profile.get("contract_message_template") or _DEFAULT_CONTRACT_NOTIFICATION
+        message_text = _render_notification(raw_template, {
+            "freelancer_name": (freelancer or {}).get("full_name") or "there",
+            "contract_title": contract.get("contract_title") or "",
+            "role_title": contract.get("role_title") or "",
+        })
+
+        pdf_bytes = download_file(CONTRACT_BUCKET, pdf_path)
+
+        msg = DMFunctions.send_message(
+            thread_id=thread["thread_id"],
+            sender_id=str(current_user.user_id),
+            message_text=message_text,
+            metadata={"type": "contract_pdf_shared", "contract_id": contract_id},
+        )
+
+        file_name = f"contract_{contract_id}.pdf"
+        attachment_path = upload_thread_attachment(
+            thread_id=thread["thread_id"],
+            message_id=msg["dm_message_id"],
+            file_name=file_name,
+            file_bytes=pdf_bytes,
+            content_type="application/pdf",
+        )
+        attachment = DMFunctions.create_attachment(
+            dm_message_id=msg["dm_message_id"],
+            file_name=file_name,
+            file_url=attachment_path,
+            mime_type="application/pdf",
+            file_type="document",
+            file_size_bytes=len(pdf_bytes),
+        )
+        attachment["file_url"] = resolve_file_url(BUCKET_MESSAGE_ATTACHMENTS, attachment["file_url"])
+        msg["attachments"] = [attachment]
+
+        # Only persist the template once the message it came from actually sent.
+        if payload.save_message_as_template and custom_msg:
+            get_db().execute_query(
+                "UPDATE client SET contract_message_template = :tpl WHERE client_id = :cid",
+                {"tpl": custom_msg, "cid": str(client_profile["client_id"])},
             )
 
-        if generation_data.termination_notice not in {7, 14, 30}:
-            return ResponseSchema.error("Termination notice must be 7, 14, or 30 days.", 400)
-        if generation_data.dispute_resolution not in {"negotiation", "mediation", "arbitration"}:
-            return ResponseSchema.error("Choose a dispute resolution method: negotiation, mediation, or arbitration.", 400)
-
-        rejection = _reject_contract_short_text_if_harmful(generation_data.governing_law)
-        if rejection:
-            return ResponseSchema.error(rejection["message"], 400, extra={"blocked_by": "harmful_text", "detected_labels": rejection["detected_labels"]})
-        duration_error = _reject_contract_duration_if_invalid(generation_data.agreed_duration)
-        if duration_error:
-            return ResponseSchema.error(duration_error["message"], 400)
-        ContractGenerationFunctions.save_generation_data(
-            contract_id=contract_id,
-            update_data={
-                "end_date": generation_data.end_date,
-                "agreed_duration": generation_data.agreed_duration,
-            },
-            terms={
-                "termination_notice": generation_data.termination_notice,
-                "governing_law": generation_data.governing_law,
-                "confidentiality": generation_data.confidentiality,
-                "confidentiality_text": generation_data.confidentiality_text,
-                "late_payment_penalty": generation_data.late_payment_penalty,
-                "dispute_resolution": generation_data.dispute_resolution,
-                "revision_rounds": generation_data.revision_rounds,
-                "additional_clauses": generation_data.additional_clauses,
-                "payment_schedule": generation_data.payment_schedule,
-            },
+        await NotificationFunctions.notify(
+            recipient_user_id=freelancer_user_id,
+            notif_type="contract_shared",
+            title="Contract received",
+            body=f"You have received the contract \"{contract.get('contract_title')}\"",
+            data={"contract_id": contract_id},
         )
 
-        pdf_bytes = ContractGenerationFunctions.render_contract_pdf(contract_id)
-        storage_path = ContractGenerationFunctions.upload_contract_pdf(contract_id, pdf_bytes)
-
-        db = get_db()
-        db.execute_query(
-            """UPDATE contract
-               SET contract_pdf_url = :url,
-                   contract_pdf_generated_at = NOW()
-               WHERE contract_id = :cid""",
-            {"url": storage_path, "cid": contract_id},
-        )
-
-        refreshed = ContractFunctions.get_contract_by_id(contract_id)
-
-        client_profile = None
-        if current_user.client_id:
-            cp = ClientFunctions.get_client_by_user_id(current_user.user_id)
-            if cp and str(cp["client_id"]) == str(refreshed["client_id"]):
-                client_profile = cp
-
-        if client_profile and generation_data.send_notification:
-            try:
-                freelancer = FreelancerFunctions.get_freelancer_by_id(str(refreshed["freelancer_id"]))
-                freelancer_name = (freelancer or {}).get("full_name") or "there"
-                freelancer_user_id = str((freelancer or {}).get("user_id", ""))
-                
-                custom_msg = generation_data.notification_message
-                saved_template = client_profile.get("contract_message_template")
-                raw_template = custom_msg or saved_template or _DEFAULT_CONTRACT_NOTIFICATION
-
-                message_text = _render_notification(raw_template, {
-                    "freelancer_name": freelancer_name,
-                    "contract_title": refreshed.get("contract_title") or "",
-                    "role_title": refreshed.get("role_title") or "",
-                })
-
-                if generation_data.save_message_as_template and custom_msg:
-                    db.execute_query(
-                        "UPDATE client SET contract_message_template = :tpl WHERE client_id = :cid",
-                        {"tpl": custom_msg, "cid": str(client_profile["client_id"])},
-                    )
-
-                if freelancer_user_id:
-                    thread = DMFunctions.get_thread_by_contract_id(contract_id)
-                    if thread:
-                        msg = DMFunctions.send_message(
-                            thread_id=thread["thread_id"],
-                            sender_id=str(current_user.user_id),
-                            message_text=message_text,
-                            metadata={
-                                "type": "contract_pdf_shared",
-                                "contract_id": contract_id,
-                            },
-                        )
-
-                        file_name = f"contract_{contract_id}.pdf"
-
-                        attachment_path = upload_thread_attachment(
-                            thread_id=thread["thread_id"],
-                            message_id=msg["dm_message_id"],
-                            file_name=file_name,
-                            file_bytes=pdf_bytes,
-                            content_type="application/pdf",
-                        )
-
-                        attachment = DMFunctions.create_attachment(
-                            dm_message_id=msg["dm_message_id"],
-                            file_name=file_name,
-                            file_url=attachment_path,
-                            mime_type="application/pdf",
-                            file_type="document",
-                            file_size_bytes=len(pdf_bytes),
-                        )
-
-                        attachment["file_url"] = resolve_file_url(
-                            BUCKET_MESSAGE_ATTACHMENTS,
-                            attachment["file_url"],
-                        )
-
-                        msg["attachments"] = [attachment]
-            except Exception as msg_err:
-                logger("CONTRACT", f"Failed to send PDF notification: {str(msg_err)}", "POST /contracts/{contract_id}/generate", "WARNING")
-
-        logger("CONTRACT", f"Generated contract PDF for {contract_id}", "POST /contracts/{contract_id}/generate", "INFO")
-        return ResponseSchema.success(refreshed, 200)
-    except ValueError as e:
-        logger("CONTRACT", f"Validation error: {str(e)}", "POST /contracts/{contract_id}/generate", "WARNING")
-        # str(e) on purpose - same reason as POST /contracts above.
-        return ResponseSchema.error(str(e), 400)
+        logger("CONTRACT", f"Sent contract {contract_id} to freelancer", "POST /contracts/{contract_id}/send", "INFO")
+        return ResponseSchema.success(contract, 200)
     except HTTPException as e:
-        logger("CONTRACT", f"HTTP {e.status_code}: {e.detail}", "POST /contracts/{contract_id}/generate", "WARNING")
+        logger("CONTRACT", f"HTTP {e.status_code}: {e.detail}", "POST /contracts/{contract_id}/send", "WARNING")
         return ResponseSchema.error(e.detail, e.status_code)
     except Exception as e:
-        logger("CONTRACT", f"Failed to generate contract PDF for {contract_id}: {str(e)}", "POST /contracts/{contract_id}/generate", "ERROR")
-        return ResponseSchema.error("Failed to generate contract PDF. Please try again.", 500)
+        logger("CONTRACT", f"Failed to send contract {contract_id}: {str(e)}", "POST /contracts/{contract_id}/send", "ERROR")
+        return ResponseSchema.error("Failed to send the contract. Please try again.", 500)
 
 
 @contract_router.put("/{contract_id}", response_model=None)
@@ -623,18 +815,27 @@ async def update_contract(contract_id: str, contract_update: ContractUpdate, bac
             if duration_error:
                 return ResponseSchema.error(duration_error["message"], 400)
 
-        updated_contract = ContractFunctions.update_contract(contract_id, update_data)
+        # Everything the PDF prints is fixed once the contract exists, because the PDF
+        # is rendered once at creation and never re-rendered. Allowing these to change
+        # would leave the stored document contradicting the row it describes, with no
+        # way to bring them back into agreement.
+        #
+        # end_date is the deliberate exception: an arbitration extension moves it, and
+        # the document keeps showing the deadline that was actually agreed - which is
+        # what original_end_date preserves and what on-time delivery is scored against.
+        frozen = _PDF_FROZEN_FIELDS.intersection(update_data.keys())
+        if frozen:
+            changed = {f for f in frozen if update_data[f] != existing_contract.get(f)}
+            if changed:
+                field = sorted(changed)[0]
+                logger("CONTRACT", f"Rejected update: {field} is printed on the contract PDF and cannot change", "PUT /contracts/{contract_id}", "WARNING")
+                return ResponseSchema.error(
+                    f"{field} appears on the signed contract PDF and cannot be changed after the contract is created.",
+                    400,
+                    extra={"blocked_by": "frozen_field", "field": field, "expected": existing_contract.get(field)},
+                )
 
-        if existing_contract.get("contract_pdf_url") and _PDF_RELEVANT_FIELDS.intersection(update_data.keys()):
-            get_db().execute_query(
-                """UPDATE contract
-                   SET contract_pdf_url = NULL, contract_pdf_generated_at = NULL
-                   WHERE contract_id = :cid""",
-                {"cid": contract_id},
-            )
-            updated_contract["contract_pdf_url"] = None
-            updated_contract["contract_pdf_generated_at"] = None
-            logger("CONTRACT", f"Contract {contract_id} PDF invalidated after edit to {sorted(_PDF_RELEVANT_FIELDS.intersection(update_data.keys()))}", "PUT /contracts/{contract_id}", "INFO")
+        updated_contract = ContractFunctions.update_contract(contract_id, update_data)
 
         if update_data.get("status") == "completed" and existing_contract.get("status") != "completed":
             mark_contract_dirty(contract_id)

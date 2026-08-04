@@ -11,6 +11,10 @@ argon2-cffi
 python-dotenv
 pydantic[email]
 reportlab
+# Used directly to derive contract end dates from the agreed duration, where
+# adding months has to respect calendar length rather than assume 30 days. It was
+# already present transitively; named here because the contract flow depends on it.
+python-dateutil
 minio
 numpy
 joblib

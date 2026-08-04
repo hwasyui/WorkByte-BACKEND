@@ -288,7 +288,7 @@ class ProposalFunctions:
             raise
 
     @staticmethod
-    def auto_reject_pending_proposals_for_filled_role(job_role_id: str, exclude_proposal_id: str) -> List[Dict]:
+    def auto_reject_pending_proposals_for_filled_role(job_role_id: str, exclude_proposal_id: str, db=None) -> List[Dict]:
         """
         Auto-reject the remaining pending proposals once a role's last position is taken,
         so those freelancers aren't left hanging. Returns each rejected proposal's
@@ -296,9 +296,14 @@ class ProposalFunctions:
 
         Split into two queries because execute_query only commits when the text starts
         with INSERT, UPDATE or DELETE, so a WITH would never commit.
+
+        Pass `db` an open Transaction to make these rejections part of a larger unit of
+        work - contract activation does this, so the seat and the rejections commit
+        together. Only execute_query is used here, which both Database and Transaction
+        provide.
         """
         try:
-            db = get_db()
+            db = db or get_db()
             rejected_rows = db.execute_query(
                 """
                 UPDATE proposal
@@ -321,10 +326,9 @@ class ProposalFunctions:
 
             result = []
             for row in rejected_rows:
-                freelancer_rows = db.fetch_data(
-                    table_name="freelancer",
-                    conditions=[("freelancer_id", "=", str(row["freelancer_id"]))],
-                    limit=1,
+                freelancer_rows = db.execute_query(
+                    "SELECT user_id FROM freelancer WHERE freelancer_id = :fid LIMIT 1",
+                    {"fid": str(row["freelancer_id"])},
                 )
                 if freelancer_rows:
                     result.append({

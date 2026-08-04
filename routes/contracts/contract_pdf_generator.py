@@ -1,5 +1,6 @@
 import io
 import json
+import re
 from datetime import datetime
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -88,18 +89,93 @@ def _format_currency(amount, currency):
         return str(amount)
 
 
-def _parse_payment_schedule(raw) -> list:
-    """Return a list of dicts from either a JSON string or an already-parsed list."""
+# The contract form writes one line per milestone, e.g.
+#   Milestone 1: Wireframes approved - 30% payment (paid after client approval)
+# with the percentage and the note both optional. Mirrors the pattern the form
+# itself uses to read the value back, so the two stay in step.
+_MILESTONE_LINE_RE = re.compile(
+    r"^Milestone\s+\d+\s*:\s*(?P<title>.+?)"
+    r"(?:\s*-\s*(?P<percentage>[\d.]+)%\s*payment)?"
+    r"(?:\s*\((?P<note>.*)\))?$"
+)
+
+
+def _parse_payment_schedule(raw, payment_structure=None, agreed_budget=None):
+    """Turn a stored payment_schedule into (table rows, free text).
+
+    Three shapes reach this function:
+      * a list, or a JSON string holding one - the richest form, carrying an
+        explicit amount and due_date per phase;
+      * the milestone lines a milestone_based contract is saved as, which is what
+        the app actually sends;
+      * a single sentence for a full_payment contract, like "100% upfront".
+
+    Only the first two become a table. The last is returned as free text, because
+    one line spread across a five-column grid reads as a rendering fault. Exactly
+    one of the two return values is ever populated.
+    """
     if isinstance(raw, list):
-        return raw
-    if isinstance(raw, str):
+        return raw, None
+    if not isinstance(raw, str):
+        return [], None
+
+    text = raw.strip()
+    if not text:
+        return [], None
+
+    if text.startswith("["):
         try:
-            parsed = json.loads(raw)
+            parsed = json.loads(text)
             if isinstance(parsed, list):
-                return parsed
+                return parsed, None
         except (json.JSONDecodeError, ValueError):
             pass
-    return []
+
+    # A full_payment arrangement is prose, not a schedule of phases.
+    if payment_structure != "milestone_based":
+        return [], text
+
+    items = []
+    for index, line in enumerate(l.strip() for l in text.splitlines()):
+        if not line:
+            continue
+        match = _MILESTONE_LINE_RE.match(line)
+        if not match:
+            # Keep the line rather than drop it: a milestone the form could not
+            # round-trip is still a term of the agreement.
+            items.append({"phase": f"Milestone {index + 1}", "description": line})
+            continue
+
+        percentage = None
+        if match.group("percentage"):
+            try:
+                percentage = float(match.group("percentage"))
+            except ValueError:
+                percentage = None
+
+        # The form collects a percentage but never an amount, so derive it. Both
+        # the budget and the split are fixed by this point, so this is arithmetic
+        # on agreed terms rather than an assumption about them.
+        amount = None
+        if percentage is not None and agreed_budget is not None:
+            try:
+                amount = float(agreed_budget) * percentage / 100.0
+            except (TypeError, ValueError):
+                amount = None
+
+        description = match.group("title").strip()
+        note = (match.group("note") or "").strip()
+        if note:
+            description = f"{description} ({note})"
+
+        items.append({
+            "phase": f"Milestone {len(items) + 1}",
+            "description": description,
+            "percentage": percentage,
+            "amount": amount,
+        })
+
+    return items, None
 
 
 def _payment_schedule_table(items: list, currency: str) -> Table:
@@ -116,37 +192,59 @@ def _payment_schedule_table(items: list, currency: str) -> Table:
         textColor=TEXT_DARK, leading=12, alignment=TA_RIGHT
     )
 
-    col_w = [
-        CONTENT_W * 0.26,  # Phase
-        CONTENT_W * 0.32,  # Description
-        CONTENT_W * 0.20,  # Amount
-        CONTENT_W * 0.11,  # %
-        CONTENT_W * 0.11,  # Due date
-    ]
+    # Only carry the columns this schedule actually has. The app collects a
+    # percentage and no due date, so a fixed five-column grid left two of them
+    # showing nothing but dashes.
+    show_amount = any(item.get("amount") is not None for item in items)
+    show_pct    = any(item.get("percentage") is not None for item in items)
+    show_due    = any(item.get("due_date") for item in items)
 
-    rows = [[
-        Paragraph("Phase",       header_style),
-        Paragraph("Description", header_style),
-        Paragraph("Amount",      header_style),
-        Paragraph("%",           header_style),
-        Paragraph("Due Date",    header_style),
-    ]]
+    columns = [("Phase", 0.24), ("Description", 0.38)]
+    if show_amount:
+        columns.append(("Amount", 0.20))
+    if show_pct:
+        columns.append(("%", 0.10))
+    if show_due:
+        columns.append(("Due Date", 0.16))
+
+    weight_total = sum(weight for _, weight in columns)
+    col_w = [CONTENT_W * (weight / weight_total) for _, weight in columns]
+
+    rows = [[Paragraph(label, header_style) for label, _ in columns]]
 
     for item in items:
-        amount_str = _format_currency(item.get("amount"), currency) if item.get("amount") is not None else "-"
-        pct_str    = f"{item['percentage']:.0f}%" if item.get("percentage") is not None else "-"
-        due_str    = str(item.get("due_date") or "-")
-        rows.append([
-            Paragraph(item.get("phase", "-"),        cell_style),
+        row = [
+            Paragraph(item.get("phase") or "-", cell_style),
             Paragraph(item.get("description") or "-", cell_style),
-            Paragraph(amount_str,                      cell_style),
-            Paragraph(pct_str,                         pct_style),
-            Paragraph(due_str,                         cell_style),
-        ])
+        ]
+        if show_amount:
+            amount = item.get("amount")
+            row.append(Paragraph(_format_currency(amount, currency) if amount is not None else "-", cell_style))
+        if show_pct:
+            pct = item.get("percentage")
+            row.append(Paragraph(f"{pct:.0f}%" if pct is not None else "-", pct_style))
+        if show_due:
+            row.append(Paragraph(str(item.get("due_date") or "-"), cell_style))
+        rows.append(row)
+
+    # A real total, so the emphasised bottom row means something. Without it the
+    # styling below simply bolded the last milestone, which read as a total that
+    # happened to be wrong.
+    total_pct = sum(i["percentage"] for i in items if i.get("percentage") is not None)
+    total_amount = sum(i["amount"] for i in items if i.get("amount") is not None)
+    has_total = show_pct or show_amount
+    if has_total:
+        total_row = [Paragraph("Total", cell_style), Paragraph("", cell_style)]
+        if show_amount:
+            total_row.append(Paragraph(_format_currency(total_amount, currency), cell_style))
+        if show_pct:
+            total_row.append(Paragraph(f"{total_pct:.0f}%", pct_style))
+        if show_due:
+            total_row.append(Paragraph("", cell_style))
+        rows.append(total_row)
 
     t = Table(rows, colWidths=col_w, hAlign="LEFT")
-    row_count = len(rows)
-    t.setStyle(TableStyle([
+    style = [
         # Header row
         ("BACKGROUND",   (0, 0), (-1, 0),       ACCENT),
         ("TEXTCOLOR",    (0, 0), (-1, 0),       WHITE),
@@ -160,10 +258,14 @@ def _payment_schedule_table(items: list, currency: str) -> Table:
         ("RIGHTPADDING", (0, 0), (-1, -1),      6),
         ("TOPPADDING",   (0, 0), (-1, -1),      5),
         ("BOTTOMPADDING",(0, 0), (-1, -1),      5),
-        # Bottom total-row accent
-        ("BACKGROUND",   (0, row_count - 1), (-1, row_count - 1), colors.HexColor("#D6E8F7")),
-        ("FONTNAME",     (0, row_count - 1), (-1, row_count - 1), "Helvetica-Bold"),
-    ]))
+    ]
+    if has_total:
+        last = len(rows) - 1
+        style += [
+            ("BACKGROUND", (0, last), (-1, last), colors.HexColor("#D6E8F7")),
+            ("FONTNAME",   (0, last), (-1, last), "Helvetica-Bold"),
+        ]
+    t.setStyle(TableStyle(style))
     return t
 
 
@@ -317,7 +419,9 @@ def generate_contract_pdf(contract_context: dict, contract_terms: dict) -> bytes
     # 2. Project Scope
     story.append(_section_header("2. Project Scope", styles))
     job_title   = contract_context.get("job_post",  {}).get("job_title", "N/A")
-    role_title  = contract_context.get("job_role",  {}).get("role_title", "N/A")
+    # The contract's role_title wins; the job role is only the fallback for older
+    # rows that never had one set.
+    role_title  = contract_context.get("role_title") or contract_context.get("job_role", {}).get("role_title", "N/A")
     scope       = contract_context.get("job_post",  {}).get("project_scope", "N/A")
     description = contract_context.get("job_post",  {}).get("job_description", "N/A")
 
@@ -342,13 +446,18 @@ def generate_contract_pdf(contract_context: dict, contract_terms: dict) -> bytes
         ("Agreed Duration",    str(contract_context.get("agreed_duration", "N/A"))),
     ]
     story.append(_kv_table(fin_rows))
-    schedule_raw = contract_terms.get("payment_schedule")
-    if schedule_raw:
-        schedule_items = _parse_payment_schedule(schedule_raw)
+    schedule_items, schedule_text = _parse_payment_schedule(
+        contract_terms.get("payment_schedule"),
+        payment_structure=payment_structure,
+        agreed_budget=contract_context.get("agreed_budget"),
+    )
+    if schedule_items or schedule_text:
+        story.append(Spacer(1, 0.2 * cm))
+        story.append(Paragraph("<b>Payment Schedule</b>", styles["body_bold"]))
         if schedule_items:
-            story.append(Spacer(1, 0.2 * cm))
-            story.append(Paragraph("<b>Payment Schedule</b>", styles["body_bold"]))
             story.append(_payment_schedule_table(schedule_items, currency))
+        else:
+            story.append(Paragraph(schedule_text, styles["body"]))
 
     # 4. Legal Clauses
     story.append(_section_header("4. Legal Clauses", styles))
