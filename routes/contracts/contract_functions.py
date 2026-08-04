@@ -311,7 +311,7 @@ class ContractFunctions:
                     _fire_notification(NotificationFunctions.notify(
                         recipient_user_id=str(row["freelancer_user_id"]),
                         notif_type="role_filled",
-                        title="Position Filled",
+                        title="Position filled",
                         body=f"The \"{row['role_title']}\" position you applied for has been filled by another freelancer.",
                         data={"job_role_id": job_role_id},
                     ))
@@ -507,7 +507,7 @@ class ContractFunctions:
                 _fire_notification(NotificationFunctions.notify(
                     recipient_user_id=str(row["recipient_id"]),
                     notif_type="role_reopened",
-                    title="Position Open Again",
+                    title="Position open again",
                     body=f"The \"{role_title}\" position you previously applied for has opened up again.",
                     data={"job_role_id": job_role_id},
                 ))
@@ -851,7 +851,7 @@ class ContractFunctions:
                     _fire_notification(NotificationFunctions.notify(
                         recipient_user_id=str(client["user_id"]),
                         notif_type="contract_overdue",
-                        title="Contract Past Deadline",
+                        title="Contract past deadline",
                         body=body,
                         data={"contract_id": contract_id},
                     ))
@@ -859,7 +859,7 @@ class ContractFunctions:
                     _fire_notification(NotificationFunctions.notify(
                         recipient_user_id=str(freelancer["user_id"]),
                         notif_type="contract_overdue",
-                        title="Contract Past Deadline",
+                        title="Contract past deadline",
                         body=body,
                         data={"contract_id": contract_id},
                     ))

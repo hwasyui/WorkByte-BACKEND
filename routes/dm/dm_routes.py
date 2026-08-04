@@ -153,6 +153,30 @@ async def start_thread(
         await _manager.broadcast(
             result["thread"]["thread_id"], result["first_message"]
         )
+
+        # The opening message is the only one in the thread that used to go out over the
+        # websocket alone, so a participant who wasn't connected never heard about the
+        # request at all. Sent as new_message rather than a request-specific type because
+        # the client renders from a fixed per-type registry - an unknown type has nothing
+        # to render. thread_id still routes it to the request.
+        try:
+            # Read off the persisted message, not payload.message_text: create_thread
+            # substitutes a job pitch or a default greeting when the caller sends none,
+            # and those threads need the notification just as much.
+            opening_text = (result["first_message"].get("message_text") or "").strip()
+            if opening_text:
+                sender_name = _get_sender_name(current_user)
+                preview = opening_text[:60] + ("..." if len(opening_text) > 60 else "")
+                await NotificationFunctions.notify(
+                    recipient_user_id=str(payload.participant_id),
+                    notif_type="new_message",
+                    title="New message",
+                    body=f"{sender_name}: {preview}",
+                    data={"thread_id": str(result["thread"]["thread_id"])},
+                )
+        except Exception as notif_err:
+            logger("DM", f"Thread request notification failed (non-fatal): {notif_err}", "POST /dm/threads", "WARNING")
+
         return ResponseSchema.success(
             {"thread_id": result["thread"].get("thread_id", ""), **result}, 201
         )
@@ -257,8 +281,8 @@ async def accept_thread(
                 await NotificationFunctions.notify(
                     recipient_user_id=initiator_id,
                     notif_type="thread_accepted",
-                    title=f"{sender_name} accepted your message request",
-                    body="You can now chat freely",
+                    title="Message request accepted",
+                    body=f"{sender_name} accepted your message request. You can now chat freely.",
                     data={"thread_id": thread_id},
                 )
         except Exception as notif_err:
@@ -375,7 +399,7 @@ async def send_message(
             await NotificationFunctions.notify(
                 recipient_user_id=recipient_id,
                 notif_type="new_message",
-                title="New Message 💬",
+                title="New message",
                 body=f"{sender_name}: {preview}",
                 data={"thread_id": thread_id},
             )
@@ -473,12 +497,12 @@ async def send_message_with_attachment(
                 else str(thread["user_a_id"])
             )
             sender_name = _get_sender_name(current_user)
-            notif_body = text[:60] + ("..." if len(text) > 60 else "") if text else "Sent an attachment 📎"
+            notif_body = text[:60] + ("..." if len(text) > 60 else "") if text else "Sent an attachment"
             await NotificationFunctions.notify(
                 recipient_user_id=recipient_id,
                 notif_type="new_message",
-                title=sender_name,
-                body=notif_body,
+                title="New message",
+                body=f"{sender_name}: {notif_body}",
                 data={"thread_id": thread_id},
             )
         except Exception as notif_err:

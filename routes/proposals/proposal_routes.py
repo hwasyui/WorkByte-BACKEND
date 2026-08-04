@@ -235,7 +235,7 @@ async def create_proposal(
                     await NotificationFunctions.notify(
                         recipient_user_id=str(client["user_id"]),
                         notif_type="new_proposal",
-                        title="New Proposal Received",
+                        title="New proposal received",
                         body=f"{freelancer.get('full_name')} applied to your job",
                         data={
                             "proposal_id": new_proposal["proposal_id"],
@@ -298,11 +298,11 @@ async def update_proposal_status(
                 cl = ClientFunctions.get_client_by_user_id(current_user.user_id)
                 if fl and cl:
                     if status == "accepted":
-                        notif_title = "Proposal Accepted 🎉"
+                        notif_title = "Proposal accepted"
                         notif_body = f"{cl.get('full_name')} accepted your proposal"
                         notif_type = "proposal_accepted"
                     else:
-                        notif_title = "Proposal Rejected"
+                        notif_title = "Proposal declined"
                         notif_body = f"{cl.get('full_name')} has declined your proposal"
                         notif_type = "proposal_rejected"
 

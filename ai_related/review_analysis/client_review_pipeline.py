@@ -262,14 +262,14 @@ async def run_client_review_post_submission_pipeline(client_review_id: str, is_r
                 await NotificationFunctions.notify(
                     recipient_user_id=client_user_id,
                     notif_type="review_published",
-                    title="New Review Received ⭐",
-                    body=f"You received a new review with an average rating of {avg_stars}★.",
+                    title="New review received",
+                    body=f"You received a new review with an average rating of {avg_stars} stars.",
                     data={"contract_id": review["contract_id"], "client_review_id": client_review_id},
                 )
                 await NotificationFunctions.notify(
                     recipient_user_id=reviewer_user_id,
                     notif_type="review_publish_confirmed",
-                    title="Your Review Was Published",
+                    title="Your review was published",
                     body=f"Your review for {client_name} is now live.",
                     data={"contract_id": review["contract_id"], "client_review_id": client_review_id},
                 )
@@ -293,7 +293,7 @@ async def run_client_review_post_submission_pipeline(client_review_id: str, is_r
                     await NotificationFunctions.notify(
                         recipient_user_id=reviewer_user_id,
                         notif_type="review_suppressed",
-                        title="Your Review Couldn't Be Published",
+                        title="Your review was not published",
                         body=f"Your review for {client_name} didn't pass our automated review checks and will not be published.",
                         data={"contract_id": review["contract_id"], "client_review_id": client_review_id},
                     )
@@ -301,7 +301,7 @@ async def run_client_review_post_submission_pipeline(client_review_id: str, is_r
                     await NotificationFunctions.notify(
                         recipient_user_id=reviewer_user_id,
                         notif_type="review_flagged",
-                        title="Your Review Is Under Review",
+                        title="Your review is under review",
                         body=f"Your review for {client_name} is being held for manual review before publishing. We'll notify you once it's resolved.",
                         data={"contract_id": review["contract_id"], "client_review_id": client_review_id},
                     )

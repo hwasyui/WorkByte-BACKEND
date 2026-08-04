@@ -157,7 +157,7 @@ def _notify_engaged_freelancers(job_post_id: str) -> None:
         _schedule_notification(NotificationFunctions.notify(
             recipient_user_id=str(row["user_id"]),
             notif_type="job_closed_admin_contract",
-            title="Job Closed by Admin",
+            title="Job closed by admin",
             body=(
                 f"The job post \"{row['job_title']}\" was closed by an administrator. "
                 f"Your contract \"{row['contract_title']}\" is still active - check with the "
@@ -412,7 +412,7 @@ def _auto_approve_expired():
                 _notify_job_post_closed(
                     content_id,
                     "job_closed_harmful_text",
-                    "Job Post Closed",
+                    "Job post closed",
                     note,
                 )
             else:
@@ -585,7 +585,7 @@ def action_moderation_item(
                 _notify_job_post_closed(
                     content_id,
                     "job_closed_harmful_text",
-                    "Job Post Closed",
+                    "Job post closed",
                     closure_note,
                 )
             else:
@@ -609,7 +609,7 @@ def _notify_scam_closure(job_post_id: str) -> None:
     coro = NotificationFunctions.notify(
         recipient_user_id=str(row["user_id"]),
         notif_type="job_closed_scam",
-        title="Job Post Closed",
+        title="Job post closed",
         body=DEFAULT_CLOSURE_NOTE_SCAM,
         data={"job_post_id": job_post_id},
     )
@@ -1685,7 +1685,7 @@ def action_report(
         ))
         if closed:
             logger("ADMIN", f"Job post {job_post_id} closed after report {report_id} accepted by admin {admin_user_id}", level="WARNING")
-            _notify_job_post_closed(job_post_id, "job_closed_reports", "Job Post Closed", closure_note)
+            _notify_job_post_closed(job_post_id, "job_closed_reports", "Job post closed", closure_note)
         else:
             logger("ADMIN", f"Report {report_id} accepted; job {job_post_id} was already closed (skipped re-close)", level="INFO")
 
@@ -1723,7 +1723,7 @@ def admin_close_job(
         _notify_job_post_closed(
             job_post_id,
             "job_closed_admin",
-            "Job Post Closed",
+            "Job post closed",
             closure_note,
         )
     return updated
@@ -3294,7 +3294,7 @@ async def override_publish_review(review_id: str, admin_user_id: str,
     _schedule_notification(NotificationFunctions.notify(
         recipient_user_id=user_id_for_client(str(updated["reviewer_id"])),
         notif_type="review_publish_confirmed",
-        title="Your Review Was Published",
+        title="Your review was published",
         body=f"After manual review, your review for {freelancer_name} has been approved and is now live.",
         data={"contract_id": str(updated["contract_id"]), "review_id": review_id},
     ))
@@ -3533,7 +3533,7 @@ async def override_publish_client_review(client_review_id: str, admin_user_id: s
     _schedule_notification(NotificationFunctions.notify(
         recipient_user_id=user_id_for_freelancer(str(updated["reviewer_id"])),
         notif_type="review_publish_confirmed",
-        title="Your Review Was Published",
+        title="Your review was published",
         body=f"After manual review, your review for {client_name} has been approved and is now live.",
         data={"contract_id": str(updated["contract_id"]), "client_review_id": client_review_id},
     ))

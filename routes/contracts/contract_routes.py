@@ -425,7 +425,7 @@ async def create_contract(contract: ContractCreate, current_user: UserInDB = Dep
                 await NotificationFunctions.notify(
                     recipient_user_id=freelancer_user_id,
                     notif_type="contract_started",
-                    title="Contract Started 🚀",
+                    title="Contract started",
                     body=f"A new contract \"{new_contract.get('contract_title')}\" has begun",
                     data={"contract_id": contract_id},
                 )
@@ -663,19 +663,19 @@ async def update_contract(contract_id: str, contract_update: ContractUpdate, bac
                 notif_map = {
                     "under_review": (
                         str(cl["user_id"]),
-                        "Work Submitted 📦",
+                        "Work submitted",
                         f"{fl.get('full_name')} submitted work for review",
                         "work_submitted",
                     ),
                     "revision_requested": (
                         str(fl["user_id"]),
-                        "Revision Requested",
+                        "Revision requested",
                         f"{cl.get('full_name')} requested a revision",
                         "revision_requested",
                     ),
                     "completed": (
                         str(fl["user_id"]),
-                        "Contract Completed ✅",
+                        "Contract completed",
                         f"\"{title_str}\" has been marked as completed",
                         "contract_completed",
                     ),
@@ -775,7 +775,7 @@ async def raise_dispute(
             await NotificationFunctions.notify(
                 recipient_user_id=str(other_party["user_id"]),
                 notif_type="contract_disputed",
-                title="Contract Under Dispute",
+                title="Contract under dispute",
                 body=f"A dispute was raised on \"{contract.get('contract_title')}\". An admin will review it.",
                 data={"contract_id": contract_id},
             )
@@ -852,7 +852,7 @@ async def cancel_contract(
             await NotificationFunctions.notify(
                 recipient_user_id=str(other_party["user_id"]),
                 notif_type="contract_cancelled",
-                title="Contract Cancelled",
+                title="Contract cancelled",
                 body=f"The contract \"{contract.get('contract_title')}\" was cancelled",
                 data={"contract_id": contract_id},
             )

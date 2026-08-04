@@ -8,6 +8,7 @@ from functions.logger import logger
 from typing import List, Optional, Dict
 import uuid
 from routes.contracts.contract_functions import ContractFunctions, _fire_notification, _already_notified, _count_notifications
+from functions.profile_ids import user_id_for_freelancer
 from routes.dm.dm_functions import DMFunctions
 from routes.notifications.notification_functions import NotificationFunctions
 from routes.clients.client_functions import ClientFunctions
@@ -424,10 +425,25 @@ class ContractSubmissionFunctions:
                     _fire_notification(NotificationFunctions.notify(
                         recipient_user_id=client_user_id,
                         notif_type="contract_auto_approved",
-                        title="Contract Auto-Approved",
+                        title="Contract auto-approved",
                         body=strike_body,
                         data={"contract_id": contract_id},
                     ))
+
+                    # The client's notification above is a strike notice, so it cannot
+                    # double as the freelancer's. Without this the contract reaches the
+                    # same completed state as a manual approval but only one side hears
+                    # about it. user_id_for_freelancer returns None on a deleted profile
+                    # rather than raising, which would strand the rest of the sweep.
+                    freelancer_user_id = user_id_for_freelancer(str(row["freelancer_id"]))
+                    if freelancer_user_id:
+                        _fire_notification(NotificationFunctions.notify(
+                            recipient_user_id=freelancer_user_id,
+                            notif_type="contract_completed",
+                            title="Contract completed",
+                            body=f"\"{title}\" was auto-approved after {AUTO_APPROVE_DAYS} days without a response from the client.",
+                            data={"contract_id": contract_id},
+                        ))
                     if strike_count >= AUTO_APPROVE_BAN_THRESHOLD:
                         from routes.admin.admin_functions import admin_close_account
                         admin_close_account(
@@ -449,7 +465,7 @@ class ContractSubmissionFunctions:
                         _fire_notification(NotificationFunctions.notify(
                             recipient_user_id=str(client["user_id"]),
                             notif_type="contract_autoapprove_final_warning",
-                            title="Final Reminder: Review Pending Work",
+                            title="Final reminder: review pending work",
                             body=f"\"{title}\" will be auto-approved in {AUTO_APPROVE_DAYS - days_elapsed} day(s) if you don't act.",
                             data={"contract_id": contract_id, "submission_id": submission_id},
                         ))
@@ -458,7 +474,7 @@ class ContractSubmissionFunctions:
                         _fire_notification(NotificationFunctions.notify(
                             recipient_user_id=str(client["user_id"]),
                             notif_type="contract_autoapprove_reminder",
-                            title="Reminder: Review Pending Work",
+                            title="Reminder: review pending work",
                             body=f"Submitted work on \"{title}\" is still waiting for your review.",
                             data={"contract_id": contract_id, "submission_id": submission_id},
                         ))

@@ -971,7 +971,7 @@ async def admin_arbitrate_contract_dispute(
                     await NotificationFunctions.notify(
                         recipient_user_id=str(party["user_id"]),
                         notif_type="dispute_resolved",
-                        title="Dispute Resolved",
+                        title="Dispute resolved",
                         body=body,
                         data={"contract_id": contract_id, "outcome": payload.outcome},
                     )

@@ -128,7 +128,7 @@ async def create_contract_submission(
                 await NotificationFunctions.notify(
                     recipient_user_id=str(client["user_id"]),
                     notif_type="work_submitted",
-                    title="Work Submitted 📦",
+                    title="Work submitted",
                     body=f"{freelancer.get('full_name')} submitted work for review",
                     data={"contract_id": contract_id, "submission_id": submission_id},
                 )
@@ -230,7 +230,7 @@ async def request_revision_for_latest_submission(
                 await NotificationFunctions.notify(
                     recipient_user_id=str(freelancer["user_id"]),
                     notif_type="revision_requested",
-                    title="Revision Requested",
+                    title="Revision requested",
                     body=f"{client.get('full_name')} requested a revision on your submission",
                     data={"contract_id": contract_id},
                 )
@@ -296,7 +296,7 @@ async def approve_latest_submission(
                 await NotificationFunctions.notify(
                     recipient_user_id=str(freelancer["user_id"]),
                     notif_type="contract_completed",
-                    title="Submission Approved ✅",
+                    title="Contract completed",
                     body=f"{client.get('full_name')} approved your submission",
                     data={"contract_id": contract_id},
                 )
