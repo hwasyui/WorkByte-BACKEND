@@ -14,6 +14,7 @@ from functions.db_manager import get_db
 from routes.contracts.contract_functions import ContractFunctions
 from routes.clients.client_functions import ClientFunctions
 from routes.admin.admin_functions import (
+    DASHBOARD_RANGE_PRESETS,
     VALID_REPORT_REASONS,
     action_moderation_item,
     action_report,
@@ -51,6 +52,7 @@ from routes.admin.admin_functions import (
     override_publish_review,
     queue_scam_scan,
     resolve_appeal,
+    resolve_dashboard_range,
     resolve_red_flag_alert,
     submit_appeal,
     uphold_client_review,
@@ -102,9 +104,37 @@ class AdminOverrideBody(BaseModel):
     reason: Optional[str] = None
 
 @admin_router.get("/dashboard")
-async def admin_dashboard(current_user: UserInDB = Depends(get_admin_user)):
+async def admin_dashboard(
+    start_date: Optional[str] = Query(
+        default=None,
+        description="Inclusive start of the window. YYYY-MM-DD or an ISO-8601 timestamp.",
+    ),
+    end_date: Optional[str] = Query(
+        default=None,
+        description="Inclusive end of the window. A bare YYYY-MM-DD covers that whole day.",
+    ),
+    range_preset: str = Query(
+        default="all",
+        alias="range",
+        description=f"Preset window, used only when start_date and end_date are both omitted. "
+                    f"One of: {', '.join(DASHBOARD_RANGE_PRESETS)}",
+    ),
+    current_user: UserInDB = Depends(get_admin_user),
+):
+    """Admin dashboard counters, optionally scoped to a time range.
+
+    Pending items and report auto-actions are scoped by when they were created,
+    auto-approvals/removals and accepted reports by when they were actioned, and
+    banned clients by when the ban landed. The two _last_24h counters ignore the
+    range - see get_admin_dashboard_stats.
+    """
     try:
-        stats = get_admin_dashboard_stats()
+        date_range = resolve_dashboard_range(start_date, end_date, range_preset)
+    except ValueError as e:
+        return ResponseSchema.error(str(e), 400)
+
+    try:
+        stats = get_admin_dashboard_stats(date_range)
         logger("ADMIN", "Dashboard stats fetched", "GET /admin/dashboard", "INFO")
         return ResponseSchema.success(stats, 200)
     except Exception as e:

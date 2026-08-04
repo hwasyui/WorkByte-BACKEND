@@ -1801,28 +1801,287 @@ def admin_reopen_account(
         logger("ADMIN", f"Account {user_id} restored by admin {admin_user_id}", level="INFO")
     return updated
 
-def get_admin_dashboard_stats() -> Dict:
+DASHBOARD_RANGE_PRESETS = {
+    "all": None,
+    "24h": timedelta(hours=24),
+    "7d":  timedelta(days=7),
+    "30d": timedelta(days=30),
+    "90d": timedelta(days=90),
+}
+
+def _parse_range_bound(raw: str, label: str) -> datetime:
+    try:
+        parsed = datetime.fromisoformat(raw.strip())
+    except ValueError:
+        raise ValueError(
+            f"Invalid {label} '{raw}'. Expected YYYY-MM-DD or an ISO-8601 timestamp."
+        )
+    # The timestamp columns are naive UTC (see the datetime.utcnow() writes above),
+    # so an offset-aware bound has to be normalised before it can be compared.
+    if parsed.tzinfo:
+        parsed = parsed.astimezone(timezone.utc).replace(tzinfo=None)
+    return parsed
+
+def resolve_dashboard_range(
+    start_date: Optional[str] = None,
+    end_date:   Optional[str] = None,
+    preset:     Optional[str] = None,
+) -> Dict:
+    """Turn the dashboard's date-range filter into concrete bounds.
+
+    Explicit start_date/end_date win over preset; the preset only fills in when
+    neither bound is given. Both bounds are inclusive from the caller's point of
+    view - a bare YYYY-MM-DD end_date is widened to midnight the following day so
+    that picking the same date for both ends still covers that whole day. Raises
+    ValueError on anything unparseable so the route can turn it into a 400.
+    """
+    start = _parse_range_bound(start_date, "start_date") if start_date else None
+    end   = _parse_range_bound(end_date,   "end_date")   if end_date   else None
+
+    if end and len(end_date.strip()) == 10:
+        end = end + timedelta(days=1)
+
+    if start is None and end is None and preset:
+        key = preset.strip().lower()
+        if key not in DASHBOARD_RANGE_PRESETS:
+            raise ValueError(
+                f"Invalid range '{preset}'. "
+                f"Valid values: {', '.join(DASHBOARD_RANGE_PRESETS)}"
+            )
+        window = DASHBOARD_RANGE_PRESETS[key]
+        if window:
+            end   = datetime.utcnow()
+            start = end - window
+
+    if start and end and start >= end:
+        raise ValueError("start_date must be earlier than end_date")
+
+    return {"start": start, "end": end, "applied": bool(start or end)}
+
+def _range_clause(column: str, date_range: Optional[Dict]) -> str:
+    """SQL to AND onto a WHERE clause. Rows with a NULL timestamp drop out, which
+    is what we want: an un-actioned item did not happen inside the window."""
+    if not date_range or not date_range["applied"]:
+        return ""
+    clause = ""
+    if date_range["start"]:
+        clause += f" AND {column} >= :range_start"
+    if date_range["end"]:
+        clause += f" AND {column} < :range_end"
+    return clause
+
+def _range_params(date_range: Optional[Dict]) -> Dict:
+    if not date_range or not date_range["applied"]:
+        return {}
+    params = {}
+    if date_range["start"]:
+        params["range_start"] = date_range["start"]
+    if date_range["end"]:
+        params["range_end"] = date_range["end"]
+    return params
+
+def _as_of_clause(column: str, date_range: Optional[Dict]) -> str:
+    """Upper bound only. A running total is "everything up to the end of the
+    window" - clipping it at the start would turn it into a per-period count."""
+    if not date_range or not date_range["end"]:
+        return ""
+    return f" AND {column} < :range_end"
+
+# Growth series are all "rows created over time", so one table + timestamp each.
+_SERIES_SOURCES = {
+    "users":       ("users",      "created_at"),
+    "freelancers": ("freelancer", "created_at"),
+    "clients":     ("client",     "created_at"),
+    "jobs":        ("job_post",   "created_at"),
+}
+
+# date_trunc units, widest span first. Keeps the chart around 5-40 points
+# whether the admin picked a week or the whole history of the platform.
+_GRANULARITY_THRESHOLDS = ((31, "day"), (120, "week"))
+_GRANULARITY_FALLBACK   = "month"
+
+def _pick_granularity(start: datetime, end: datetime) -> str:
+    span_days = max((end - start).days, 1)
+    for limit, unit in _GRANULARITY_THRESHOLDS:
+        if span_days <= limit:
+            return unit
+    return _GRANULARITY_FALLBACK
+
+def _bucket_label(bucket: datetime, granularity: str) -> str:
+    """Axis label built server-side so every client renders the same string."""
+    if granularity == "month":
+        return f"{bucket:%b %Y}"
+    return f"{bucket:%b} {bucket.day}"
+
+def _series_window(date_range: Optional[Dict]) -> tuple:
+    """The span the charts cover. An unfiltered dashboard still needs a window,
+    so fall back to the platform's own history: earliest signup or job to now."""
+    start = date_range["start"] if date_range and date_range["applied"] else None
+    end   = date_range["end"]   if date_range and date_range["applied"] else None
+    end   = end or datetime.utcnow()
+
+    if start is None:
+        earliest = [
+            row["earliest"]
+            for table, column in _SERIES_SOURCES.values()
+            for row in [_row(get_db().execute_query(
+                f"SELECT MIN({column}) AS earliest FROM {table}"
+            ))]
+            if row and row["earliest"]
+        ]
+        start = min(earliest) if earliest else end - timedelta(days=30)
+
+    if start >= end:
+        start = end - timedelta(days=1)
+    return start, end
+
+def _growth_series(start: datetime, end: datetime, granularity: str) -> Dict[str, List[Dict]]:
+    """Per-bucket new + running total for each growth source.
+
+    generate_series supplies the buckets so a quiet week still shows up as a
+    zero instead of vanishing from the chart. Every source shares one bucket
+    grid, which is what lets the cards line up against the same x-axis.
+    """
+    series = {}
+    for name, (table, column) in _SERIES_SOURCES.items():
+        rows = _rows(get_db().execute_query(
+            f"""
+            WITH buckets AS (
+                -- series_end is exclusive, so back off a tick before truncating.
+                -- Without this an end of "Aug 5 00:00" opens an empty Aug 5 bucket.
+                SELECT generate_series(
+                    date_trunc('{granularity}', CAST(:series_start AS timestamp)),
+                    date_trunc('{granularity}', CAST(:series_end AS timestamp)
+                                                - INTERVAL '1 microsecond'),
+                    INTERVAL '1 {granularity}'
+                ) AS bucket
+            )
+            SELECT b.bucket AS bucket,
+                   COUNT(t.{column}) AS new_count,
+                   (
+                       SELECT COUNT(*) FROM {table} p
+                       WHERE p.{column} < LEAST(
+                           b.bucket + INTERVAL '1 {granularity}',
+                           CAST(:series_end AS timestamp)
+                       )
+                   ) AS cumulative
+            FROM buckets b
+            LEFT JOIN {table} t
+                   ON t.{column} >= b.bucket
+                  AND t.{column} <  b.bucket + INTERVAL '1 {granularity}'
+            GROUP BY b.bucket
+            ORDER BY b.bucket
+            """,
+            params={"series_start": start, "series_end": end},
+        ))
+        series[name] = [
+            {
+                "bucket":     r["bucket"].isoformat(),
+                "label":      _bucket_label(r["bucket"], granularity),
+                "new":        int(r["new_count"]),
+                "cumulative": int(r["cumulative"]),
+            }
+            for r in rows
+        ]
+    return series
+
+def get_admin_dashboard_stats(date_range: Optional[Dict] = None) -> Dict:
     _auto_approve_expired()
     _process_auto_remove()
     _process_report_auto_actions()
 
-    def _count(query: str, params: dict = {}) -> int:
+    range_params = _range_params(date_range)
+
+    def _count(query: str) -> int:
+        # Only bind the bounds the query actually mentions - a start-only range
+        # leaves :range_end out of the SQL entirely.
+        params = {k: v for k, v in range_params.items() if f":{k}" in query}
         row = _row(get_db().execute_query(query, params=params))
         return int(row["cnt"]) if row else 0
 
+    created_at_range  = _range_clause("created_at",  date_range)
+    actioned_at_range = _range_clause("actioned_at", date_range)
+    banned_at_range   = _range_clause("banned_at",   date_range)
+    created_as_of     = _as_of_clause("created_at",  date_range)
+
+    series_start, series_end = _series_window(date_range)
+    granularity = _pick_granularity(series_start, series_end)
+
+    # Cumulative headcounts as of the end of the window, alongside the number
+    # created inside it. A card can show either without a second round trip.
+    totals = {
+        f"total_{name}": _count(
+            f"SELECT COUNT(*) AS cnt FROM {table} WHERE TRUE{created_as_of}"
+        )
+        for name, (table, column) in _SERIES_SOURCES.items()
+    }
+    new_in_range = {
+        f"new_{name}": _count(
+            f"SELECT COUNT(*) AS cnt FROM {table} WHERE TRUE{created_at_range}"
+        )
+        for name, (table, column) in _SERIES_SOURCES.items()
+    }
+
+    month_start = datetime.utcnow().replace(
+        day=1, hour=0, minute=0, second=0, microsecond=0
+    )
+    def _since_month_start(table: str) -> int:
+        row = _row(get_db().execute_query(
+            f"SELECT COUNT(*) AS cnt FROM {table} WHERE created_at >= :month_start",
+            params={"month_start": month_start},
+        ))
+        return int(row["cnt"]) if row else 0
+
+    reports_accepted  = _count(
+        f"SELECT COUNT(*) AS cnt FROM user_reports WHERE status = 'accepted'{actioned_at_range}"
+    )
+    reports_dismissed = _count(
+        f"SELECT COUNT(*) AS cnt FROM user_reports WHERE status = 'dismissed'{actioned_at_range}"
+    )
+    reports_pending   = _count(
+        f"SELECT COUNT(*) AS cnt FROM user_reports WHERE status = 'pending'{created_at_range}"
+    )
+
     return {
+        "date_range": {
+            "start":       date_range["start"].isoformat() if date_range and date_range["start"] else None,
+            "end":         date_range["end"].isoformat()   if date_range and date_range["end"]   else None,
+            "applied":     bool(date_range and date_range["applied"]),
+            "series_start": series_start.isoformat(),
+            "series_end":   series_end.isoformat(),
+            "granularity":  granularity,
+        },
+        "totals":       totals,
+        "new_in_range": new_in_range,
+        "reports": {
+            "pending":   reports_pending,
+            "accepted":  reports_accepted,
+            "dismissed": reports_dismissed,
+            "total":     reports_pending + reports_accepted + reports_dismissed,
+        },
+        "series": _growth_series(series_start, series_end, granularity),
+
+        # Flat aliases for the keys the Flutter overview page already reads, so
+        # its donut and growth badges light up without a client change.
+        "total_jobs_all":             totals["total_jobs"],
+        "reports_accepted":           reports_accepted,
+        "reports_dismissed":          reports_dismissed,
+        "new_freelancers_this_month": _since_month_start("freelancer"),
+        "new_clients_this_month":     _since_month_start("client"),
+
         "pending_moderation_items": _count(
-            "SELECT COUNT(*) AS cnt FROM harmful_text_queue WHERE status = 'pending'"
+            f"SELECT COUNT(*) AS cnt FROM harmful_text_queue WHERE status = 'pending'{created_at_range}"
         ),
         "pending_scam_flags": _count(
-            "SELECT COUNT(*) AS cnt FROM scam_job_flags WHERE status = 'pending'"
+            f"SELECT COUNT(*) AS cnt FROM scam_job_flags WHERE status = 'pending'{created_at_range}"
         ),
-        "pending_reports": _count(
-            "SELECT COUNT(*) AS cnt FROM user_reports WHERE status = 'pending'"
-        ),
+        "pending_reports": reports_pending,
         "banned_clients": _count(
-            "SELECT COUNT(*) AS cnt FROM client_scam_record WHERE is_banned = TRUE"
+            f"SELECT COUNT(*) AS cnt FROM client_scam_record WHERE is_banned = TRUE{banned_at_range}"
         ),
+        # The two _last_24h counters stay pinned to 24 hours whatever range is
+        # selected - they are the "what happened overnight" signal, and admins
+        # still need it while looking at a quarter of history.
         "auto_approved_last_24h": _count(
             """
             SELECT COUNT(*) AS cnt FROM harmful_text_queue
@@ -1839,11 +2098,23 @@ def get_admin_dashboard_stats() -> Dict:
               AND actioned_at >= NOW() - INTERVAL '24 hours'
             """
         ),
-        "total_reports_accepted": _count(
-            "SELECT COUNT(*) AS cnt FROM user_reports WHERE status = 'accepted'"
+        "auto_approved_in_range": _count(
+            f"""
+            SELECT COUNT(*) AS cnt FROM harmful_text_queue
+            WHERE status = 'approved'
+              AND admin_user_id IS NULL{actioned_at_range}
+            """
         ),
+        "auto_removed_in_range": _count(
+            f"""
+            SELECT COUNT(*) AS cnt FROM scam_job_flags
+            WHERE status = 'removed'
+              AND admin_user_id IS NULL{actioned_at_range}
+            """
+        ),
+        "total_reports_accepted": reports_accepted,
         "report_auto_actions_total": _count(
-            "SELECT COUNT(*) AS cnt FROM report_auto_actions"
+            f"SELECT COUNT(*) AS cnt FROM report_auto_actions WHERE TRUE{created_at_range}"
         ),
     }
 
