@@ -262,6 +262,25 @@ def queue_harmful_text_scan(content_type: str,
                level="ERROR")
         return None
 
+FLAGGED_BY_PREFIX = "[FLAGGED BY] "
+
+def flagged_source(flagged_text: Optional[str]) -> Optional[str]:
+    """The field label that scored highest, e.g. '[ROLE] Frontend Developer'. None for rows
+    written before the marker existed, or for content that has no field breakdown."""
+    if not flagged_text or not flagged_text.startswith(FLAGGED_BY_PREFIX):
+        return None
+    marker = flagged_text.split("\n", 1)[0][len(FLAGGED_BY_PREFIX):].strip()
+    # Trailing dash trimmed so it reads as a label; it stays a prefix of the body line, so
+    # the client can still match the section with a plain startsWith.
+    return marker.rstrip(" —-") or None
+
+def _body_without_marker(flagged_text: Optional[str]) -> Optional[str]:
+    """The snapshot as the admin should read it. The marker line stays in the column - it is
+    the only place the offending field is recorded - but it is not text anyone wants to see."""
+    if not flagged_text or not flagged_text.startswith(FLAGGED_BY_PREFIX):
+        return flagged_text
+    return flagged_text.partition("\n")[2]
+
 def queue_job_post_harmful_scan(job_post_id: str, user_id: str) -> Optional[Dict]:
     """Scan a job post's title, description and every one of its roles, and queue the
     result as the single harmful_text_queue entry for that post."""
@@ -305,8 +324,9 @@ def queue_job_post_harmful_scan(job_post_id: str, user_id: str) -> Optional[Dict
             return None
 
         worst = result.get("worst_field", "")
-        order = sorted(range(len(fields)), key=lambda i: fields[i] != worst)
-        snapshot = "\n".join(f"{labelled[i][0]} {labelled[i][1]}".strip() for i in order)
+        worst_label = next((p for p, t in labelled if t == worst), "")
+        body = "\n".join(f"{prefix} {text}".strip() for prefix, text in labelled)
+        snapshot = f"{FLAGGED_BY_PREFIX}{worst_label}\n{body}" if worst_label else body
 
         return queue_harmful_text_scan(
             "job_post", job_post_id, user_id, snapshot, *fields, result=result,
@@ -469,7 +489,7 @@ def list_moderation_queue(
     offset    = (page - 1) * page_size
     sort_col  = _MOD_SORT_COLS.get(sort_by, "htq.created_at")
     direction = "ASC" if sort_dir.lower() == "asc" else "DESC"
-    return _rows(get_db().execute_query(
+    rows = _rows(get_db().execute_query(
         f"""
         SELECT htq.*,
                (htq.toxic_score + htq.obscene_score +
@@ -506,6 +526,10 @@ def list_moderation_queue(
             "offset":       offset,
         },
     ))
+    for row in rows:
+        row["flagged_source"] = flagged_source(row.get("flagged_text"))
+        row["flagged_text"]   = _body_without_marker(row.get("flagged_text"))
+    return rows
 
 def action_moderation_item(
     moderation_id: str,
@@ -513,15 +537,7 @@ def action_moderation_item(
     admin_user_id: str,
     admin_note: Optional[str] = None,
 ) -> Optional[Dict]:
-    """
-    Record an admin verdict on a harmful-text flag.
-
-    action is 'uphold' (the flag was right - the content comes down) or 'dismiss' (the
-    flag was wrong - the content stays). The legacy spelling approve/reject is still
-    accepted: here 'approve' meant approving the FLAG, so it maps to uphold. Scam flags
-    used the opposite word for the same verdict, which is why both now speak
-    uphold/dismiss - see action_scam_flag.
-    """
+    """Record an admin verdict on a harmful-text flag."""
     upheld     = action in ("uphold", "approve")
     new_status = "approved" if upheld else "rejected"
     updated = _row(get_db().execute_query(
