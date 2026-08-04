@@ -191,20 +191,15 @@ def queue_harmful_text_scan(content_type: str,
     user_id: str,
     text: str,
     *fields: str,
+    result: Optional[Dict] = None,
 ) -> Optional[Dict]:
-    # Callers with several fields (a job post's title and description) pass them separately
-    # so each is scored on its own. text stays the snapshot stored on the row.
-    # The whole body sits in the try because this runs as a fire-and-forget task: anything
-    # raised outside it would die with the task and leave the content unmoderated silently.
     try:
-        result = scan_harmful_text_fields(*fields) if fields else scan_harmful_text_with_ml_fallback(text)
+        if result is None:
+            result = scan_harmful_text_fields(*fields) if fields else scan_harmful_text_with_ml_fallback(text)
         if not result["is_flagged"]:
             return None
 
         scan_method = result.get("scan_method", "unknown")
-        # One pending row per content. A re-scan overwrites it only when the new text scores
-        # higher, so the admin and the 30-day sweep judge the worst version that went live.
-        # auto_approve_at is left alone, so the deadline still runs from the first offence.
         auto_approve_at = datetime.utcnow() + timedelta(days=AUTO_APPROVE_DAYS)
         row = _row(get_db().execute_query(
             """
@@ -245,7 +240,7 @@ def queue_harmful_text_scan(content_type: str,
                 "insult_score":         result["insult_score"],
                 "identity_hate_score":  result["identity_hate_score"],
                 "detected_labels":      json.dumps(result["detected_labels"]),
-                "flagged_text":         text[:500],
+                "flagged_text":         text,
                 "auto_approve_at":      auto_approve_at,
             },
         ))
@@ -264,6 +259,60 @@ def queue_harmful_text_scan(content_type: str,
         return row
     except Exception as e:
         logger("ADMIN", f"Harmful scan failed, content left unmoderated: {content_type} {content_id} | {e}",
+               level="ERROR")
+        return None
+
+def queue_job_post_harmful_scan(job_post_id: str, user_id: str) -> Optional[Dict]:
+    """Scan a job post's title, description and every one of its roles, and queue the
+    result as the single harmful_text_queue entry for that post."""
+    try:
+        post = _row(get_db().execute_query(
+            "SELECT job_title, job_description, status FROM job_post WHERE job_post_id = :jid",
+            params={"jid": job_post_id},
+        ))
+        if not post or post.get("status") != "active":
+            return None
+        
+        labelled = [
+            ("[TITLE]", post.get("job_title") or ""),
+            ("[DESC]",  post.get("job_description") or ""),
+        ]
+
+        roles = _rows(get_db().execute_query(
+            """
+            SELECT role_title, role_description
+            FROM job_role
+            WHERE job_post_id = :jid
+            ORDER BY display_order, job_role_id
+            """,
+            params={"jid": job_post_id},
+        ))
+        for role in roles:
+            role_title = (role.get("role_title") or "").strip()
+            role_desc  = (role.get("role_description") or "").strip()
+            if not role_title and not role_desc:
+                continue
+           
+            labelled.append((
+                f"[ROLE] {role_title} —" if role_title else "[ROLE] —",
+                f"Role: {role_title}. {role_desc}".strip(),
+            ))
+
+        labelled = [(prefix, text) for prefix, text in labelled if text.strip()]
+        fields = [text for _, text in labelled]
+        result = scan_harmful_text_fields(*fields)
+        if not result["is_flagged"]:
+            return None
+
+        worst = result.get("worst_field", "")
+        order = sorted(range(len(fields)), key=lambda i: fields[i] != worst)
+        snapshot = "\n".join(f"{labelled[i][0]} {labelled[i][1]}".strip() for i in order)
+
+        return queue_harmful_text_scan(
+            "job_post", job_post_id, user_id, snapshot, *fields, result=result,
+        )
+    except Exception as e:
+        logger("ADMIN", f"Job post harmful scan failed, content left unmoderated: {job_post_id} | {e}",
                level="ERROR")
         return None
 
@@ -562,9 +611,6 @@ def queue_scam_scan(
     title: str = "",
     description: str = "",
 ) -> Optional[Dict]:
-    # The whole body sits in the try because this runs as a fire-and-forget task: anything
-    # raised outside it would die with the task and leave the job unscanned silently.
-    # Same reason queue_harmful_text_scan is shaped this way.
     try:
         if title or description:
             result = scan_for_scam_with_ml_fallback(title, description)
@@ -605,12 +651,6 @@ def queue_scam_scan(
                 },
             ))
 
-        # One pending flag per job. A re-scan (an edit, or an admin re-running the scan)
-        # overwrites it only when the new text scores higher, so the admin and the 30-day
-        # sweep judge the worst version that went live - editing the scam out after the
-        # applicants have already seen it does not clear the record. auto_remove_at is left
-        # alone so the deadline still runs from the first offence, and auto_closed is only
-        # ever raised, never dropped back to FALSE by a later scan.
         row = _row(get_db().execute_query(
             """
             INSERT INTO scam_job_flags (

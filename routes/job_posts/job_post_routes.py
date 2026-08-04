@@ -23,10 +23,9 @@ from functions.response_utils import ResponseSchema
 from functions.db_manager import get_db
 from routes.job_posts.job_post_functions import JobPostFunctions, convert_uuids_to_str
 from ai_related.job_engine.embedding_manager import mark_job_dirty
-from routes.admin.admin_functions import queue_harmful_text_scan, queue_scam_scan, SYSTEM_CLOSURE_REASONS
+from routes.admin.admin_functions import queue_job_post_harmful_scan, queue_scam_scan, SYSTEM_CLOSURE_REASONS
 
 job_post_router = APIRouter(prefix="/job-posts", tags=["Job Posts"])
-
 
 _VALID_JOB_STATUSES      = {"active", "closed", "filled", "draft", "all"}
 _VALID_JOB_ORDER_BY      = {"created_at", "posted_at", "deadline", "job_title", "proposal_count", "view_count"}
@@ -382,22 +381,16 @@ async def create_job_post(job_post: JobPostCreate, current_user: UserInDB = Depe
             is_ai_generated=job_post.is_ai_generated
         )
         
-        # Role embeddings are created when job roles are added via POST /job-roles.
-
-        # Background: toxicity detection + scam detection
         _jp_id    = str(new_job_post["job_post_id"])
         _cl_id    = str(client["client_id"])
         _usr_id   = current_user.user_id
         _title    = job_post.job_title
         _desc     = job_post.job_description
         _scan_text = f"{_title} {_desc}"
-        # Only active posts are public, so drafts aren't queued for moderation. The
-        # update path scans them once they go active. Scanning a draft would flag content
-        # nobody can see, and both auto-close paths only touch active posts anyway, so the
-        # flag would just sit there burning its 30-day window while still a draft.
+        
         if job_post.status == "active":
             asyncio.create_task(asyncio.to_thread(
-                queue_harmful_text_scan, "job_post", _jp_id, _usr_id, _scan_text, _title, _desc))
+                queue_job_post_harmful_scan, _jp_id, _usr_id))
             asyncio.create_task(asyncio.to_thread(
                 queue_scam_scan, _jp_id, _cl_id, _scan_text, _title, _desc,
             ))
@@ -471,10 +464,6 @@ async def update_job_post(job_post_id: str, job_post_update: JobPostUpdate, curr
 
         mark_job_dirty(job_post_id)
 
-        # Re-scan an active post when its content changes or when it first goes active,
-        # so an edit can't slip harmful text or a scam past moderation. _became_active is
-        # what covers a draft: it is scanned the moment it goes public, not before. The
-        # ON CONFLICT guard in both queue functions stops duplicate rows.
         _new_status      = updated_job_post.get("status")
         _became_active   = existing_job_post.get("status") != "active" and _new_status == "active"
         _content_changed = "job_title" in update_data or "job_description" in update_data
@@ -483,8 +472,7 @@ async def update_job_post(job_post_id: str, job_post_update: JobPostUpdate, curr
             _desc      = updated_job_post.get("job_description") or ""
             _scan_text = f"{_title} {_desc}"
             asyncio.create_task(asyncio.to_thread(
-                queue_harmful_text_scan, "job_post", job_post_id, current_user.user_id,
-                _scan_text, _title, _desc))
+                queue_job_post_harmful_scan, job_post_id, current_user.user_id))
             asyncio.create_task(asyncio.to_thread(
                 queue_scam_scan, job_post_id, str(existing_job_post["client_id"]),
                 _scan_text, _title, _desc))

@@ -1,3 +1,4 @@
+import asyncio
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -14,6 +15,7 @@ from functions.response_utils import ResponseSchema
 from routes.job_posts.job_post_functions import JobPostFunctions
 from routes.job_roles.job_role_functions import JobRoleFunctions
 from ai_related.job_engine.embedding_manager import mark_job_dirty, mark_job_dirty_by_role
+from routes.admin.admin_functions import queue_job_post_harmful_scan
 
 job_role_router = APIRouter(prefix="/job-roles", tags=["Job Roles"])
 
@@ -90,8 +92,8 @@ async def create_job_role(job_role: JobRoleCreate, current_user: UserInDB = Depe
         )
         
         mark_job_dirty_by_role(str(new_job_role["job_role_id"]))
-        # Roles are added after the post is created, so the scope computed at creation
-        # assumed a headcount of 1. Refresh it now that positions_available changed.
+        asyncio.create_task(asyncio.to_thread(
+            queue_job_post_harmful_scan, str(job_role.job_post_id), current_user.user_id))
         JobPostFunctions.recompute_project_scope(str(job_role.job_post_id))
         success_msg = f"Created job role {job_role_id} for job post {job_role.job_post_id}"
         logger("JOB_ROLE", success_msg, "POST /job-roles", "INFO")
@@ -124,6 +126,8 @@ async def update_job_role(job_role_id: str, job_role_update: JobRoleUpdate, curr
         updated_job_role = JobRoleFunctions.update_job_role(job_role_id, update_data)
         
         mark_job_dirty_by_role(job_role_id)
+        asyncio.create_task(asyncio.to_thread(
+            queue_job_post_harmful_scan, str(existing_job_role["job_post_id"]), current_user.user_id))
         success_msg = f"Updated job role {job_role_id}"
         logger("JOB_ROLE", success_msg, "PUT /job-roles/{job_role_id}", "INFO")
         return ResponseSchema.success(updated_job_role, 200)

@@ -121,15 +121,23 @@ def scan_harmful_text_with_ml_fallback(text: str) -> Dict:
 _SCORE_KEYS = ("toxic_score", "obscene_score", "threat_score",
                "insult_score", "identity_hate_score")
 
+def _max_score(result: Dict) -> float:
+    return max(result[k] for k in _SCORE_KEYS)
+
 def scan_harmful_text_fields(*fields: str) -> Dict:
     parts = [f for f in fields if f and f.strip()]
     if not parts:
-        return scan_harmful_text_with_ml_fallback("")
+        merged = scan_harmful_text_with_ml_fallback("")
+        merged["worst_field"] = ""
+        return merged
     if len(parts) == 1:
-        return scan_harmful_text_with_ml_fallback(parts[0])
+        merged = scan_harmful_text_with_ml_fallback(parts[0])
+        merged["worst_field"] = parts[0]
+        return merged
 
     results = [scan_harmful_text_with_ml_fallback(p) for p in parts]
     merged = {k: max(r[k] for r in results) for k in _SCORE_KEYS}
+    merged["worst_field"] = max(zip(parts, results), key=lambda pr: _max_score(pr[1]))[0]
     merged["detected_labels"] = sorted({l for r in results for l in r["detected_labels"]})
     merged["is_flagged"]      = any(r["is_flagged"] for r in results)
     merged["scan_method"]     = ("keyword" if any(r["scan_method"] == "keyword" for r in results)
