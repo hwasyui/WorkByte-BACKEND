@@ -69,10 +69,10 @@ def log_pipeline_judgment(
     ratings: Optional[list],
     avg_stars: float,
     llm_analysis: Dict[str, Any],
-    ml_authenticity: Dict[str, Any],
     ml_sentiment: Dict[str, Any],
     ml_mismatch: Dict[str, Any],
     outcome: Dict[str, Any],
+    specificity: Optional[Dict[str, Any]] = None,
 ) -> None:
     """
     One record per analysed review: the inputs, what each model said, and what the
@@ -81,6 +81,13 @@ def log_pipeline_judgment(
     Both the LLM's and the ML models' outputs are kept even where the pipeline only
     uses one. Their disagreements are the interesting part - a case where the LLM
     and the classifier split is exactly the kind of example worth hand-labelling.
+
+    The authenticity classifier used to be logged here as well. It is no longer run
+    at all (see review_decision.blend_authenticity), so records written from this
+    point carry no "ml.authenticity" key. Readers must treat it as optional: older
+    lines in the same file still have it. Nothing is rewritten - the log is
+    append-only and the historical values are still true records of what that model
+    said at the time.
     """
     _append({
         "event": "pipeline_judgment",
@@ -105,10 +112,13 @@ def log_pipeline_judgment(
             "analysis_unavailable": llm_analysis.get("analysis_unavailable"),
         },
         "ml": {
-            "authenticity": ml_authenticity,
             "sentiment": ml_sentiment,
             "mismatch": ml_mismatch,
         },
+        # Component 5. Not a model, but it is a signal the pipeline acted on, and a
+        # record of a held review that does not say which check held it is not
+        # usable as training data.
+        "specificity": specificity,
         "outcome": outcome,
     })
 

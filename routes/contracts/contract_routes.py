@@ -696,27 +696,12 @@ async def send_contract_to_freelancer(contract_id: str, payload: ContractSendReq
         if not freelancer_user_id:
             return ResponseSchema.error("Could not resolve the freelancer for this contract", 404)
 
-        thread = DMFunctions.get_thread_by_contract_id(contract_id)
+        # Resolved by participant pair, not by contract_id: this client and freelancer
+        # share one thread no matter how many contracts they sign, and only the most
+        # recent contract is recorded on it. Opens the thread if this is their first.
+        thread = DMFunctions.get_or_open_thread_for_contract(contract)
         if not thread:
-            # The thread is opened when the contract is created, so its absence means
-            # that step failed. Recreate it rather than refuse to send.
-            DMFunctions.activate_or_create_thread(
-                client_user_id=str(current_user.user_id),
-                freelancer_user_id=freelancer_user_id,
-                message_text=_contract_accepted_default(
-                    role_title=contract.get("role_title", ""),
-                    contract_title=contract.get("contract_title", ""),
-                ),
-                sender_id=str(current_user.user_id),
-                job_post_id=str(contract["job_post_id"]) if contract.get("job_post_id") else None,
-                job_role_id=str(contract["job_role_id"]) if contract.get("job_role_id") else None,
-                contract_id=contract_id,
-                role_title=contract.get("role_title"),
-                contract_title=contract.get("contract_title"),
-            )
-            thread = DMFunctions.get_thread_by_contract_id(contract_id)
-            if not thread:
-                return ResponseSchema.error("Could not open a message thread for this contract", 500)
+            return ResponseSchema.error("Could not open a message thread for this contract", 500)
 
         custom_msg = payload.notification_message
         raw_template = custom_msg or client_profile.get("contract_message_template") or _DEFAULT_CONTRACT_NOTIFICATION

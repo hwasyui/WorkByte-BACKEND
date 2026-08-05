@@ -13,6 +13,7 @@ from functions.profile_ids import user_id_for_client
 from routes.dm.dm_functions import DMFunctions
 from ai_related.review_analysis.review_ai_functions import (
     ANALYSIS_UNAVAILABLE_REASON,
+    FAKE_FIELD_RUBRIC,
     call_llm,
     MIN_REVIEWS_FOR_SUMMARY,
     _fmt_metric,
@@ -146,7 +147,9 @@ async def analyze_client_review_full(
 
     schema_description = {
         "authenticity_score": "float between 0.0 and 1.0, likelihood the review is genuine and not fabricated",
-        "is_flagged_fake": "boolean, true if review appears fabricated or templated",
+        # Same rubric as the freelancer side - the two prompts asked this question
+        # with identical wording before, and they should stay identical after.
+        "is_flagged_fake": FAKE_FIELD_RUBRIC,
         "is_flagged_coerced": "boolean, true if review appears pressured or coerced",
         "flag_reasons": "list of strings describing specific red flags, empty list if none",
         "sentiment_mismatch": "boolean, true if the review text's tone contradicts the star rating (e.g. negative text with 5 stars)",

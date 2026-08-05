@@ -475,6 +475,43 @@ def blend_communication_score(
     return round(max(0.0, min(1.0, blended)), 3)
 
 
+# The definition of "templated", shared verbatim by both analysis prompts.
+#
+# The field used to say only "true if review appears fabricated or templated",
+# with no criteria attached. Measured against that wording, four templated
+# 5-star reviews - "A+++++ super fast delivery", "Excellent work. Very
+# professional and easy to work with", keyword-stuffed superlatives, and a bare
+# "Really good work, thanks!" - were all scored 0.48-0.72 authentic and cleared
+# the gate, two of them without even a flag reason attached. The model was not
+# being asked the right question.
+#
+# The rubric names the actual test (could this text be pasted onto a different
+# job unchanged?) and, as importantly, rules out the two proxies a model reaches
+# for instead: length and warmth. Both are wrong here. Brevity is a writing
+# habit - the authenticity classifier removed from this pipeline learned exactly
+# that confusion from its training corpus - and enthusiasm is what a genuinely
+# happy client sounds like.
+#
+# This is defence in depth, not the whole defence: review_specificity.py checks
+# the same property arithmetically, because a rubric is still a judgement call
+# the model can get wrong on any given call.
+FAKE_FIELD_RUBRIC = (
+    "boolean. True if the review is FABRICATED (describes things that did not "
+    "happen, or contradicts the objective record and message thread) or TEMPLATED. "
+    "Templated means the text could be pasted onto a completely different job on "
+    "this platform without changing a word: it is built from stock marketplace "
+    "phrases and superlatives - 'fast delivery', 'highly recommended', 'A+++', "
+    "'would hire again', 'very professional' - and names nothing concrete from "
+    "THIS engagement. Concrete means a deliverable, feature, tool, decision, "
+    "deadline, incident or trade-off that only someone who lived this project "
+    "could know. "
+    "Two things that are NOT evidence of a template. Length: a two-sentence review "
+    "naming one specific broken endpoint is genuine, and a long enthusiastic one "
+    "naming nothing is not. Tone: warmth and criticism are both normal, and a "
+    "delighted client writing in superlatives about specifics is genuine."
+)
+
+
 def _fmt_metric(value) -> str:
     """Render an objective metric for the LLM prompt.
 
@@ -517,7 +554,7 @@ async def analyze_review_full(
 
     schema_description = {
         "authenticity_score": "float between 0.0 and 1.0, likelihood the review is genuine and not fabricated",
-        "is_flagged_fake": "boolean, true if review appears fabricated or templated",
+        "is_flagged_fake": FAKE_FIELD_RUBRIC,
         "is_flagged_coerced": "boolean, true if review appears pressured or coerced",
         "flag_reasons": "list of strings describing specific red flags, empty list if none",
         "sentiment_mismatch": "boolean, true if the review text's tone contradicts the star rating (e.g. negative text with 5 stars)",

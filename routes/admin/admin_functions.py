@@ -2898,20 +2898,23 @@ def _ratings_for(table: str, id_column: str, record_id: str) -> Dict:
 def _blend_weights(components: Optional[Dict], answer_text: Optional[str]) -> Dict:
     """The weights actually used for THIS review's authenticity score.
 
-    Not a constant, for two reasons. blend_authenticity falls back to the LLM score
-    alone when the reviewer skipped the targeted question - which is optional at
-    submit - so a fixed split would misdescribe every review without an answer.
+    Not a constant: blend_authenticity falls back to the LLM score alone when the
+    reviewer skipped the targeted question - which is optional at submit - so a
+    fixed split would misdescribe every review without an answer.
 
-    And the authenticity classifier's share is now 0.0. The key is kept rather than
-    removed so the panel shows the model was deliberately dropped rather than
-    silently omitted; see review_decision.blend_authenticity for the audit behind
-    that (near-constant output, mean 0.963 / stdev 0.086 over 42 production
-    reviews, and a fake flag that never once fired).
+    The authenticity classifier used to appear here with a share of 0.0, to show it
+    had been deliberately dropped from the blend rather than silently omitted. It is
+    now gone from the pipeline entirely, so the key has gone with it; a weight of
+    zero for a model that no longer runs says less than saying nothing.
+
+    Note this describes the authenticity SCORE only. Two of the three things that
+    can hold a review - the coercion flag and the specificity check - are vetoes
+    outside this blend and carry no weight here. See `components.specificity`.
     """
     grounded = ((components or {}).get("llm") or {}).get("answer_groundedness")
     if grounded is not None and (answer_text or "").strip():
-        return {"llm": 0.8, "authenticity_model": 0.0, "answer_groundedness": 0.2}
-    return {"llm": 1.0, "authenticity_model": 0.0, "answer_groundedness": 0.0}
+        return {"llm": 0.8, "answer_groundedness": 0.2}
+    return {"llm": 1.0, "answer_groundedness": 0.0}
 
 
 def _component_breakdown(review_id: str) -> Optional[Dict]:
@@ -2929,12 +2932,11 @@ def _component_breakdown(review_id: str) -> Optional[Dict]:
 
     llm = record.get("llm") or {}
     ml = record.get("ml") or {}
-    authenticity = ml.get("authenticity") or {}
     sentiment = ml.get("sentiment") or {}
     mismatch = ml.get("mismatch") or {}
+    specificity = record.get("specificity") or {}
 
     llm_fake = llm.get("is_flagged_fake")
-    ml_fake = authenticity.get("is_likely_fake")
     llm_mismatch = llm.get("sentiment_mismatch")
     ml_mismatch = mismatch.get("is_mismatched")
 
@@ -2955,31 +2957,30 @@ def _component_breakdown(review_id: str) -> Optional[Dict]:
             # it fell back to the weaker retired model and the score is less trustworthy.
             "model_used": sentiment.get("model_used"),
         },
-        "authenticity_model": {
-            "fake_probability": authenticity.get("fake_probability"),
-            # Length-neutral. The raw score penalises short reviews ~7x more often,
-            # so the calibrated figure is the fair one to read.
-            "fake_probability_calibrated": authenticity.get("fake_probability_calibrated"),
-            "is_likely_fake": ml_fake,
-            "threshold": 0.75,
-            "model_used": authenticity.get("model_used"),
-            # ADVISORY ONLY as of the blend change - this model no longer feeds
-            # authenticity_score and no longer gates is_flagged_fake. It is still run
-            # and logged, so the admin sees what it thought, but an admin adjudicating
-            # a held review should not read a low fake_probability here as the
-            # pipeline having cleared the review. See review_decision.blend_authenticity.
-            "advisory_only": True,
-        },
+        # Component 5, review_specificity.py: arithmetic, not a model, so the admin
+        # can check it by eye. `shared_terms` is the evidence - the project words the
+        # review actually used - and an empty list next to is_generic=true is the
+        # whole case for holding it.
+        "specificity": {
+            "shared_terms": specificity.get("shared_terms"),
+            "shared_term_count": specificity.get("shared_term_count"),
+            "word_count": specificity.get("word_count"),
+            "is_generic": specificity.get("is_generic"),
+            "measurable": specificity.get("measurable"),
+        } if specificity else None,
         "disagreement_model": {
             "disagreement_probability": mismatch.get("disagreement_probability"),
             "is_mismatched": ml_mismatch,
             "threshold": 0.5,
             "model_used": mismatch.get("model_used"),
         },
-        # Surfaced as structured fields rather than left buried in flag_reasons
+        # Surfaced as a structured field rather than left buried in flag_reasons
         # prose, because "which of the two objected" is the whole question.
+        #
+        # Only `mismatch` remains: it was a pair of keys while the authenticity
+        # classifier also voted on `fake`, and with that model gone the LLM is the
+        # sole source for is_flagged_fake, so there is nothing left to disagree with.
         "disagreements": {
-            "fake": (llm_fake is not None and ml_fake is not None and llm_fake != ml_fake),
             "mismatch": (llm_mismatch is not None and ml_mismatch is not None
                          and llm_mismatch != ml_mismatch),
         },

@@ -107,12 +107,24 @@ async def start_thread(
     payload: DMThreadCreate,
     current_user: UserInDB = Depends(get_current_user),
 ):
+    # Clients may open a thread with anyone - that is how hiring starts. Freelancers may
+    # not cold-approach, but a freelancer who already has a contract with this client is
+    # not cold outreach, and blocking them left workspace conversations unstartable.
+    # A thread opened off a contract skips the request stage: the counterparty should not
+    # have to accept a request for work that is already underway.
+    new_thread_status = "request"
     if not current_user.client_id:
-        return ResponseSchema.error(
-            "Only clients can start a conversation. "
-            "Freelancers can reply once a thread is opened by a client or created via a contract.",
-            403,
-        )
+        if not current_user.freelancer_id:
+            return ResponseSchema.error("Only clients and freelancers can start a conversation.", 403)
+        if not DMFunctions.has_contract_between_users(
+            str(current_user.user_id), str(payload.participant_id)
+        ):
+            return ResponseSchema.error(
+                "You can only message a client you have a contract with. "
+                "Clients start the conversation otherwise.",
+                403,
+            )
+        new_thread_status = "active"
 
     existing = DMFunctions.get_thread_by_users(
         str(current_user.user_id), str(payload.participant_id)
@@ -148,8 +160,9 @@ async def start_thread(
             participant_id=str(payload.participant_id),
             job_post_id=payload.job_post_id,
             message_text=payload.message_text,
+            status=new_thread_status,
         )
-        logger("DM", f"Thread created by client {current_user.user_id}", "POST /dm/threads", "INFO")
+        logger("DM", f"Thread created by {current_user.user_id} (status={new_thread_status})", "POST /dm/threads", "INFO")
         await _manager.broadcast(
             result["thread"]["thread_id"], result["first_message"]
         )

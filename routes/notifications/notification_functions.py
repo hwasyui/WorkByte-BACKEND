@@ -5,6 +5,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 from functions.db_manager import get_db
 from functions.logger import logger
 from typing import List, Optional, Dict
+import asyncio
 import json
 import uuid
 
@@ -14,6 +15,27 @@ import google.auth.transport.requests
 
 FCM_PROJECT_ID = os.getenv("FCM_PROJECT_ID")
 FCM_SERVICE_ACCOUNT_FILE = os.getenv("FCM_SERVICE_ACCOUNT_FILE", "service-account.json")
+
+# Ceiling on a whole push attempt: OAuth token refresh plus the FCM POST. The POST has
+# its own 5s timeout; this bounds the pair so a push can never hang, wherever it runs.
+FCM_TOTAL_TIMEOUT_SECONDS = 10.0
+
+# The token refresh runs in a worker thread, which cancelling the awaiting coroutine
+# cannot interrupt - so it needs a timeout of its own or it holds a pool slot long after
+# the caller gave up. google.auth's default is 120s, far past FCM_TOTAL_TIMEOUT_SECONDS.
+FCM_TOKEN_TIMEOUT_SECONDS = 5
+
+
+class _TimeoutRequest(google.auth.transport.requests.Request):
+    """google.auth transport with a shorter default timeout.
+
+    Credentials.refresh() calls the transport without passing a timeout, so overriding
+    the default here is the only place it can be set.
+    """
+
+    def __call__(self, url, method="GET", body=None, headers=None,
+                 timeout=FCM_TOKEN_TIMEOUT_SECONDS, **kwargs):
+        return super().__call__(url, method, body, headers, timeout=timeout, **kwargs)
 
 
 def convert_uuids_to_str(data: Dict) -> Dict:
@@ -33,29 +55,47 @@ class NotificationFunctions:
             FCM_SERVICE_ACCOUNT_FILE,
             scopes=["https://www.googleapis.com/auth/firebase.messaging"],
         )
-        credentials.refresh(google.auth.transport.requests.Request())
+        credentials.refresh(_TimeoutRequest())
         return credentials.token
 
     @staticmethod
     async def send_fcm(token: str, title: str, body: str, data: dict):
         try:
-            access_token = NotificationFunctions._get_fcm_access_token()
-            async with httpx.AsyncClient() as client:
-                await client.post(
-                    f"https://fcm.googleapis.com/v1/projects/{FCM_PROJECT_ID}/messages:send",
-                    headers={"Authorization": f"Bearer {access_token}"},
-                    json={
-                        "message": {
-                            "token": token,
-                            "notification": {"title": title, "body": body},
-                            "data": {k: str(v) for k, v in data.items()},
-                        }
-                    },
-                    timeout=5.0,
-                )
-            logger("NOTIFICATION_FUNCTIONS", f"FCM sent to token ...{token[-6:]}", level="INFO")
+            await asyncio.wait_for(
+                NotificationFunctions._send_fcm_inner(token, title, body, data),
+                timeout=FCM_TOTAL_TIMEOUT_SECONDS,
+            )
+        except asyncio.TimeoutError:
+            logger(
+                "NOTIFICATION_FUNCTIONS",
+                f"FCM send timed out after {FCM_TOTAL_TIMEOUT_SECONDS}s (non-fatal)",
+                level="WARNING",
+            )
         except Exception as e:
             logger("NOTIFICATION_FUNCTIONS", f"FCM send failed (non-fatal): {str(e)}", level="WARNING")
+
+    @staticmethod
+    async def _send_fcm_inner(token: str, title: str, body: str, data: dict):
+        """Raises on failure; send_fcm owns the logging and the timeout."""
+        # Off the event loop: credentials.refresh() is blocking network I/O against
+        # Google's OAuth endpoint with no timeout of its own. Called inline it stalls
+        # every other request on this worker, not just the one that triggered it, and
+        # wait_for cannot interrupt a synchronous call.
+        access_token = await asyncio.to_thread(NotificationFunctions._get_fcm_access_token)
+        async with httpx.AsyncClient() as client:
+            await client.post(
+                f"https://fcm.googleapis.com/v1/projects/{FCM_PROJECT_ID}/messages:send",
+                headers={"Authorization": f"Bearer {access_token}"},
+                json={
+                    "message": {
+                        "token": token,
+                        "notification": {"title": title, "body": body},
+                        "data": {k: str(v) for k, v in data.items()},
+                    }
+                },
+                timeout=5.0,
+            )
+        logger("NOTIFICATION_FUNCTIONS", f"FCM sent to token ...{token[-6:]}", level="INFO")
 
     @staticmethod
     async def notify(

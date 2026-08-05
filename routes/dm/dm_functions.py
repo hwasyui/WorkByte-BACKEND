@@ -178,8 +178,15 @@ class DMFunctions:
         participant_id: str,
         job_post_id: Optional[str] = None,
         message_text: Optional[str] = None,
+        status: str = "request",
     ) -> Dict:
-        """Create a thread and send the first message. Returns (thread, first_message)."""
+        """Create a thread and send the first message. Returns (thread, first_message).
+
+        status defaults to 'request' - cold outreach the other side must accept, which
+        also caps the initiator at one message. Callers who already know the two share a
+        working relationship pass 'active' so no one has to accept a request for work
+        that is already underway.
+        """
         existing = DMFunctions.get_thread_by_users(initiator_id, participant_id)
         if existing:
             raise ValueError("A message thread already exists between these users.")
@@ -201,9 +208,10 @@ class DMFunctions:
         db.execute_query(
             """
             INSERT INTO dm_thread (thread_id, user_a_id, user_b_id, initiator_id, status, job_post_id)
-            VALUES (:tid, :a, :b, :init, 'request', :jpid)
+            VALUES (:tid, :a, :b, :init, :status, :jpid)
             """,
-            {"tid": thread_id, "a": a, "b": b, "init": initiator_id, "jpid": job_post_id},
+            {"tid": thread_id, "a": a, "b": b, "init": initiator_id,
+             "status": status, "jpid": job_post_id},
         )
 
         metadata = None
@@ -454,6 +462,81 @@ class DMFunctions:
         return _to_str(rows[0]["client_user_id"]), _to_str(rows[0]["freelancer_user_id"])
 
     @staticmethod
+    def has_contract_between_users(freelancer_user_id: str, client_user_id: str) -> bool:
+        """True if these two users share a contract, in any status.
+
+        Any status on purpose: a cancelled or completed contract still means they have
+        worked together, which is the thing that separates a legitimate follow-up from
+        cold outreach. Queried directly rather than through ContractFunctions to keep
+        dm_functions free of that import cycle.
+        """
+        rows = get_db().execute_query(
+            """
+            SELECT 1
+            FROM contract c
+            JOIN client     cl ON cl.client_id     = c.client_id
+            JOIN freelancer fl ON fl.freelancer_id = c.freelancer_id
+            WHERE fl.user_id = :fuid AND cl.user_id = :cuid
+            LIMIT 1
+            """,
+            {"fuid": freelancer_user_id, "cuid": client_user_id},
+        )
+        return bool(rows)
+
+    @staticmethod
+    def get_or_open_thread_for_contract(contract: Dict) -> Optional[Dict]:
+        """Return the DM thread for a contract's two parties, opening one if needed.
+
+        Resolved by PARTICIPANT PAIR, not by contract_id: a pair has exactly one thread
+        (dm_thread is UNIQUE on user_a_id, user_b_id) but contract_id is a single column,
+        so a second contract between the same client and freelancer can never be found by
+        its own id. Looking the pair up instead is the only lookup that stays correct
+        across repeat pairings.
+
+        Re-points contract_id at the CURRENT contract so callers that do go through
+        get_thread_by_contract_id resolve the most recent one rather than nothing.
+        Sends no message - the caller owns what gets posted.
+        """
+        contract_id = str(contract["contract_id"])
+        parties = DMFunctions._get_contract_party_user_ids(contract_id)
+        if not parties:
+            return None
+        client_user_id, freelancer_user_id = parties
+        if not (client_user_id and freelancer_user_id):
+            return None
+
+        job_post_id = str(contract["job_post_id"]) if contract.get("job_post_id") else None
+        db = get_db()
+        thread = DMFunctions.get_thread_by_users(client_user_id, freelancer_user_id)
+
+        if not thread:
+            a, b = _canonical(client_user_id, freelancer_user_id)
+            thread_id = str(uuid.uuid4())
+            db.execute_query(
+                """
+                INSERT INTO dm_thread
+                    (thread_id, user_a_id, user_b_id, initiator_id, status, job_post_id, contract_id)
+                VALUES (:tid, :a, :b, :init, 'active', :jpid, :cid)
+                """,
+                {"tid": thread_id, "a": a, "b": b, "init": client_user_id,
+                 "jpid": job_post_id, "cid": contract_id},
+            )
+            return DMFunctions.get_thread_by_id(thread_id)
+
+        # An existing thread may still be sitting in 'request' (or 'declined') from an
+        # earlier cold approach. A contract is a working relationship, so it outranks
+        # that: the pair should not have to accept a request for work already agreed.
+        db.execute_query(
+            """
+            UPDATE dm_thread
+            SET status = 'active', updated_at = NOW(), contract_id = :cid
+            WHERE thread_id = :tid
+            """,
+            {"tid": thread["thread_id"], "cid": contract_id},
+        )
+        return DMFunctions.get_thread_by_id(thread["thread_id"])
+
+    @staticmethod
     def send_system_event(
         contract_id: str,
         actor_id: str,
@@ -463,12 +546,12 @@ class DMFunctions:
     ) -> Optional[Dict]:
         """Send a system-event message to the thread linked to a contract.
 
-        dm_thread.contract_id is claimed by the FIRST contract between a pair of users
-        (activate_or_create_thread COALESCEs it), so a repeat pairing has no thread under
-        its own contract_id. Falling back to the parties' shared thread keeps later
-        contracts' events - a dispute reason among them - from being dropped on the floor.
-        contract_id always goes into the metadata so readers can tell which contract an
-        event belongs to without trusting the thread's own column.
+        dm_thread.contract_id holds only the most recent contract for a pair of users, so
+        any earlier contract has no thread under its own contract_id. Falling back to the
+        parties' shared thread keeps those contracts' events - a dispute reason among them
+        - from being dropped on the floor. contract_id always goes into the metadata so
+        readers can tell which contract an event belongs to without trusting the thread's
+        own column.
         """
         thread = DMFunctions.get_thread_by_contract_id(contract_id)
         if not thread:
@@ -526,7 +609,7 @@ class DMFunctions:
             db.execute_query(
                 """
                 UPDATE dm_thread
-                SET status = 'active', updated_at = NOW(), contract_id = COALESCE(contract_id, :cid)
+                SET status = 'active', updated_at = NOW(), contract_id = COALESCE(:cid, contract_id)
                 WHERE thread_id = :tid
                 """,
                 {"tid": thread["thread_id"], "cid": contract_id},

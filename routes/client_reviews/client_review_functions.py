@@ -9,6 +9,11 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 from fastapi import HTTPException
 from functions.db_manager import get_db
 from functions.logger import logger
+from ai_related.review_analysis.review_decision import (
+    RED_FLAG_WINDOW,
+    evaluate_score_drop,
+    should_escalate,
+)
 
 
 def convert_uuids_to_str(data: Dict) -> Dict:
@@ -397,14 +402,18 @@ class ClientReviewFunctions:
 
     @staticmethod
     def check_and_create_red_flag(client_id: str, new_score: float) -> None:
-        """Compare latest 2 snapshots. Fire alert if drop > 10 points.
+        """Raise or escalate a score-drop alert for this client.
 
-        Reads the previous score from client_trust_score_history rather than from
+        The rule itself is review_decision.evaluate_score_drop, shared with
+        ReviewFunctions.check_and_create_red_flag - the two were verbatim copies
+        before, so a change to the thresholds or the comparison had to be made
+        twice. This method is the client half of the I/O only.
+
+        Reads history from client_trust_score_history rather than from
         client_trust_score: the caller upserts the new score before calling this,
         so the live row already holds new_score and every comparison against it
         yielded a drop of exactly 0 - no client red flag could ever fire. The
-        history table is append-only, so snapshots[1] is genuinely the prior
-        value. Identical to ReviewFunctions.check_and_create_red_flag.
+        history table is append-only, so snapshots[1:] are genuinely the priors.
         """
         try:
             db = get_db()
@@ -412,22 +421,45 @@ class ClientReviewFunctions:
                 table_name="client_trust_score_history",
                 conditions=[("client_id", "=", client_id)],
                 order_by="recorded_at DESC",
-                limit=2,
+                limit=RED_FLAG_WINDOW + 1,
             )
-            if len(snapshots) < 2:
+            verdict = evaluate_score_drop(
+                [s["trust_score"] for s in snapshots[1:]], new_score
+            )
+            if not verdict:
                 return
 
-            previous_score = float(snapshots[1]["trust_score"])
-            drop = previous_score - new_score
-            if drop <= 10:
-                return
-
-            severity = "high" if drop > 20 else "medium" if drop > 15 else "low"
+            trend = (
+                "against their best score in the last "
+                f"{RED_FLAG_WINDOW} updates" if verdict["basis"] == "window"
+                else "since the previous update"
+            )
             message = (
-                f"Trust score dropped by {drop:.1f} points "
-                f"(from {previous_score:.1f} to {new_score:.1f}). "
+                f"Trust score dropped by {verdict['drop']:.1f} points "
+                f"(from {verdict['previous_score']:.1f} to {new_score:.1f}) {trend}. "
                 f"Recent reviews may indicate a declining pattern."
             )
+
+            open_alerts = db.fetch_data(
+                table_name="red_flag_alerts",
+                conditions=[("client_id", "=", client_id),
+                            ("alert_type", "=", "score_drop"),
+                            ("is_resolved", "=", False)],
+                order_by="triggered_at DESC",
+                limit=1,
+            )
+            if open_alerts:
+                existing = open_alerts[0]
+                if not should_escalate(existing["severity"], verdict["severity"]):
+                    return
+                db.update_data(
+                    table_name="red_flag_alerts",
+                    data={"severity": verdict["severity"], "message": message},
+                    conditions=[("id", "=", str(existing["id"]))],
+                )
+                logger("CLIENT_REVIEW_FUNCTIONS", f"Red flag escalated to {verdict['severity']} for client {client_id} (drop: {verdict['drop']:.1f}, {verdict['basis']})", level="WARNING")
+                return
+
             db.insert_data(
                 table_name="red_flag_alerts",
                 data={
@@ -435,12 +467,12 @@ class ClientReviewFunctions:
                     "client_id": client_id,
                     "subject_type": "client",
                     "alert_type": "score_drop",
-                    "severity": severity,
+                    "severity": verdict["severity"],
                     "message": message,
                     "is_resolved": False,
                 },
             )
-            logger("CLIENT_REVIEW_FUNCTIONS", f"Red flag created for client {client_id} (drop: {drop:.1f})", level="WARNING")
+            logger("CLIENT_REVIEW_FUNCTIONS", f"Red flag created for client {client_id} (drop: {verdict['drop']:.1f}, {verdict['basis']})", level="WARNING")
         except Exception as e:
             logger("CLIENT_REVIEW_FUNCTIONS", f"Error checking client red flag: {str(e)}", level="ERROR")
             raise

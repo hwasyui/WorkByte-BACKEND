@@ -8,6 +8,11 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 
 from functions.db_manager import get_db
 from functions.logger import logger
+from ai_related.review_analysis.review_decision import (
+    RED_FLAG_WINDOW,
+    evaluate_score_drop,
+    should_escalate,
+)
 from typing import Optional, List, Dict
 import uuid
 
@@ -483,29 +488,61 @@ class ReviewFunctions:
 
     @staticmethod
     def check_and_create_red_flag(freelancer_id: str, new_score: float) -> None:
-        """Compare latest 2 snapshots. Fire alert if drop > 10 points."""
+        """Raise or escalate a score-drop alert for this freelancer.
+
+        The rule (both comparisons, the thresholds, and when to escalate an open
+        alert) lives in review_decision.py, shared with the client side - the two
+        used to be verbatim copies of each other. This method is the freelancer
+        half of the I/O: read the history, write the alert.
+
+        snapshots[0] is the row upsert_trust_score just wrote for new_score, so the
+        priors start at index 1.
+        """
         try:
             db = get_db()
             snapshots = db.fetch_data(
                 table_name="trust_score_history",
                 conditions=[("freelancer_id", "=", freelancer_id)],
                 order_by="recorded_at DESC",
-                limit=2,
+                limit=RED_FLAG_WINDOW + 1,
             )
-            if len(snapshots) < 2:
+            verdict = evaluate_score_drop(
+                [s["overall_score"] for s in snapshots[1:]], new_score
+            )
+            if not verdict:
                 return
 
-            previous_score = float(snapshots[1]["overall_score"])
-            drop = previous_score - new_score
-            if drop <= 10:
-                return
-
-            severity = "high" if drop > 20 else "medium" if drop > 15 else "low"
+            trend = (
+                "against their best score in the last "
+                f"{RED_FLAG_WINDOW} updates" if verdict["basis"] == "window"
+                else "since the previous update"
+            )
             message = (
-                f"Trust score dropped by {drop:.1f} points "
-                f"(from {previous_score:.1f} to {new_score:.1f}). "
+                f"Trust score dropped by {verdict['drop']:.1f} points "
+                f"(from {verdict['previous_score']:.1f} to {new_score:.1f}) {trend}. "
                 f"Recent performance may have declined."
             )
+
+            open_alerts = db.fetch_data(
+                table_name="red_flag_alerts",
+                conditions=[("freelancer_id", "=", freelancer_id),
+                            ("alert_type", "=", "score_drop"),
+                            ("is_resolved", "=", False)],
+                order_by="triggered_at DESC",
+                limit=1,
+            )
+            if open_alerts:
+                existing = open_alerts[0]
+                if not should_escalate(existing["severity"], verdict["severity"]):
+                    return
+                db.update_data(
+                    table_name="red_flag_alerts",
+                    data={"severity": verdict["severity"], "message": message},
+                    conditions=[("id", "=", str(existing["id"]))],
+                )
+                logger("REVIEW_FUNCTIONS", f"Red flag escalated to {verdict['severity']} for freelancer {freelancer_id} (drop: {verdict['drop']:.1f}, {verdict['basis']})", level="WARNING")
+                return
+
             db.insert_data(
                 table_name="red_flag_alerts",
                 data={
@@ -513,12 +550,12 @@ class ReviewFunctions:
                     "freelancer_id": freelancer_id,
                     "subject_type": "freelancer",
                     "alert_type": "score_drop",
-                    "severity": severity,
+                    "severity": verdict["severity"],
                     "message": message,
                     "is_resolved": False,
                 },
             )
-            logger("REVIEW_FUNCTIONS", f"Red flag created for freelancer {freelancer_id} (drop: {drop:.1f})", level="WARNING")
+            logger("REVIEW_FUNCTIONS", f"Red flag created for freelancer {freelancer_id} (drop: {verdict['drop']:.1f}, {verdict['basis']})", level="WARNING")
         except Exception as e:
             logger("REVIEW_FUNCTIONS", f"Error checking red flag: {str(e)}", level="ERROR")
             raise

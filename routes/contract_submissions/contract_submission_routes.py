@@ -43,8 +43,22 @@ def _get_extension(filename: str) -> str:
     return filename.rsplit(".", 1)[-1].lower()
 
 
+async def _notify_in_background(label: str, route: str, **kwargs) -> None:
+    """Run a notification after the response has been sent.
+
+    NotificationFunctions.notify is already best-effort internally, but a background task
+    that raises is logged by Starlette as an unhandled error with no context, so failures
+    are named here instead.
+    """
+    try:
+        await NotificationFunctions.notify(**kwargs)
+    except Exception as notif_err:
+        logger("CONTRACT_SUBMISSION", f"{label} notification failed (non-fatal): {notif_err}", route, "WARNING")
+
+
 @contract_submission_router.post("")
 async def create_contract_submission(
+    background_tasks: BackgroundTasks,
     contract_id: str = Form(...),
     note: Optional[str] = Form(None),
     files: List[UploadFile] = File(...),
@@ -121,19 +135,22 @@ async def create_contract_submission(
 
         full_submission = _resolve_submission_urls(ContractSubmissionFunctions.get_submission_by_id(submission_id))
 
-        # Notify client that work has been submitted
-        try:
-            client = ClientFunctions.get_client_by_id(str(contract["client_id"]))
-            if client:
-                await NotificationFunctions.notify(
-                    recipient_user_id=str(client["user_id"]),
-                    notif_type="work_submitted",
-                    title="Work submitted",
-                    body=f"{freelancer.get('full_name')} submitted work for review",
-                    data={"contract_id": contract_id, "submission_id": submission_id},
-                )
-        except Exception as notif_err:
-            logger("CONTRACT_SUBMISSION", f"Submission notification failed (non-fatal): {notif_err}", "POST /contract-submissions", "WARNING")
+        # The submission and its files are durably recorded by this point, so nothing the
+        # freelancer is waiting on depends on the push going out. Queued rather than
+        # awaited: an unreachable push service used to hold the connection open until the
+        # app timed out, on work that had already been saved.
+        client = ClientFunctions.get_client_by_id(str(contract["client_id"]))
+        if client:
+            background_tasks.add_task(
+                _notify_in_background,
+                "Submission",
+                "POST /contract-submissions",
+                recipient_user_id=str(client["user_id"]),
+                notif_type="work_submitted",
+                title="Work submitted",
+                body=f"{freelancer.get('full_name')} submitted work for review",
+                data={"contract_id": contract_id, "submission_id": submission_id},
+            )
 
         logger("CONTRACT_SUBMISSION", f"Submission {submission_id} created for contract {contract_id}", "POST /contract-submissions", "INFO")
         return ResponseSchema.success(full_submission, 201)
@@ -178,6 +195,7 @@ async def get_submissions_by_contract(
 async def request_revision_for_latest_submission(
     contract_id: str,
     payload: RevisionRequest,
+    background_tasks: BackgroundTasks,
     current_user: UserInDB = Depends(get_current_user),
 ):
     try:
@@ -223,19 +241,20 @@ async def request_revision_for_latest_submission(
             return ResponseSchema.error("No submission found for this contract", 404)
         latest_submission = _resolve_submission_urls(latest_submission)
 
-        # Notify freelancer of revision request
-        try:
-            freelancer = FreelancerFunctions.get_freelancer_by_id(str(contract["freelancer_id"]))
-            if freelancer:
-                await NotificationFunctions.notify(
-                    recipient_user_id=str(freelancer["user_id"]),
-                    notif_type="revision_requested",
-                    title="Revision requested",
-                    body=f"{client.get('full_name')} requested a revision on your submission",
-                    data={"contract_id": contract_id},
-                )
-        except Exception as notif_err:
-            logger("CONTRACT_SUBMISSION", f"Revision notification failed (non-fatal): {notif_err}", "PUT /contract-submissions/contract/{contract_id}/request-revision", "WARNING")
+        # Queued, not awaited - same reason as the submission route: the revision is
+        # already recorded, so the client should not wait on the push service.
+        freelancer = FreelancerFunctions.get_freelancer_by_id(str(contract["freelancer_id"]))
+        if freelancer:
+            background_tasks.add_task(
+                _notify_in_background,
+                "Revision",
+                "PUT /contract-submissions/contract/{contract_id}/request-revision",
+                recipient_user_id=str(freelancer["user_id"]),
+                notif_type="revision_requested",
+                title="Revision requested",
+                body=f"{client.get('full_name')} requested a revision on your submission",
+                data={"contract_id": contract_id},
+            )
 
         logger("CONTRACT_SUBMISSION", f"Revision requested for latest submission in contract {contract_id}", "PUT /contract-submissions/contract/{contract_id}/request-revision", "INFO")
         return ResponseSchema.success(latest_submission, 200)
@@ -289,19 +308,19 @@ async def approve_latest_submission(
         await trigger_review_pipeline_on_completion(contract_id, background_tasks)
         await trigger_client_review_pipeline_on_completion(contract_id, background_tasks)
 
-        # Notify freelancer that submission was approved
-        try:
-            freelancer = FreelancerFunctions.get_freelancer_by_id(str(contract["freelancer_id"]))
-            if freelancer:
-                await NotificationFunctions.notify(
-                    recipient_user_id=str(freelancer["user_id"]),
-                    notif_type="contract_completed",
-                    title="Contract completed",
-                    body=f"{client.get('full_name')} approved your submission",
-                    data={"contract_id": contract_id},
-                )
-        except Exception as notif_err:
-            logger("CONTRACT_SUBMISSION", f"Approval notification failed (non-fatal): {notif_err}", "PUT /contract-submissions/contract/{contract_id}/approve", "WARNING")
+        # Queued, not awaited - the approval is already recorded.
+        freelancer = FreelancerFunctions.get_freelancer_by_id(str(contract["freelancer_id"]))
+        if freelancer:
+            background_tasks.add_task(
+                _notify_in_background,
+                "Approval",
+                "PUT /contract-submissions/contract/{contract_id}/approve",
+                recipient_user_id=str(freelancer["user_id"]),
+                notif_type="contract_completed",
+                title="Contract completed",
+                body=f"{client.get('full_name')} approved your submission",
+                data={"contract_id": contract_id},
+            )
 
         logger("CONTRACT_SUBMISSION", f"Latest submission approved for contract {contract_id}", "PUT /contract-submissions/contract/{contract_id}/approve", "INFO")
         return ResponseSchema.success(latest_submission, 200)
