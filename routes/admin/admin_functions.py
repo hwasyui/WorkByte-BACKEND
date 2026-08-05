@@ -1847,6 +1847,11 @@ def _parse_range_bound(raw: str, label: str) -> datetime:
         parsed = parsed.astimezone(timezone.utc).replace(tzinfo=None)
     return parsed
 
+def _upper_bound(raw: str, label: str) -> datetime:
+    """Exclusive end bound. A bare YYYY-MM-DD means "through the end of that day"."""
+    parsed = _parse_range_bound(raw, label)
+    return parsed + timedelta(days=1) if len(raw.strip()) == 10 else parsed
+
 def resolve_admin_range(
     start_date: Optional[str] = None,
     end_date:   Optional[str] = None,
@@ -2281,16 +2286,16 @@ def admin_list_jobs(
         params["search"] = f"%{search}%"
     if created_from:
         where.append("jp.created_at >= :created_from")
-        params["created_from"] = created_from
+        params["created_from"] = _parse_range_bound(created_from, "created_from")
     if created_to:
-        where.append("jp.created_at <= :created_to")
-        params["created_to"] = created_to
+        where.append("jp.created_at < :created_to")
+        params["created_to"] = _upper_bound(created_to, "created_to")
     if closed_from:
         where.append("jp.closed_at >= :closed_from")
-        params["closed_from"] = closed_from
+        params["closed_from"] = _parse_range_bound(closed_from, "closed_from")
     if closed_to:
-        where.append("jp.closed_at <= :closed_to")
-        params["closed_to"] = closed_to
+        where.append("jp.closed_at < :closed_to")
+        params["closed_to"] = _upper_bound(closed_to, "closed_to")
 
     where_sql = ("WHERE " + " AND ".join(where)) if where else ""
 
@@ -2404,16 +2409,16 @@ def admin_list_users(
         params["search"] = f"%{search}%"
     if created_from:
         where.append("u.created_at >= :created_from")
-        params["created_from"] = created_from
+        params["created_from"] = _parse_range_bound(created_from, "created_from")
     if created_to:
-        where.append("u.created_at <= :created_to")
-        params["created_to"] = created_to
+        where.append("u.created_at < :created_to")
+        params["created_to"] = _upper_bound(created_to, "created_to")
     if banned_from:
         where.append("u.report_banned_at >= :banned_from")
-        params["banned_from"] = banned_from
+        params["banned_from"] = _parse_range_bound(banned_from, "banned_from")
     if banned_to:
-        where.append("u.report_banned_at <= :banned_to")
-        params["banned_to"] = banned_to
+        where.append("u.report_banned_at < :banned_to")
+        params["banned_to"] = _upper_bound(banned_to, "banned_to")
 
     where_sql = ("WHERE " + " AND ".join(where)) if where else ""
 
@@ -2426,10 +2431,13 @@ def admin_list_users(
             f.freelancer_id,
             f.full_name             AS freelancer_name,
             f.profile_picture_url   AS freelancer_avatar,
+            f.estimated_rate, f.rate_time, f.rate_currency,
             c.client_id,
             c.full_name             AS client_name,
             c.profile_picture_url   AS client_avatar,
-            c.total_jobs_posted,
+            (SELECT COUNT(*) FROM job_post jp
+              WHERE jp.client_id = c.client_id AND jp.status <> 'draft') AS total_jobs_posted,
+            c.total_jobs_completed,
             CASE
                 WHEN u.is_admin              THEN 'admin'
                 WHEN f.freelancer_id IS NOT NULL THEN 'freelancer'

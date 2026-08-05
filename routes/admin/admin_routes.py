@@ -760,6 +760,9 @@ async def admin_browse_jobs(
         )
         logger("ADMIN", f"Jobs browse: page={page} status={status!r} search={search!r}", "GET /admin/jobs", "INFO")
         return ResponseSchema.success(result, 200)
+    except ValueError as e:
+        logger("ADMIN", f"Jobs browse bad date filter: {e}", "GET /admin/jobs", "WARNING")
+        return ResponseSchema.error("Invalid date filter. Use YYYY-MM-DD or an ISO-8601 timestamp.", 400)
     except Exception as e:
         logger("ADMIN", f"Jobs browse error: {e}", "GET /admin/jobs", "ERROR")
         return ResponseSchema.error("Failed to list jobs. Please try again.", 500)
@@ -803,6 +806,9 @@ async def admin_browse_users(
         )
         logger("ADMIN", f"Users browse: page={page} role={role!r} is_banned={is_banned} search={search!r}", "GET /admin/users", "INFO")
         return ResponseSchema.success(result, 200)
+    except ValueError as e:
+        logger("ADMIN", f"Users browse bad date filter: {e}", "GET /admin/users", "WARNING")
+        return ResponseSchema.error("Invalid date filter. Use YYYY-MM-DD or an ISO-8601 timestamp.", 400)
     except Exception as e:
         logger("ADMIN", f"Users browse error: {e}", "GET /admin/users", "ERROR")
         return ResponseSchema.error("Failed to list users. Please try again.", 500)

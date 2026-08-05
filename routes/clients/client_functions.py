@@ -49,8 +49,10 @@ class ClientFunctions:
         order_dir: str = "desc",
         page: int = 1,
         page_size: int = 20,
+        created_from: Optional[str] = None,
+        created_to: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Paginated + sorted client browse."""
+        """Paginated + sorted client browse, optionally filtered by created_at range."""
         try:
             db = get_db()
 
@@ -58,7 +60,20 @@ class ClientFunctions:
             direction = "DESC" if order_dir.lower() == "desc" else "ASC"
             offset = (page - 1) * page_size
 
-            count_rows = db.execute_query("SELECT COUNT(*) AS total FROM client")
+            where: List[str] = []
+            params: Dict[str, Any] = {}
+            if created_from:
+                where.append("c.created_at >= :created_from")
+                params["created_from"] = created_from
+            if created_to:
+                where.append("c.created_at <= :created_to")
+                params["created_to"] = created_to
+            where_sql = ("WHERE " + " AND ".join(where)) if where else ""
+
+            count_rows = db.execute_query(
+                f"SELECT COUNT(*) AS total FROM client c {where_sql}",
+                params,
+            )
             total = int(count_rows[0]["total"]) if count_rows else 0
 
             data_rows = db.execute_query(
@@ -71,10 +86,11 @@ class ClientFunctions:
                 FROM client c
                 LEFT JOIN client_trust_score cts
                     ON cts.client_id = c.client_id
+                {where_sql}
                 ORDER BY {sort_col} {direction} NULLS LAST
                 LIMIT :limit OFFSET :offset
                 """,
-                {"limit": page_size, "offset": offset},
+                {**params, "limit": page_size, "offset": offset},
             )
             items = [convert_uuids_to_str(dict(row)) for row in data_rows]
 

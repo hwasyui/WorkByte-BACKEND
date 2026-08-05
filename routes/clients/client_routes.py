@@ -32,6 +32,8 @@ async def browse_all_clients(
     order_dir: str = Query(default="desc", description="asc or desc", pattern="^(asc|desc)$"),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
+    created_from: Optional[str] = Query(default=None, description="ISO date, created_at >="),
+    created_to: Optional[str] = Query(default=None, description="ISO date, created_at <="),
     current_user: UserInDB = Depends(get_current_user),
 ):
     """Browse all clients with pagination and sorting - Authenticated users only."""
@@ -45,6 +47,8 @@ async def browse_all_clients(
             order_dir=order_dir,
             page=page,
             page_size=page_size,
+            created_from=created_from,
+            created_to=created_to,
         )
         logger("CLIENT", f"Browsed clients: page={page}", "GET /clients/browse/all", "INFO")
         return ResponseSchema.success(result, 200)
