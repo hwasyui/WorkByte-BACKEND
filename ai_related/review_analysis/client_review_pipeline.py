@@ -14,6 +14,8 @@ from ai_related.review_analysis.client_review_ai_functions import (
     generate_client_targeted_question,
     compute_client_responsiveness_score,
     compute_client_dispute_rate_score,
+    measure_client_responsiveness,
+    measure_client_dispute_fairness,
     calculate_weighted_client_review_avg,
     calculate_client_ai_trust_components,
     calculate_client_coerced_ratio,
@@ -26,6 +28,7 @@ from ai_related.review_analysis.review_decision import (
     blend_authenticity,
     compute_overall_pass,
     resolve_flags,
+    should_suppress,
     split_ml_inputs,
 )
 from ai_related.review_analysis.review_ai_functions import (
@@ -149,11 +152,17 @@ async def run_client_review_post_submission_pipeline(client_review_id: str, is_r
             None,
         )
 
-        responsiveness_score = compute_client_responsiveness_score(client_id)
-        dispute_fairness_score = compute_client_dispute_rate_score(client_id)
+        # Measured values, so an unmeasured client reaches the prompt as "not
+        # recorded" (_fmt_metric) instead of as the neutral 0.8/1.0 the scoring
+        # entry points substitute. The prompt explicitly tells the model that
+        # "not recorded" is missing data and not evidence against the reviewer;
+        # feeding it the fallback instead states the client WAS measured at 0.8
+        # responsiveness and a spotless dispute record, and the model has been
+        # observed citing exactly those figures back in its flag reasons. The
+        # trust score keeps the fallbacks - see recalculate_and_persist_client_trust_score.
         performance_summary = {
-            "responsiveness": responsiveness_score,
-            "dispute_fairness": dispute_fairness_score,
+            "responsiveness": measure_client_responsiveness(client_id),
+            "dispute_fairness": measure_client_dispute_fairness(client_id),
         }
 
         dm_thread = DMFunctions.get_thread_by_contract_id(review["contract_id"])
@@ -188,11 +197,14 @@ async def run_client_review_post_submission_pipeline(client_review_id: str, is_r
         ml_sentiment = predict_sentiment(review_text_for_ml)
         ml_mismatch = predict_mismatch(review_text_full, avg_stars)
 
+        # ml_authenticity no longer feeds this - it is kept above because it still
+        # sets an advisory flag reason and is logged for the in-domain retrain. See
+        # blend_authenticity for the audit that removed it.
         authenticity_score = blend_authenticity(
             llm_authenticity_score=analysis_result["authenticity_score"],
-            ml_authenticity=ml_authenticity,
             answer_groundedness=analysis_result.get("answer_groundedness"),
             answer_text=freelancer_answer,
+            analysis_unavailable=bool(analysis_result.get("analysis_unavailable")),
         )
 
         is_flagged_fake, sentiment_mismatch, flag_reasons = resolve_flags(
@@ -280,10 +292,7 @@ async def run_client_review_post_submission_pipeline(client_review_id: str, is_r
             # didn't pass for a softer reason (is_flagged_fake or is_flagged_coerced alone,
             # or the mismatch rule) - still held for admin review, not written off as
             # almost-certainly fake.
-            suppress = (
-                not analysis_result.get("analysis_unavailable")
-                and authenticity_score < 0.3
-            )
+            suppress = should_suppress(analysis_result, authenticity_score)
             ClientReviewFunctions.flag_review(client_review_id, suppress=suppress)
             logger("CLIENT_REVIEW_PIPELINE", f"Client review {client_review_id} not published (pass={overall_pass}, suppressed={suppress})", level="WARNING")
             try:

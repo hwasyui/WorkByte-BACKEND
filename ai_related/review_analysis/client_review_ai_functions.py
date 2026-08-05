@@ -224,18 +224,19 @@ async def analyze_client_review_full(
         }
 
 
-def compute_client_responsiveness_score(client_id: str) -> float:
+def measure_client_responsiveness(client_id: str) -> Optional[float]:
     """
-    Symmetric counterpart to compute_responsiveness_score (freelancer side),
-    aggregated live across ALL of this client's contracts rather than a
-    per-contract snapshot table - avoids the same "single contract dominates
-    the aggregate" bug fixed on the freelancer side (see calculate_trust_score).
+    The measurement behind compute_client_responsiveness_score, or None when
+    there was nothing to measure - no contracts, no DM thread, or no reply pair
+    to time.
 
-    Previously took a users.user_id and filtered contract.client_id with it.
-    contract.client_id is a client.client_id, so the filter never matched and
-    this silently returned its 0.8 fallback for every client. It now takes the
-    client profile id the review tables key on, and resolves the user id only
-    where it is genuinely needed: dm_message.sender_id.
+    Split out because the 0.8 fallback below is a scoring convenience, not a
+    measurement: charging an unmeasured client neither credit nor penalty in the
+    trust score is reasonable, but rendering that same 0.8 to an admin under a
+    heading that says "measured platform data" states as fact something the
+    platform never observed. Callers that display the number, rather than score
+    with it, want the None - the same distinction compute_on_time_score draws on
+    the freelancer side.
     """
     try:
         db = get_db()
@@ -244,11 +245,11 @@ def compute_client_responsiveness_score(client_id: str) -> float:
             conditions=[("client_id", "=", client_id)],
         )
         if not contracts:
-            return 0.8
+            return None
 
         client_user_id = user_id_for_client(client_id)
         if not client_user_id:
-            return 0.8
+            return None
 
         all_gaps = []
         for contract in contracts:
@@ -268,13 +269,66 @@ def compute_client_responsiveness_score(client_id: str) -> float:
                         break
 
         if not all_gaps:
-            return 0.8
+            return None
 
         avg_hours = sum(all_gaps) / len(all_gaps)
         return round(max(0.0, min(1.0, 1.0 - (avg_hours / 48.0))), 3)
     except Exception as e:
         logger("CLIENT_REVIEW_AI", f"Error computing client responsiveness: {str(e)}", level="ERROR")
-        return 0.8
+        return None
+
+
+def compute_client_responsiveness_score(client_id: str) -> float:
+    """
+    Symmetric counterpart to compute_responsiveness_score (freelancer side),
+    aggregated live across ALL of this client's contracts rather than a
+    per-contract snapshot table - avoids the same "single contract dominates
+    the aggregate" bug fixed on the freelancer side (see calculate_trust_score).
+
+    Previously took a users.user_id and filtered contract.client_id with it.
+    contract.client_id is a client.client_id, so the filter never matched and
+    this silently returned its 0.8 fallback for every client. It now takes the
+    client profile id the review tables key on, and resolves the user id only
+    where it is genuinely needed: dm_message.sender_id.
+
+    Scoring entry point: keeps the 0.8 neutral fallback its callers rely on.
+    For display, use measure_client_responsiveness and render None as unmeasured.
+    """
+    measured = measure_client_responsiveness(client_id)
+    return 0.8 if measured is None else measured
+
+
+def measure_client_dispute_fairness(client_id: str) -> Optional[float]:
+    """
+    The measurement behind compute_client_dispute_rate_score, or None when the
+    client has no closed contracts yet - see measure_client_responsiveness for
+    why the scoring fallback (1.0 there) must not be shown as a measurement. A
+    client with nothing finished has not proved a clean dispute record; there is
+    simply nothing on file.
+    """
+    try:
+        rows = get_db().execute_query(
+            """
+            SELECT COUNT(DISTINCT c.contract_id) AS total,
+                   COUNT(DISTINCT CASE WHEN dm.metadata::jsonb->>'type' = 'dispute_raised'
+                                        THEN c.contract_id END) AS disputed
+            FROM contract c
+            LEFT JOIN dm_thread dt ON dt.contract_id = c.contract_id
+            LEFT JOIN dm_message dm ON dm.thread_id = dt.thread_id
+            WHERE c.client_id = :cid
+              AND c.status IN ('completed', 'cancelled', 'disputed')
+            """,
+            {"cid": client_id},
+        )
+        if not rows or not rows[0]["total"]:
+            return None
+
+        total = int(rows[0]["total"])
+        disputed = int(rows[0]["disputed"] or 0)
+        return round(max(0.0, 1.0 - (disputed / total)), 3)
+    except Exception as e:
+        logger("CLIENT_REVIEW_AI", f"Error computing client dispute rate: {str(e)}", level="ERROR")
+        return None
 
 
 def compute_client_dispute_rate_score(client_id: str) -> float:
@@ -293,31 +347,12 @@ def compute_client_dispute_rate_score(client_id: str) -> float:
     into a constant 1.0. The cast is explicit rather than relying on the column
     type, since metadata is written as json.dumps(...) by
     DMFunctions.send_system_event.
-    """
-    try:
-        db = get_db()
-        rows = db.execute_query(
-            """
-            SELECT COUNT(DISTINCT c.contract_id) AS total,
-                   COUNT(DISTINCT CASE WHEN dm.metadata::jsonb->>'type' = 'dispute_raised'
-                                        THEN c.contract_id END) AS disputed
-            FROM contract c
-            LEFT JOIN dm_thread dt ON dt.contract_id = c.contract_id
-            LEFT JOIN dm_message dm ON dm.thread_id = dt.thread_id
-            WHERE c.client_id = :cid
-              AND c.status IN ('completed', 'cancelled', 'disputed')
-            """,
-            {"cid": client_id},
-        )
-        if not rows or not rows[0]["total"]:
-            return 1.0
 
-        total = int(rows[0]["total"])
-        disputed = int(rows[0]["disputed"] or 0)
-        return round(max(0.0, 1.0 - (disputed / total)), 3)
-    except Exception as e:
-        logger("CLIENT_REVIEW_AI", f"Error computing client dispute rate: {str(e)}", level="ERROR")
-        return 1.0
+    Scoring entry point: keeps the 1.0 neutral fallback its callers rely on.
+    For display, use measure_client_dispute_fairness and render None as unmeasured.
+    """
+    measured = measure_client_dispute_fairness(client_id)
+    return 1.0 if measured is None else measured
 
 
 def _client_record_gaps(client_id: str) -> Dict[str, Dict]:
@@ -337,10 +372,16 @@ def _client_record_gaps(client_id: str) -> Dict[str, Dict]:
     from ai_related.review_analysis.review_consistency import compare_review_to_record
 
     performance = {
-        "responsiveness_score": compute_client_responsiveness_score(client_id),
+        # The MEASURED figure, not the 0.8-fallback scoring one. compare_review_to_record
+        # skips a dimension whose objective value is None and renormalises, on the
+        # principle that missing data is neutral; handing it the fallback instead
+        # manufactures a comparison against a number nobody observed, so a client with
+        # no DM history on file would have every low responsiveness rating they receive
+        # scored as deflation against a fictional 0.8.
+        "responsiveness_score": measure_client_responsiveness(client_id),
         # Revisions are contract-level; aggregated across this client's contracts to
         # match the granularity of the responsiveness figure above.
-        "revision_rate_score": _client_avg_revision_rate_score(client_id),
+        "revision_rate_score": measure_client_revision_rate(client_id),
         "on_time_score": None,  # a client has no delivery deadline to meet
     }
 
@@ -366,7 +407,7 @@ def _client_record_gaps(client_id: str) -> Dict[str, Dict]:
     }
 
 
-def _client_avg_revision_rate_score(client_id: str) -> Optional[float]:
+def measure_client_revision_rate(client_id: str) -> Optional[float]:
     """Mean revision_rate_score across this client's contracts, or None if unknown."""
     try:
         rows = get_db().execute_query(
@@ -645,8 +686,10 @@ def calculate_freelancer_review_fairness(freelancer_id: str) -> float:
             cid = entry["client_id"]
             if cid not in performance_cache:
                 performance_cache[cid] = {
-                    "responsiveness_score": compute_client_responsiveness_score(cid),
-                    "revision_rate_score": _client_avg_revision_rate_score(cid),
+                    # Measured, not the scoring fallback - see _client_record_gaps. An
+                    # unmeasured client must not make a reviewer look unfair.
+                    "responsiveness_score": measure_client_responsiveness(cid),
+                    "revision_rate_score": measure_client_revision_rate(cid),
                     "on_time_score": None,
                 }
             result = compare_review_to_record(entry["ratings"], performance_cache[cid])

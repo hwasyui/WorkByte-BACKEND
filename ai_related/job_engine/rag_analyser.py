@@ -69,7 +69,7 @@ def _retrieve_freelancer_context(db, freelancer_id: str, job_role_id: str | None
 
     f_rows = db.execute_query(
         """
-        SELECT f.full_name, f.title, f.bio, f.estimated_rate, f.rate_time, f.rate_currency,
+        SELECT f.title, f.bio, f.estimated_rate, f.rate_time, f.rate_currency,
                f.total_jobs
         FROM freelancer f
         WHERE f.freelancer_id = :fid
@@ -180,7 +180,7 @@ def _retrieve_freelancer_context(db, freelancer_id: str, job_role_id: str | None
 
     logger(
         "RAG_ANALYSER",
-        f"Freelancer context retrieved | freelancer_id={freelancer_id} | name='{fc.get('full_name', '?')}' "
+        f"Freelancer context retrieved | freelancer_id={freelancer_id} "
         f"| skills={len(fc['skills'])} "
         f"| portfolio={len(fc['portfolio'])} ({portfolio_method}) "
         f"| work_exp={len(fc['work_experience'])} | jobs={fc.get('total_jobs', 0)}",
@@ -335,7 +335,6 @@ def _build_prompt(role: dict, fc: dict, used_contracts: list[dict], used_portfol
         lines.append(f"Role description: {(role['role_description'] or '')[:500]}")
 
     lines.append("\nFREELANCER PROFILE")
-    lines.append(f"Name:         {fc.get('full_name', '')}")
     if fc.get("title"):
         lines.append(f"Title:        {fc['title']}")
     lines.append(f"Jobs done:    {fc.get('total_jobs', 0)} completed in-platform")

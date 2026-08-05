@@ -317,7 +317,10 @@ class ReviewFunctions:
         sentiment_score: float,
         sentiment_label: str,
         sentiment_mismatch: bool,
-        authenticity_score: float,
+        # None when the LLM analysis was unavailable - stored as NULL rather than a
+        # number, so a Groq outage does not write a maximally-bad authenticity score
+        # into the freelancer's trust average. Both readers already skip NULL.
+        authenticity_score: Optional[float],
         is_flagged_fake: bool,
         is_flagged_coerced: bool,
         flag_reasons: List[str],

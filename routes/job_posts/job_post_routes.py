@@ -230,8 +230,6 @@ async def get_relevant_jobs(
         rows = db.execute_query(
             f"""
             WITH candidate_roles AS (
-                -- Stage 1: metadata pre-filter. Restricts the candidate set to active jobs
-                -- (with optional category) before any vector math runs.
                 SELECT jre.job_post_id, jre.embedding_vector
                 FROM job_role_embedding jre
                 JOIN job_post jp ON jp.job_post_id = jre.job_post_id
@@ -250,7 +248,6 @@ async def get_relevant_jobs(
                 WHERE freelancer_id = :fid AND embedding_vector IS NOT NULL
             ),
             similarity_scores AS (
-                -- Stage 2: cosine similarity runs only on the pre-filtered candidate set.
                 SELECT cr.job_post_id,
                        MAX(1 - (cr.embedding_vector <=> fv.embedding_vector)) AS similarity_score
                 FROM candidate_roles cr

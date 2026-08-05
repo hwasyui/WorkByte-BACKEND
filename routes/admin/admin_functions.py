@@ -2895,14 +2895,33 @@ def _ratings_for(table: str, id_column: str, record_id: str) -> Dict:
     }
 
 
+def _blend_weights(components: Optional[Dict], answer_text: Optional[str]) -> Dict:
+    """The weights actually used for THIS review's authenticity score.
+
+    Not a constant, for two reasons. blend_authenticity falls back to the LLM score
+    alone when the reviewer skipped the targeted question - which is optional at
+    submit - so a fixed split would misdescribe every review without an answer.
+
+    And the authenticity classifier's share is now 0.0. The key is kept rather than
+    removed so the panel shows the model was deliberately dropped rather than
+    silently omitted; see review_decision.blend_authenticity for the audit behind
+    that (near-constant output, mean 0.963 / stdev 0.086 over 42 production
+    reviews, and a fake flag that never once fired).
+    """
+    grounded = ((components or {}).get("llm") or {}).get("answer_groundedness")
+    if grounded is not None and (answer_text or "").strip():
+        return {"llm": 0.8, "authenticity_model": 0.0, "answer_groundedness": 0.2}
+    return {"llm": 1.0, "authenticity_model": 0.0, "answer_groundedness": 0.0}
+
+
 def _component_breakdown(review_id: str) -> Optional[Dict]:
     """Per-model verdicts from the judgment log.
 
-    review_ai_analysis persists the BLENDED authenticity score (0.4 LLM + 0.4
-    classifier + 0.2 answer groundedness) and nothing about its inputs, so from
-    the database alone an admin cannot tell which component objected - or whether
-    the two disagreed, which is exactly the adjudication being asked of them.
-    Optional by construction: returns None when no record exists.
+    review_ai_analysis persists the BLENDED authenticity score and nothing about
+    its inputs, so from the database alone an admin cannot tell which component
+    objected - or whether the two disagreed, which is exactly the adjudication
+    being asked of them. Optional by construction: returns None when no record
+    exists.
     """
     record = read_latest_judgment(review_id)
     if not record:
@@ -2944,6 +2963,12 @@ def _component_breakdown(review_id: str) -> Optional[Dict]:
             "is_likely_fake": ml_fake,
             "threshold": 0.75,
             "model_used": authenticity.get("model_used"),
+            # ADVISORY ONLY as of the blend change - this model no longer feeds
+            # authenticity_score and no longer gates is_flagged_fake. It is still run
+            # and logged, so the admin sees what it thought, but an admin adjudicating
+            # a held review should not read a low fake_probability here as the
+            # pipeline having cleared the review. See review_decision.blend_authenticity.
+            "advisory_only": True,
         },
         "disagreement_model": {
             "disagreement_probability": mismatch.get("disagreement_probability"),
@@ -2994,6 +3019,84 @@ def _contract_telemetry(contract_id: str) -> Optional[Dict]:
         row.get("actual_completion_date") and (row.get("original_end_date") or row.get("end_date"))
     )
     return row
+
+
+def _client_lifetime_record(client_id: str) -> Dict:
+    """The client's own measured record - the objective counterpart to a review
+    written ABOUT them, the way _contract_telemetry is on the freelancer side.
+
+    Three deliberate differences from that function:
+
+    * Measured live, not read back from client_trust_score. That table is only
+      written by recalculate_and_persist_client_trust_score, which runs on
+      publish - so a client whose reviews have all been held has no row at all,
+      and the admin ruling on the first one was shown an entirely blank record.
+      All three figures below are aggregate reads over the client's contracts
+      and are correct with zero published reviews.
+    * dispute_fairness_score is included because it is one of only two objective
+      signals the client-side LLM prompt is given (analyze_client_review_full),
+      so half of what the model cites was unverifiable without it.
+    * No on_time_score key at all. A client has no delivery deadline to meet, so
+      this is not a measurement that happens to be missing - there is nothing to
+      measure. An absent key is the honest encoding; a null would read as "we
+      failed to measure it".
+
+    revision_rate_score is this client's mean across their contracts, read here
+    as requirement churn: many revision rounds are what unclear or shifting
+    requirements look like from the outside (see _DIMENSION_MAP in
+    review_consistency). It has no persisted home - it is computed for the
+    consistency component and discarded - so it is recomputed here.
+
+    None means unmeasured and must render as "not measured", never as an empty
+    bar: the measure_* variants return None where the scoring entry points
+    substitute a neutral 0.8/1.0, and displaying that substitute would assert a
+    measurement the platform never made.
+    """
+    from ai_related.review_analysis.client_review_ai_functions import (
+        measure_client_dispute_fairness,
+        measure_client_responsiveness,
+        measure_client_revision_rate,
+    )
+
+    persisted = _row(get_db().execute_query(
+        """
+        SELECT trust_score, responsiveness_score, communication_sentiment,
+               authenticity_confidence, consistency_score, dispute_fairness_score,
+               total_reviews_received
+        FROM client_trust_score WHERE client_id = :cid
+        """,
+        params={"cid": client_id},
+    ))
+
+    return {
+        **(persisted or {}),
+        "responsiveness_score":   measure_client_responsiveness(client_id),
+        "dispute_fairness_score": measure_client_dispute_fairness(client_id),
+        "revision_rate_score":    measure_client_revision_rate(client_id),
+        # False means every score above was measured just now and none of it has
+        # been folded into a published trust score yet - which is the normal state
+        # for a client whose first review is the one being adjudicated.
+        "has_persisted_trust_score": bool(persisted),
+    }
+
+
+def _record_gaps(ratings: Dict, performance: Optional[Dict]) -> Dict:
+    """Each star rating minus its objective counterpart, per category.
+
+    The moderation UI asks the admin to check the ratings against the measured
+    record, and they were doing it by eye across two columns - reproducing, less
+    accurately, arithmetic the backend already runs. compare_review_to_record is
+    the same function whose output feeds the record-consistency trust component,
+    so the admin now sees exactly the comparison the score was computed from
+    rather than an approximation of it.
+
+    Categories with no objective counterpart (professionalism, value_for_money)
+    are absent from per_dimension by design, not omitted in error - see
+    _DIMENSION_MAP. inflation/deflation are None when nothing was comparable.
+    """
+    from ai_related.review_analysis.review_consistency import compare_review_to_record
+
+    return compare_review_to_record(ratings.get("categories") or [], performance or {})
 
 
 def _dm_excerpt(contract_id: str, limit: int = 20) -> List[Dict]:
@@ -3172,15 +3275,22 @@ def get_review_moderation_detail(review_id: str) -> Optional[Dict]:
     if not review:
         return None
 
+    ratings = _ratings_for("review_ratings", "review_id", review_id)
+    telemetry = _contract_telemetry(str(review["contract_id"]))
+    components = _component_breakdown(review_id)
+
     return {
         "review_kind": "freelancer_review",
         "review": review,
         "hold_level": review.get("status"),
         "analysis_unavailable": _analysis_unavailable(review.get("flag_reasons")),
-        "ratings": _ratings_for("review_ratings", "review_id", review_id),
-        "components": _component_breakdown(review_id),
-        "blend_weights": {"llm": 0.4, "authenticity_model": 0.4, "answer_groundedness": 0.2},
-        "telemetry": _contract_telemetry(str(review["contract_id"])),
+        "ratings": ratings,
+        "components": components,
+        "blend_weights": _blend_weights(components, review.get("client_answer")),
+        "telemetry": telemetry,
+        # Per-contract telemetry, so each rating is compared against the engagement
+        # the review actually describes.
+        "record_gaps": _record_gaps(ratings, telemetry),
         "reviewer": _client_reviewer_context(str(review["reviewer_id"]), review_id),
         "dm_thread": _dm_excerpt(str(review["contract_id"])),
         "skill_tags": _rows(get_db().execute_query(
@@ -3425,26 +3535,26 @@ def get_client_review_moderation_detail(client_review_id: str) -> Optional[Dict]
     if not review:
         return None
 
-    subject = _row(get_db().execute_query(
-        """
-        SELECT trust_score, responsiveness_score, communication_sentiment,
-               authenticity_confidence, consistency_score, dispute_fairness_score,
-               total_reviews_received
-        FROM client_trust_score WHERE client_id = :cid
-        """,
-        params={"cid": str(review["client_id"])},
-    ))
+    ratings = _ratings_for("client_review_ratings", "client_review_id", client_review_id)
+    subject = _client_lifetime_record(str(review["client_id"]))
+    components = _component_breakdown(client_review_id)
 
     return {
         "review_kind": "client_review",
         "review": review,
         "hold_level": review.get("status"),
         "analysis_unavailable": _analysis_unavailable(review.get("flag_reasons")),
-        "ratings": _ratings_for("client_review_ratings", "client_review_id", client_review_id),
-        "components": _component_breakdown(client_review_id),
-        "blend_weights": {"llm": 0.4, "authenticity_model": 0.4, "answer_groundedness": 0.2},
+        "ratings": ratings,
+        "components": components,
+        "blend_weights": _blend_weights(components, review.get("freelancer_answer")),
         "telemetry": _contract_telemetry(str(review["contract_id"])),
         "subject_lifetime_scores": subject,
+        # Compared against the LIFETIME record, not `telemetry` - which describes the
+        # freelancer's delivery on this contract and says nothing about the client
+        # being reviewed. Note the granularity caveat in compare_review_to_record:
+        # the record is an average across all their contracts, so an accurate
+        # complaint about this one job can register as deflation.
+        "record_gaps": _record_gaps(ratings, subject),
         "reviewer": _freelancer_reviewer_context(str(review["reviewer_id"]), client_review_id),
         "dm_thread": _dm_excerpt(str(review["contract_id"])),
     }

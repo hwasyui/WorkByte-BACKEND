@@ -48,16 +48,34 @@ def split_ml_inputs(comment: str, answer: str) -> Tuple[str, str]:
     return scoring_text, full_text
 
 
+# Gates on the blended authenticity score. Both were re-tuned when the ML term was
+# removed from the blend - see blend_authenticity. The old values (0.50 / 0.30) were
+# set against a distribution the ML constant inflated by roughly +0.14, so carrying
+# them over unchanged would have silently tightened both gates.
+#
+# Measured on the 42 logged production judgments: the old blend had mean 0.767 and a
+# floor of 0.498; the new one has mean 0.669. These values keep the publish and
+# suppress rates in the same place. Re-tune against real traffic once there is more
+# than one batch of it.
+PASS_THRESHOLD = 0.42
+SUPPRESS_THRESHOLD = 0.25
+
+
 def ml_authenticity_component(ml_authenticity: Dict) -> float:
     """
     (1 - P(fake)) using the LENGTH-CALIBRATED probability where available.
 
-    authenticity_score is persisted and averaged into
-    freelancer_trust_scores.authenticity_confidence. The raw probability is biased
-    by review length, so using it charged a freelancer roughly 3 trust points for
-    how briefly their clients happen to write - and landed hardest on people who
-    write short, simple English. Falls back to raw when no calibration artifact is
-    installed, which is a silent degradation: see INSTALL.md.
+    NO LONGER FEEDS THE BLEND, and nothing else currently calls it - see
+    blend_authenticity for the audit that removed it. Kept rather than deleted
+    because the judgment log still records the raw and calibrated probabilities on
+    every review, and whatever replaces this model will need the same
+    calibrated-preferring derivation to compare old scores against new ones.
+
+    (The admin breakdown in admin_functions.py renders the probabilities directly
+    from the logged dict; it does not go through here.)
+
+    Falls back to raw when no calibration artifact is installed, which is a silent
+    degradation: see INSTALL.md.
     """
     calibrated = ml_authenticity.get("fake_probability_calibrated")
     probability = calibrated if calibrated is not None else ml_authenticity["fake_probability"]
@@ -66,22 +84,53 @@ def ml_authenticity_component(ml_authenticity: Dict) -> float:
 
 def blend_authenticity(
     llm_authenticity_score: float,
-    ml_authenticity: Dict,
     answer_groundedness: Optional[float],
     answer_text: str,
-) -> float:
+    analysis_unavailable: bool = False,
+) -> Optional[float]:
     """
-    0.4 LLM + 0.4 ML + 0.2 groundedness, or a plain two-way average when the
-    reviewer skipped the targeted question (it is optional at submit).
+    0.8 LLM + 0.2 groundedness, or the LLM score alone when the reviewer skipped
+    the targeted question (it is optional at submit).
+
+    Returns None when the LLM analysis was unavailable - see below.
+
+    Why the ML term was dropped
+    ---------------------------
+    The blend used to be 0.4 LLM + 0.4 ML + 0.2 groundedness. Audited over the 42
+    logged production judgments, the ML term was not a signal:
+
+        ML component (1 - calibrated P(fake))   mean 0.963   stdev 0.086
+        LLM authenticity                        mean 0.737   stdev 0.276
+
+    It contributed a near-constant +0.385 to every review. Its `is_likely_fake`
+    never fired once across all 42 - the 0.75 threshold sits above the model's
+    entire real-world output range - and on the three reviews the LLM did judge
+    fabricated it returned P(fake) of 0.055/0.052/0.229, pulling one from 0.22 up
+    to a passing 0.652. So it was not merely uninformative, it actively diluted.
+
+    The root cause is the training label, not the fit. review_ml/ is trained on the
+    Salminen corpus, where the positive class is GPT-2-generated Amazon product
+    reviews. That target has drifted away from what this pipeline needs twice over:
+    wrong domain (product vs. freelance service), and wrong question - "written by a
+    2020 language model" is no longer a proxy for "dishonest", in either direction.
+
+    Why None rather than 0.0 when the LLM is unavailable
+    ----------------------------------------------------
+    On a Groq outage analyze_review_full returns authenticity_score 0.0. Under the
+    old blend the ML constant masked that as ~0.499; without it the pipeline would
+    persist a hard 0.0 into a freelancer's permanent trust average, so an API
+    outage would read as a maximally inauthentic review. overall_pass already holds
+    these reviews on analysis_unavailable alone, so the score itself carries no
+    decision - it only has to avoid poisoning the aggregate. Both consumers of the
+    column already skip NULL (authenticity_confidence excludes it from the mean,
+    weighted_review_avg falls back to weight 1.0), so None is the honest value.
     """
-    ml_component = ml_authenticity_component(ml_authenticity)
+    if analysis_unavailable:
+        return None
 
     if answer_groundedness is not None and (answer_text or "").strip():
-        return round(
-            0.4 * llm_authenticity_score + 0.4 * ml_component + 0.2 * answer_groundedness,
-            3,
-        )
-    return round((llm_authenticity_score + ml_component) / 2, 3)
+        return round(0.8 * llm_authenticity_score + 0.2 * answer_groundedness, 3)
+    return round(llm_authenticity_score, 3)
 
 
 def resolve_flags(
@@ -94,16 +143,21 @@ def resolve_flags(
     """
     (is_flagged_fake, sentiment_mismatch, flag_reasons).
 
-    Both flags require the LLM and the classical model to AGREE.
+    is_flagged_fake is the LLM's call alone. It used to require the authenticity
+    classifier to agree, which was justified at the time - that model alone flagged
+    2 of 8 genuine sample reviews, since short warm praise is exactly what it was
+    trained to call templated. But the AND gate turned out to disable the flag
+    outright: across 42 logged production judgments the classifier's `is_likely_fake`
+    never once fired, so `llm_fake and ml_fake` was structurally always False and the
+    three reviews the LLM did flag were all silently cleared. A veto that can never
+    fire is worse than a noisy one, because nothing surfaces it.
 
-    For fake, that was justified by measurement: the ML classifier alone flagged 2
-    of 8 genuine sample reviews, because short warm praise is exactly what it was
-    trained to call templated.
-
-    For mismatch, the rule used to be OR, letting either model set the flag alone.
-    On held-out AGREEING (text, rating) pairs the disagreement classifier still
-    returns P(disagree) of 0.21-0.29, so it fires often enough on genuine reviews
-    that OR made the flag noisy.
+    sentiment_mismatch still requires both models to AGREE. That gate is doing real
+    work and the reasoning behind it stands: the rule used to be OR, and on held-out
+    AGREEING (text, rating) pairs the disagreement classifier still returns
+    P(disagree) of 0.21-0.29, so it fires often enough on genuine reviews that OR
+    made the flag noisy. Unlike the authenticity model, this one does fire in
+    production, so the AND is a filter rather than an off switch.
 
     Single-model suspicion is never discarded - it becomes a flag reason so an admin
     reviewing the queue can see which model objected and why.
@@ -112,12 +166,13 @@ def resolve_flags(
 
     llm_fake = llm_analysis["is_flagged_fake"]
     ml_fake = ml_authenticity["is_likely_fake"]
-    is_flagged_fake = llm_fake and ml_fake
+    is_flagged_fake = llm_fake
 
     if ml_fake and not llm_fake:
         flag_reasons.append(
             f"Statistical model flagged generic/templated language, LLM did not "
-            f"(fake_probability={ml_authenticity['fake_probability']})"
+            f"(fake_probability={ml_authenticity['fake_probability']}) - advisory "
+            f"only, this model no longer sets the flag or feeds the score"
         )
     elif llm_fake and not ml_fake:
         flag_reasons.append("LLM flagged the review as fabricated, statistical model did not")
@@ -140,7 +195,7 @@ def resolve_flags(
 
 def compute_overall_pass(
     llm_analysis: Dict,
-    authenticity_score: float,
+    authenticity_score: Optional[float],
     is_flagged_fake: bool,
     is_flagged_coerced: bool,
     sentiment_mismatch: bool,
@@ -160,11 +215,38 @@ def compute_overall_pass(
     (admin queue, reviewer told it is pending) or `suppressed` (high-confidence bad),
     and an unavailable LLM analysis is never suppressed - learning nothing about a
     review is not the same as judging it bad.
+
+    authenticity_score is None exactly when the analysis was unavailable, which the
+    first clause already holds on. The None check is written out anyway rather than
+    left to short-circuit evaluation, so that a future reordering of these clauses
+    fails loudly instead of comparing None to a float.
     """
+    if llm_analysis.get("analysis_unavailable") or authenticity_score is None:
+        return False
+
     return (
-        not llm_analysis.get("analysis_unavailable")
-        and authenticity_score >= 0.5
+        authenticity_score >= PASS_THRESHOLD
         and not is_flagged_fake
         and not is_flagged_coerced
         and not (sentiment_mismatch and avg_stars == 5.0 and sentiment_label == "negative")
     )
+
+
+def should_suppress(llm_analysis: Dict, authenticity_score: Optional[float]) -> bool:
+    """
+    Whether a non-passing review is written off (`suppressed`) rather than sent to
+    the admin queue (`flagged`).
+
+    Suppression is the harsher outcome, so it needs a positive finding. An
+    unavailable analysis is never suppressed: we learned nothing about the review,
+    which is not the same as having judged it bad. That is also why None - which is
+    exactly the unavailable case now that the score is nullable - returns False
+    rather than comparing as low.
+
+    Both pipelines had their own copy of this two-line rule, including the constant.
+    Dropping the ML term moved the constant, which is the kind of change that used
+    to have to be made twice.
+    """
+    if llm_analysis.get("analysis_unavailable") or authenticity_score is None:
+        return False
+    return authenticity_score < SUPPRESS_THRESHOLD

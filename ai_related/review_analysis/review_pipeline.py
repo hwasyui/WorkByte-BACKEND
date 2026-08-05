@@ -19,6 +19,7 @@ from ai_related.review_analysis.review_decision import (
     blend_authenticity,
     compute_overall_pass,
     resolve_flags,
+    should_suppress,
     split_ml_inputs,
 )
 from ai_related.review_analysis.review_ai_functions import (
@@ -269,9 +270,19 @@ async def run_post_review_pipeline(review_id: str, is_retry: bool = False) -> No
         )
 
         # Step 6b: Trained models (review_ml/) as independent signals alongside the
-        # LLM - authenticity, text-rating disagreement, and sentiment. Kept as an
-        # ensemble rather than a replacement so the pipeline still works if the Groq
-        # API is rate-limited or down.
+        # LLM - text-rating disagreement and sentiment. Those two are genuine
+        # ensemble members: sentiment_score/label come from the Cardiff model
+        # outright, and sentiment_mismatch needs both it and the LLM to agree.
+        #
+        # predict_authenticity is the exception. It still runs, but only to populate
+        # the judgment log and an advisory flag reason - it no longer feeds
+        # authenticity_score or is_flagged_fake. That means authenticity, fake and
+        # coerced are now decided by the LLM alone.
+        #
+        # This used to claim the ensemble kept the pipeline working when Groq is
+        # down. It never did: analysis_unavailable holds the review regardless of
+        # what the classifiers say, so their scores were never load-bearing during
+        # an outage. The real outage behaviour is fail-closed, which is deliberate.
         #
         # Everything from here to overall_pass lives in review_decision.py, shared
         # with client_review_pipeline.py. Those two used to hold identical copies of
@@ -284,11 +295,14 @@ async def run_post_review_pipeline(review_id: str, is_retry: bool = False) -> No
         ml_sentiment = predict_sentiment(review_text_for_ml)
         ml_mismatch = predict_mismatch(review_text_full, avg_stars)
 
+        # ml_authenticity no longer feeds this - it is kept above because it still
+        # sets an advisory flag reason and is logged for the in-domain retrain. See
+        # blend_authenticity for the audit that removed it.
         authenticity_score = blend_authenticity(
             llm_authenticity_score=analysis_result["authenticity_score"],
-            ml_authenticity=ml_authenticity,
             answer_groundedness=analysis_result.get("answer_groundedness"),
             answer_text=client_answer,
+            analysis_unavailable=bool(analysis_result.get("analysis_unavailable")),
         )
 
         is_flagged_fake, sentiment_mismatch, flag_reasons = resolve_flags(
@@ -415,10 +429,7 @@ async def run_post_review_pipeline(review_id: str, is_retry: bool = False) -> No
             # An unavailable analysis is never suppressed: we learned nothing about this
             # review, which is not the same as having judged it bad. It goes to the admin
             # queue with its reason, and the reviewer is told it is pending, not rejected.
-            suppress = (
-                not analysis_result.get("analysis_unavailable")
-                and authenticity_score < 0.3
-            )
+            suppress = should_suppress(analysis_result, authenticity_score)
             ReviewFunctions.flag_review(review_id, suppress=suppress)
             logger("REVIEW_PIPELINE", f"Review {review_id} not published (pass={overall_pass}, suppressed={suppress})", level="WARNING")
             try:

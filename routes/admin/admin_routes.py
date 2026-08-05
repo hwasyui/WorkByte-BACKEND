@@ -1255,6 +1255,10 @@ async def get_review_moderation_route(
     reviews analysed before judgment logging shipped have none. Every other
     section is always present; individual fields may be null where the platform
     never recorded the data.
+
+    `record_gaps` holds the per-category comparison of the star ratings against
+    that telemetry ({claimed, actual, gap} per category, plus inflation/deflation),
+    the same arithmetic that feeds the record-consistency trust component.
     """
     try:
         detail = get_review_moderation_detail(review_id)
@@ -1350,6 +1354,16 @@ async def get_client_review_moderation_route(
     objective counterpart is `subject_lifetime_scores` - the client's aggregate
     trust components - because the client-side measurements are lifetime figures
     rather than per-contract. `telemetry` is engagement context only.
+
+    `subject_lifetime_scores` carries `responsiveness_score`, `revision_rate_score`
+    and `dispute_fairness_score`, measured live so they are present before the
+    client has any published review. There is no `on_time_score`: a client has no
+    delivery deadline, so the UI must not render an on-time row here. Any of the
+    three may be null, meaning unmeasured - render "not measured", not an empty bar.
+
+    `record_gaps` holds the per-category comparison of these ratings against that
+    record ({claimed, actual, gap} per category, plus inflation/deflation), the
+    same arithmetic that feeds the record-consistency trust component.
     """
     try:
         detail = get_client_review_moderation_detail(client_review_id)

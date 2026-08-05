@@ -1,5 +1,4 @@
 import os
-import random
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
@@ -8,7 +7,6 @@ from functions.logger import logger
 from typing import List, Optional, Dict, Any
 import math
 import uuid
-import json
 from datetime import datetime
 
 
@@ -30,62 +28,6 @@ class EmbeddingFunctions:
     """Helper functions for managing embeddings with pgvector."""
 
     @staticmethod
-    def get_embedding_vector(text: str) -> List[float]:
-        try:
-            return [random.random() for _ in range(1536)]
-        except Exception as e:
-            logger("EMBEDDING_FUNCTIONS", f"Error generating embedding: {str(e)}", level="ERROR")
-            raise
-
-    # dev function - no callers.
-    @staticmethod
-    def create_freelancer_embedding(freelancer_id: str, source_text: str) -> Dict:
-        try:
-            db = get_db()
-            query = "SELECT embedding_id FROM freelancer_embedding WHERE freelancer_id = :freelancer_id"
-            result = db.execute_query(query, {"freelancer_id": freelancer_id})
-            embedding_vector = EmbeddingFunctions.get_embedding_vector(source_text)
-            vector_str = "[" + ",".join(str(x) for x in embedding_vector) + "]"
-
-            if result and len(result) > 0:
-                embedding_id = result[0]['embedding_id']
-                update_query = """
-                    UPDATE freelancer_embedding
-                    SET embedding_vector = :vector::vector,
-                        source_text = :source_text,
-                        embedding_metadata = :metadata
-                    WHERE embedding_id = :embedding_id
-                """
-                db.execute_query(update_query, {
-                    "vector": vector_str,
-                    "source_text": source_text,
-                    "metadata": json.dumps({"updated": True}),
-                    "embedding_id": embedding_id,
-                })
-                logger("EMBEDDING_FUNCTIONS", f"Updated freelancer embedding: {embedding_id}", level="INFO")
-                return {"embedding_id": embedding_id, "status": "updated"}
-            else:
-                embedding_id = str(uuid.uuid4())
-                insert_query = """
-                    INSERT INTO freelancer_embedding
-                        (embedding_id, freelancer_id, embedding_vector, source_text, embedding_metadata)
-                    VALUES
-                        (:embedding_id, :freelancer_id, :vector::vector, :source_text, :metadata)
-                """
-                db.execute_query(insert_query, {
-                    "embedding_id": embedding_id,
-                    "freelancer_id": freelancer_id,
-                    "vector": vector_str,
-                    "source_text": source_text,
-                    "metadata": json.dumps({"created": True}),
-                })
-                logger("EMBEDDING_FUNCTIONS", f"Created freelancer embedding: {embedding_id}", level="INFO")
-                return {"embedding_id": embedding_id, "status": "created"}
-        except Exception as e:
-            logger("EMBEDDING_FUNCTIONS", f"Error managing freelancer embedding: {str(e)}", level="ERROR")
-            raise
-
-    @staticmethod
     def delete_freelancer_embedding(freelancer_id: str) -> bool:
         try:
             db = get_db()
@@ -95,69 +37,6 @@ class EmbeddingFunctions:
             return True
         except Exception as e:
             logger("EMBEDDING_FUNCTIONS", f"Error deleting freelancer embedding: {str(e)}", level="ERROR")
-            raise
-
-    # dev function - no callers.
-    @staticmethod
-    def create_job_embedding(job_role_id: str, job_post_id: str, source_text: str) -> Dict:
-        try:
-            db = get_db()
-            query = "SELECT embedding_id FROM job_role_embedding WHERE job_role_id = :job_role_id"
-            result = db.execute_query(query, {"job_role_id": job_role_id})
-            embedding_vector = EmbeddingFunctions.get_embedding_vector(source_text)
-            vector_str = "[" + ",".join(str(x) for x in embedding_vector) + "]"
-
-            if result and len(result) > 0:
-                embedding_id = result[0]['embedding_id']
-                update_query = """
-                    UPDATE job_role_embedding
-                    SET embedding_vector = :vector::vector,
-                        source_text = :source_text,
-                        embedding_metadata = :metadata,
-                        embedding_dirty = FALSE
-                    WHERE embedding_id = :embedding_id
-                """
-                db.execute_query(update_query, {
-                    "vector": vector_str,
-                    "source_text": source_text,
-                    "metadata": json.dumps({"updated": True}),
-                    "embedding_id": embedding_id,
-                })
-                logger("EMBEDDING_FUNCTIONS", f"Updated job role embedding: {embedding_id}", level="INFO")
-                return {"embedding_id": embedding_id, "status": "updated"}
-            else:
-                embedding_id = str(uuid.uuid4())
-                insert_query = """
-                    INSERT INTO job_role_embedding
-                        (embedding_id, job_role_id, job_post_id, embedding_vector, source_text, embedding_metadata, embedding_dirty)
-                    VALUES
-                        (:embedding_id, :job_role_id, :job_post_id, :vector::vector, :source_text, :metadata, FALSE)
-                """
-                db.execute_query(insert_query, {
-                    "embedding_id": embedding_id,
-                    "job_role_id": job_role_id,
-                    "job_post_id": job_post_id,
-                    "vector": vector_str,
-                    "source_text": source_text,
-                    "metadata": json.dumps({"created": True}),
-                })
-                logger("EMBEDDING_FUNCTIONS", f"Created job role embedding: {embedding_id}", level="INFO")
-                return {"embedding_id": embedding_id, "status": "created"}
-        except Exception as e:
-            logger("EMBEDDING_FUNCTIONS", f"Error managing job role embedding: {str(e)}", level="ERROR")
-            raise
-
-    # dev function - no callers.
-    @staticmethod
-    def delete_job_embedding(job_role_id: str) -> bool:
-        try:
-            db = get_db()
-            conditions = [("job_role_id", "=", job_role_id)]
-            db.delete_data(table_name="job_role_embedding", conditions=conditions)
-            logger("EMBEDDING_FUNCTIONS", f"Deleted job role embedding for role {job_role_id}", level="INFO")
-            return True
-        except Exception as e:
-            logger("EMBEDDING_FUNCTIONS", f"Error deleting job role embedding: {str(e)}", level="ERROR")
             raise
 
 
