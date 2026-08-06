@@ -4,7 +4,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from functions.schema_model import UserInDB
-from functions.authentication import get_current_user
+from functions.authentication import get_admin_user, get_current_user
 from functions.access_control import (
     assert_current_user_is_contract_party,
     get_freelancer_profile_for_user,
@@ -265,9 +265,21 @@ async def get_trust_score(
 @review_router.get("/red-flags/{freelancer_id}")
 async def get_red_flags(
     freelancer_id: str,
-    current_user: UserInDB = Depends(get_current_user),
+    current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Unresolved red flag alerts for a freelancer. Intended for admin dashboards."""
+    """Unresolved red flag alerts for a freelancer. Admin only.
+
+    A red flag is an internal accusation - "trust score dropped 12.7 points,
+    recent performance may have declined" - raised by a detector and not yet
+    ruled on by anyone. It is moderation state, not profile data: the whole
+    point of get_red_flags filtering to is_resolved=False is that these are the
+    ones still awaiting a human verdict. Served to any authenticated caller it
+    let a client read an unreviewed allegation about a freelancer they are
+    considering, and let a competitor enumerate them, with the freelancer having
+    no way to see or answer it. The freelancer's own profile already exposes the
+    reputation signal that IS meant to be public - the trust score itself, via
+    public_trust_score.
+    """
     try:
         db = get_db()
         fl_rows = db.fetch_data("freelancer", conditions=[("freelancer_id", "=", freelancer_id)], limit=1)

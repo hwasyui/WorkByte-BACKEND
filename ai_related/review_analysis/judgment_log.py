@@ -39,7 +39,7 @@ acceptable; failing a review submission because logging broke is not.
 import json
 import os
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
 from functions.logger import logger
 
@@ -159,6 +159,106 @@ def log_admin_override(
         "prior_analysis": prior_analysis,
         "reason": reason,
     })
+
+
+def read_admin_rulings(review_id: str) -> List[Dict[str, Any]]:
+    """Every admin ruling recorded for a review, oldest first.
+
+    log_admin_override was write-only until this existed: read_latest_judgment
+    filters to `pipeline_judgment`, so nothing read the `admin_override` records
+    back. The API makes the admin's reason mandatory, and it was going to a file
+    no code opened - a second admin opening the same review saw no sign that
+    anyone had ruled, or why. That is the same gap red_flag_alerts closed with
+    resolved_by/resolution_note.
+
+    A list rather than the latest one: an upheld review can still be
+    override-published afterwards, and the sequence is the point - "suppressed,
+    then released on appeal" is a different history from "released", and only the
+    full list distinguishes them.
+
+    `prior_analysis` is deliberately dropped from the returned records. It exists
+    for training and is large; nothing in an admin view renders it.
+
+    Returns [] when the log is missing, unreadable, or has no ruling for this
+    review - all normal (logs/ is gitignored, and reviews ruled on before this
+    logging existed have no entry). Callers must treat rulings as optional.
+    """
+    if not os.path.exists(JUDGMENT_LOG_PATH):
+        return []
+    target = str(review_id)
+    rulings: List[Dict[str, Any]] = []
+    try:
+        with open(JUDGMENT_LOG_PATH, encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line or target not in line:
+                    continue
+                try:
+                    record = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if record.get("event") != "admin_override" or record.get("review_id") != target:
+                    continue
+                rulings.append({
+                    "action": record.get("action"),
+                    "admin_user_id": record.get("admin_user_id"),
+                    # Records written before the reason dialog shipped carry a
+                    # null reason. Kept as "" rather than dropped: a ruling with
+                    # no recorded justification is still a ruling, and the second
+                    # admin needs to see that it happened.
+                    "reason": record.get("reason") or "",
+                    "prior_status": record.get("prior_status"),
+                    "logged_at": record.get("logged_at"),
+                })
+    except Exception as e:
+        logger("JUDGMENT_LOG", f"Could not read admin rulings: {str(e)[:200]}", level="WARNING")
+        return []
+    return rulings
+
+
+def count_admin_rulings(review_ids: Iterable[str]) -> Dict[str, int]:
+    """How many admin rulings each of these reviews has on file, as
+    {review_id: count}. Ids absent from the result have none.
+
+    Takes a whole page of ids and reads the file once, rather than exposing the
+    per-review reader to the queue endpoints. A read_admin_rulings() call inside
+    the per-item loop would re-scan an append-only file that grows without bound,
+    once per row, on every queue page load.
+
+    Only the count, not the rulings: the queue card renders a "ruled on" marker
+    and nothing else, and shipping every reason for every row would grow the
+    triage payload for text no queue view displays. The full list is on the
+    detail endpoint, which is where an admin reads them.
+
+    Same failure policy as the rest of this module - a missing, unreadable or
+    corrupt log yields an empty result, never an exception. Nothing gates on
+    these counts; they only decide which buttons a card shows.
+    """
+    targets = {str(rid) for rid in review_ids if rid}
+    if not targets or not os.path.exists(JUDGMENT_LOG_PATH):
+        return {}
+    counts: Dict[str, int] = {}
+    try:
+        with open(JUDGMENT_LOG_PATH, encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                # Cheap reject before parsing: the overwhelming majority of lines
+                # are pipeline_judgment records carrying full review text.
+                if not line or "admin_override" not in line:
+                    continue
+                try:
+                    record = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if record.get("event") != "admin_override":
+                    continue
+                review_id = record.get("review_id")
+                if review_id in targets:
+                    counts[review_id] = counts.get(review_id, 0) + 1
+    except Exception as e:
+        logger("JUDGMENT_LOG", f"Could not count admin rulings: {str(e)[:200]}", level="WARNING")
+        return {}
+    return counts
 
 
 def read_latest_judgment(review_id: str) -> Optional[Dict[str, Any]]:

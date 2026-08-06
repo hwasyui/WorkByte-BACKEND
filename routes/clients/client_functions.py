@@ -33,6 +33,13 @@ class ClientFunctions:
         "AND jp.status <> 'draft')"
     )
 
+    # ORDER BY still ranks on weighted_review_avg_received even though the SELECT no
+    # longer returns it - Postgres will sort on a joined column that is not in the
+    # select list. That split is deliberate: the weighted figure is the better
+    # RANKING signal, because authenticity and repeat-pair decay stop manufactured
+    # reviews from lifting a client up the list, but it is the wrong number to SHOW
+    # (see review_views._MODERATION_ONLY_TRUST_FIELDS). The sort key keeps its
+    # public name so the documented order_by values do not change.
     _CLIENT_SORT_FIELDS = {
         "created_at":                   "c.created_at",
         "updated_at":                   "c.updated_at",
@@ -40,6 +47,7 @@ class ClientFunctions:
         "total_jobs_posted":            _NON_DRAFT_JOBS_POSTED_SQL,
         "total_jobs_completed":         "c.total_jobs_completed",
         "weighted_review_avg_received": "cts.weighted_review_avg_received",
+        "display_star_avg":             "cts.display_star_avg",
         "total_reviews_received":       "cts.total_reviews_received",
     }
 
@@ -82,7 +90,7 @@ class ClientFunctions:
                        {ClientFunctions._NON_DRAFT_JOBS_POSTED_SQL} AS total_jobs_posted,
                        c.total_jobs_completed, c.average_rating_given,
                        c.created_at, c.updated_at,
-                       cts.weighted_review_avg_received, cts.total_reviews_received
+                       cts.display_star_avg, cts.total_reviews_received
                 FROM client c
                 LEFT JOIN client_trust_score cts
                     ON cts.client_id = c.client_id

@@ -14,7 +14,15 @@ from google.oauth2 import service_account
 import google.auth.transport.requests
 
 FCM_PROJECT_ID = os.getenv("FCM_PROJECT_ID")
-FCM_SERVICE_ACCOUNT_FILE = os.getenv("FCM_SERVICE_ACCOUNT_FILE", "service-account.json")
+
+# Anchored to the repo root, not the cwd. The env var holds a bare filename, so an app
+# started from a subdirectory (cd main && python main.py) resolved it against that
+# subdirectory and every push died on [Errno 2] while the rest of the app was fine.
+# An absolute value in the env var is left as-is.
+_BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+FCM_SERVICE_ACCOUNT_FILE = os.path.join(
+    _BASE_DIR, os.getenv("FCM_SERVICE_ACCOUNT_FILE", "service-account.json")
+)
 
 # Ceiling on a whole push attempt: OAuth token refresh plus the FCM POST. The POST has
 # its own 5s timeout; this bounds the pair so a push can never hang, wherever it runs.

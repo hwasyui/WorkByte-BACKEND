@@ -297,6 +297,7 @@ class ClientReviewFunctions:
         trust_score: float,
         weighted_review_avg_received: float,
         effective_review_avg_received: Optional[float],
+        display_star_avg: Optional[float],
         responsiveness_score: float,
         communication_sentiment: Optional[float],
         authenticity_confidence: float,
@@ -304,7 +305,14 @@ class ClientReviewFunctions:
         dispute_fairness_score: float,
         total_reviews_received: int,
         ai_review_summary: Optional[str] = None,
-    ) -> None:
+        snapshot_reason: str = "review_published",
+    ) -> bool:
+        """Write the current client trust score, and snapshot it if it moved.
+
+        Returns whether the score moved - the caller's cue to run
+        check_and_create_red_flag. snapshot_reason mirrors the freelancer side;
+        see ReviewFunctions.upsert_trust_score for both.
+        """
         try:
             db = get_db()
             existing = db.fetch_data(
@@ -317,6 +325,7 @@ class ClientReviewFunctions:
                 "trust_score": trust_score,
                 "weighted_review_avg_received": weighted_review_avg_received,
                 "effective_review_avg_received": effective_review_avg_received,
+                "display_star_avg": display_star_avg,
                 "responsiveness_score": responsiveness_score,
                 "communication_sentiment": communication_sentiment,
                 "authenticity_confidence": authenticity_confidence,
@@ -339,20 +348,26 @@ class ClientReviewFunctions:
                 data["client_trust_score_id"] = str(uuid.uuid4())
                 db.insert_data(table_name="client_trust_score", data=data)
 
-            # Append-only snapshot, mirroring trust_score_history on the freelancer
-            # side. check_and_create_red_flag reads the previous snapshot from here,
-            # so this must happen even though client_trust_score already holds the
-            # current value - that row has just been overwritten.
-            db.insert_data(
-                table_name="client_trust_score_history",
-                data={
-                    "id": str(uuid.uuid4()),
-                    "client_id": client_id,
-                    "trust_score": trust_score,
-                    "snapshot_reason": "review_published",
-                },
-            )
+            # Snapshot, mirroring trust_score_history on the freelancer side.
+            # check_and_create_red_flag reads the previous snapshot from here, so
+            # this must happen even though client_trust_score already holds the
+            # current value - that row has just been overwritten. Skipped when the
+            # score did not move, for the window-dilution reason documented on the
+            # freelancer side.
+            previous_score = existing[0].get("trust_score") if existing else None
+            moved = previous_score is None or round(float(previous_score), 2) != round(float(trust_score), 2)
+            if moved:
+                db.insert_data(
+                    table_name="client_trust_score_history",
+                    data={
+                        "id": str(uuid.uuid4()),
+                        "client_id": client_id,
+                        "trust_score": trust_score,
+                        "snapshot_reason": snapshot_reason,
+                    },
+                )
             logger("CLIENT_REVIEW_FUNCTIONS", f"Trust score upserted for client {client_id}: {trust_score}", level="INFO")
+            return moved
         except Exception as e:
             logger("CLIENT_REVIEW_FUNCTIONS", f"Error upserting client trust score: {str(e)}", level="ERROR")
             raise
@@ -413,7 +428,8 @@ class ClientReviewFunctions:
         client_trust_score: the caller upserts the new score before calling this,
         so the live row already holds new_score and every comparison against it
         yielded a drop of exactly 0 - no client red flag could ever fire. The
-        history table is append-only, so snapshots[1:] are genuinely the priors.
+        history table only gains a row when the score moves, and callers only
+        reach this when it did, so snapshots[1:] are genuinely the priors.
         """
         try:
             db = get_db()

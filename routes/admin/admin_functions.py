@@ -12,7 +12,12 @@ from fastapi import HTTPException
 
 from functions.db_manager import get_db
 from functions.logger import logger
-from ai_related.review_analysis.judgment_log import log_admin_override, read_latest_judgment
+from ai_related.review_analysis.judgment_log import (
+    count_admin_rulings,
+    log_admin_override,
+    read_admin_rulings,
+    read_latest_judgment,
+)
 from functions.profile_ids import user_id_for_client, user_id_for_freelancer
 from routes.admin.admin_moderation import (
     scan_harmful_text,
@@ -2988,6 +2993,56 @@ def _component_breakdown(review_id: str) -> Optional[Dict]:
     }
 
 
+def _admin_rulings(review_id: str) -> List[Dict]:
+    """Human rulings already made on this review, oldest first, with admin emails.
+
+    A held review can be opened by any admin, and until this was surfaced none of
+    them could see that a colleague had already ruled - so the same review could
+    be adjudicated twice, and the mandatory justification for the first ruling was
+    invisible to the second. The red-flag view has shown resolved_by/resolution_note
+    from the start; this is the review side of the same idea.
+
+    Read from the JSONL judgment log rather than a table, because that is where
+    log_admin_override writes and adding a table means a migration in the separate
+    DATABASE repo. The tradeoff is real and worth stating: logs/ is gitignored and
+    does not survive a container rebuild, so an empty list means "no ruling on
+    file", never "definitely never ruled on". Nothing gates on it - it is display
+    only - so a lost record degrades the view rather than changing a decision.
+
+    Emails are resolved in one query rather than per ruling; a ruling whose admin
+    no longer resolves keeps its user id so the record is still attributable.
+
+    The lookup is CAST to uuid[] because users.user_id is UUID and the ids arrive
+    from the log as strings - Postgres rejects `uuid = text` outright rather than
+    coercing. It is also wrapped, because this is a display field on a view whose
+    actual job is adjudicating a held review: an admin must still be able to open
+    that review when the name lookup fails, and without the guard a single
+    malformed id in an append-only log file 500s the whole moderation detail
+    endpoint. Losing the emails costs a line of provenance; losing the endpoint
+    costs the ruling.
+    """
+    rulings = read_admin_rulings(review_id)
+    if not rulings:
+        return []
+
+    admin_ids = {r["admin_user_id"] for r in rulings if r.get("admin_user_id")}
+    emails: Dict[str, str] = {}
+    if admin_ids:
+        try:
+            rows = _rows(get_db().execute_query(
+                "SELECT user_id, email FROM users WHERE user_id = ANY(CAST(:ids AS uuid[]))",
+                params={"ids": list(admin_ids)},
+            ))
+            emails = {str(row["user_id"]): row["email"] for row in rows}
+        except Exception as e:
+            logger("ADMIN", f"Could not resolve admin emails for review {review_id}: {str(e)[:200]}",
+                   level="WARNING")
+
+    for ruling in rulings:
+        ruling["admin_email"] = emails.get(str(ruling.get("admin_user_id")))
+    return rulings
+
+
 def _contract_telemetry(contract_id: str) -> Optional[Dict]:
     """Objective contract record for the engagement under review.
 
@@ -3231,6 +3286,9 @@ def list_flagged_reviews(
         params={"status": status, "limit": page_size, "offset": offset, **range_params},
     ))
 
+    # One scan of the judgment log for the whole page, not one per row.
+    ruling_counts = count_admin_rulings([str(item["id"]) for item in items])
+
     for item in items:
         reasons = item.get("flag_reasons") or []
         if isinstance(reasons, str):
@@ -3243,6 +3301,10 @@ def list_flagged_reviews(
         # 'suppressed' is the pipeline's high-confidence verdict, 'flagged' means
         # it wanted a human. Different severities, so the queue must not mix them.
         item["hold_level"] = item.get("status")
+        # Count only - the card shows a marker, and the reasons behind it are on
+        # the detail endpoint. Zero means "no ruling on file", which is not the
+        # same as never ruled on: logs/ can be wiped. Nothing may gate on it.
+        item["admin_ruling_count"] = ruling_counts.get(str(item["id"]), 0)
 
     return _paged(items, int(total_row["total"]), page, page_size)
 
@@ -3284,6 +3346,9 @@ def get_review_moderation_detail(review_id: str) -> Optional[Dict]:
         "review_kind": "freelancer_review",
         "review": review,
         "hold_level": review.get("status"),
+        # Empty when nobody has ruled yet - which is the normal case for a queue
+        # item, and what the UI uses to decide whether to offer a ruling at all.
+        "admin_rulings": _admin_rulings(review_id),
         "analysis_unavailable": _analysis_unavailable(review.get("flag_reasons")),
         "ratings": ratings,
         "components": components,
@@ -3418,11 +3483,18 @@ async def override_publish_review(review_id: str, admin_user_id: str,
         data={"contract_id": str(updated["contract_id"]), "review_id": review_id},
     ))
 
-    from ai_related.review_analysis.review_pipeline import recalculate_and_persist_trust_score
+    from ai_related.review_analysis.review_pipeline import (
+        _recalculate_reviewer_trust_score,
+        recalculate_and_persist_trust_score,
+    )
     await recalculate_and_persist_trust_score(
         freelancer_id=str(updated["freelancer_id"]),
         category=updated.get("inferred_category"),
     )
+    # The reviewing client's unfair_review_ratio counts published reviews they wrote,
+    # and this override just published one. Same reason the pipeline refreshes the
+    # reviewer on its own publish path.
+    await _recalculate_reviewer_trust_score(str(updated["reviewer_id"]))
     return updated
 
 _FLAGGED_CLIENT_REVIEW_SORT_COLS = {
@@ -3490,6 +3562,8 @@ def list_flagged_client_reviews(
         params={"status": status, "limit": page_size, "offset": offset, **range_params},
     ))
 
+    ruling_counts = count_admin_rulings([str(item["id"]) for item in items])
+
     for item in items:
         reasons = item.get("flag_reasons") or []
         if isinstance(reasons, str):
@@ -3500,6 +3574,7 @@ def list_flagged_client_reviews(
         item["flag_reason_count"] = len(reasons)
         item["analysis_unavailable"] = _analysis_unavailable(reasons)
         item["hold_level"] = item.get("status")
+        item["admin_ruling_count"] = ruling_counts.get(str(item["id"]), 0)
 
     return _paged(items, int(total_row["total"]), page, page_size)
 
@@ -3544,6 +3619,7 @@ def get_client_review_moderation_detail(client_review_id: str) -> Optional[Dict]
         "review_kind": "client_review",
         "review": review,
         "hold_level": review.get("status"),
+        "admin_rulings": _admin_rulings(client_review_id),
         "analysis_unavailable": _analysis_unavailable(review.get("flag_reasons")),
         "ratings": ratings,
         "components": components,
@@ -3657,6 +3733,13 @@ async def override_publish_client_review(client_review_id: str, admin_user_id: s
         data={"contract_id": str(updated["contract_id"]), "client_review_id": client_review_id},
     ))
 
-    from ai_related.review_analysis.client_review_pipeline import recalculate_and_persist_client_trust_score
+    from ai_related.review_analysis.client_review_pipeline import (
+        _recalculate_reviewer_trust_score,
+        recalculate_and_persist_client_trust_score,
+    )
     await recalculate_and_persist_client_trust_score(client_id=str(updated["client_id"]))
+    # The reviewing freelancer's unfair_review_ratio counts published reviews they
+    # wrote, and this override just published one. Same reason the pipeline refreshes
+    # the reviewer on its own publish path.
+    await _recalculate_reviewer_trust_score(str(updated["reviewer_id"]))
     return updated

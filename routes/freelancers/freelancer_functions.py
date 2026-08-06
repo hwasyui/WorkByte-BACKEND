@@ -355,7 +355,7 @@ def get_comprehensive_freelancer_profile(freelancer_id: str) -> Optional[Dict]:
 
         # Ratings come from the review system and freelancer_trust_scores, both keyed
         # on freelancer.freelancer_id, so pass the profile id directly.
-        from functions.review_views import public_reviews
+        from functions.review_views import public_reviews, public_trust_score
         from routes.reviews.review_functions import ReviewFunctions
 
         # public_reviews strips the moderation analysis: this profile is readable by
@@ -370,13 +370,21 @@ def get_comprehensive_freelancer_profile(freelancer_id: str) -> Optional[Dict]:
             conditions=[("freelancer_id", "=", freelancer_id)],
             limit=1,
         ) if freelancer_id else []
-        trust_score = dict(trust_rows[0]) if trust_rows else None
+        stored_trust_score = dict(trust_rows[0]) if trust_rows else None
+        # Same reasoning as public_reviews above, which this row was missing: the
+        # profile is readable by any authenticated user, and the raw
+        # freelancer_trust_scores row carries authenticity_confidence,
+        # consistency_score and the two internal review averages - judgements about
+        # the freelancer's reviewers, not things the freelancer earned. Sanitised
+        # here rather than at the route so the totals below still read from the full
+        # row.
+        trust_score = public_trust_score(stored_trust_score)
 
         # total_ratings / average_rating are kept for the admin profile view. Prefer the
         # precomputed trust-score aggregate, then fall back to the published reviews.
-        if trust_score:
-            total_ratings = trust_score.get("total_reviews") or len(reviews)
-            average_rating = trust_score.get("display_star_avg")
+        if stored_trust_score:
+            total_ratings = stored_trust_score.get("total_reviews") or len(reviews)
+            average_rating = stored_trust_score.get("display_star_avg")
         else:
             total_ratings = len(reviews)
             average_rating = None

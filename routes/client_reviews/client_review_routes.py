@@ -4,7 +4,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from functions.schema_model import UserInDB
-from functions.authentication import get_current_user
+from functions.authentication import get_admin_user, get_current_user
 from functions.access_control import assert_current_user_is_contract_party
 from functions.response_utils import ResponseSchema
 from functions.logger import logger
@@ -213,9 +213,14 @@ async def get_client_trust_score_route(
 @client_review_router.get("/red-flags/{client_id}")
 async def get_client_red_flags(
     client_id: str,
-    current_user: UserInDB = Depends(get_current_user),
+    current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Unresolved red flag alerts for a client. Intended for admin dashboards."""
+    """Unresolved red flag alerts for a client. Admin only.
+
+    Same reasoning as the freelancer-side endpoint - see
+    review_routes.get_red_flags. Both read the same red_flag_alerts table and
+    both serve unresolved alerts, so they get the same gate.
+    """
     try:
         db = get_db()
         cl_rows = db.fetch_data("client", conditions=[("client_id", "=", client_id)], limit=1)

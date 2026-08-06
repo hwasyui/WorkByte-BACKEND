@@ -1015,6 +1015,7 @@ class ClientTrustScoreV2Response(BaseModel):
     trust_score: Optional[float] = None
     weighted_review_avg_received: Optional[float] = None
     effective_review_avg_received: Optional[float] = None
+    display_star_avg: Optional[float] = None
     responsiveness_score: Optional[float] = None
     communication_sentiment: Optional[float] = None
     authenticity_confidence: Optional[float] = None

@@ -42,12 +42,38 @@ _MODERATION_ONLY_TRUST_FIELDS = (
     "effective_review_avg",           # shrunk average; drives `confidence`, must not be printed
     "effective_review_avg_received",  # client-side counterpart
     "weighted_review_avg",       # internal scoring input; display_star_avg is the public figure
+    # The client-side counterpart, withheld for the same reason and previously
+    # missing from this list only because client_trust_score had no plain average
+    # to withhold it in favour of. It does now.
+    "weighted_review_avg_received",
     "ai_review_summary_updated_at",
     # Row PKs. Not sensitive, but the subject is addressed by freelancer_id/client_id
     # everywhere else, so exposing a second identifier only invites confusion.
     "id",
     "client_trust_score_id",
 )
+
+# Withheld for a different reason: not sensitive, just not ready to be shown.
+#
+# category_rank_pct is the share of same-category peers scoring below this
+# freelancer, recomputed only when THIS freelancer's score is recalculated. Two
+# problems make it misleading rather than merely imprecise:
+#
+#   * No minimum peer count. The SQL divides by however many rows share the
+#     category, so "Top 10%" can mean "ahead of one of two peers" and reads as
+#     authoritative either way.
+#   * It goes stale silently. Peers' scores move without triggering a recompute
+#     here, so two profiles can carry percentiles calculated months apart against
+#     different populations, and disagree.
+#
+# The column keeps being computed and stored - admin views read it, and nothing
+# scores with it - it just does not leave the server on a public route until it
+# has a peer-count floor and a recompute story.
+_UNRELEASED_TRUST_FIELDS = (
+    "category_rank_pct",
+)
+
+_WITHHELD_TRUST_FIELDS = _MODERATION_ONLY_TRUST_FIELDS + _UNRELEASED_TRUST_FIELDS
 
 
 def review_confidence(total_reviews: Optional[int]) -> str:
@@ -109,6 +135,6 @@ def public_trust_score(
     if not trust_score:
         return trust_score
 
-    view = {k: v for k, v in trust_score.items() if k not in _MODERATION_ONLY_TRUST_FIELDS}
+    view = {k: v for k, v in trust_score.items() if k not in _WITHHELD_TRUST_FIELDS}
     view["confidence"] = review_confidence(trust_score.get(total_reviews_key))
     return view

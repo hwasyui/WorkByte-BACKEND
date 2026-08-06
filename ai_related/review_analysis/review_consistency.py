@@ -64,6 +64,13 @@ _DIMENSION_MAP = {
     "communication":  ("responsiveness_score", 0.4),
 }
 
+# The weight of a direct correspondence - the same question asked twice, like a
+# timeliness rating against a computed on-time rate. A comparison whose total
+# compared weight never reaches this rested entirely on loose mappings, and
+# callers charging somebody for the result should say so rather than treat
+# "quality vs revision count" as if it were the same kind of evidence.
+DIRECT_CORRESPONDENCE_WEIGHT = 1.0
+
 # communication and responsiveness both map onto responsiveness_score, and client
 # reviews collect both. Using both would count one objective measurement twice -
 # the same double-counting that was just removed from blend_communication_score.
@@ -104,8 +111,12 @@ def compare_review_to_record(
             "inflation": float 0-1 or None,   weighted mean of positive gaps
             "deflation": float 0-1 or None,   weighted mean of negative gaps
             "dimensions_compared": int,
+            "compared_weight": float,         total _DIMENSION_MAP weight compared
             "per_dimension": {category: {"claimed", "actual", "gap"}},
         }
+
+        Both means are taken over the weight of EVERY dimension compared, not just
+        the ones that moved in that direction - see the note above weighted_mean.
 
         inflation and deflation are None when nothing could be compared - no
         matching category, or no telemetry. None rather than 0.0 on purpose:
@@ -126,6 +137,7 @@ def compare_review_to_record(
 
     per_dimension = {}
     inflation_terms, deflation_terms = [], []
+    compared_weight = 0.0
 
     for category, claimed_star in by_category.items():
         mapping = _DIMENSION_MAP.get(category)
@@ -146,16 +158,29 @@ def compare_review_to_record(
             "gap": round(gap, 4),
         }
 
+        compared_weight += weight
         if gap > 0:
             inflation_terms.append((weight, gap))
         elif gap < 0:
             deflation_terms.append((weight, -gap))
 
+    # Divided by the weight of everything compared, NOT by the weight of the terms
+    # in this direction. Dividing by the direction's own weight cancelled it out
+    # whenever a review moved one way on a single dimension, which is the common
+    # case - the confidence weights in _DIMENSION_MAP then attenuated nothing at
+    # all. A client rating timeliness 5 against a perfect on-time record (weight
+    # 1.0, gap 0) and quality 1 against an 0.8 revision rate (weight 0.4, gap
+    # -0.8) scored deflation 0.8, over the unfair-reviewer threshold, on the one
+    # dimension the map itself calls loose - while the dimension that agreed
+    # exactly, and agreed on the tightest correspondence available, counted for
+    # nothing. Over the full compared weight the same review scores 0.23.
+    #
+    # This is also what the "still evidence" note below has always claimed:
+    # an exactly-agreeing dimension has to reach the denominator to be evidence.
     def weighted_mean(terms) -> Optional[float]:
-        if not terms:
+        if not terms or compared_weight <= 0:
             return None
-        total_weight = sum(w for w, _ in terms)
-        return round(sum(w * v for w, v in terms) / total_weight, 4)
+        return round(sum(w * v for w, v in terms) / compared_weight, 4)
 
     # A dimension that agrees exactly contributes to neither list but is still
     # evidence, so both figures are None only when nothing was comparable at all.
@@ -165,6 +190,12 @@ def compare_review_to_record(
         "inflation": None if nothing_comparable else (weighted_mean(inflation_terms) or 0.0),
         "deflation": None if nothing_comparable else (weighted_mean(deflation_terms) or 0.0),
         "dimensions_compared": len(per_dimension),
+        # How much confidence the figures above actually rest on, so a caller can
+        # tell "harsh against a direct measurement" from "harsh against a loose
+        # proxy" - the two are the same number otherwise, and only one of them is
+        # worth penalising a reviewer for. Compare against
+        # DIRECT_CORRESPONDENCE_WEIGHT.
+        "compared_weight": round(compared_weight, 4),
         "per_dimension": per_dimension,
     }
 

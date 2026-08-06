@@ -662,6 +662,38 @@ def shrink_toward_prior(weighted_review_avg: float, total_reviews: int) -> float
     return (n * float(weighted_review_avg) + SHRINKAGE_K * SHRINKAGE_PRIOR) / (n + SHRINKAGE_K)
 
 
+# Behavioural penalties (coercion, unfair reviewing) are shares, and a share
+# computed over one observation is not evidence of a pattern. K clean pseudo-
+# observations are added to the denominator, which is the same move
+# shrink_toward_prior makes for star averages, with a prior of zero: nobody is
+# assumed to coerce.
+#
+# Why it was needed: coerced_ratio * 30, capped at 15, saturates at a raw share
+# of 0.5. A freelancer whose ONLY review was flagged coerced scored 1.0 and took
+# the entire 15 points - three times the flat -5 that the proportional rule
+# replaced, on a single uncalibrated LLM boolean. The stated intent was to stop
+# scoring one bad flag like ten; ungated, it scored one like twenty.
+#
+# K=3 keeps the penalty reachable on real patterns while making a lone flag cost
+# a fraction of it: 1 of 1 scores 0.25 (7.5 points), 3 of 3 scores 0.5 (the full
+# 15), 3 of 20 scores 0.13 (3.9). Admin override-publishing a review does not
+# clear its flag, so a wrongly-flagged review keeps contributing - one more
+# reason not to let a single one carry the maximum.
+PENALTY_SHRINKAGE_K = 3.0
+
+
+def shrink_penalty_ratio(hits: int, observations: int) -> float:
+    """A behavioural-penalty share, damped by how few observations back it.
+
+    Returns 0.0 on no observations, so an absent record never penalises - the
+    same contract every ratio function here already honours.
+    """
+    n = max(0, int(observations or 0))
+    if n <= 0:
+        return 0.0
+    return round(max(0, int(hits or 0)) / (n + PENALTY_SHRINKAGE_K), 3)
+
+
 def calculate_trust_score(
     weighted_review_avg: float,
     on_time_score: Optional[float],
@@ -738,6 +770,13 @@ def calculate_trust_score(
     a proportional penalty of up to 15 points, replacing the old flat -5
     "if any coercion flag exists" rule that scored one bad flag the same as ten.
 
+    Both penalty ratios arrive already shrunk by shrink_penalty_ratio - a share
+    over one or two reviews is damped toward zero, the same treatment the star
+    average gets from shrink_toward_prior. Without it the proportional rule was
+    at its harshest exactly where the evidence was thinnest: a freelancer's
+    first-ever review, flagged coerced by one LLM boolean, scored a ratio of 1.0
+    and lost the full 15 points.
+
     Two things changed in how the weights are applied:
 
     * The star average is shrunk toward a neutral prior by review count
@@ -807,8 +846,14 @@ DEFLATION_MAX_REDUCTION = 0.25
 
 
 def _deflation_weight(deflation: Optional[float]) -> float:
-    """1.0 (no reduction) up to 1 - DEFLATION_MAX_REDUCTION at full deflation."""
-    if deflation is None or deflation <= DEFLATION_WEIGHT_THRESHOLD:
+    """1.0 (no reduction) up to 1 - DEFLATION_MAX_REDUCTION at full deflation.
+
+    `<` rather than `<=` so the boundary reads the same way as the reviewer-side
+    counters, which treat deflation >= threshold as unfair. The ramp is zero at
+    exactly the threshold either way, so this changes no number - only the
+    impression that the two sides disagree about where the threshold sits.
+    """
+    if deflation is None or deflation < DEFLATION_WEIGHT_THRESHOLD:
         return 1.0
     span = 1.0 - DEFLATION_WEIGHT_THRESHOLD
     ramp = min(1.0, (deflation - DEFLATION_WEIGHT_THRESHOLD) / span)
@@ -916,11 +961,18 @@ def calculate_review_fairness(client_id: str) -> float:
     calculate_client_trust_score, which measures reviews they received. It is a
     judgement about their conduct as a reviewer, not their reputation as a client.
 
+    Shrunk by shrink_penalty_ratio, so one harsh review out of one is a fraction of
+    the penalty that a sustained pattern carries - the "one harsh review is not
+    penalised" promise above was not true of the arithmetic before that.
+
     Returns 0.0 when there is nothing comparable, so it never penalises on absent
     evidence.
     """
     try:
-        from ai_related.review_analysis.review_consistency import compare_review_to_record
+        from ai_related.review_analysis.review_consistency import (
+            DIRECT_CORRESPONDENCE_WEIGHT,
+            compare_review_to_record,
+        )
 
         db = get_db()
         rows = db.execute_query(
@@ -956,15 +1008,19 @@ def calculate_review_fairness(client_id: str) -> float:
         comparable, unfair = 0, 0
         for entry in by_review.values():
             result = compare_review_to_record(entry["ratings"], entry["performance"])
-            if result["deflation"] is None:
+            # Skipped, not counted as fair: a review whose only comparable dimension
+            # was a loose mapping - `quality` against revision count, say, when the
+            # rating carried no timeliness score or the contract had no completion
+            # date to measure against - is not evidence either way about whether the
+            # reviewer was unfair. Charging somebody's trust score for a proxy the
+            # map itself calls loose is what the DEFLATION hazard note warns about.
+            if result["deflation"] is None or result["compared_weight"] < DIRECT_CORRESPONDENCE_WEIGHT:
                 continue
             comparable += 1
             if result["deflation"] >= DEFLATION_WEIGHT_THRESHOLD:
                 unfair += 1
 
-        if not comparable:
-            return 0.0
-        return round(unfair / comparable, 3)
+        return shrink_penalty_ratio(unfair, comparable)
 
     except Exception as e:
         logger("REVIEW_AI", f"Error computing review fairness for client {client_id}: {str(e)}",
@@ -1010,28 +1066,44 @@ def calculate_aggregate_performance(freelancer_id: str) -> Dict:
             """,
             {"fid": freelancer_id},
         )
-        # coerced_ratio is deliberately NOT read from the query above. conflict_score
-        # is set to 1.0 only when the AI analysis flags a review as coerced, and that
+        # coerced_ratio is deliberately NOT read from the query above. The coercion
         # flag forces overall_pass=False, which stops the review publishing - so the
         # published-only join made the coerced count structurally always zero and the
         # 15-point penalty in calculate_trust_score unreachable. It could only fire
         # after an admin override-published a coerced review, i.e. exactly when a human
         # had decided it was legitimate. Counted here over every review the pipeline
         # actually analysed instead.
+        #
+        # Read from review_ai_analysis rather than from freelancer_performance_scores.
+        # conflict_score mirrors the same flag, but it is written by an UPDATE keyed on
+        # contract_id (ReviewFunctions.update_performance_scores), which silently
+        # matches zero rows when the post-completion pipeline failed to insert the
+        # performance row - and that pipeline swallows its own exceptions. The flag
+        # would then exist on the analysis, be invisible here, and cost nothing.
+        # review_ai_analysis is where the pipeline's verdict actually lives, and it is
+        # upserted on the review's own id. conflict_score is still written; the admin
+        # contract view renders it.
+        #
+        # authenticity_score IS NULL marks an unavailable LLM analysis (see
+        # ReviewFunctions.save_ai_analysis). Those rows are excluded from BOTH sides of
+        # the ratio: an outage stores is_flagged_coerced=False for every review it
+        # touched, and counting those as clean would have let a Groq outage quietly
+        # dilute the coercion ratio of everyone who received a review during it.
         coerced_rows = db.execute_query(
             """
-            SELECT fps.conflict_score
-            FROM freelancer_performance_scores fps
-            JOIN reviews r ON r.contract_id = fps.contract_id
-            WHERE fps.freelancer_id = :fid
+            SELECT ra.is_flagged_coerced
+            FROM review_ai_analysis ra
+            JOIN reviews r ON r.id = ra.review_id
+            WHERE r.freelancer_id = :fid
               AND r.status IN ('published', 'flagged', 'suppressed')
+              AND ra.authenticity_score IS NOT NULL
             """,
             {"fid": freelancer_id},
         )
-        coerced_ratio = 0.0
-        if coerced_rows:
-            coerced_count = sum(1 for r in coerced_rows if float(r["conflict_score"] or 0.0) > 0.7)
-            coerced_ratio = round(coerced_count / len(coerced_rows), 3)
+        coerced_ratio = shrink_penalty_ratio(
+            sum(1 for r in coerced_rows or [] if r["is_flagged_coerced"]),
+            len(coerced_rows or []),
+        )
 
         if not rows:
             return {**empty, "coerced_ratio": coerced_ratio}

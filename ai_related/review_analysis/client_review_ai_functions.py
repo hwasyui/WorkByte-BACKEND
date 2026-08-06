@@ -617,6 +617,10 @@ def calculate_client_trust_score(
     responsiveness, not deliverable quality, so a harsh review can be entirely
     accurate and still register as deflated. See _deflation_weight for the full
     hazard.
+
+    Both penalty ratios arrive already shrunk by shrink_penalty_ratio - see
+    calculate_trust_score, which documents why a share over one review was not
+    evidence of a pattern and was nonetheless charged as one.
     """
     effective_avg = shrink_toward_prior(weighted_review_avg, total_reviews)
 
@@ -657,11 +661,20 @@ def calculate_freelancer_review_fairness(freelancer_id: str) -> float:
     responsiveness and revision churn in it. Hence the smaller cap in
     calculate_trust_score.
 
+    Shrunk by shrink_penalty_ratio, so a freelancer who has written one harsh review
+    out of one carries a fraction of the penalty a repeat pattern does.
+
     Returns 0.0 when nothing was comparable, so it never penalises on absent evidence.
     """
     try:
-        from ai_related.review_analysis.review_ai_functions import DEFLATION_WEIGHT_THRESHOLD
-        from ai_related.review_analysis.review_consistency import compare_review_to_record
+        from ai_related.review_analysis.review_ai_functions import (
+            DEFLATION_WEIGHT_THRESHOLD,
+            shrink_penalty_ratio,
+        )
+        from ai_related.review_analysis.review_consistency import (
+            DIRECT_CORRESPONDENCE_WEIGHT,
+            compare_review_to_record,
+        )
 
         rows = get_db().execute_query(
             """
@@ -696,15 +709,18 @@ def calculate_freelancer_review_fairness(freelancer_id: str) -> float:
                     "on_time_score": None,
                 }
             result = compare_review_to_record(entry["ratings"], performance_cache[cid])
-            if result["deflation"] is None:
+            # Same gate as calculate_review_fairness: a comparison resting only on
+            # the loose clarity_of_requirements -> revision-churn proxy is not
+            # evidence that the reviewer was unfair. It bites more often here, since
+            # an unmeasured client leaves responsiveness - the one direct
+            # correspondence a client record has - out of the comparison entirely.
+            if result["deflation"] is None or result["compared_weight"] < DIRECT_CORRESPONDENCE_WEIGHT:
                 continue
             comparable += 1
             if result["deflation"] >= DEFLATION_WEIGHT_THRESHOLD:
                 unfair += 1
 
-        if not comparable:
-            return 0.0
-        return round(unfair / comparable, 3)
+        return shrink_penalty_ratio(unfair, comparable)
 
     except Exception as e:
         logger("CLIENT_REVIEW_AI",
@@ -720,8 +736,19 @@ def calculate_client_coerced_ratio(client_id: str) -> float:
     review is held back from publishing, so a published-only filter would make this
     structurally zero. Same reasoning as the freelancer-side fix in
     calculate_aggregate_performance.
+
+    Rows whose analysis was unavailable are excluded from both sides of the ratio:
+    an outage writes is_flagged_coerced=False for every review it touched, and
+    counting those as clean would let a Groq outage dilute the coercion ratio of
+    every client who received a review during it. authenticity_score IS NULL is
+    the marker - see ClientReviewFunctions.save_ai_analysis.
+
+    Shrunk by shrink_penalty_ratio, so a lone flag does not carry the whole
+    15-point penalty. See that function for why.
     """
     try:
+        from ai_related.review_analysis.review_ai_functions import shrink_penalty_ratio
+
         rows = get_db().execute_query(
             """
             SELECT cra.is_flagged_coerced
@@ -729,13 +756,14 @@ def calculate_client_coerced_ratio(client_id: str) -> float:
             JOIN client_reviews cr ON cr.id = cra.client_review_id
             WHERE cr.client_id = :cid
               AND cr.status IN ('published', 'flagged', 'suppressed')
+              AND cra.authenticity_score IS NOT NULL
             """,
             {"cid": client_id},
         )
-        if not rows:
-            return 0.0
-        coerced = sum(1 for r in rows if r["is_flagged_coerced"])
-        return round(coerced / len(rows), 3)
+        return shrink_penalty_ratio(
+            sum(1 for r in rows or [] if r["is_flagged_coerced"]),
+            len(rows or []),
+        )
     except Exception as e:
         logger("CLIENT_REVIEW_AI", f"Error computing client coerced ratio: {str(e)}", level="ERROR")
         return 0.0

@@ -1,5 +1,6 @@
 import os
 import sys
+from typing import Optional
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
@@ -330,9 +331,25 @@ async def run_client_review_post_submission_pipeline(client_review_id: str, is_r
                     )
             except Exception as notif_err:
                 logger("CLIENT_REVIEW_PIPELINE", f"Hold-back notification failed (non-fatal): {notif_err}", level="WARNING")
+
+            # Held, not ignored: calculate_client_coerced_ratio counts reviews the
+            # pipeline analysed regardless of status, exactly because a coerced
+            # review never publishes - and returning here meant nothing ever read
+            # that ratio at the moment it changed. A client who pressures every
+            # freelancer has every review held, so the -15 would never have landed.
+            # Conditioned on the flag, and skipped for every other hold-back reason,
+            # for the same reasons as the freelancer side.
+            if is_flagged_coerced:
+                await recalculate_and_persist_client_trust_score(client_id, trigger="review_held")
+            logger("CLIENT_REVIEW_PIPELINE", f"Client-review post-submission pipeline done | review={client_review_id} | held | coercion_penalty_applied={is_flagged_coerced}", level="INFO")
             return
 
         await recalculate_and_persist_client_trust_score(client_id)
+
+        # And the reviewing FREELANCER's own score: their unfair_review_ratio counts
+        # published client reviews they wrote, and one just published. Mirror of the
+        # reviewer-side refresh in review_pipeline.
+        await _recalculate_reviewer_trust_score(review["reviewer_id"])
 
         logger("CLIENT_REVIEW_PIPELINE", f"Client-review post-submission pipeline done | review={client_review_id}", level="INFO")
 
@@ -340,7 +357,44 @@ async def run_client_review_post_submission_pipeline(client_review_id: str, is_r
         logger("CLIENT_REVIEW_PIPELINE", f"Post-submission pipeline failed for review {client_review_id}: {str(e)}", level="ERROR")
 
 
-async def recalculate_and_persist_client_trust_score(client_id: str) -> float:
+async def _recalculate_reviewer_trust_score(reviewer_freelancer_id: Optional[str]) -> None:
+    """Recompute the trust score of the FREELANCER who wrote a client review that
+    just published.
+
+    Their unfair_review_ratio describes reviews they authored, but it is only read
+    while scoring reviews they received - so writing one left their own penalty
+    stale until a client happened to review them back. Mirror of
+    review_pipeline._recalculate_reviewer_trust_score, including the
+    inside-the-function import that keeps the two pipeline modules acyclic and the
+    non-fatal handling: the client review is already published and the client's
+    score already written.
+
+    category is passed as None deliberately. This refresh is not tied to a
+    contract, so it has no category to assert; recalculate_and_persist_trust_score
+    reads the stored one rather than overwriting it with NULL.
+    """
+    if not reviewer_freelancer_id:
+        return
+    try:
+        from ai_related.review_analysis.review_pipeline import (
+            recalculate_and_persist_trust_score,
+        )
+
+        await recalculate_and_persist_trust_score(
+            freelancer_id=str(reviewer_freelancer_id),
+            category=None,
+            trigger="reviewer_conduct",
+        )
+    except Exception as e:
+        logger("CLIENT_REVIEW_PIPELINE",
+               f"Reviewer trust recalculation failed for freelancer {reviewer_freelancer_id} (non-fatal): {str(e)}",
+               level="WARNING")
+
+
+async def recalculate_and_persist_client_trust_score(
+    client_id: str,
+    trigger: str = "review_published",
+) -> float:
     """
     Recomputes and upserts a client's trust score from every sub-score,
     aggregated live across their full contract/review history (see
@@ -348,12 +402,33 @@ async def recalculate_and_persist_client_trust_score(client_id: str) -> float:
     both query ALL contracts directly rather than a per-contract snapshot,
     so there's no equivalent to the "single contract dominates" bug that had
     to be fixed on the freelancer side). Shared by the post-submission
-    pipeline and the admin override-publish endpoint.
+    pipeline (on publish AND on hold-back, since the coercion penalty counts
+    held reviews) and the admin override-publish endpoint.
+
+    trigger names the event behind this recalculation: it becomes the
+    client_trust_score_history snapshot_reason the admin red-flag view renders,
+    and only "review_published" regenerates the AI summary. See
+    recalculate_and_persist_trust_score for the full reasoning.
 
     Async because the AI review summary (below) needs an LLM call - it only
     actually fires every SUMMARY_REGEN_INTERVAL reviews, not on every publish.
     """
+    regenerate_summary = trigger == "review_published"
     weighted_avg, total_reviews = calculate_weighted_client_review_avg(client_id)
+
+    # Nothing published and no score on file: no reputation for the penalty to
+    # reduce, and a held review must not be what creates one. See the equivalent
+    # guard in recalculate_and_persist_trust_score.
+    if total_reviews == 0:
+        on_file = get_db().execute_query(
+            "SELECT 1 FROM client_trust_score WHERE client_id = :cid", {"cid": client_id}
+        )
+        if not on_file:
+            logger("CLIENT_REVIEW_PIPELINE",
+                   f"Skipping trust score for {client_id}: no published reviews and no score on file (trigger={trigger})",
+                   level="INFO")
+            return 0.0
+
     responsiveness_score = compute_client_responsiveness_score(client_id)
     dispute_fairness_score = compute_client_dispute_rate_score(client_id)
     ai_trust = calculate_client_ai_trust_components(client_id)
@@ -377,12 +452,35 @@ async def recalculate_and_persist_client_trust_score(client_id: str) -> float:
         record_consistency=ai_trust.get("record_consistency"),
     )
 
+    # The PUBLIC star figure: a plain mean over published ratings, matching the
+    # freelancer side's display_star_avg. weighted_avg above cannot serve this
+    # purpose - it multiplies each review by recency, authenticity, repeat decay and
+    # deflation, so a client with three recent 5-star reviews can score 4.1 and no
+    # viewer averaging the ratings they can see is able to reproduce it. Same
+    # reasoning as review_confidence returning a label rather than printing
+    # effective_review_avg.
+    display_star_rows = get_db().execute_query(
+        """
+        SELECT AVG(crr.score) AS avg_score
+        FROM client_review_ratings crr
+        JOIN client_reviews cr ON cr.id = crr.client_review_id
+        WHERE cr.client_id = :cid AND cr.status = 'published'
+        """,
+        {"cid": client_id},
+    )
+    display_star_avg = (
+        round(float(display_star_rows[0]["avg_score"]), 2)
+        if display_star_rows and display_star_rows[0]["avg_score"] is not None
+        else None
+    )
+
     # Regenerate the profile-level AI summary only every SUMMARY_REGEN_INTERVAL
     # reviews (3, 8, 13...), not on every single publish - same cadence and
     # reasoning as the freelancer side.
     ai_review_summary = None
     if (
-        total_reviews >= MIN_REVIEWS_FOR_SUMMARY
+        regenerate_summary
+        and total_reviews >= MIN_REVIEWS_FOR_SUMMARY
         and (total_reviews - MIN_REVIEWS_FOR_SUMMARY) % SUMMARY_REGEN_INTERVAL == 0
     ):
         client_name = "the client"
@@ -393,11 +491,12 @@ async def recalculate_and_persist_client_trust_score(client_id: str) -> float:
             client_name = name_rows[0]["full_name"]
         ai_review_summary = await generate_client_review_summary(client_id, client_name)
 
-    ClientReviewFunctions.upsert_client_trust_score(
+    moved = ClientReviewFunctions.upsert_client_trust_score(
         client_id=client_id,
         trust_score=trust_score,
         weighted_review_avg_received=weighted_avg,
         effective_review_avg_received=round(shrink_toward_prior(weighted_avg, total_reviews), 3),
+        display_star_avg=display_star_avg,
         responsiveness_score=responsiveness_score,
         communication_sentiment=ai_trust["communication_sentiment"],
         authenticity_confidence=ai_trust["authenticity_confidence"],
@@ -405,8 +504,11 @@ async def recalculate_and_persist_client_trust_score(client_id: str) -> float:
         dispute_fairness_score=dispute_fairness_score,
         total_reviews_received=total_reviews,
         ai_review_summary=ai_review_summary,
+        snapshot_reason=trigger,
     )
 
-    ClientReviewFunctions.check_and_create_red_flag(client_id, trust_score)
+    # Only on an actual movement - same reasoning as the freelancer side.
+    if moved:
+        ClientReviewFunctions.check_and_create_red_flag(client_id, trust_score)
 
     return trust_score

@@ -20,14 +20,14 @@ client_router = APIRouter(prefix="/clients", tags=["Clients"])
 
 _VALID_CLIENT_ORDER_BY = {
     "created_at", "updated_at", "full_name", "total_jobs_posted", "total_jobs_completed",
-    "weighted_review_avg_received", "total_reviews_received",
+    "weighted_review_avg_received", "display_star_avg", "total_reviews_received",
 }
 
 @client_router.get("/browse/all", response_model=None)
 async def browse_all_clients(
     order_by: str = Query(
         default="weighted_review_avg_received",
-        description="Sort field. One of: created_at, updated_at, full_name, total_jobs_posted, total_jobs_completed, weighted_review_avg_received (default), total_reviews_received",
+        description="Sort field. One of: created_at, updated_at, full_name, total_jobs_posted, total_jobs_completed, weighted_review_avg_received (default), display_star_avg, total_reviews_received. weighted_review_avg_received ranks on the authenticity-weighted score, which is not returned in the payload; display_star_avg sorts on the plain average that is.",
         ),
     order_dir: str = Query(default="desc", description="asc or desc", pattern="^(asc|desc)$"),
     page: int = Query(default=1, ge=1),

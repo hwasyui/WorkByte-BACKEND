@@ -429,7 +429,19 @@ class ReviewFunctions:
         authenticity_confidence: Optional[float] = None,
         consistency_score: Optional[float] = None,
         ai_review_summary: Optional[str] = None,
-    ) -> None:
+        snapshot_reason: str = "review_published",
+    ) -> bool:
+        """Write the current trust score, and snapshot it if it moved.
+
+        Returns whether the score actually moved, which is the caller's cue to
+        run check_and_create_red_flag: an unchanged score cannot have dropped,
+        and re-evaluating one re-reports a decline that was already alerted on.
+
+        snapshot_reason records WHY the score was recalculated - the admin
+        red-flag investigation view renders it beside each movement. It is not
+        always a publish: a held review still moves the score, because the
+        coercion penalty counts reviews that never publish.
+        """
         try:
             db = get_db()
             existing = db.fetch_data(
@@ -470,16 +482,27 @@ class ReviewFunctions:
                 data["id"] = str(uuid.uuid4())
                 db.insert_data(table_name="freelancer_trust_scores", data=data)
 
-            db.insert_data(
-                table_name="trust_score_history",
-                data={
-                    "id": str(uuid.uuid4()),
-                    "freelancer_id": freelancer_id,
-                    "overall_score": overall_score,
-                    "snapshot_reason": "review_published",
-                },
-            )
+            # Only snapshot an actual movement. check_and_create_red_flag compares
+            # against the best of the last RED_FLAG_WINDOW rows, so rows recording
+            # no change are not neutral: they push genuinely higher earlier scores
+            # out of the window and blunt the sustained-decline rule the window
+            # exists to catch. That became reachable once recalculations stopped
+            # being one-per-publish - a held review, a reconcile retry of it, and a
+            # reviewer-conduct refresh can all land on an unchanged score.
+            previous_score = existing[0].get("overall_score") if existing else None
+            moved = previous_score is None or round(float(previous_score), 2) != round(float(overall_score), 2)
+            if moved:
+                db.insert_data(
+                    table_name="trust_score_history",
+                    data={
+                        "id": str(uuid.uuid4()),
+                        "freelancer_id": freelancer_id,
+                        "overall_score": overall_score,
+                        "snapshot_reason": snapshot_reason,
+                    },
+                )
             logger("REVIEW_FUNCTIONS", f"Trust score upserted for freelancer {freelancer_id}: {overall_score}", level="INFO")
+            return moved
         except Exception as e:
             logger("REVIEW_FUNCTIONS", f"Error upserting trust score: {str(e)}", level="ERROR")
             raise
@@ -496,7 +519,9 @@ class ReviewFunctions:
         half of the I/O: read the history, write the alert.
 
         snapshots[0] is the row upsert_trust_score just wrote for new_score, so the
-        priors start at index 1.
+        priors start at index 1. That holds because callers only reach this after
+        an upsert that reported the score as moved - an unchanged score writes no
+        snapshot, and index 1 would then be a prior that is still current.
         """
         try:
             db = get_db()

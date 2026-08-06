@@ -467,10 +467,40 @@ async def run_post_review_pipeline(review_id: str, is_retry: bool = False) -> No
                     )
             except Exception as notif_err:
                 logger("REVIEW_PIPELINE", f"Hold-back notification failed (non-fatal): {notif_err}", level="WARNING")
-            return  # Do not recalculate trust score for unpublished reviews
+
+            # A held review can still move one reputation input, and only one: the
+            # coercion penalty. calculate_aggregate_performance counts coerced
+            # reviews across every status the pipeline analysed, precisely because a
+            # coerced review never publishes - but this branch used to return before
+            # anything read that ratio. The penalty was therefore computed correctly
+            # and applied only when some LATER review published, and never at all in
+            # the case it exists for: a freelancer who pressures every client has
+            # every review held, so no later review ever publishes to trigger it.
+            #
+            # Conditioned on the flag rather than run for every hold-back, because
+            # coercion is the only one of the hold-back reasons that feeds a score.
+            # A review held as fake, generic or mismatched leaves every input
+            # untouched, and recalculating for it would burn the query budget to
+            # write back an identical number.
+            if is_flagged_coerced:
+                await recalculate_and_persist_trust_score(
+                    freelancer_id,
+                    review.get("inferred_category"),
+                    trigger="review_held",
+                )
+            logger("REVIEW_PIPELINE", f"Post-review pipeline done | review={review_id} | held | coercion_penalty_applied={is_flagged_coerced}", level="INFO")
+            return
 
         # Step 8-9: Recalculate trust score + red flag check
         overall_score = await recalculate_and_persist_trust_score(freelancer_id, review.get("inferred_category"))
+
+        # And the REVIEWER's own score: unfair_review_ratio counts published reviews
+        # they wrote, and one just published. Their score is otherwise only
+        # recalculated when they RECEIVE a review, so a client who hires constantly
+        # and is rarely reviewed back could accumulate unfair reviews against a
+        # penalty that never got recomputed. Non-fatal - this review is already
+        # published and the freelancer's score is already written.
+        await _recalculate_reviewer_trust_score(review["reviewer_id"])
 
         logger("REVIEW_PIPELINE", f"Post-review pipeline done | review={review_id} | trust_score={overall_score}", level="INFO")
 
@@ -478,22 +508,106 @@ async def run_post_review_pipeline(review_id: str, is_retry: bool = False) -> No
         logger("REVIEW_PIPELINE", f"Post-review pipeline failed for review {review_id}: {str(e)}", level="ERROR")
 
 
-async def recalculate_and_persist_trust_score(freelancer_id: str, category: Optional[str]) -> float:
+async def _recalculate_reviewer_trust_score(reviewer_client_id: Optional[str]) -> None:
+    """Recompute the trust score of the CLIENT who wrote a review that just published.
+
+    Their unfair_review_ratio is a judgement about reviews they authored, but it is
+    only ever read while scoring reviews they received - the two events are
+    different, and only the second one used to trigger a recalculation. Writing a
+    review therefore left the reviewer's own penalty stale until somebody happened
+    to review them back.
+
+    Imported inside the function: client_review_pipeline imports this module's
+    scoring helpers, so a module-level import would close the cycle.
+
+    Non-fatal by construction. The caller has already published the review and
+    written the reviewed party's score; failing that work because a second,
+    independent score could not be refreshed would be the worse outcome.
+    """
+    if not reviewer_client_id:
+        return
+    try:
+        from ai_related.review_analysis.client_review_pipeline import (
+            recalculate_and_persist_client_trust_score,
+        )
+
+        await recalculate_and_persist_client_trust_score(
+            str(reviewer_client_id), trigger="reviewer_conduct"
+        )
+    except Exception as e:
+        logger("REVIEW_PIPELINE",
+               f"Reviewer trust recalculation failed for client {reviewer_client_id} (non-fatal): {str(e)}",
+               level="WARNING")
+
+
+async def recalculate_and_persist_trust_score(
+    freelancer_id: str,
+    category: Optional[str],
+    trigger: str = "review_published",
+) -> float:
     """
     Recomputes and upserts a freelancer's trust score from every sub-score
     aggregated across their FULL contract/review history (see
     calculate_aggregate_performance/calculate_ai_trust_components), then
     checks for a red-flag-worthy score drop. Shared by run_post_review_pipeline
-    (after a new review publishes) and the admin override-publish endpoint
-    (after a held-back review is manually approved) so both paths compute
-    the trust score the same way instead of duplicating this logic.
+    (after a new review publishes, and after one is held - the coercion penalty
+    only counts held reviews) and the admin override-publish endpoint (after a
+    held-back review is manually approved) so every path computes the trust
+    score the same way instead of duplicating this logic.
+
+    category is looked up from the stored row when the caller has none. It is
+    written unconditionally by upsert_trust_score, so a recalculation triggered
+    by something other than a contract's own review - the reviewer-side refresh
+    in _recalculate_reviewer_trust_score - would otherwise null out the category
+    and the peer ranking that depends on it.
+
+    trigger names the event that caused this recalculation, and two things read it:
+
+      * it is stored as the trust_score_history snapshot_reason, which the admin
+        red-flag investigation view renders next to each score movement. A
+        recalculation triggered by a HELD review labelled "review_published"
+        would be a false statement in the one view an admin uses to work out why
+        a score moved.
+      * only "review_published" regenerates the AI summary. The cadence below
+        keys off the published review count, so any other trigger leaves that
+        count untouched and would re-fire the same LLM call for the same count
+        every time a review is held or a reviewer's conduct is rescored.
 
     Async because the AI review summary (below) needs an LLM call - it only
     actually fires every SUMMARY_REGEN_INTERVAL reviews, not on every publish.
     """
     db = get_db()
+    regenerate_summary = trigger == "review_published"
+
+    if category is None:
+        stored = db.execute_query(
+            "SELECT category FROM freelancer_trust_scores WHERE freelancer_id = :fid",
+            {"fid": freelancer_id},
+        )
+        if stored:
+            category = stored[0].get("category")
 
     weighted_avg, total_reviews = calculate_weighted_review_avg(freelancer_id)
+
+    # A freelancer with nothing published and no score on file has no reputation
+    # for a penalty to reduce, and a held review must not be what invents one.
+    # Reachable only from the hold-back trigger - every other caller publishes
+    # first, so total_reviews is at least 1 by the time it gets here. Without this
+    # guard, a first-ever review held for coercion would create a trust score
+    # around 72: the star component would be pure shrinkage prior (nothing
+    # published to average), and a 7.5 point penalty subtracted from it would still
+    # read as a respectable score on a profile that has never been reviewed.
+    if total_reviews == 0:
+        on_file = db.execute_query(
+            "SELECT 1 FROM freelancer_trust_scores WHERE freelancer_id = :fid",
+            {"fid": freelancer_id},
+        )
+        if not on_file:
+            logger("REVIEW_PIPELINE",
+                   f"Skipping trust score for {freelancer_id}: no published reviews and no score on file (trigger={trigger})",
+                   level="INFO")
+            return 0.0
+
     aggregate_perf = calculate_aggregate_performance(freelancer_id)
     ai_trust = calculate_ai_trust_components(freelancer_id)
 
@@ -537,7 +651,8 @@ async def recalculate_and_persist_trust_score(freelancer_id: str, category: Opti
     # between consecutive reviews and each regen costs an LLM call.
     ai_review_summary = None
     if (
-        total_reviews >= MIN_REVIEWS_FOR_SUMMARY
+        regenerate_summary
+        and total_reviews >= MIN_REVIEWS_FOR_SUMMARY
         and (total_reviews - MIN_REVIEWS_FOR_SUMMARY) % SUMMARY_REGEN_INTERVAL == 0
     ):
         freelancer_name = "Unknown"
@@ -567,7 +682,7 @@ async def recalculate_and_persist_trust_score(freelancer_id: str, category: Opti
         if rank_rows and rank_rows[0]["rank_pct"] is not None:
             category_rank_pct = float(rank_rows[0]["rank_pct"])
 
-    ReviewFunctions.upsert_trust_score(
+    moved = ReviewFunctions.upsert_trust_score(
         freelancer_id=freelancer_id,
         overall_score=overall_score,
         weighted_review_avg=weighted_avg,
@@ -579,12 +694,19 @@ async def recalculate_and_persist_trust_score(freelancer_id: str, category: Opti
         total_reviews=total_reviews,
         category=category,
         category_rank_pct=category_rank_pct,
+        snapshot_reason=trigger,
         on_time_score=aggregate_perf["on_time_score"],
         authenticity_confidence=ai_trust["authenticity_confidence"],
         consistency_score=ai_trust["consistency_score"],
         ai_review_summary=ai_review_summary,
     )
 
-    ReviewFunctions.check_and_create_red_flag(freelancer_id, overall_score)
+    # Only when the score actually moved. Recalculations now outnumber score
+    # changes - a held review, a reconcile retry of that same review, and a
+    # reviewer-conduct refresh can all recompute an identical number - and
+    # re-evaluating an unchanged score re-reports a decline that was already
+    # alerted on, which is how a resolved alert comes back from the dead.
+    if moved:
+        ReviewFunctions.check_and_create_red_flag(freelancer_id, overall_score)
 
     return overall_score
