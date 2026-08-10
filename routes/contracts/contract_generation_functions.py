@@ -94,7 +94,8 @@ class ContractGenerationFunctions:
 
     @staticmethod
     def build_generation_context(
-        contract_id: str, contract: Optional[Dict] = None, contract_terms: Optional[Dict] = None
+        contract_id: str, contract: Optional[Dict] = None, contract_terms: Optional[Dict] = None,
+        milestones: Optional[List[Dict]] = None,
     ) -> Dict:
         """Gather everything the PDF is rendered from.
 
@@ -103,6 +104,9 @@ class ContractGenerationFunctions:
         first and writes the row last, so that a failure leaves nothing behind. Every
         other entity the document needs - the proposal, job post, role, freelancer and
         client - already exists by then and is still read from the database.
+
+        `milestones` follows the same pattern: creation passes the schedule straight
+        from the request, since the milestone rows haven't been written yet either.
         """
         try:
             if contract is None:
@@ -112,6 +116,9 @@ class ContractGenerationFunctions:
 
             if contract_terms is None:
                 contract_terms = ContractGenerationFunctions.get_contract_terms(contract_id) or {}
+            if milestones is None:
+                from routes.contracts.milestone_functions import MilestoneFunctions
+                milestones = MilestoneFunctions.get_milestones_by_contract_id(contract_id)
             proposal = ProposalFunctions.get_proposal_by_id(contract["proposal_id"]) or {}
             job_post = JobPostFunctions.get_job_post_by_id(contract["job_post_id"]) or {}
             job_role = JobRoleFunctions.get_job_role_by_id(contract["job_role_id"]) or {}
@@ -121,6 +128,7 @@ class ContractGenerationFunctions:
             return {
                 "contract": contract,
                 "contract_terms": contract_terms,
+                "milestones": milestones,
                 "proposal": proposal,
                 "job_post": job_post,
                 "job_role": job_role,
@@ -155,19 +163,20 @@ class ContractGenerationFunctions:
         generated_at: Optional[datetime] = None,
         contract: Optional[Dict] = None,
         contract_terms: Optional[Dict] = None,
+        milestones: Optional[List[Dict]] = None,
     ) -> bytes:
         """Render the contract PDF.
 
-        Reads the persisted row by default. Creation passes `contract` and
-        `contract_terms` directly, because at that point neither has been written yet -
-        see build_generation_context.
+        Reads the persisted row by default. Creation passes `contract`, `contract_terms`
+        and `milestones` directly, because at that point none of them have been written
+        yet - see build_generation_context.
 
         Pass the same `generated_at` that gets written to contract.contract_pdf_generated_at
         so the date on the document matches the column. Defaults to now for callers that
         only want the bytes.
         """
         context = ContractGenerationFunctions.build_generation_context(
-            contract_id, contract=contract, contract_terms=contract_terms
+            contract_id, contract=contract, contract_terms=contract_terms, milestones=milestones
         )
         if context is None:
             raise ValueError("Contract not found")
@@ -182,11 +191,11 @@ class ContractGenerationFunctions:
                 "role_title": contract.get("role_title"),
                 "agreed_budget": contract.get("agreed_budget"),
                 "budget_currency": contract.get("budget_currency"),
-                "payment_structure": contract.get("payment_structure"),
                 "start_date": contract.get("start_date"),
                 "end_date": contract.get("end_date"),
                 "agreed_duration": contract.get("agreed_duration"),
                 "generated_at": (generated_at or datetime.utcnow()).strftime("%Y-%m-%d %H:%M UTC"),
+                "milestones": context["milestones"],
                 "job_post": context["job_post"],
                 "job_role": context["job_role"],
                 "freelancer": context["freelancer"],

@@ -9,6 +9,7 @@ import uuid
 from functions.db_manager import get_db
 from functions.logger import logger
 from routes.contracts.contract_functions import ContractFunctions, _fire_notification
+from routes.contracts.milestone_functions import MilestoneFunctions
 from routes.clients.client_functions import ClientFunctions
 from routes.freelancers.freelancer_functions import FreelancerFunctions
 from routes.dm.dm_functions import DMFunctions
@@ -51,11 +52,11 @@ def notify_admins(notif_type: str, title: str, body: str, data: Dict) -> None:
 class PaymentFunctions:
 
     @staticmethod
-    def get_expected_amount(contract: Dict, payee: str) -> float:
-        agreed_budget = float(contract["agreed_budget"])
+    def get_expected_amount(milestone: Dict, payee: str) -> float:
+        milestone_amount = float(milestone["amount"])
         if payee == "admin":
-            return round(agreed_budget * PLATFORM_COMMISSION_RATE, 2)
-        return round(agreed_budget * (1 - PLATFORM_COMMISSION_RATE), 2)
+            return round(milestone_amount * PLATFORM_COMMISSION_RATE, 2)
+        return round(milestone_amount * (1 - PLATFORM_COMMISSION_RATE), 2)
 
     @staticmethod
     def get_proof_by_id(proof_id: str) -> Optional[Dict]:
@@ -118,12 +119,16 @@ class PaymentFunctions:
             if contract["status"] not in PAYMENT_STAGE_STATUSES:
                 raise ValueError(f"Cannot upload payment proof when contract status is '{contract['status']}'")
 
-            expected = PaymentFunctions.get_expected_amount(contract, payee)
+            milestone = MilestoneFunctions.get_current_milestone(contract_id)
+            if not milestone or milestone["status"] not in PAYMENT_STAGE_STATUSES:
+                raise ValueError("There is no milestone currently awaiting payment on this contract")
+
+            expected = PaymentFunctions.get_expected_amount(milestone, payee)
             submitted = round(float(amount), 2)
             if abs(submitted - expected) > AMOUNT_TOLERANCE:
                 raise ValueError(
                     f"Amount mismatch: {payee}'s share of the {contract.get('budget_currency', 'USD')} "
-                    f"{contract['agreed_budget']} budget should be {expected}, got {submitted}"
+                    f"{milestone['amount']} milestone should be {expected}, got {submitted}"
                 )
 
             proof_id = proof_id or str(uuid.uuid4())
@@ -133,6 +138,7 @@ class PaymentFunctions:
                 data={
                     "proof_id": proof_id,
                     "contract_id": contract_id,
+                    "milestone_id": milestone["milestone_id"],
                     "payee": payee,
                     "amount": submitted,
                     "reference_number": reference_number,
@@ -140,6 +146,11 @@ class PaymentFunctions:
                     "uploaded_by": uploaded_by,
                     "status": "pending_review",
                 },
+            )
+            db.update_data(
+                table_name="milestone",
+                data={"status": "payment_review"},
+                conditions=[("milestone_id", "=", milestone["milestone_id"])],
             )
             db.update_data(
                 table_name="contract",
@@ -150,17 +161,17 @@ class PaymentFunctions:
             notify_admins(
                 notif_type="payment_proof_uploaded",
                 title="Payment proof uploaded",
-                body=f"A payment proof for \"{contract.get('contract_title')}\" ({payee}'s share) is awaiting verification.",
-                data={"contract_id": contract_id, "proof_id": proof_id, "payee": payee},
+                body=f"A payment proof for \"{milestone.get('title')}\" on \"{contract.get('contract_title')}\" ({payee}'s share) is awaiting verification.",
+                data={"contract_id": contract_id, "milestone_id": milestone["milestone_id"], "proof_id": proof_id, "payee": payee},
             )
 
             try:
                 DMFunctions.send_system_event(
                     contract_id=contract_id,
                     actor_id=uploaded_by,
-                    message_text=f"Payment proof uploaded for {payee}.",
+                    message_text=f"Payment proof uploaded for {payee} ({milestone.get('title')}).",
                     event_type="payment_proof_uploaded",
-                    metadata={"proof_id": proof_id, "payee": payee},
+                    metadata={"proof_id": proof_id, "milestone_id": milestone["milestone_id"], "payee": payee},
                 )
             except Exception:
                 pass
@@ -225,6 +236,11 @@ class PaymentFunctions:
                 conditions=[("proof_id", "=", proof_id)],
             )
             db.update_data(
+                table_name="milestone",
+                data={"status": "payment_rejected"},
+                conditions=[("milestone_id", "=", proof["milestone_id"])],
+            )
+            db.update_data(
                 table_name="contract",
                 data={"status": "payment_rejected"},
                 conditions=[("contract_id", "=", proof["contract_id"])],
@@ -252,21 +268,25 @@ class PaymentFunctions:
                 raise ValueError("Contract not found")
             if contract["status"] not in PAYMENT_STAGE_STATUSES:
                 raise ValueError(f"Cannot confirm receipt when contract status is '{contract['status']}'")
-            if contract.get("freelancer_confirmed_receipt_at"):
-                raise ValueError("Receipt has already been confirmed for this contract")
+
+            milestone = MilestoneFunctions.get_current_milestone(contract_id)
+            if not milestone or milestone["status"] not in PAYMENT_STAGE_STATUSES:
+                raise ValueError("There is no milestone currently awaiting payment on this contract")
+            if milestone.get("freelancer_confirmed_receipt_at"):
+                raise ValueError("Receipt has already been confirmed for this milestone")
 
             db = get_db()
             db.update_data(
-                table_name="contract",
+                table_name="milestone",
                 data={"freelancer_confirmed_receipt_at": datetime.now(timezone.utc)},
-                conditions=[("contract_id", "=", contract_id)],
+                conditions=[("milestone_id", "=", milestone["milestone_id"])],
             )
 
             notify_admins(
                 notif_type="freelancer_confirmed_receipt",
                 title="Freelancer confirmed receipt",
-                body=f"The freelancer confirmed receiving their share for \"{contract.get('contract_title')}\".",
-                data={"contract_id": contract_id},
+                body=f"The freelancer confirmed receiving their share for \"{milestone.get('title')}\" on \"{contract.get('contract_title')}\".",
+                data={"contract_id": contract_id, "milestone_id": milestone["milestone_id"]},
             )
 
             completed = PaymentFunctions._maybe_complete_contract(contract_id)
@@ -277,51 +297,137 @@ class PaymentFunctions:
             raise
 
     @staticmethod
-    def _write_completion(tx, contract_id: str, agreed_budget, verified_by: str, admin_override: bool) -> None:
-        commission_amount = round(float(agreed_budget) * PLATFORM_COMMISSION_RATE, 2)
-        payout_amount = round(float(agreed_budget) - commission_amount, 2)
+    def _complete_milestone(tx, contract_id: str, milestone: Dict, verified_by: str, admin_override: bool) -> bool:
+        """Marks one milestone paid. If another milestone is waiting behind it, unlocks
+        that one and sends the contract back to 'active'. If this was the last
+        milestone, rolls the per-milestone totals up onto the contract (so the admin
+        commission dashboard, which reads contract.commission_amount, keeps working
+        unchanged) and marks the whole contract 'completed'.
+
+        Returns True when the contract just fully completed.
+        """
+        commission_amount = round(float(milestone["amount"]) * PLATFORM_COMMISSION_RATE, 2)
+        payout_amount = round(float(milestone["amount"]) - commission_amount, 2)
+        now = datetime.now(timezone.utc)
+
         tx.update_data(
-            table_name="contract",
+            table_name="milestone",
             data={
                 "status": "completed",
                 "commission_rate": PLATFORM_COMMISSION_RATE,
                 "commission_amount": commission_amount,
                 "payout_amount": payout_amount,
-                "payment_verified_at": datetime.now(timezone.utc),
+                "payment_verified_at": now,
                 "payment_verified_by": verified_by,
                 "completed_by_admin_override": admin_override,
-                "actual_completion_date": datetime.now(timezone.utc).date(),
+            },
+            conditions=[("milestone_id", "=", milestone["milestone_id"])],
+        )
+
+        next_rows = tx.execute_query(
+            "SELECT milestone_id FROM milestone WHERE contract_id = :cid AND sequence_order = :seq",
+            {"cid": contract_id, "seq": milestone["sequence_order"] + 1},
+        )
+        if next_rows:
+            tx.update_data(
+                table_name="milestone",
+                data={"status": "active"},
+                conditions=[("milestone_id", "=", str(next_rows[0]["milestone_id"]))],
+            )
+            tx.update_data(
+                table_name="contract",
+                data={"status": "active"},
+                conditions=[("contract_id", "=", contract_id)],
+            )
+            return False
+
+        totals = dict(tx.execute_query(
+            """
+            SELECT
+                COALESCE(SUM(commission_amount), 0) AS commission_amount,
+                COALESCE(SUM(payout_amount), 0) AS payout_amount,
+                BOOL_OR(completed_by_admin_override) AS any_override
+            FROM milestone WHERE contract_id = :cid
+            """,
+            {"cid": contract_id},
+        )[0])
+        tx.update_data(
+            table_name="contract",
+            data={
+                "status": "completed",
+                "commission_rate": PLATFORM_COMMISSION_RATE,
+                "commission_amount": float(totals["commission_amount"]),
+                "payout_amount": float(totals["payout_amount"]),
+                "payment_verified_at": now,
+                "payment_verified_by": verified_by,
+                "completed_by_admin_override": bool(totals["any_override"]),
+                "freelancer_confirmed_receipt_at": now,
+                "actual_completion_date": now.date(),
             },
             conditions=[("contract_id", "=", contract_id)],
         )
+        return True
+
+    @staticmethod
+    def _notify_milestone_advanced(contract: Dict) -> None:
+        """A milestone just got paid but the contract isn't done yet - tell both
+        parties the next milestone has unlocked. Non-fatal: this is a courtesy
+        notification, not part of the payment record."""
+        try:
+            contract_id = contract.get("contract_id")
+            next_milestone = MilestoneFunctions.get_current_milestone(contract_id)
+            title = (next_milestone or {}).get("title") or "the next milestone"
+            fl = FreelancerFunctions.get_freelancer_by_id(str(contract.get("freelancer_id")))
+            cl = ClientFunctions.get_client_by_id(str(contract.get("client_id")))
+            for party in (fl, cl):
+                if party:
+                    _fire_notification(NotificationFunctions.notify(
+                        recipient_user_id=str(party["user_id"]),
+                        notif_type="milestone_paid",
+                        title="Milestone paid",
+                        body=f"A milestone on \"{contract.get('contract_title')}\" is complete. \"{title}\" is now open.",
+                        data={"contract_id": contract_id, "milestone_id": (next_milestone or {}).get("milestone_id")},
+                    ))
+        except Exception as e:
+            logger("PAYMENT_FUNCTIONS", f"Milestone-advanced notification failed (non-fatal): {str(e)}", level="WARNING")
 
     @staticmethod
     def _maybe_complete_contract(contract_id: str) -> Optional[Dict]:
         try:
-            ready = False
+            milestone_completed = False
+            fully_completed = False
             with get_db().transaction() as tx:
                 rows = tx.execute_query(
-                    "SELECT status, freelancer_confirmed_receipt_at, agreed_budget FROM contract WHERE contract_id = :cid FOR UPDATE",
+                    """
+                    SELECT * FROM milestone
+                    WHERE contract_id = :cid AND status != 'completed'
+                    ORDER BY sequence_order ASC
+                    LIMIT 1
+                    FOR UPDATE
+                    """,
                     {"cid": contract_id},
                 )
                 if rows:
-                    contract = dict(rows[0])
-                    if contract["status"] == "payment_review" and contract.get("freelancer_confirmed_receipt_at"):
+                    milestone = dict(rows[0])
+                    if milestone["status"] == "payment_review" and milestone.get("freelancer_confirmed_receipt_at"):
                         admin_proof_rows = tx.execute_query(
-                            "SELECT verified_by FROM payment_proof WHERE contract_id = :cid AND payee = 'admin' AND status = 'verified' ORDER BY verified_at DESC LIMIT 1",
-                            {"cid": contract_id},
+                            "SELECT verified_by FROM payment_proof WHERE milestone_id = :mid AND payee = 'admin' AND status = 'verified' ORDER BY verified_at DESC LIMIT 1",
+                            {"mid": milestone["milestone_id"]},
                         )
                         if admin_proof_rows:
-                            PaymentFunctions._write_completion(
-                                tx, contract_id, contract["agreed_budget"], str(admin_proof_rows[0]["verified_by"]), False
+                            milestone_completed = True
+                            fully_completed = PaymentFunctions._complete_milestone(
+                                tx, contract_id, milestone, str(admin_proof_rows[0]["verified_by"]), False
                             )
-                            ready = True
 
-            if not ready:
+            if not milestone_completed:
                 return None
-            completed_contract = ContractFunctions.get_contract_by_id(contract_id)
-            PaymentFunctions._apply_completion_side_effects(completed_contract)
-            return completed_contract
+            updated_contract = ContractFunctions.get_contract_by_id(contract_id)
+            if fully_completed:
+                PaymentFunctions._apply_completion_side_effects(updated_contract)
+            else:
+                PaymentFunctions._notify_milestone_advanced(updated_contract)
+            return updated_contract
         except Exception as e:
             logger("PAYMENT_FUNCTIONS", f"Error completing contract: {str(e)}", level="ERROR")
             raise
@@ -329,44 +435,54 @@ class PaymentFunctions:
     @staticmethod
     def admin_override_completion(contract_id: str, admin_user_id: str, reason: str) -> Dict:
         try:
+            fully_completed = False
             with get_db().transaction() as tx:
                 rows = tx.execute_query(
-                    "SELECT status, agreed_budget FROM contract WHERE contract_id = :cid FOR UPDATE",
+                    """
+                    SELECT * FROM milestone
+                    WHERE contract_id = :cid AND status != 'completed'
+                    ORDER BY sequence_order ASC
+                    LIMIT 1
+                    FOR UPDATE
+                    """,
                     {"cid": contract_id},
                 )
                 if not rows:
-                    raise ValueError("Contract not found")
-                contract = dict(rows[0])
-                if contract["status"] != "payment_review":
-                    raise ValueError(f"Cannot override completion when contract status is '{contract['status']}'")
+                    raise ValueError("Contract not found, or every milestone is already completed")
+                milestone = dict(rows[0])
+                if milestone["status"] != "payment_review":
+                    raise ValueError(f"Cannot override completion when the current milestone's status is '{milestone['status']}'")
 
                 admin_proof_rows = tx.execute_query(
-                    "SELECT verified_by FROM payment_proof WHERE contract_id = :cid AND payee = 'admin' AND status = 'verified' ORDER BY verified_at DESC LIMIT 1",
-                    {"cid": contract_id},
+                    "SELECT verified_by FROM payment_proof WHERE milestone_id = :mid AND payee = 'admin' AND status = 'verified' ORDER BY verified_at DESC LIMIT 1",
+                    {"mid": milestone["milestone_id"]},
                 )
                 if not admin_proof_rows:
-                    raise ValueError("The admin's payment proof must be verified before the contract can be completed")
+                    raise ValueError("The admin's payment proof must be verified before this milestone can be completed")
 
-                PaymentFunctions._write_completion(
-                    tx, contract_id, contract["agreed_budget"], str(admin_proof_rows[0]["verified_by"]), True
+                fully_completed = PaymentFunctions._complete_milestone(
+                    tx, contract_id, milestone, str(admin_proof_rows[0]["verified_by"]), True
                 )
 
             try:
                 DMFunctions.send_system_event(
                     contract_id=contract_id,
                     actor_id=admin_user_id,
-                    message_text=f"Admin marked this contract completed without freelancer confirmation: {reason}",
+                    message_text=f"Admin marked \"{milestone.get('title')}\" completed without freelancer confirmation: {reason}",
                     event_type="payment_admin_override",
-                    metadata={"admin_user_id": admin_user_id, "reason": reason},
+                    metadata={"admin_user_id": admin_user_id, "milestone_id": milestone["milestone_id"], "reason": reason},
                 )
             except Exception:
                 pass
 
-            completed_contract = ContractFunctions.get_contract_by_id(contract_id)
-            PaymentFunctions._apply_completion_side_effects(completed_contract)
+            updated_contract = ContractFunctions.get_contract_by_id(contract_id)
+            if fully_completed:
+                PaymentFunctions._apply_completion_side_effects(updated_contract)
+            else:
+                PaymentFunctions._notify_milestone_advanced(updated_contract)
 
-            logger("PAYMENT_FUNCTIONS", f"Contract {contract_id} completion overridden by admin {admin_user_id}: {reason}", level="WARNING")
-            return completed_contract
+            logger("PAYMENT_FUNCTIONS", f"Milestone {milestone['milestone_id']} on contract {contract_id} completion overridden by admin {admin_user_id}: {reason}", level="WARNING")
+            return updated_contract
         except ValueError:
             raise
         except Exception as e:

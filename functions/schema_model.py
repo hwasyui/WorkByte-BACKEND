@@ -1,6 +1,7 @@
 import re
+from decimal import Decimal
 from fastapi import File, Form, Request, UploadFile
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 from typing import Optional, Any, Dict, List, Literal
 from datetime import date, datetime
 
@@ -786,6 +787,52 @@ class ContractSendRequest(BaseModel):
 
 
 # Contracts
+class MilestoneCreate(BaseModel):
+    title: str
+    description: Optional[str] = None
+    amount: float
+    due_date: Optional[date] = None
+
+    @field_validator('title')
+    @classmethod
+    def validate_title(cls, v):
+        if not v or not v.strip():
+            raise ValueError("Milestone title is required")
+        if len(v) > 255:
+            raise ValueError("Milestone title must be 255 characters or fewer")
+        return v
+
+    @field_validator('amount')
+    @classmethod
+    def validate_amount(cls, v):
+        if v <= 0:
+            raise ValueError("Milestone amount must be greater than zero")
+        return v
+
+
+class MilestoneResponse(BaseModel):
+    milestone_id: str
+    contract_id: str
+    title: str
+    description: Optional[str] = None
+    amount: float
+    sequence_order: int
+    status: str
+    due_date: Optional[date] = None
+    commission_rate: Optional[float] = None
+    commission_amount: Optional[float] = None
+    payout_amount: Optional[float] = None
+    freelancer_confirmed_receipt_at: Optional[datetime] = None
+    payment_verified_at: Optional[datetime] = None
+    payment_verified_by: Optional[str] = None
+    completed_by_admin_override: Optional[bool] = False
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
 class ContractCreate(BaseModel):
     contract_id: Optional[str] = None
     job_post_id: str
@@ -797,7 +844,6 @@ class ContractCreate(BaseModel):
     role_title: Optional[str] = None
     agreed_budget: float
     budget_currency: Optional[str] = None
-    payment_structure: Literal["full_payment", "milestone_based"]
     agreed_duration: Optional[str] = None
     # Accepted for backwards compatibility but ignored: a contract is always created
     # 'active', because it is only ever created complete.
@@ -807,6 +853,10 @@ class ContractCreate(BaseModel):
     actual_completion_date: Optional[date] = None
     total_hours_worked: Optional[float] = None
     total_paid: Optional[float] = 0
+    # Every contract is milestone-based; there is no more full_payment option. At
+    # least one milestone is required, and their amounts must add up to agreed_budget
+    # exactly (see validate_milestones_sum_to_budget).
+    milestones: List[MilestoneCreate] = Field(min_length=1)
     # Required: a contract is created together with the terms it was generated from,
     # in one transaction, so there is no moment at which one exists without the other.
     terms: ContractGenerateRequest
@@ -839,12 +889,24 @@ class ContractCreate(BaseModel):
             raise ValueError("Currency must be a 3-letter code, e.g. USD or IDR")
         return v
 
+    @model_validator(mode='after')
+    def validate_milestones_sum_to_budget(self):
+        # numeric(12,2), so only two decimals are significant - compare in cents to
+        # avoid float rounding rejecting a schedule that is actually exact.
+        total = sum(Decimal(str(m.amount)) for m in self.milestones)
+        budget = Decimal(str(self.agreed_budget)).quantize(Decimal("0.01"))
+        if total.quantize(Decimal("0.01")) != budget:
+            raise ValueError(
+                f"Milestone amounts must add up to the agreed budget "
+                f"({budget}), got {total.quantize(Decimal('0.01'))}"
+            )
+        return self
+
 class ContractUpdate(BaseModel):
     contract_title: Optional[str] = None
     role_title: Optional[str] = None
     agreed_budget: Optional[float] = None
     budget_currency: Optional[str] = None
-    payment_structure: Optional[str] = None
     agreed_duration: Optional[str] = None
     status: Optional[str] = None
     end_date: Optional[date] = None
@@ -863,7 +925,6 @@ class ContractResponse(BaseModel):
     role_title: Optional[str] = None
     agreed_budget: float
     budget_currency: Optional[str] = "USD"
-    payment_structure: str
     agreed_duration: Optional[str] = None
     status: str
     start_date: date
@@ -909,6 +970,7 @@ class ContractSubmissionFileResponse(BaseModel):
 class ContractSubmissionResponse(BaseModel):
     submission_id: str
     contract_id: str
+    milestone_id: str
     submitted_by: str
     note: Optional[str] = None
     status: str
@@ -930,6 +992,7 @@ class PaymentProofCreate(BaseModel):
 class PaymentProofResponse(BaseModel):
     proof_id: str
     contract_id: str
+    milestone_id: str
     payee: str
     amount: float
     reference_number: Optional[str] = None

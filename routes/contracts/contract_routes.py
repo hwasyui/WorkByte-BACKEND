@@ -35,6 +35,7 @@ from functions.response_utils import ResponseSchema
 from functions.db_manager import get_db
 from routes.contracts.contract_functions import ContractFunctions, MAX_ACTIVE_CONTRACTS_PER_FREELANCER
 from routes.contracts.contract_generation_functions import ContractGenerationFunctions, CONTRACT_BUCKET
+from routes.contracts.milestone_functions import MilestoneFunctions
 from routes.clients.client_functions import ClientFunctions
 from routes.freelancers.freelancer_functions import FreelancerFunctions
 from routes.proposals.proposal_functions import ProposalFunctions
@@ -211,7 +212,7 @@ def _render_notification(template: str, subs: dict) -> str:
 # the document keeps the originally agreed deadline, preserved in original_end_date.
 _PDF_FROZEN_FIELDS = {
     "contract_title", "role_title", "agreed_budget", "budget_currency",
-    "payment_structure", "agreed_duration", "start_date",
+    "agreed_duration", "start_date",
 }
 
 _CANCELLATION_DISPUTE_WINDOW = timedelta(hours=72)
@@ -266,7 +267,7 @@ async def _announce_contract_started(contract: Dict) -> None:
 # What the freelancer bid on is not the client's to rewrite afterwards. The role's
 # title and currency come from the job role, the money and the duration from the
 # proposal; the contract only records them. Everything else on the setup screen
-# (contract_title, payment_structure, start_date, the legal terms) stays editable.
+# (contract_title, start_date, the legal terms) stays editable.
 def _locked_field_error(field: str, submitted, expected) -> Dict:
     return {
         "message": (
@@ -423,6 +424,26 @@ async def get_contract_generation_data(contract_id: str, current_user: UserInDB 
     except Exception as e:
         logger("CONTRACT", f"Failed to fetch generation data for contract {contract_id}: {str(e)}", "GET /contracts/{contract_id}/generation-data", "ERROR")
         return ResponseSchema.error("Failed to fetch generation data for contract. Please try again.", 500)
+
+
+@contract_router.get("/{contract_id}/milestones")
+async def get_contract_milestones(contract_id: str, current_user: UserInDB = Depends(get_current_user)):
+    """Return this contract's milestone schedule, in order."""
+    try:
+        contract = ContractFunctions.get_contract_by_id(contract_id)
+        if not contract:
+            return ResponseSchema.error(f"Contract {contract_id} not found", 404)
+        assert_current_user_is_contract_party(current_user, contract)
+
+        milestones = MilestoneFunctions.get_milestones_by_contract_id(contract_id)
+        logger("CONTRACT", f"Retrieved {len(milestones)} milestone(s) for contract {contract_id}", "GET /contracts/{contract_id}/milestones", "INFO")
+        return ResponseSchema.success(milestones, 200)
+    except HTTPException as e:
+        logger("CONTRACT", f"HTTP {e.status_code}: {e.detail}", "GET /contracts/{contract_id}/milestones", "WARNING")
+        return ResponseSchema.error(e.detail, e.status_code)
+    except Exception as e:
+        logger("CONTRACT", f"Failed to fetch milestones for contract {contract_id}: {str(e)}", "GET /contracts/{contract_id}/milestones", "ERROR")
+        return ResponseSchema.error("Failed to fetch milestones. Please try again.", 500)
 
 
 @contract_router.get("/{contract_id}/pdf-url")
@@ -611,13 +632,14 @@ async def create_contract(contract: ContractCreate, current_user: UserInDB = Dep
             "role_title": role_title,
             "agreed_budget": contract.agreed_budget,
             "budget_currency": budget_currency,
-            "payment_structure": contract.payment_structure,
             "agreed_duration": agreed_duration,
             "start_date": contract.start_date,
             "end_date": end_date,
         }
+        milestones_in = [m.model_dump() for m in contract.milestones]
         pdf_bytes = ContractGenerationFunctions.render_contract_pdf(
-            contract_id, generated_at=generated_at, contract=pending_contract, contract_terms=terms
+            contract_id, generated_at=generated_at, contract=pending_contract, contract_terms=terms,
+            milestones=milestones_in,
         )
         storage_path = ContractGenerationFunctions.upload_contract_pdf(contract_id, pdf_bytes)
 
@@ -631,7 +653,7 @@ async def create_contract(contract: ContractCreate, current_user: UserInDB = Dep
                 client_id=contract.client_id,
                 contract_title=contract.contract_title,
                 agreed_budget=contract.agreed_budget,
-                payment_structure=contract.payment_structure,
+                milestones=milestones_in,
                 start_date=contract.start_date,
                 terms=terms,
                 role_title=role_title,

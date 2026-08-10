@@ -8,6 +8,7 @@ from functions.logger import logger
 from typing import List, Optional, Dict
 import uuid
 from routes.contracts.contract_functions import ContractFunctions, _fire_notification, _already_notified, _count_notifications
+from routes.contracts.milestone_functions import MilestoneFunctions
 from functions.profile_ids import user_id_for_freelancer
 from routes.dm.dm_functions import DMFunctions
 from routes.notifications.notification_functions import NotificationFunctions
@@ -62,11 +63,23 @@ class ContractSubmissionFunctions:
     ) -> Dict:
         try:
             db = get_db()
+
+            # Every contract is milestone-based: the deliverable always belongs to
+            # whichever milestone is currently unlocked (lowest sequence_order not yet
+            # 'completed'). There is no milestone_id on the request - it can never be
+            # ambiguous, since milestones only ever unlock one at a time.
+            milestone = MilestoneFunctions.get_current_milestone(contract_id)
+            if not milestone or milestone["status"] not in ("active", "revision_requested"):
+                raise ValueError(
+                    "There is no milestone currently open for submission on this contract."
+                )
+
             submission_id = str(uuid.uuid4())
 
             submission_data = {
                 "submission_id": submission_id,
                 "contract_id": contract_id,
+                "milestone_id": milestone["milestone_id"],
                 "submitted_by": submitted_by,
                 "note": note,
                 "status": status,
@@ -74,7 +87,12 @@ class ContractSubmissionFunctions:
 
             db.insert_data(table_name="contract_submission", data=submission_data)
 
-            # Update contract status to under_review
+            # Update milestone + contract status to under_review
+            db.update_data(
+                table_name="milestone",
+                data={"status": "under_review"},
+                conditions=[("milestone_id", "=", milestone["milestone_id"])],
+            )
             db.update_data(
                 table_name="contract",
                 data={"status": "under_review"},
@@ -222,15 +240,16 @@ class ContractSubmissionFunctions:
             raise
 
     @staticmethod
-    def count_revision_rounds(contract_id: str) -> int:
-        """Count revision rounds already requested on this contract. Each round leaves
+    def count_revision_rounds(milestone_id: str) -> int:
+        """Count revision rounds already requested on this milestone. Each round leaves
         one submission at 'revision_requested' or 'superseded', so counting those
-        avoids a dedicated counter column."""
+        avoids a dedicated counter column. Scoped to the milestone (not the contract's
+        whole lifetime), so the cap resets for each new milestone."""
         try:
             db = get_db()
             rows = db.fetch_data(
                 table_name="contract_submission",
-                conditions=[("contract_id", "=", contract_id)],
+                conditions=[("milestone_id", "=", milestone_id)],
             )
             return sum(1 for r in rows if r.get("status") in ("revision_requested", "superseded"))
         except Exception as e:
@@ -285,6 +304,11 @@ class ContractSubmissionFunctions:
             )
 
             db.update_data(
+                table_name="milestone",
+                data={"status": "revision_requested"},
+                conditions=[("milestone_id", "=", latest_submission["milestone_id"])],
+            )
+            db.update_data(
                 table_name="contract",
                 data={"status": "revision_requested"},
                 conditions=[("contract_id", "=", contract_id)],
@@ -298,7 +322,7 @@ class ContractSubmissionFunctions:
                     actor_id=actor_user_id,
                     message_text=message_text,
                     event_type="revision_requested",
-                    metadata={"submission_id": submission_id, "note": note},
+                    metadata={"submission_id": submission_id, "milestone_id": latest_submission["milestone_id"], "note": note},
                 )
             except Exception:
                 pass
@@ -335,18 +359,22 @@ class ContractSubmissionFunctions:
                 {"status": "approved", "reviewed_at": datetime.now(timezone.utc)},
             )
 
+            milestone = MilestoneFunctions.update_milestone(
+                latest_submission["milestone_id"], {"status": "pending_payment"}
+            )
             ContractFunctions.update_contract(
                 contract_id=contract_id,
                 update_data={"status": "pending_payment"},
             )
+            milestone_title = (milestone or {}).get("title") or "this milestone"
 
             try:
                 DMFunctions.send_system_event(
                     contract_id=contract_id,
                     actor_id=actor_user_id,
-                    message_text="Work approved. Waiting for payment.",
+                    message_text=f"Milestone approved: {milestone_title}. Waiting for payment.",
                     event_type="submission_approved",
-                    metadata={"submission_id": submission_id, "approved_by": actor_user_id},
+                    metadata={"submission_id": submission_id, "milestone_id": latest_submission["milestone_id"], "approved_by": actor_user_id},
                 )
             except Exception:
                 pass
@@ -356,8 +384,8 @@ class ContractSubmissionFunctions:
                     recipient_user_id=actor_user_id,
                     notif_type="payment_due",
                     title="Time to pay",
-                    body=f"All work on \"{contract.get('contract_title')}\" has been approved. Please upload your payment proof to complete the contract.",
-                    data={"contract_id": contract_id},
+                    body=f"\"{milestone_title}\" on \"{contract.get('contract_title')}\" has been approved. Please upload your payment proof to continue.",
+                    data={"contract_id": contract_id, "milestone_id": latest_submission["milestone_id"]},
                 ))
             except Exception:
                 pass

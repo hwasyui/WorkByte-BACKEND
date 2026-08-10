@@ -12,6 +12,7 @@ from functions.response_utils import ResponseSchema
 from functions.minio_client import upload_contract_submission_file, guess_mime, resolve_file_url, BUCKET_CONTRACT_SUBMISSIONS, MAX_UPLOAD_FILE_SIZE_BYTES
 from routes.contract_submissions.contract_submission_functions import ContractSubmissionFunctions
 from routes.contracts.contract_generation_functions import ContractGenerationFunctions
+from routes.contracts.milestone_functions import MilestoneFunctions
 from routes.freelancers.freelancer_functions import FreelancerFunctions
 from routes.clients.client_functions import ClientFunctions
 from routes.notifications.notification_functions import NotificationFunctions
@@ -224,7 +225,13 @@ async def request_revision_for_latest_submission(
         configured_cap = contract_terms.get("revision_rounds")
         effective_cap = configured_cap if configured_cap is not None else MAX_REVISION_REQUESTS
 
-        revision_rounds = ContractSubmissionFunctions.count_revision_rounds(contract_id)
+        # Scoped to the current milestone: the cap resets each time a new milestone
+        # unlocks, rather than being spent once across the whole contract.
+        current_milestone = MilestoneFunctions.get_current_milestone(contract_id)
+        revision_rounds = (
+            ContractSubmissionFunctions.count_revision_rounds(current_milestone["milestone_id"])
+            if current_milestone else 0
+        )
         if revision_rounds >= effective_cap:
             return ResponseSchema.error(
                 f"Maximum number of revision requests ({effective_cap}) reached for this contract",

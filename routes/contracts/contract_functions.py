@@ -191,7 +191,7 @@ class ContractFunctions:
         client_id: str,
         contract_title: str,
         agreed_budget: float,
-        payment_structure: str,
+        milestones: List[Dict],
         start_date,
         terms: Dict,
         contract_id: Optional[str] = None,
@@ -227,6 +227,7 @@ class ContractFunctions:
         # Imported here rather than at module scope: contract_generation_functions
         # imports this module, so a top-level import either way is circular.
         from routes.contracts.contract_generation_functions import ContractGenerationFunctions
+        from routes.contracts.milestone_functions import MilestoneFunctions
 
         try:
             contract_id = contract_id or str(uuid.uuid4())
@@ -238,13 +239,13 @@ class ContractFunctions:
                     INSERT INTO contract (
                         contract_id, job_post_id, job_role_id, proposal_id, freelancer_id,
                         client_id, contract_title, role_title, agreed_budget, budget_currency,
-                        payment_structure, agreed_duration, status, start_date, end_date,
+                        agreed_duration, status, start_date, end_date,
                         actual_completion_date, total_hours_worked, total_paid,
                         contract_pdf_url, contract_pdf_generated_at
                     ) VALUES (
                         :contract_id, :job_post_id, :job_role_id, :proposal_id, :freelancer_id,
                         :client_id, :contract_title, :role_title, :agreed_budget, :budget_currency,
-                        :payment_structure, :agreed_duration, 'active', :start_date, :end_date,
+                        :agreed_duration, 'active', :start_date, :end_date,
                         :actual_completion_date, :total_hours_worked, :total_paid,
                         :contract_pdf_url, :contract_pdf_generated_at
                     )
@@ -261,7 +262,6 @@ class ContractFunctions:
                         "role_title": role_title,
                         "agreed_budget": agreed_budget,
                         "budget_currency": budget_currency,
-                        "payment_structure": payment_structure,
                         "agreed_duration": agreed_duration,
                         "start_date": start_date,
                         "end_date": end_date,
@@ -272,6 +272,10 @@ class ContractFunctions:
                         "contract_pdf_generated_at": contract_pdf_generated_at,
                     },
                 )
+
+                # A contract is created together with the milestone schedule it was
+                # generated from, in the same unit of work as the row itself.
+                MilestoneFunctions.create_milestones_for_contract(tx, contract_id, milestones)
 
                 # After the insert, so that a second contract for the same proposal fails
                 # on UNIQUE(proposal_id) and is reported as the duplicate it is, rather

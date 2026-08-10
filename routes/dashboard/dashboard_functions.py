@@ -339,7 +339,6 @@ class DashboardFunctions:
                     role_title,
                     agreed_budget,
                     budget_currency,
-                    payment_structure,
                     status,
                     start_date,
                     end_date,

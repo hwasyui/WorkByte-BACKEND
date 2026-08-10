@@ -1,6 +1,4 @@
 import io
-import json
-import re
 from datetime import datetime
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -89,93 +87,21 @@ def _format_currency(amount, currency):
         return str(amount)
 
 
-# The contract form writes one line per milestone, e.g.
-#   Milestone 1: Wireframes approved - 30% payment (paid after client approval)
-# with the percentage and the note both optional. Mirrors the pattern the form
-# itself uses to read the value back, so the two stay in step.
-_MILESTONE_LINE_RE = re.compile(
-    r"^Milestone\s+\d+\s*:\s*(?P<title>.+?)"
-    r"(?:\s*-\s*(?P<percentage>[\d.]+)%\s*payment)?"
-    r"(?:\s*\((?P<note>.*)\))?$"
-)
-
-
-def _parse_payment_schedule(raw, payment_structure=None, agreed_budget=None):
-    """Turn a stored payment_schedule into (table rows, free text).
-
-    Three shapes reach this function:
-      * a list, or a JSON string holding one - the richest form, carrying an
-        explicit amount and due_date per phase;
-      * the milestone lines a milestone_based contract is saved as, which is what
-        the app actually sends;
-      * a single sentence for a full_payment contract, like "100% upfront".
-
-    Only the first two become a table. The last is returned as free text, because
-    one line spread across a five-column grid reads as a rendering fault. Exactly
-    one of the two return values is ever populated.
-    """
-    if isinstance(raw, list):
-        return raw, None
-    if not isinstance(raw, str):
-        return [], None
-
-    text = raw.strip()
-    if not text:
-        return [], None
-
-    if text.startswith("["):
-        try:
-            parsed = json.loads(text)
-            if isinstance(parsed, list):
-                return parsed, None
-        except (json.JSONDecodeError, ValueError):
-            pass
-
-    # A full_payment arrangement is prose, not a schedule of phases.
-    if payment_structure != "milestone_based":
-        return [], text
-
+def _milestones_to_schedule(milestones: list) -> list:
+    """Every contract is milestone-based, so the payment schedule table is read
+    straight off the real milestone rows - no more text to parse."""
     items = []
-    for index, line in enumerate(l.strip() for l in text.splitlines()):
-        if not line:
-            continue
-        match = _MILESTONE_LINE_RE.match(line)
-        if not match:
-            # Keep the line rather than drop it: a milestone the form could not
-            # round-trip is still a term of the agreement.
-            items.append({"phase": f"Milestone {index + 1}", "description": line})
-            continue
-
-        percentage = None
-        if match.group("percentage"):
-            try:
-                percentage = float(match.group("percentage"))
-            except ValueError:
-                percentage = None
-
-        # The form collects a percentage but never an amount, so derive it. Both
-        # the budget and the split are fixed by this point, so this is arithmetic
-        # on agreed terms rather than an assumption about them.
-        amount = None
-        if percentage is not None and agreed_budget is not None:
-            try:
-                amount = float(agreed_budget) * percentage / 100.0
-            except (TypeError, ValueError):
-                amount = None
-
-        description = match.group("title").strip()
-        note = (match.group("note") or "").strip()
-        if note:
-            description = f"{description} ({note})"
-
+    for m in milestones or []:
+        description = m.get("title") or f"Milestone {m.get('sequence_order', len(items) + 1)}"
+        if m.get("description"):
+            description = f"{description} ({m['description']})"
         items.append({
-            "phase": f"Milestone {len(items) + 1}",
+            "phase": f"Milestone {m.get('sequence_order', len(items) + 1)}",
             "description": description,
-            "percentage": percentage,
-            "amount": amount,
+            "amount": m.get("amount"),
+            "due_date": m.get("due_date"),
         })
-
-    return items, None
+    return items
 
 
 def _payment_schedule_table(items: list, currency: str) -> Table:
@@ -437,27 +363,18 @@ def generate_contract_pdf(contract_context: dict, contract_terms: dict) -> bytes
     # 3. Financial Terms
     story.append(_section_header("3. Financial Terms", styles))
     currency = contract_context.get("budget_currency", "USD")
-    payment_structure = contract_context.get("payment_structure", "N/A")
     fin_rows = [
         ("Agreed Budget",      _format_currency(contract_context.get("agreed_budget"), currency)),
-        ("Payment Structure",  payment_structure.replace("_", " ").title() if payment_structure != "N/A" else "N/A"),
         ("Start Date",         str(contract_context.get("start_date", "N/A"))),
         ("End Date",           str(contract_context.get("end_date", "N/A"))),
         ("Agreed Duration",    str(contract_context.get("agreed_duration", "N/A"))),
     ]
     story.append(_kv_table(fin_rows))
-    schedule_items, schedule_text = _parse_payment_schedule(
-        contract_terms.get("payment_schedule"),
-        payment_structure=payment_structure,
-        agreed_budget=contract_context.get("agreed_budget"),
-    )
-    if schedule_items or schedule_text:
+    schedule_items = _milestones_to_schedule(contract_context.get("milestones"))
+    if schedule_items:
         story.append(Spacer(1, 0.2 * cm))
         story.append(Paragraph("<b>Payment Schedule</b>", styles["body_bold"]))
-        if schedule_items:
-            story.append(_payment_schedule_table(schedule_items, currency))
-        else:
-            story.append(Paragraph(schedule_text, styles["body"]))
+        story.append(_payment_schedule_table(schedule_items, currency))
 
     # 4. Legal Clauses
     story.append(_section_header("4. Legal Clauses", styles))
