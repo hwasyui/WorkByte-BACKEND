@@ -2,12 +2,12 @@ import asyncio
 
 from functions.logger import logger
 from functions.db_manager import get_db
-from routes.payments.payment_functions import notify_admins
+from routes.payments.payment_functions import notify_admins, PaymentFunctions
 
 SWEEP_INTERVAL_SECONDS = 3600
 VERIFICATION_SLA_DAYS = 3
 EVASION_THRESHOLD_DAYS = 3
-
+ADMIN_PROOF_AUTO_VERIFY_DAYS = 30
 
 def run_payment_reminder_sweep() -> int:
     flagged = 0
@@ -34,9 +34,8 @@ def run_payment_reminder_sweep() -> int:
             """
             SELECT c.contract_id, c.contract_title
             FROM contract c
-            WHERE c.freelancer_confirmed_receipt_at IS NOT NULL
-              AND c.freelancer_confirmed_receipt_at < NOW() - make_interval(days => :days)
-              AND c.status != 'completed'
+            WHERE c.status IN ('pending_payment', 'payment_review')
+              AND c.updated_at < NOW() - make_interval(days => :days)
               AND NOT EXISTS (
                   SELECT 1 FROM payment_proof pp
                   WHERE pp.contract_id = c.contract_id
@@ -55,13 +54,30 @@ def run_payment_reminder_sweep() -> int:
             )
             flagged += 1
 
+        stale_admin_proof_rows = get_db().execute_query(
+            """
+            SELECT proof_id, contract_id
+            FROM payment_proof
+            WHERE payee = 'admin'
+              AND status = 'pending_review'
+              AND created_at < NOW() - make_interval(days => :days)
+            """,
+            {"days": ADMIN_PROOF_AUTO_VERIFY_DAYS},
+        )
+        for row in stale_admin_proof_rows or []:
+            try:
+                PaymentFunctions.verify_proof(str(row["proof_id"]))
+                logger("PAYMENT_REMINDER_SWEEP", f"Auto-verified payment proof {row['proof_id']} on contract {row['contract_id']} after {ADMIN_PROOF_AUTO_VERIFY_DAYS} days of inactivity", level="WARNING")
+                flagged += 1
+            except Exception as e:
+                logger("PAYMENT_REMINDER_SWEEP", f"Failed to auto-verify payment proof {row['proof_id']}: {str(e)}", level="ERROR")
+
         if flagged:
             logger("PAYMENT_REMINDER_SWEEP", f"Flagged {flagged} contract(s) for admin attention", level="INFO")
         return flagged
     except Exception as e:
         logger("PAYMENT_REMINDER_SWEEP", f"Error in payment reminder sweep: {str(e)}", level="ERROR")
         return 0
-
 
 async def payment_reminder_loop() -> None:
     logger("PAYMENT_REMINDER_SWEEP", f"Sweep loop started | interval={SWEEP_INTERVAL_SECONDS}s", level="INFO")

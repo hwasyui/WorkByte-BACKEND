@@ -73,13 +73,6 @@ class AdminActionBody(BaseModel):
     admin_note: Optional[str] = None
 
 class ReviewRulingBody(BaseModel):
-    """Justification for a moderation ruling.
-
-    Required, not optional. The status change records what was decided and never
-    why, and these rulings are the only human-labelled data the review pipeline
-    will ever get - an unexplained one is close to useless as a training example.
-    See ai_related/review_analysis/judgment_log.py.
-    """
     reason: str = Field(min_length=10, max_length=1000)
 
 class ScamScanBody(BaseModel):
@@ -125,12 +118,6 @@ def admin_range(
                     f"One of: {', '.join(ADMIN_RANGE_PRESETS)}",
     ),
 ) -> Dict:
-    """Shared date-range filter for every admin listing.
-
-    One dependency so all admin endpoints take the same three query params and
-    reject bad input identically, instead of each route re-deriving the rules.
-    Each endpoint decides which timestamp column the window applies to.
-    """
     try:
         return resolve_admin_range(start_date, end_date, range_preset)
     except ValueError as e:
@@ -141,13 +128,6 @@ async def admin_dashboard(
     date_range: Dict = Depends(admin_range),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Admin dashboard counters, optionally scoped to a time range.
-
-    Pending items and report auto-actions are scoped by when they were created,
-    auto-approvals/removals and accepted reports by when they were actioned, and
-    banned clients by when the ban landed. The two _last_24h counters ignore the
-    range - see get_admin_dashboard_stats.
-    """
     try:
         stats = get_admin_dashboard_stats(date_range)
         logger("ADMIN", "Dashboard stats fetched", "GET /admin/dashboard", "INFO")
@@ -191,11 +171,6 @@ async def list_moderation(
         logger("ADMIN", f"Moderation list error: {e}", "GET /admin/moderation", "ERROR")
         return ResponseSchema.error("Failed to fetch moderation queue. Please try again.", 500)
 
-# A verdict is named for what happens to the FLAG, not to the content. The two queues
-# used to spell the same two verdicts with opposite words - /moderation/approve closed
-# the job, /scam-flags/approve kept it - so an admin UI wired by the wrong noun did the
-# reverse of what the button said. uphold/dismiss is the shared vocabulary; the old paths
-# stay as aliases so existing clients keep working.
 def _moderation_verdict(moderation_id: str, verdict: str, admin_user_id: str,
                         admin_note: Optional[str], route: str):
     try:
@@ -220,7 +195,6 @@ async def uphold_moderation(
     body: AdminActionBody = AdminActionBody(),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Flag was right: the content is harmful and the job post is closed."""
     return _moderation_verdict(moderation_id, "uphold", current_user.user_id,
                                body.admin_note, "POST /admin/moderation/uphold")
 
@@ -230,7 +204,6 @@ async def dismiss_moderation(
     body: AdminActionBody = AdminActionBody(),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Flag was wrong: the content is fine and stays up."""
     return _moderation_verdict(moderation_id, "dismiss", current_user.user_id,
                                body.admin_note, "POST /admin/moderation/dismiss")
 
@@ -240,7 +213,6 @@ async def approve_moderation(
     body: AdminActionBody = AdminActionBody(),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Deprecated alias for /uphold - 'approve' here approved the flag, closing the job."""
     return _moderation_verdict(moderation_id, "uphold", current_user.user_id,
                                body.admin_note, "POST /admin/moderation/approve")
 
@@ -250,7 +222,6 @@ async def reject_moderation(
     body: AdminActionBody = AdminActionBody(),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Deprecated alias for /dismiss."""
     return _moderation_verdict(moderation_id, "dismiss", current_user.user_id,
                                body.admin_note, "POST /admin/moderation/reject")
 
@@ -315,7 +286,6 @@ async def uphold_scam_flag(
     body: AdminActionBody = AdminActionBody(),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Flag was right: the job is a scam, it is closed and the client takes a strike."""
     return _scam_verdict(flag_id, "uphold", current_user.user_id,
                          body.admin_note, "POST /admin/scam-flags/uphold")
 
@@ -325,7 +295,6 @@ async def dismiss_scam_flag(
     body: AdminActionBody = AdminActionBody(),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Flag was wrong: the job is legitimate, and is reopened if the scan auto-closed it."""
     return _scam_verdict(flag_id, "dismiss", current_user.user_id,
                          body.admin_note, "POST /admin/scam-flags/dismiss")
 
@@ -335,13 +304,6 @@ async def approve_scam_flag(
     body: AdminActionBody = AdminActionBody(),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """
-    Deprecated alias for /uphold: approves the FLAG, so the job is closed.
-
-    This inverted - it used to clear the flag and keep the job live. A client still on
-    the old meaning is now closing jobs it means to clear, so every call is logged as a
-    WARNING to make a stale caller visible rather than silent.
-    """
     logger("ADMIN",
            f"Legacy /scam-flags/approve called by {current_user.user_id} on flag {flag_id} - "
            f"this now UPHOLDS the flag and closes the job; caller may still expect the old "
@@ -356,7 +318,6 @@ async def remove_scam_job(
     body: AdminActionBody = AdminActionBody(),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Deprecated alias for /uphold."""
     return _scam_verdict(flag_id, "uphold", current_user.user_id,
                          body.admin_note, "POST /admin/scam-flags/remove")
 
@@ -844,12 +805,6 @@ async def admin_list_disputed_contracts(
         offset = (page - 1) * page_size
         where = ["c.status = 'disputed'"]
         params: Dict = {}
-        # Scoped by when the dispute was RAISED, not when the contract was signed -
-        # the two can be weeks apart, and this queue is about disputes. That is the
-        # same timestamp the ORDER BY below sorts on, so filter and sort agree.
-        # COALESCE keeps contracts whose dispute predates the dispute_raised DM
-        # event; without it the LEFT JOIN would silently drop them. sent_at is
-        # timestamptz while everything else here is naive UTC, hence the cast.
         where.extend(_range_conditions(
             "COALESCE(ld.sent_at AT TIME ZONE 'UTC', c.updated_at)", date_range
         ))
@@ -863,14 +818,8 @@ async def admin_list_disputed_contracts(
             params["search"] = f"%{search}%"
         where_sql = "WHERE " + " AND ".join(where)
 
-        # Both the page and the count resolve ld, because the date filter is on the
-        # dispute timestamp and would otherwise be an undefined table in the count.
         dispute_cte = """
             WITH dispute_events AS (
-                -- A thread is shared by every contract between the same two users and its
-                -- contract_id only ever names the first one, so the event's own metadata is
-                -- the authoritative link. The thread column is the fallback for events
-                -- written before send_system_event started stamping contract_id.
                 SELECT
                     COALESCE(dm.metadata::jsonb->>'contract_id', dt.contract_id::text) AS contract_id,
                     dm.message_text, dm.metadata, dm.sent_at
@@ -1026,7 +975,7 @@ async def admin_list_pending_payments(
 ):
     try:
         offset = (page - 1) * page_size
-        where = ["c.status = 'payment_review'", "pp.status = 'pending_review'"]
+        where = ["c.status = 'payment_review'", "pp.status = 'pending_review'", "pp.payee = 'admin'"]
         params: Dict = {}
         where.extend(_range_conditions("pp.created_at", date_range))
         params.update(_range_params(date_range))
@@ -1147,21 +1096,13 @@ async def admin_payments_overview(
         at_risk_row = get_db().execute_query(
             """
             SELECT COUNT(*) AS cnt
-            FROM (
-                SELECT DISTINCT ON (m.contract_id) m.*
-                FROM milestone m
-                WHERE m.status != 'completed'
-                ORDER BY m.contract_id, m.sequence_order ASC
-            ) current_milestone
-            JOIN contract c ON c.contract_id = current_milestone.contract_id
+            FROM contract c
             WHERE c.budget_currency = :currency
-              AND current_milestone.freelancer_confirmed_receipt_at IS NOT NULL
-              AND current_milestone.freelancer_confirmed_receipt_at < NOW() - make_interval(days => :days)
-              AND c.status != 'completed'
+              AND c.status IN ('pending_payment', 'payment_review')
+              AND c.updated_at < NOW() - make_interval(days => :days)
               AND NOT EXISTS (
                   SELECT 1 FROM payment_proof pp
-                  WHERE pp.milestone_id = current_milestone.milestone_id
-                    AND pp.payee = 'admin' AND pp.status = 'verified'
+                  WHERE pp.contract_id = c.contract_id AND pp.payee = 'admin' AND pp.status = 'verified'
               )
             """,
             {"currency": currency, "days": evasion_threshold_days},
@@ -1402,13 +1343,6 @@ async def list_review_red_flags(
     date_range: Dict = Depends(admin_range),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Admin-wide red flag alert listing (trust score drops), across freelancers and/or clients.
-
-    Returns a paged envelope: {items, total, page, page_size, total_pages}.
-    Rows carry `current_trust_score`, `age_hours` and `open_held_reviews` for
-    triage; the diagnosis for one alert comes from
-    GET /admin/reviews/red-flags/{alert_id}.
-    """
     try:
         if subject_type not in ("freelancer", "client", "all"):
             return ResponseSchema.error("Invalid subject type. Choose freelancer, client, or all.", 400)
@@ -1429,16 +1363,6 @@ async def get_review_red_flag(
     alert_id: str,
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Full diagnosis for one red flag alert.
-
-    The alert row only reports a symptom - a trust score fell by N points. This
-    returns what caused it: the score trajectory, the current per-component
-    breakdown so the admin can see WHICH input dropped, the reviews that landed
-    in the window, and - separately - any of those reviews that are themselves
-    held for moderation. That last list is the one that changes the recommended
-    action: a drop driven by a review the pipeline already distrusts should be
-    handled by ruling on that review, not by clearing the alert.
-    """
     try:
         detail = get_red_flag_detail(alert_id)
         if not detail:
@@ -1455,17 +1379,6 @@ async def resolve_review_red_flag(
     body: ReviewRulingBody,
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Close a red flag alert, recording who closed it and why.
-
-    The note is required. "Investigated, the decline is genuine" and "cleared, the
-    drop came from one retaliatory review that has since been suppressed" are
-    opposite conclusions, and without a stated reason a resolved alert cannot
-    distinguish them - or show that anyone looked at all.
-
-    Persisting attribution needs red_flag_alerts.resolved_by and
-    .resolution_note. Against a database without them the alert still resolves
-    and the response carries resolution_recorded=false.
-    """
     try:
         updated = resolve_red_flag_alert(
             alert_id=alert_id, admin_user_id=current_user.user_id, note=body.reason)
@@ -1487,12 +1400,6 @@ async def list_review_flagged(
     date_range: Dict = Depends(admin_range),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Triage list of reviews held back from publishing (overall_pass=false).
-
-    Returns a paged envelope: {items, total, page, page_size, total_pages}.
-    Each row carries only what the queue needs to sort and prioritise - the full
-    moderation record for one review comes from GET /admin/reviews/{id}/moderation.
-    """
     try:
         if status not in ("flagged", "suppressed", "all"):
             return ResponseSchema.error("Invalid status. Choose flagged, suppressed, or all.", 400)
@@ -1514,20 +1421,6 @@ async def get_review_moderation_route(
     review_id: str,
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Full moderation record for one review: star ratings, the targeted question
-    and its answer, the objective contract telemetry the flag reasons cite, the
-    per-model breakdown (LLM vs each classifier, and where they disagree), the
-    reviewer's history, and the DM thread.
-
-    `components` is null when no judgment-log record exists for this review -
-    reviews analysed before judgment logging shipped have none. Every other
-    section is always present; individual fields may be null where the platform
-    never recorded the data.
-
-    `record_gaps` holds the per-category comparison of the star ratings against
-    that telemetry ({claimed, actual, gap} per category, plus inflation/deflation),
-    the same arithmetic that feeds the record-consistency trust component.
-    """
     try:
         detail = get_review_moderation_detail(review_id)
         if not detail:
@@ -1544,7 +1437,6 @@ async def override_publish_review_route(
     body: ReviewRulingBody,
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Publish a held-back (flagged/suppressed) review - the human overruling the pipeline."""
     try:
         updated = await override_publish_review(
             review_id=review_id, admin_user_id=current_user.user_id, reason=body.reason)
@@ -1562,13 +1454,6 @@ async def uphold_review_route(
     body: ReviewRulingBody,
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Confirm the hold - the human agreeing with the pipeline.
-
-    Moves 'flagged' to 'suppressed' so the review leaves the pending queue as a
-    settled decision. Logged with the same weight as an override: an agreement is
-    a training label too, and capturing only reversals would produce a dataset of
-    nothing but pipeline mistakes.
-    """
     try:
         updated = await uphold_review(
             review_id=review_id, admin_user_id=current_user.user_id, reason=body.reason)
@@ -1590,10 +1475,6 @@ async def list_client_review_flagged(
     date_range: Dict = Depends(admin_range),
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Triage list of client reviews (written by freelancers) held back from publishing.
-
-    Same paged envelope and same triage-only contract as GET /admin/reviews/flagged.
-    """
     try:
         if status not in ("flagged", "suppressed", "all"):
             return ResponseSchema.error("Invalid status. Choose flagged, suppressed, or all.", 400)
@@ -1615,24 +1496,6 @@ async def get_client_review_moderation_route(
     client_review_id: str,
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Full moderation record for one client review.
-
-    Note two differences from the freelancer side that the UI must handle: there
-    are four rating categories rather than five (no `timeliness`), and the
-    objective counterpart is `subject_lifetime_scores` - the client's aggregate
-    trust components - because the client-side measurements are lifetime figures
-    rather than per-contract. `telemetry` is engagement context only.
-
-    `subject_lifetime_scores` carries `responsiveness_score`, `revision_rate_score`
-    and `dispute_fairness_score`, measured live so they are present before the
-    client has any published review. There is no `on_time_score`: a client has no
-    delivery deadline, so the UI must not render an on-time row here. Any of the
-    three may be null, meaning unmeasured - render "not measured", not an empty bar.
-
-    `record_gaps` holds the per-category comparison of these ratings against that
-    record ({claimed, actual, gap} per category, plus inflation/deflation), the
-    same arithmetic that feeds the record-consistency trust component.
-    """
     try:
         detail = get_client_review_moderation_detail(client_review_id)
         if not detail:
@@ -1649,7 +1512,6 @@ async def override_publish_client_review_route(
     body: ReviewRulingBody,
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Publish a held-back client review - the human overruling the pipeline."""
     try:
         updated = await override_publish_client_review(
             client_review_id=client_review_id, admin_user_id=current_user.user_id, reason=body.reason)
@@ -1667,7 +1529,6 @@ async def uphold_client_review_route(
     body: ReviewRulingBody,
     current_user: UserInDB = Depends(get_admin_user),
 ):
-    """Confirm the hold on a client review - see POST /admin/reviews/{id}/uphold."""
     try:
         updated = await uphold_client_review(
             client_review_id=client_review_id, admin_user_id=current_user.user_id, reason=body.reason)
