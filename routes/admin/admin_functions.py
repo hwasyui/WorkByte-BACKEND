@@ -19,6 +19,7 @@ from ai_related.review_analysis.judgment_log import (
     read_latest_judgment,
 )
 from functions.profile_ids import user_id_for_client, user_id_for_freelancer
+from routes.contracts.contract_functions import LIVE_CONTRACT_STATUSES
 from routes.admin.admin_moderation import (
     scan_harmful_text,
     scan_for_scam,
@@ -75,10 +76,6 @@ DEFAULT_BAN_MESSAGE_ADMIN      = (
     "Submit an appeal if you believe this was a mistake."
 )
 
-LIVE_CONTRACT_STATUSES     = (
-    "active", "revision_requested", "under_review", "disputed",
-    "pending_payment", "payment_review", "payment_rejected",
-)
 _LIVE_CONTRACT_STATUS_SQL  = ", ".join(f"'{s}'" for s in LIVE_CONTRACT_STATUSES)
 
 def _is_engaged_sql(job_post_id_expr: str) -> str:

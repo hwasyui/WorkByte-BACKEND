@@ -922,7 +922,6 @@ class ContractSubmissionResponse(BaseModel):
     class Config:
         from_attributes = True
 
-# Payments
 class PaymentProofCreate(BaseModel):
     payee: Literal["freelancer", "admin"]
     amount: float

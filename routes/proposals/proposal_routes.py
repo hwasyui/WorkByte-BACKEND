@@ -17,6 +17,7 @@ from routes.freelancers.freelancer_functions import FreelancerFunctions
 from routes.clients.client_functions import ClientFunctions
 from routes.notifications.notification_functions import NotificationFunctions
 from routes.admin.admin_moderation import scan_harmful_text_with_ml_fallback
+from routes.contracts.contract_functions import ContractFunctions, MAX_ACTIVE_CONTRACTS_PER_FREELANCER
 
 
 proposal_router = APIRouter(prefix="/proposals", tags=["Proposals"])
@@ -296,6 +297,13 @@ async def create_proposal(
             return ResponseSchema.error("Freelancer profile not found for this account", 404)
 
         freelancer_id = freelancer["freelancer_id"]
+
+        active_count = ContractFunctions.count_live_contracts_for_freelancer(freelancer_id)
+        if active_count >= MAX_ACTIVE_CONTRACTS_PER_FREELANCER:
+            return ResponseSchema.error(
+                f"You already have {active_count} active contract(s). Finish or resolve at least one before applying to new jobs.",
+                403,
+            )
 
         if current_user.client_id:
             job_row = get_db().execute_query(

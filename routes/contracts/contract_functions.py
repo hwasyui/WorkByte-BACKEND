@@ -65,6 +65,13 @@ def convert_uuids_to_str(data: Dict) -> Dict:
     return result
 
 
+LIVE_CONTRACT_STATUSES = (
+    "active", "under_review", "revision_requested", "disputed",
+    "pending_payment", "payment_review", "payment_rejected",
+)
+MAX_ACTIVE_CONTRACTS_PER_FREELANCER = 3
+
+
 class ContractFunctions:
     """Handle all contract-related database operations."""
 
@@ -145,6 +152,18 @@ class ContractFunctions:
             return ContractFunctions.attach_job_closure([convert_uuids_to_str(dict(row)) for row in rows])
         except Exception as e:
             logger("CONTRACT_FUNCTIONS", f"Error fetching contracts: {str(e)}", level="ERROR")
+            raise
+
+    @staticmethod
+    def count_live_contracts_for_freelancer(freelancer_id: str) -> int:
+        try:
+            rows = get_db().execute_query(
+                "SELECT COUNT(*) AS cnt FROM contract WHERE freelancer_id = :fid AND status::text = ANY(:statuses)",
+                {"fid": freelancer_id, "statuses": list(LIVE_CONTRACT_STATUSES)},
+            )
+            return int(rows[0]["cnt"]) if rows else 0
+        except Exception as e:
+            logger("CONTRACT_FUNCTIONS", f"Error counting live contracts for freelancer: {str(e)}", level="ERROR")
             raise
 
     @staticmethod

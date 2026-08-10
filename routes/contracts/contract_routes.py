@@ -33,7 +33,7 @@ from functions.access_control import (
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from functions.db_manager import get_db
-from routes.contracts.contract_functions import ContractFunctions
+from routes.contracts.contract_functions import ContractFunctions, MAX_ACTIVE_CONTRACTS_PER_FREELANCER
 from routes.contracts.contract_generation_functions import ContractGenerationFunctions, CONTRACT_BUCKET
 from routes.clients.client_functions import ClientFunctions
 from routes.freelancers.freelancer_functions import FreelancerFunctions
@@ -533,6 +533,13 @@ async def create_contract(contract: ContractCreate, current_user: UserInDB = Dep
             return ResponseSchema.error("Contract job post does not match the proposal's job post", 400)
         if proposal.get("job_role_id") and str(proposal["job_role_id"]) != str(contract.job_role_id):
             return ResponseSchema.error("Contract job role does not match the proposal's job role", 400)
+
+        active_count = ContractFunctions.count_live_contracts_for_freelancer(str(contract.freelancer_id))
+        if active_count >= MAX_ACTIVE_CONTRACTS_PER_FREELANCER:
+            return ResponseSchema.error(
+                f"This freelancer already has {active_count} active contract(s) and cannot take on a new one until at least one is resolved.",
+                409,
+            )
 
         terms_in = contract.terms
         rejection = _reject_contract_short_text_if_harmful(
