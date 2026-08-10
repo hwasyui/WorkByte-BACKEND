@@ -1037,9 +1037,12 @@ async def admin_list_pending_payments(
             SELECT pp.proof_id, pp.contract_id, pp.payee, pp.amount, pp.reference_number,
                    pp.file_url, pp.uploaded_by, pp.status, pp.created_at,
                    c.contract_title, c.agreed_budget, c.budget_currency,
-                   c.client_id, c.freelancer_id
+                   c.client_id, c.freelancer_id,
+                   m.title AS milestone_title, m.sequence_order AS milestone_sequence_order,
+                   m.amount AS milestone_amount
             FROM payment_proof pp
             JOIN contract c ON c.contract_id = pp.contract_id
+            LEFT JOIN milestone m ON m.milestone_id = pp.milestone_id
             {where_sql}
             ORDER BY pp.created_at ASC
             LIMIT :limit OFFSET :offset
@@ -1144,14 +1147,21 @@ async def admin_payments_overview(
         at_risk_row = get_db().execute_query(
             """
             SELECT COUNT(*) AS cnt
-            FROM contract c
+            FROM (
+                SELECT DISTINCT ON (m.contract_id) m.*
+                FROM milestone m
+                WHERE m.status != 'completed'
+                ORDER BY m.contract_id, m.sequence_order ASC
+            ) current_milestone
+            JOIN contract c ON c.contract_id = current_milestone.contract_id
             WHERE c.budget_currency = :currency
-              AND c.freelancer_confirmed_receipt_at IS NOT NULL
-              AND c.freelancer_confirmed_receipt_at < NOW() - make_interval(days => :days)
+              AND current_milestone.freelancer_confirmed_receipt_at IS NOT NULL
+              AND current_milestone.freelancer_confirmed_receipt_at < NOW() - make_interval(days => :days)
               AND c.status != 'completed'
               AND NOT EXISTS (
                   SELECT 1 FROM payment_proof pp
-                  WHERE pp.contract_id = c.contract_id AND pp.payee = 'admin' AND pp.status = 'verified'
+                  WHERE pp.milestone_id = current_milestone.milestone_id
+                    AND pp.payee = 'admin' AND pp.status = 'verified'
               )
             """,
             {"currency": currency, "days": evasion_threshold_days},
