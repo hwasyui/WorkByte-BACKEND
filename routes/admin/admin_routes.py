@@ -13,7 +13,7 @@ from functions.response_utils import ResponseSchema
 from functions.db_manager import get_db
 from routes.contracts.contract_functions import ContractFunctions
 from routes.clients.client_functions import ClientFunctions
-from routes.payments.payment_functions import PaymentFunctions
+from routes.payments.payment_functions import PaymentFunctions, PLATFORM_COMMISSION_RATE
 from routes.admin.admin_functions import (
     ADMIN_RANGE_PRESETS,
     VALID_REPORT_REASONS,
@@ -57,6 +57,8 @@ from routes.admin.admin_functions import (
     _range_conditions,
     _range_params,
     _as_of_clause,
+    _csv,
+    _in_filter,
     resolve_red_flag_alert,
     submit_appeal,
     uphold_client_review,
@@ -1168,6 +1170,86 @@ async def admin_payments_overview(
     except Exception as e:
         logger("ADMIN", f"Failed to fetch payments overview: {e}", "GET /admin/payments/overview", "ERROR")
         return ResponseSchema.error("Failed to fetch payments overview. Please try again.", 500)
+
+@admin_router.get("/payments/contracts")
+async def admin_list_payment_contracts(
+    status:    Optional[str] = Query(default=None, description="Filter by contract status (comma-sep)"),
+    search:    Optional[str] = Query(default=None, description="Partial match on contract_title, client name, or freelancer name"),
+    page:      int = Query(default=1,  ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    date_range: Dict = Depends(admin_range),
+    current_user: UserInDB = Depends(get_admin_user),
+):
+    try:
+        offset = (page - 1) * page_size
+        where: List[str] = []
+        params: Dict = {}
+
+        where.extend(_range_conditions("c.created_at", date_range))
+        params.update(_range_params(date_range))
+
+        _in_filter("c.status::text", _csv(status), "st", where, params)
+
+        if search:
+            where.append(
+                "(c.contract_title ILIKE :search OR cl.full_name ILIKE :search OR fl.full_name ILIKE :search)"
+            )
+            params["search"] = f"%{search}%"
+
+        where_sql = ("WHERE " + " AND ".join(where)) if where else ""
+
+        rows = get_db().execute_query(
+            f"""
+            SELECT
+                c.contract_id, c.contract_title, c.agreed_budget, c.budget_currency,
+                c.commission_rate, c.commission_amount, c.status, c.created_at,
+                c.client_id, c.freelancer_id,
+                cl.full_name AS client_name,
+                fl.full_name AS freelancer_name
+            FROM contract c
+            LEFT JOIN client     cl ON cl.client_id     = c.client_id
+            LEFT JOIN freelancer fl ON fl.freelancer_id = c.freelancer_id
+            {where_sql}
+            ORDER BY c.created_at DESC
+            LIMIT :limit OFFSET :offset
+            """,
+            {**params, "limit": page_size, "offset": offset},
+        )
+
+        total_row = get_db().execute_query(
+            f"""
+            SELECT COUNT(*) AS cnt
+            FROM contract c
+            LEFT JOIN client     cl ON cl.client_id     = c.client_id
+            LEFT JOIN freelancer fl ON fl.freelancer_id = c.freelancer_id
+            {where_sql}
+            """,
+            params,
+        )
+        total = int(total_row[0]["cnt"]) if total_row else 0
+
+        items = []
+        for row in rows or []:
+            row = dict(row)
+            is_completed = row["status"] == "completed"
+            row["commission_rate"] = float(row["commission_rate"]) if row.get("commission_rate") is not None else PLATFORM_COMMISSION_RATE
+            row["commission_amount"] = float(row["commission_amount"]) if is_completed and row.get("commission_amount") is not None else None
+            items.append(row)
+
+        result = {
+            "items": items,
+            "pagination": {
+                "total": total,
+                "page": page,
+                "page_size": page_size,
+                "total_pages": (total + page_size - 1) // page_size if page_size > 0 else 0,
+            },
+        }
+        logger("ADMIN", f"Retrieved {len(items)} payment contract(s) (page {page})", "GET /admin/payments/contracts", "INFO")
+        return ResponseSchema.success(result, 200)
+    except Exception as e:
+        logger("ADMIN", f"Failed to list payment contracts: {e}", "GET /admin/payments/contracts", "ERROR")
+        return ResponseSchema.error("Failed to list payment contracts. Please try again.", 500)
 
 @admin_router.get("/clients/{client_id}/autoapprove-history")
 async def admin_get_client_autoapprove_history(
