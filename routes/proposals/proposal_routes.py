@@ -21,13 +21,12 @@ from routes.admin.admin_moderation import scan_harmful_text_with_ml_fallback
 
 proposal_router = APIRouter(prefix="/proposals", tags=["Proposals"])
 
-# Whitelists for the freelancer proposal-list filters/sort. Anything outside these
-# is a 400 - keeps bad values out of the SQL and off the enum comparisons.
 _VALID_PROPOSAL_STATUSES = {"pending", "accepted", "rejected"}
 _VALID_JOB_POST_STATUSES = {"draft", "active", "closed", "filled"}
 _VALID_SORT_BY = {"submitted_at", "proposed_budget"}
 _VALID_SORT_ORDER = {"asc", "desc"}
 
+_VALID_BID_SORT_BY = {"relevance", "submitted_at", "proposed_budget", "rating", "total_jobs"}
 
 def _validate_proposal_filters(status, job_post_status, sort_by, sort_order):
     """Return an error message if any filter/sort value is invalid, else None."""
@@ -39,6 +38,30 @@ def _validate_proposal_filters(status, job_post_status, sort_by, sort_order):
         return f"Invalid sort_by '{sort_by}'. Allowed: {', '.join(sorted(_VALID_SORT_BY))}"
     if sort_order not in _VALID_SORT_ORDER:
         return f"Invalid sort_order '{sort_order}'. Allowed: {', '.join(sorted(_VALID_SORT_ORDER))}"
+    return None
+
+
+def _validate_bid_filters(status, sort_by, sort_order):
+    """Same idea as _validate_proposal_filters, for the client-facing bidding views."""
+    if status is not None and status not in _VALID_PROPOSAL_STATUSES:
+        return f"Invalid status '{status}'. Allowed: {', '.join(sorted(_VALID_PROPOSAL_STATUSES))}"
+    if sort_by not in _VALID_BID_SORT_BY:
+        return f"Invalid sort_by '{sort_by}'. Allowed: {', '.join(sorted(_VALID_BID_SORT_BY))}"
+    if sort_order not in _VALID_SORT_ORDER:
+        return f"Invalid sort_order '{sort_order}'. Allowed: {', '.join(sorted(_VALID_SORT_ORDER))}"
+    return None
+
+
+def _assert_client_owns_job_post(current_user, job_post_id: str):
+    """Only the client who posted the job can read its bids. Returns an error response
+    if the post does not exist, raises HTTPException(403) if it is someone else's."""
+    job_row = get_db().execute_query(
+        "SELECT client_id FROM job_post WHERE job_post_id = :jpid",
+        {"jpid": job_post_id},
+    )
+    if not job_row:
+        return ResponseSchema.error(f"Job post {job_post_id} not found", 404)
+    assert_client_owns(current_user, str(job_row[0]["client_id"]))
     return None
 
 
@@ -93,25 +116,125 @@ async def get_my_proposals(
 @proposal_router.get("/job-post/{job_post_id}")
 async def get_proposals_by_job_post(
     job_post_id: str,
+    job_role_id: Optional[str] = None,
+    status: Optional[str] = None,
+    sort_by: str = "submitted_at",
+    sort_order: str = "desc",
     current_user: UserInDB = Depends(get_current_user),
 ):
-    """Client views all proposals on an owned job post, with freelancer info."""
-    try:
-        job_row = get_db().execute_query(
-            "SELECT client_id FROM job_post WHERE job_post_id = :jpid",
-            {"jpid": job_post_id},
-        )
-        if not job_row:
-            return ResponseSchema.error(f"Job post {job_post_id} not found", 404)
-        assert_client_owns(current_user, str(job_row[0]["client_id"]))
+    """Client views the bids on an owned job post as one flat list, with freelancer info
+    and a relevance score on every row.
 
-        proposals = ProposalFunctions.get_proposals_by_job_post_id_enriched(job_post_id)
+    Each bid is scored against the role it was submitted to, so sort_by='relevance' is
+    only a like-for-like ordering once job_role_id narrows this to a single role. Across
+    a whole post it mixes roles - useful as an "look at these first" hint, not a ranking.
+    Use /job-post/{id}/by-role for the properly per-role view.
+
+    Defaults to newest-first so the existing client view is unchanged.
+    """
+    try:
+        err = _validate_bid_filters(status, sort_by, sort_order)
+        if err:
+            return ResponseSchema.error(err, 400)
+
+        denied = _assert_client_owns_job_post(current_user, job_post_id)
+        if denied:
+            return denied
+
+        proposals = ProposalFunctions.get_proposals_by_job_post_id_enriched(
+            job_post_id,
+            job_role_id=job_role_id,
+            status=status,
+            sort_by=sort_by,
+            sort_order=sort_order,
+        )
         logger("PROPOSAL", f"Retrieved {len(proposals)} proposals for job post {job_post_id}", "GET /proposals/job-post/{job_post_id}", "INFO")
         return ResponseSchema.success(proposals, 200)
     except HTTPException:
         raise
     except Exception as e:
         logger("PROPOSAL", f"Failed to fetch proposals: {str(e)}", "GET /proposals/job-post/{job_post_id}", "ERROR")
+        return ResponseSchema.error("Failed to fetch proposals. Please try again.", 500)
+
+
+@proposal_router.get("/job-post/{job_post_id}/by-role")
+async def get_proposals_grouped_by_role(
+    job_post_id: str,
+    status: Optional[str] = None,
+    sort_by: str = "relevance",
+    sort_order: str = "desc",
+    current_user: UserInDB = Depends(get_current_user),
+):
+    """Client views an owned job post's bids split into one bucket per role, each bucket
+    ranked on its own.
+
+    A role is the only scope where "most relevant applicant" means anything: the
+    embedding (job_role_embedding), the skill list (job_role_skill) and the budget all
+    hang off job_role, never off job_post. Ranking a post's applicants as one list would
+    put a designer's fit next to a backend dev's.
+
+    Roles with no bids yet are still returned, so the client sees every role rather than
+    only the ones that got traffic.
+    """
+    try:
+        err = _validate_bid_filters(status, sort_by, sort_order)
+        if err:
+            return ResponseSchema.error(err, 400)
+
+        denied = _assert_client_owns_job_post(current_user, job_post_id)
+        if denied:
+            return denied
+
+        grouped = ProposalFunctions.get_proposals_by_job_post_grouped_by_role(
+            job_post_id, status=status, sort_by=sort_by, sort_order=sort_order
+        )
+        logger("PROPOSAL",
+               f"Retrieved {grouped['total_proposals']} proposals across {grouped['role_count']} roles "
+               f"for job post {job_post_id}",
+               "GET /proposals/job-post/{job_post_id}/by-role", "INFO")
+        return ResponseSchema.success(grouped, 200)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger("PROPOSAL", f"Failed to fetch grouped proposals: {str(e)}", "GET /proposals/job-post/{job_post_id}/by-role", "ERROR")
+        return ResponseSchema.error("Failed to fetch proposals. Please try again.", 500)
+
+
+@proposal_router.get("/job-role/{job_role_id}")
+async def get_proposals_by_job_role(
+    job_role_id: str,
+    status: Optional[str] = None,
+    sort_by: str = "relevance",
+    sort_order: str = "desc",
+    current_user: UserInDB = Depends(get_current_user),
+):
+    """Client views the bids on one role of an owned job post, ranked. This is the scope
+    where relevance scores are directly comparable, so it defaults to best-fit first."""
+    try:
+        err = _validate_bid_filters(status, sort_by, sort_order)
+        if err:
+            return ResponseSchema.error(err, 400)
+
+        role_row = get_db().execute_query(
+            "SELECT job_post_id FROM job_role WHERE job_role_id = :jrid",
+            {"jrid": job_role_id},
+        )
+        if not role_row:
+            return ResponseSchema.error(f"Job role {job_role_id} not found", 404)
+
+        denied = _assert_client_owns_job_post(current_user, str(role_row[0]["job_post_id"]))
+        if denied:
+            return denied
+
+        proposals = ProposalFunctions.get_proposals_by_job_role_id_enriched(
+            job_role_id, status=status, sort_by=sort_by, sort_order=sort_order
+        )
+        logger("PROPOSAL", f"Retrieved {len(proposals)} proposals for job role {job_role_id}", "GET /proposals/job-role/{job_role_id}", "INFO")
+        return ResponseSchema.success(proposals, 200)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger("PROPOSAL", f"Failed to fetch role proposals: {str(e)}", "GET /proposals/job-role/{job_role_id}", "ERROR")
         return ResponseSchema.error("Failed to fetch proposals. Please try again.", 500)
 
 

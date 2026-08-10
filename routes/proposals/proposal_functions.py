@@ -5,9 +5,16 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 from functions.db_manager import get_db
 from functions.logger import logger
 from routes.job_posts.job_post_functions import JobPostFunctions
+from ai_related.job_engine.applicant_ranker import (
+    score_proposals_for_job_post,
+    score_proposals_for_job_role,
+    empty_score,
+)
 from typing import List, Optional, Dict
+from datetime import datetime
 import uuid
 
+_EPOCH = datetime.min
 
 def convert_uuids_to_str(data: Dict) -> Dict:
     """Convert all UUID objects in dict to strings."""
@@ -87,34 +94,225 @@ class ProposalFunctions:
             logger("PROPOSAL_FUNCTIONS", f"Error fetching proposals: {str(e)}", level="ERROR")
             raise
 
+    _ENRICHED_SELECT = """
+        SELECT
+            p.proposal_id, p.job_post_id, p.job_role_id, p.freelancer_id,
+            p.cover_letter, p.proposed_budget, p.proposed_duration,
+            p.status, p.is_ai_generated, p.submitted_at,
+            f.full_name           AS freelancer_name,
+            f.title               AS freelancer_title,
+            f.profile_picture_url,
+            f.estimated_rate,
+            f.rate_currency,
+            f.rate_time,
+            f.total_jobs,
+            fts.display_star_avg  AS freelancer_rating,
+            COALESCE(fts.total_reviews, 0) AS freelancer_review_count,
+            jr.role_title,
+            jr.role_budget,
+            jr.budget_currency    AS role_budget_currency,
+            jr.display_order      AS role_display_order
+        FROM proposal p
+        JOIN freelancer f  ON p.freelancer_id = f.freelancer_id
+        JOIN job_role   jr ON jr.job_role_id  = p.job_role_id
+        LEFT JOIN freelancer_trust_scores fts ON fts.freelancer_id = p.freelancer_id
+    """
+
     @staticmethod
-    def get_proposals_by_job_post_id_enriched(job_post_id: str) -> List[Dict]:
-        """Fetch all proposals for a job post with freelancer info joined."""
+    def _sort_scored_proposals(proposals: List[Dict], sort_by: str, sort_order: str) -> List[Dict]:
+        """Order an already-scored list."""
+        descending = (sort_order or "").lower() != "asc"
+
+        def submitted(p: Dict):
+            # submitted_at defaults to NOW() so it is effectively never null; the fallback
+            # only keeps the comparison total if a row ever comes back without one.
+            return p.get("submitted_at") or _EPOCH
+
+        def by_nullable(field: str, cast) -> None:
+            proposals.sort(key=submitted, reverse=True)
+            proposals.sort(
+                key=lambda p: (p.get(field) is not None, cast(p.get(field) or 0)),
+                reverse=descending,
+            )
+            if not descending:
+                # Ascending means worst first, but a missing value still goes last.
+                proposals.sort(key=lambda p: p.get(field) is None)
+
+        if sort_by == "relevance":
+            by_nullable("relevance_score", int)
+        elif sort_by == "rating":
+            by_nullable("freelancer_rating", float)
+        elif sort_by == "proposed_budget":
+            proposals.sort(key=submitted, reverse=True)
+            proposals.sort(key=lambda p: float(p.get("proposed_budget") or 0), reverse=descending)
+        elif sort_by == "total_jobs":
+            proposals.sort(key=submitted, reverse=True)
+            proposals.sort(key=lambda p: int(p.get("total_jobs") or 0), reverse=descending)
+        else:
+            proposals.sort(key=submitted, reverse=descending)
+
+        return proposals
+
+    @staticmethod
+    def _attach_relevance(proposals: List[Dict], scores: Dict[str, Dict]) -> List[Dict]:
+        """Merge ranker output into each proposal, defaulting to the unavailable payload
+        so every row carries the same keys whether or not the embeddings are ready."""
+        for proposal in proposals:
+            proposal.update(scores.get(proposal["proposal_id"]) or empty_score())
+        return proposals
+
+    @staticmethod
+    def get_proposals_by_job_post_id_enriched(
+        job_post_id: str,
+        job_role_id: Optional[str] = None,
+        status: Optional[str] = None,
+        sort_by: str = "submitted_at",
+        sort_order: str = "desc",
+    ) -> List[Dict]:
+        """Fetch a job post's proposals with freelancer + role info and a relevance score."""
         try:
             db = get_db()
-            query = """
-                SELECT
-                    p.proposal_id, p.job_post_id, p.job_role_id, p.freelancer_id,
-                    p.cover_letter, p.proposed_budget, p.proposed_duration,
-                    p.status, p.is_ai_generated, p.submitted_at,
-                    f.full_name           AS freelancer_name,
-                    f.profile_picture_url,
-                    f.estimated_rate,
-                    f.rate_currency,
-                    f.rate_time,
-                    f.total_jobs
-                FROM proposal p
-                JOIN freelancer f ON p.freelancer_id = f.freelancer_id
-                WHERE p.job_post_id = :job_post_id
-                ORDER BY p.submitted_at DESC
-            """
-            rows = db.execute_query(query, {"job_post_id": job_post_id})
+
+            where = ["p.job_post_id = :job_post_id"]
+            params: Dict = {"job_post_id": job_post_id}
+            if job_role_id:
+                where.append("p.job_role_id = :job_role_id")
+                params["job_role_id"] = job_role_id
+            if status:
+                where.append("p.status::text = :status")
+                params["status"] = status
+
+            rows = db.execute_query(
+                f"{ProposalFunctions._ENRICHED_SELECT} WHERE {' AND '.join(where)}",
+                params,
+            )
+            proposals = [convert_uuids_to_str(dict(row)) for row in rows]
+
+            scores = (
+                score_proposals_for_job_role(db, job_role_id)
+                if job_role_id
+                else score_proposals_for_job_post(db, job_post_id)
+            )
+            ProposalFunctions._attach_relevance(proposals, scores)
+            ProposalFunctions._sort_scored_proposals(proposals, sort_by, sort_order)
+
             logger("PROPOSAL_FUNCTIONS",
-                   f"Fetched {len(rows)} enriched proposals for job post {job_post_id}", level="INFO")
-            return [convert_uuids_to_str(dict(row)) for row in rows]
+                   f"Fetched {len(proposals)} enriched proposals for job post {job_post_id} "
+                   f"| role={job_role_id or 'all'} | sort={sort_by} {sort_order}", level="INFO")
+            return proposals
 
         except Exception as e:
             logger("PROPOSAL_FUNCTIONS", f"Error fetching enriched proposals: {str(e)}", level="ERROR")
+            raise
+
+    @staticmethod
+    def get_proposals_by_job_role_id_enriched(
+        job_role_id: str,
+        status: Optional[str] = None,
+        sort_by: str = "relevance",
+        sort_order: str = "desc",
+    ) -> List[Dict]:
+        """Fetch one role's proposals, ranked. This is the scope where relevance scores
+        are directly comparable, so it defaults to best-fit first."""
+        try:
+            db = get_db()
+
+            where = ["p.job_role_id = :job_role_id"]
+            params: Dict = {"job_role_id": job_role_id}
+            if status:
+                where.append("p.status::text = :status")
+                params["status"] = status
+
+            rows = db.execute_query(
+                f"{ProposalFunctions._ENRICHED_SELECT} WHERE {' AND '.join(where)}",
+                params,
+            )
+            proposals = [convert_uuids_to_str(dict(row)) for row in rows]
+
+            ProposalFunctions._attach_relevance(
+                proposals, score_proposals_for_job_role(db, job_role_id)
+            )
+            ProposalFunctions._sort_scored_proposals(proposals, sort_by, sort_order)
+
+            logger("PROPOSAL_FUNCTIONS",
+                   f"Fetched {len(proposals)} enriched proposals for role {job_role_id} "
+                   f"| sort={sort_by} {sort_order}", level="INFO")
+            return proposals
+
+        except Exception as e:
+            logger("PROPOSAL_FUNCTIONS", f"Error fetching role proposals: {str(e)}", level="ERROR")
+            raise
+
+    @staticmethod
+    def get_proposals_by_job_post_grouped_by_role(
+        job_post_id: str,
+        status: Optional[str] = None,
+        sort_by: str = "relevance",
+        sort_order: str = "desc",
+    ) -> Dict:
+        """A job post's bids split into one bucket per role, each bucket ranked on its own."""
+        try:
+            db = get_db()
+
+            role_rows = db.execute_query(
+                """
+                SELECT job_role_id, role_title, role_description, role_budget,
+                       budget_currency, budget_type, positions_available,
+                       positions_filled, is_required, display_order
+                FROM job_role
+                WHERE job_post_id = :job_post_id
+                ORDER BY display_order ASC, created_at ASC
+                """,
+                {"job_post_id": job_post_id},
+            )
+
+            proposals = ProposalFunctions.get_proposals_by_job_post_id_enriched(
+                job_post_id, status=status, sort_by=sort_by, sort_order=sort_order
+            )
+
+            by_role: Dict[str, List[Dict]] = {}
+            for proposal in proposals:
+                by_role.setdefault(str(proposal["job_role_id"]), []).append(proposal)
+
+            roles = []
+            for role_row in role_rows:
+                role = convert_uuids_to_str(dict(role_row))
+                role_id = str(role["job_role_id"])
+                # Already ordered by the shared sort; grouping preserves it.
+                role_proposals = by_role.get(role_id, [])
+
+                statuses = [p.get("status") for p in role_proposals]
+                scored = [p for p in role_proposals if p.get("relevance_score") is not None]
+
+                role.update({
+                    "proposal_count":     len(role_proposals),
+                    "pending_count":      statuses.count("pending"),
+                    "accepted_count":     statuses.count("accepted"),
+                    "rejected_count":     statuses.count("rejected"),
+                    "ranked_count":       len(scored),
+                    "positions_open":     max(
+                        (role.get("positions_available") or 0) - (role.get("positions_filled") or 0), 0
+                    ),
+                    "top_proposal_id":    role_proposals[0]["proposal_id"] if role_proposals else None,
+                    "proposals":          role_proposals,
+                })
+                roles.append(role)
+
+            logger("PROPOSAL_FUNCTIONS",
+                   f"Grouped {len(proposals)} proposals into {len(roles)} roles "
+                   f"for job post {job_post_id}", level="INFO")
+
+            return {
+                "job_post_id":     job_post_id,
+                "total_proposals": len(proposals),
+                "role_count":      len(roles),
+                "sort_by":         sort_by,
+                "sort_order":      sort_order,
+                "roles":           roles,
+            }
+
+        except Exception as e:
+            logger("PROPOSAL_FUNCTIONS", f"Error grouping proposals by role: {str(e)}", level="ERROR")
             raise
 
     # Sortable columns for a freelancer's proposal list. Keys are what the API accepts,
