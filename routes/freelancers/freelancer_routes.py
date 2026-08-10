@@ -458,6 +458,24 @@ async def update_payout_info(
         return ResponseSchema.error("Failed to update payout info. Please try again.", 500)
 
 
+@freelancer_router.get("/{freelancer_id}/payout-info", response_model=None)
+async def get_payout_info(
+    freelancer_id: str,
+    current_user: UserInDB = Depends(get_current_user),
+):
+    try:
+        existing = FreelancerFunctions.get_freelancer_by_id_or_user_id(freelancer_id)
+        if not existing:
+            return ResponseSchema.error(f"Freelancer {freelancer_id} not found", 404)
+        info = FreelancerFunctions.get_payout_info(existing["freelancer_id"])
+        if not info:
+            return ResponseSchema.error("No payout info on file for this freelancer", 404)
+        return ResponseSchema.success(info, 200)
+    except Exception as e:
+        logger("FREELANCER", f"Failed to fetch payout info for freelancer {freelancer_id}: {str(e)}", f"GET /freelancers/{freelancer_id}/payout-info", "ERROR")
+        return ResponseSchema.error("Failed to fetch payout info. Please try again.", 500)
+
+
 # Wildcard last, must come after all /{freelancer_id}/xxx routes
 @freelancer_router.get("/{identifier}", response_model=None)
 async def get_freelancer(identifier: str, current_user: UserInDB = Depends(get_current_user)):
