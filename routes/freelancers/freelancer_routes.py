@@ -6,7 +6,7 @@ from fastapi import HTTPException, APIRouter, Depends, Form, Query, Request, Upl
 from typing import List, Optional, Dict
 import uuid
 from functions.schema_model import FreelancerCreate, FreelancerUpdate, FreelancerResponse, FreelancerProfileComplete
-from functions.schema_model import UserInDB
+from functions.schema_model import PayoutInfoCreate, UserInDB
 from functions.authentication import get_current_user, get_freelancer_user
 from functions.access_control import assert_freelancer_owns, get_freelancer_profile_for_user
 from functions.logger import logger
@@ -428,6 +428,34 @@ async def delete_freelancer_profile_picture(
         error_msg = f"Failed to delete profile picture for freelancer {freelancer_id}: {str(e)}"
         logger("FREELANCER", error_msg, f"DELETE /freelancers/{freelancer_id}/profile-picture", "ERROR")
         return ResponseSchema.error("Failed to delete profile picture for freelancer. Please try again.", 500)
+
+
+@freelancer_router.put("/{freelancer_id}/payout-info", response_model=None)
+async def update_payout_info(
+    freelancer_id: str,
+    payload: PayoutInfoCreate,
+    current_user: UserInDB = Depends(get_freelancer_user),
+):
+    try:
+        existing = FreelancerFunctions.get_freelancer_by_id_or_user_id(freelancer_id)
+        if not existing:
+            return ResponseSchema.error(f"Freelancer {freelancer_id} not found", 404)
+        assert_freelancer_owns(current_user, existing["freelancer_id"])
+
+        updated = FreelancerFunctions.upsert_payout_info(
+            freelancer_id=existing["freelancer_id"],
+            bank_name=payload.bank_name,
+            account_number=payload.account_number,
+            account_holder_name=payload.account_holder_name,
+        )
+        logger("FREELANCER", f"Payout info updated for freelancer {freelancer_id}", f"PUT /freelancers/{freelancer_id}/payout-info", "INFO")
+        return ResponseSchema.success(updated, 200)
+    except HTTPException:
+        raise
+    except Exception as e:
+        error_msg = f"Failed to update payout info for freelancer {freelancer_id}: {str(e)}"
+        logger("FREELANCER", error_msg, f"PUT /freelancers/{freelancer_id}/payout-info", "ERROR")
+        return ResponseSchema.error("Failed to update payout info. Please try again.", 500)
 
 
 # Wildcard last, must come after all /{freelancer_id}/xxx routes

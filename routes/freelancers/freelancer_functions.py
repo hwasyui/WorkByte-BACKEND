@@ -283,6 +283,48 @@ class FreelancerFunctions:
             raise
 
     @staticmethod
+    def get_payout_info(freelancer_id: str) -> Optional[Dict]:
+        try:
+            db = get_db()
+            rows = db.fetch_data(
+                table_name="freelancer_payout_info",
+                conditions=[("freelancer_id", "=", freelancer_id)],
+                limit=1,
+            )
+            if rows:
+                return convert_uuids_to_str(dict(rows[0]))
+            return None
+        except Exception as e:
+            logger("FREELANCER_FUNCTIONS", f"Error fetching payout info: {str(e)}", level="ERROR")
+            raise
+
+    @staticmethod
+    def upsert_payout_info(freelancer_id: str, bank_name: str, account_number: str, account_holder_name: str) -> Dict:
+        try:
+            db = get_db()
+            db.execute_query(
+                """
+                INSERT INTO freelancer_payout_info (freelancer_id, bank_name, account_number, account_holder_name)
+                VALUES (:freelancer_id, :bank_name, :account_number, :account_holder_name)
+                ON CONFLICT (freelancer_id) DO UPDATE SET
+                    bank_name = EXCLUDED.bank_name,
+                    account_number = EXCLUDED.account_number,
+                    account_holder_name = EXCLUDED.account_holder_name
+                """,
+                {
+                    "freelancer_id": freelancer_id,
+                    "bank_name": bank_name,
+                    "account_number": account_number,
+                    "account_holder_name": account_holder_name,
+                },
+            )
+            logger("FREELANCER_FUNCTIONS", f"Payout info upserted for freelancer {freelancer_id}", level="INFO")
+            return FreelancerFunctions.get_payout_info(freelancer_id)
+        except Exception as e:
+            logger("FREELANCER_FUNCTIONS", f"Error upserting payout info: {str(e)}", level="ERROR")
+            raise
+
+    @staticmethod
     def get_freelancer_skills_with_names(freelancer_id: str) -> List[Dict]:
         try:
             db = get_db()

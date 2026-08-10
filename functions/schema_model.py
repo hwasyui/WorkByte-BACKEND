@@ -1,6 +1,6 @@
 import re
 from fastapi import File, Form, Request, UploadFile
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional, Any, Dict, List, Literal
 from datetime import date, datetime
 
@@ -879,6 +879,14 @@ class ContractResponse(BaseModel):
     cancelled_by: Optional[str] = None
     cancellation_reason: Optional[str] = None
 
+    commission_rate: Optional[float] = None
+    commission_amount: Optional[float] = None
+    payout_amount: Optional[float] = None
+    freelancer_confirmed_receipt_at: Optional[datetime] = None
+    payment_verified_at: Optional[datetime] = None
+    payment_verified_by: Optional[str] = None
+    completed_by_admin_override: Optional[bool] = False
+
     class Config:
         from_attributes = True
 
@@ -913,6 +921,51 @@ class ContractSubmissionResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+# Payments
+class PaymentProofCreate(BaseModel):
+    payee: Literal["freelancer", "admin"]
+    amount: float
+    reference_number: Optional[str] = None
+
+class PaymentProofResponse(BaseModel):
+    proof_id: str
+    contract_id: str
+    payee: str
+    amount: float
+    reference_number: Optional[str] = None
+    file_url: str
+    uploaded_by: str
+    status: str
+    rejection_reason: Optional[str] = None
+    verified_by: Optional[str] = None
+    verified_at: Optional[datetime] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+class PaymentProofRejectRequest(BaseModel):
+    reason: str = Field(min_length=5, max_length=1000)
+
+class PayoutInfoCreate(BaseModel):
+    bank_name: str
+    account_number: str
+    account_holder_name: str
+
+class PayoutInfoResponse(BaseModel):
+    freelancer_id: str
+    bank_name: Optional[str] = None
+    account_number: Optional[str] = None
+    account_holder_name: Optional[str] = None
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+class AdminOverrideCompletionRequest(BaseModel):
+    reason: str = Field(min_length=10, max_length=1000)
 
 # Portfolio
 class PortfolioCreate(BaseModel):

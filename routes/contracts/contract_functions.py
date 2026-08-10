@@ -551,7 +551,10 @@ class ContractFunctions:
     # Cancellable from the route, plus 'disputed' so arbitration can cancel. The write
     # below is conditional on these, which is what makes the check in the route safe:
     # the autoapprove sweep can complete a contract between that check and this write.
-    _CANCELLABLE_FROM = ("active", "under_review", "revision_requested", "disputed")
+    _CANCELLABLE_FROM = (
+        "active", "under_review", "revision_requested", "disputed",
+        "pending_payment", "payment_review", "payment_rejected",
+    )
 
     @staticmethod
     def cancel_contract(
@@ -677,7 +680,10 @@ class ContractFunctions:
 
     # Statuses a dispute can be raised from. 'cancelled' is the recourse against a
     # cancellation; the route decides whether that window is still open.
-    _DISPUTABLE_FROM = ("under_review", "revision_requested", "cancelled")
+    _DISPUTABLE_FROM = (
+        "under_review", "revision_requested", "cancelled",
+        "pending_payment", "payment_review", "payment_rejected",
+    )
 
     @staticmethod
     def raise_dispute(contract_id: str, raised_by: str, reason: str) -> Optional[Dict]:
@@ -748,19 +754,29 @@ class ContractFunctions:
                 and contract.get("proposal_id")
             )
 
+            latest_submission = ContractSubmissionFunctions.get_latest_submission_by_contract_id(contract_id)
+
             if outcome == "approve":
-                latest_submission = ContractSubmissionFunctions.get_latest_submission_by_contract_id(contract_id)
                 if latest_submission and latest_submission.get("status") == "submitted":
                     ContractSubmissionFunctions.approve_latest_submission(contract_id)
+                elif latest_submission and latest_submission.get("status") == "approved":
+                    ContractFunctions.update_contract(contract_id, {"status": "pending_payment"})
                 else:
                     ContractFunctions.update_contract(contract_id, {"status": "completed"})
-                from ai_related.review_analysis.review_pipeline import run_post_completion_pipeline
-                _fire_notification(run_post_completion_pipeline(contract_id))
+                    from ai_related.review_analysis.review_pipeline import run_post_completion_pipeline
+                    from ai_related.review_analysis.client_review_pipeline import run_client_review_post_completion_pipeline
+                    _fire_notification(run_post_completion_pipeline(contract_id))
+                    _fire_notification(run_client_review_post_completion_pipeline(contract_id))
             elif outcome == "cancel":
                 ContractFunctions.cancel_contract(contract_id, cancelled_by=admin_user_id, reason=note)
             elif outcome == "revise":
                 if not new_deadline:
                     raise ValueError("new_deadline is required when outcome='revise'")
+                if latest_submission and latest_submission.get("status") == "approved":
+                    raise ValueError(
+                        "Work was already approved for this contract - this dispute is about payment, "
+                        "not deliverables. Use 'approve' or 'cancel' instead of 'revise'."
+                    )
                 revised = ContractSubmissionFunctions.request_revision_for_latest_submission(contract_id, note=note)
                 if not revised:
                     raise ValueError(

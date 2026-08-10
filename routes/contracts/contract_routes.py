@@ -912,7 +912,7 @@ async def raise_dispute(
 
         assert_current_user_is_contract_party(current_user, contract)
 
-        disputable_statuses = {"under_review", "revision_requested"}
+        disputable_statuses = {"under_review", "revision_requested", "pending_payment", "payment_review", "payment_rejected"}
         if contract["status"] == "cancelled":
             if str(contract.get("cancelled_by")) == str(current_user.user_id):
                 return ResponseSchema.error("You cannot dispute your own cancellation.", 403)
@@ -995,7 +995,8 @@ async def cancel_contract(
     """
     Cancel an active contract.
     Only the client or freelancer who is a party to the contract can cancel it.
-    Only contracts with status 'active', 'under_review', or 'revision_requested' can be cancelled.
+    Only contracts with status 'active', 'under_review', 'revision_requested',
+    'pending_payment', 'payment_review', or 'payment_rejected' can be cancelled.
     """
     try:
         contract = ContractFunctions.get_contract_by_id(contract_id)
@@ -1004,7 +1005,10 @@ async def cancel_contract(
 
         assert_current_user_is_contract_party(current_user, contract)
 
-        cancellable_statuses = {"active", "under_review", "revision_requested"}
+        cancellable_statuses = {
+            "active", "under_review", "revision_requested",
+            "pending_payment", "payment_review", "payment_rejected",
+        }
         if contract["status"] not in cancellable_statuses:
             return ResponseSchema.error(
                 f"Cannot cancel a contract with status '{contract['status']}'",

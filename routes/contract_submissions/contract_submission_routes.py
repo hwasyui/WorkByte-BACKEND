@@ -15,8 +15,6 @@ from routes.contracts.contract_generation_functions import ContractGenerationFun
 from routes.freelancers.freelancer_functions import FreelancerFunctions
 from routes.clients.client_functions import ClientFunctions
 from routes.notifications.notification_functions import NotificationFunctions
-from routes.reviews.review_routes import trigger_review_pipeline_on_completion
-from routes.client_reviews.client_review_routes import trigger_client_review_pipeline_on_completion
 
 
 contract_submission_router = APIRouter(
@@ -305,9 +303,6 @@ async def approve_latest_submission(
             return ResponseSchema.error("No submission found for this contract", 404)
         latest_submission = _resolve_submission_urls(latest_submission)
 
-        await trigger_review_pipeline_on_completion(contract_id, background_tasks)
-        await trigger_client_review_pipeline_on_completion(contract_id, background_tasks)
-
         # Queued, not awaited - the approval is already recorded.
         freelancer = FreelancerFunctions.get_freelancer_by_id(str(contract["freelancer_id"]))
         if freelancer:
@@ -316,9 +311,9 @@ async def approve_latest_submission(
                 "Approval",
                 "PUT /contract-submissions/contract/{contract_id}/approve",
                 recipient_user_id=str(freelancer["user_id"]),
-                notif_type="contract_completed",
-                title="Contract completed",
-                body=f"{client.get('full_name')} approved your submission",
+                notif_type="work_approved",
+                title="Work approved",
+                body=f"{client.get('full_name')} approved your submission. Waiting on payment now.",
                 data={"contract_id": contract_id},
             )
 

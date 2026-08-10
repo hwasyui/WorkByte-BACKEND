@@ -337,17 +337,28 @@ class ContractSubmissionFunctions:
 
             ContractFunctions.update_contract(
                 contract_id=contract_id,
-                update_data={"status": "completed"},
+                update_data={"status": "pending_payment"},
             )
 
             try:
                 DMFunctions.send_system_event(
                     contract_id=contract_id,
                     actor_id=actor_user_id,
-                    message_text="Work approved. Contract completed.",
+                    message_text="Work approved. Waiting for payment.",
                     event_type="submission_approved",
                     metadata={"submission_id": submission_id, "approved_by": actor_user_id},
                 )
+            except Exception:
+                pass
+
+            try:
+                _fire_notification(NotificationFunctions.notify(
+                    recipient_user_id=actor_user_id,
+                    notif_type="payment_due",
+                    title="Time to pay",
+                    body=f"All work on \"{contract.get('contract_title')}\" has been approved. Please upload your payment proof to complete the contract.",
+                    data={"contract_id": contract_id},
+                ))
             except Exception:
                 pass
 
@@ -397,13 +408,6 @@ class ContractSubmissionFunctions:
 
                 if days_elapsed >= AUTO_APPROVE_DAYS:
                     ContractSubmissionFunctions.approve_latest_submission(contract_id)
-                    try:
-                        from ai_related.review_analysis.review_pipeline import run_post_completion_pipeline
-                        from ai_related.review_analysis.client_review_pipeline import run_client_review_post_completion_pipeline
-                        _fire_notification(run_post_completion_pipeline(contract_id))
-                        _fire_notification(run_client_review_post_completion_pipeline(contract_id))
-                    except Exception:
-                        pass
 
                     # Strikes are counted off the notifications table rather than a
                     # counter column. Count before sending so the message matches the
@@ -439,9 +443,9 @@ class ContractSubmissionFunctions:
                     if freelancer_user_id:
                         _fire_notification(NotificationFunctions.notify(
                             recipient_user_id=freelancer_user_id,
-                            notif_type="contract_completed",
-                            title="Contract completed",
-                            body=f"\"{title}\" was auto-approved after {AUTO_APPROVE_DAYS} days without a response from the client.",
+                            notif_type="work_auto_approved",
+                            title="Work auto-approved",
+                            body=f"\"{title}\" was auto-approved after {AUTO_APPROVE_DAYS} days without a response from the client. Waiting on payment now.",
                             data={"contract_id": contract_id},
                         ))
                     if strike_count >= AUTO_APPROVE_BAN_THRESHOLD:

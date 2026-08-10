@@ -6,13 +6,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import Dict, List, Optional
 from pydantic import BaseModel, Field
 
-from functions.schema_model import UserInDB, ArbitrateDisputeRequest
+from functions.schema_model import UserInDB, ArbitrateDisputeRequest, PaymentProofRejectRequest, AdminOverrideCompletionRequest
 from functions.authentication import get_current_user, get_admin_user
 from functions.logger import logger
 from functions.response_utils import ResponseSchema
 from functions.db_manager import get_db
 from routes.contracts.contract_functions import ContractFunctions
 from routes.clients.client_functions import ClientFunctions
+from routes.payments.payment_functions import PaymentFunctions
 from routes.admin.admin_functions import (
     ADMIN_RANGE_PRESETS,
     VALID_REPORT_REASONS,
@@ -55,6 +56,7 @@ from routes.admin.admin_functions import (
     resolve_admin_range,
     _range_conditions,
     _range_params,
+    _as_of_clause,
     resolve_red_flag_alert,
     submit_appeal,
     uphold_client_review,
@@ -992,6 +994,180 @@ async def admin_arbitrate_contract_dispute(
     except Exception as e:
         logger("ADMIN", f"Failed to arbitrate dispute for contract {contract_id}: {e}", "PUT /admin/contracts/{contract_id}/arbitrate", "ERROR")
         return ResponseSchema.error("Failed to arbitrate dispute. Please try again.", 500)
+
+@admin_router.put("/contracts/{contract_id}/override-completion")
+async def admin_override_contract_completion(
+    contract_id: str,
+    payload: AdminOverrideCompletionRequest,
+    current_user: UserInDB = Depends(get_admin_user),
+):
+    try:
+        completed_contract = PaymentFunctions.admin_override_completion(
+            contract_id=contract_id,
+            admin_user_id=str(current_user.user_id),
+            reason=payload.reason,
+        )
+        logger("ADMIN", f"Contract {contract_id} completion overridden by admin {current_user.user_id}: {payload.reason}", "PUT /admin/contracts/{contract_id}/override-completion", "WARNING")
+        return ResponseSchema.success(completed_contract, 200)
+    except ValueError as e:
+        return ResponseSchema.error(str(e), 400)
+    except Exception as e:
+        logger("ADMIN", f"Failed to override contract completion for {contract_id}: {e}", "PUT /admin/contracts/{contract_id}/override-completion", "ERROR")
+        return ResponseSchema.error("Failed to override contract completion. Please try again.", 500)
+
+@admin_router.get("/payments/pending")
+async def admin_list_pending_payments(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    date_range: Dict = Depends(admin_range),
+    current_user: UserInDB = Depends(get_admin_user),
+):
+    try:
+        offset = (page - 1) * page_size
+        where = ["c.status = 'payment_review'", "pp.status = 'pending_review'"]
+        params: Dict = {}
+        where.extend(_range_conditions("pp.created_at", date_range))
+        params.update(_range_params(date_range))
+        where_sql = "WHERE " + " AND ".join(where)
+
+        rows = get_db().execute_query(
+            f"""
+            SELECT pp.proof_id, pp.contract_id, pp.payee, pp.amount, pp.reference_number,
+                   pp.file_url, pp.uploaded_by, pp.status, pp.created_at,
+                   c.contract_title, c.agreed_budget, c.budget_currency,
+                   c.client_id, c.freelancer_id
+            FROM payment_proof pp
+            JOIN contract c ON c.contract_id = pp.contract_id
+            {where_sql}
+            ORDER BY pp.created_at ASC
+            LIMIT :limit OFFSET :offset
+            """,
+            {**params, "limit": page_size, "offset": offset},
+        )
+        total_row = get_db().execute_query(
+            f"""
+            SELECT COUNT(*) AS cnt
+            FROM payment_proof pp
+            JOIN contract c ON c.contract_id = pp.contract_id
+            {where_sql}
+            """,
+            params,
+        )
+        total = int(total_row[0]["cnt"]) if total_row else 0
+        items = [dict(row) for row in rows or []]
+        result = {
+            "items": items,
+            "pagination": {
+                "total": total,
+                "page": page,
+                "page_size": page_size,
+                "total_pages": (total + page_size - 1) // page_size if page_size > 0 else 0,
+            },
+        }
+        logger("ADMIN", f"Retrieved {len(items)} pending payment proof(s) (page {page})", "GET /admin/payments/pending", "INFO")
+        return ResponseSchema.success(result, 200)
+    except Exception as e:
+        logger("ADMIN", f"Failed to list pending payments: {e}", "GET /admin/payments/pending", "ERROR")
+        return ResponseSchema.error("Failed to list pending payments. Please try again.", 500)
+
+@admin_router.put("/payments/{proof_id}/verify")
+async def admin_verify_payment(
+    proof_id: str,
+    current_user: UserInDB = Depends(get_admin_user),
+):
+    try:
+        updated = PaymentFunctions.verify_proof(proof_id, str(current_user.user_id))
+        logger("ADMIN", f"Payment proof {proof_id} verified by admin {current_user.user_id}", "PUT /admin/payments/{proof_id}/verify", "INFO")
+        return ResponseSchema.success(updated, 200)
+    except ValueError as e:
+        return ResponseSchema.error(str(e), 400)
+    except Exception as e:
+        logger("ADMIN", f"Failed to verify payment proof {proof_id}: {e}", "PUT /admin/payments/{proof_id}/verify", "ERROR")
+        return ResponseSchema.error("Failed to verify payment proof. Please try again.", 500)
+
+@admin_router.put("/payments/{proof_id}/reject")
+async def admin_reject_payment(
+    proof_id: str,
+    payload: PaymentProofRejectRequest,
+    current_user: UserInDB = Depends(get_admin_user),
+):
+    try:
+        updated = PaymentFunctions.reject_proof(proof_id, str(current_user.user_id), payload.reason)
+        logger("ADMIN", f"Payment proof {proof_id} rejected by admin {current_user.user_id}", "PUT /admin/payments/{proof_id}/reject", "INFO")
+        return ResponseSchema.success(updated, 200)
+    except ValueError as e:
+        return ResponseSchema.error(str(e), 400)
+    except Exception as e:
+        logger("ADMIN", f"Failed to reject payment proof {proof_id}: {e}", "PUT /admin/payments/{proof_id}/reject", "ERROR")
+        return ResponseSchema.error("Failed to reject payment proof. Please try again.", 500)
+
+@admin_router.get("/payments/overview")
+async def admin_payments_overview(
+    currency: str = Query(default="USD", description="Reporting currency to scope the sums to"),
+    evasion_threshold_days: int = Query(default=3, ge=1, description="Days after freelancer confirmation before an unverified admin proof counts as at-risk"),
+    date_range: Dict = Depends(admin_range),
+    current_user: UserInDB = Depends(get_admin_user),
+):
+    try:
+        params = {"currency": currency, **_range_params(date_range)}
+
+        realized_row = get_db().execute_query(
+            f"""
+            SELECT COALESCE(SUM(commission_amount), 0) AS total
+            FROM contract
+            WHERE status = 'completed' AND budget_currency = :currency
+            {_as_of_clause("payment_verified_at", date_range)}
+            """,
+            params,
+        )
+        realized_commission = float(realized_row[0]["total"]) if realized_row else 0.0
+
+        gmv_row = get_db().execute_query(
+            f"""
+            SELECT COALESCE(SUM(agreed_budget), 0) AS total
+            FROM contract
+            WHERE budget_currency = :currency
+            {_as_of_clause("created_at", date_range)}
+            """,
+            params,
+        )
+        gmv = float(gmv_row[0]["total"]) if gmv_row else 0.0
+
+        pending_row = get_db().execute_query(
+            "SELECT COUNT(*) AS cnt FROM contract WHERE status = 'payment_review' AND budget_currency = :currency",
+            {"currency": currency},
+        )
+        pending_verification = int(pending_row[0]["cnt"]) if pending_row else 0
+
+        at_risk_row = get_db().execute_query(
+            """
+            SELECT COUNT(*) AS cnt
+            FROM contract c
+            WHERE c.budget_currency = :currency
+              AND c.freelancer_confirmed_receipt_at IS NOT NULL
+              AND c.freelancer_confirmed_receipt_at < NOW() - make_interval(days => :days)
+              AND c.status != 'completed'
+              AND NOT EXISTS (
+                  SELECT 1 FROM payment_proof pp
+                  WHERE pp.contract_id = c.contract_id AND pp.payee = 'admin' AND pp.status = 'verified'
+              )
+            """,
+            {"currency": currency, "days": evasion_threshold_days},
+        )
+        commission_at_risk = int(at_risk_row[0]["cnt"]) if at_risk_row else 0
+
+        result = {
+            "currency": currency,
+            "realized_commission": realized_commission,
+            "gmv": gmv,
+            "pending_verification": pending_verification,
+            "commission_at_risk": commission_at_risk,
+        }
+        logger("ADMIN", f"Payments overview fetched for {currency}", "GET /admin/payments/overview", "INFO")
+        return ResponseSchema.success(result, 200)
+    except Exception as e:
+        logger("ADMIN", f"Failed to fetch payments overview: {e}", "GET /admin/payments/overview", "ERROR")
+        return ResponseSchema.error("Failed to fetch payments overview. Please try again.", 500)
 
 @admin_router.get("/clients/{client_id}/autoapprove-history")
 async def admin_get_client_autoapprove_history(

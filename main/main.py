@@ -52,6 +52,8 @@ from routes.admin.admin_routes import admin_router, reports_router, appeals_rout
 from routes.admin.admin_functions import moderation_sweep_loop
 from routes.notifications.notification_routes import notification_router
 from routes.share.share_routes import share_router
+from routes.payments.payment_routes import payment_router, payment_config_router
+from routes.payments.payment_reminder_worker import payment_reminder_loop
 
 
 @asynccontextmanager
@@ -92,6 +94,9 @@ async def lifespan(app: FastAPI):
 
     review_reconcile_task = asyncio.create_task(review_reconcile_loop())
     logger("LIFESPAN", "Review reconcile sweep worker started (re-queues reviews whose analysis was interrupted)", level="INFO")
+
+    payment_reminder_task = asyncio.create_task(payment_reminder_loop())
+    logger("LIFESPAN", "Payment reminder sweep worker started (verification SLA + commission evasion flags)", level="INFO")
 
     def _warmup_harmful_text():
         try:
@@ -141,6 +146,7 @@ async def lifespan(app: FastAPI):
         (contract_deadline_task, "Contract deadline"),
         (contract_autoapprove_task, "Contract autoapprove"),
         (review_reconcile_task, "Review reconcile"),
+        (payment_reminder_task, "Payment reminder"),
     ):
         task.cancel()
         try:
@@ -224,6 +230,8 @@ app.include_router(reports_router)
 app.include_router(appeals_router)
 app.include_router(notification_router)
 app.include_router(share_router)
+app.include_router(payment_router)
+app.include_router(payment_config_router)
 
 
 @app.exception_handler(RequestValidationError)

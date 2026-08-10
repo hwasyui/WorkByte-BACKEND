@@ -22,13 +22,14 @@ _client = Minio(
     secure=MINIO_SECURE,
 )
 
-PRIVATE_BUCKETS = {"contract-assets", "contract-submissions", "message-attachments", "proposal-files"}
+PRIVATE_BUCKETS = {"contract-assets", "contract-submissions", "message-attachments", "proposal-files", "payment-proofs"}
 
 BUCKET_JOB_FILES            = "job-files"
 BUCKET_PROPOSAL_FILES       = "proposal-files"
 BUCKET_USER_ASSETS          = "user-assets"
 BUCKET_CONTRACT_SUBMISSIONS = "contract-submissions"
 BUCKET_MESSAGE_ATTACHMENTS  = "message-attachments"
+BUCKET_PAYMENT_PROOFS       = "payment-proofs"
 
 MAX_UPLOAD_FILE_SIZE_BYTES = 100 * 1024 * 1024  # 100 MB
 
@@ -38,6 +39,7 @@ BUCKET_MAP = {
     "user-assets":          BUCKET_USER_ASSETS,
     "contract-submissions": BUCKET_CONTRACT_SUBMISSIONS,
     "message-attachments":  BUCKET_MESSAGE_ATTACHMENTS,
+    "payment-proofs":       BUCKET_PAYMENT_PROOFS,
 }
 
 
@@ -48,6 +50,7 @@ _ALL_BUCKETS = [
     "contract-submissions",
     "message-attachments",
     "contract-assets",
+    "payment-proofs",
 ]
 _PUBLIC_READ_BUCKETS = {"user-assets", "job-files"}
 
@@ -203,6 +206,14 @@ def upload_thread_attachment(thread_id: str, message_id: str, file_name: str, fi
     return upload_file(
         bucket=BUCKET_MESSAGE_ATTACHMENTS,
         path=f"{thread_id}/{message_id}/{file_name}",
+        file_bytes=file_bytes,
+        content_type=content_type or guess_mime(file_name),
+    )
+
+def upload_payment_proof_file(contract_id: str, proof_id: str, file_name: str, file_bytes: bytes, content_type: str = None) -> str:
+    return upload_file(
+        bucket=BUCKET_PAYMENT_PROOFS,
+        path=f"{contract_id}/{proof_id}/{file_name}",
         file_bytes=file_bytes,
         content_type=content_type or guess_mime(file_name),
     )
