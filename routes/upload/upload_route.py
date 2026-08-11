@@ -81,7 +81,7 @@ async def proxy_private_file(
         filename = path.split("/")[-1]
         return StreamingResponse(
             BytesIO(file_bytes),
-            media_type="application/octet-stream",
+            media_type=guess_mime(filename),
             headers={"Content-Disposition": f"inline; filename={filename}"},
         )
     except Exception as e:

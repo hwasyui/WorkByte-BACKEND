@@ -14,6 +14,7 @@ from functions.db_manager import get_db
 from routes.contracts.contract_functions import ContractFunctions
 from routes.clients.client_functions import ClientFunctions
 from routes.payments.payment_functions import PaymentFunctions, PLATFORM_COMMISSION_RATE
+from functions.minio_client import resolve_file_url, BUCKET_PAYMENT_PROOFS
 from routes.admin.admin_functions import (
     ADMIN_RANGE_PRESETS,
     VALID_REPORT_REASONS,
@@ -1009,6 +1010,9 @@ async def admin_list_pending_payments(
         )
         total = int(total_row[0]["cnt"]) if total_row else 0
         items = [dict(row) for row in rows or []]
+        for item in items:
+            if item.get("file_url"):
+                item["file_url"] = resolve_file_url(BUCKET_PAYMENT_PROOFS, item["file_url"])
         result = {
             "items": items,
             "pagination": {
